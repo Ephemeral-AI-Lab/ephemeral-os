@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-overlay · src/writable_dirs.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-overlay File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>56</b><span>items</span></div>
+  <div><b>24</b><span>fields</span></div>
+  <div><b>9</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/16</small></a></li><li><a class="file-link" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>3/17</small></a></li><li><a class="file-link active" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="writable_dirs crates/eos-overlay/src/writable_dirs.rs OverlayWritableDirs overlay_writable_root allocate_overlay_writable_dirs TestResult allocates_upper_and_work_dirs">
+  <div class="module-head">
+    <div>
+      <h2>src/writable_dirs.rs</h2>
+      <p class="path">module <code>writable_dirs</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>3 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OverlayWritableDirs pub pub struct OverlayWritableDirs crates/eos-overlay/src/writable_dirs.rs run_dir PathBuf upperdir PathBuf workdir PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OverlayWritableDirs</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct OverlayWritableDirs</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>run_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>PathBuf</code></td></tr></tbody></table>
+  <p class="source">crates/eos-overlay/src/writable_dirs.rs:16</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-overlay/src/writable_dirs.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/writable_dirs.rs:74</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_writable_root pub pub fn overlay_writable_root () -&gt; Result &lt; PathBuf &gt; crates/eos-overlay/src/writable_dirs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>overlay_writable_root</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn overlay_writable_root () -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/writable_dirs.rs:27</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn allocate_overlay_writable_dirs pub pub fn allocate_overlay_writable_dirs (run_dir : &amp; Path) -&gt; Result &lt; OverlayWritableDirs &gt; crates/eos-overlay/src/writable_dirs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>allocate_overlay_writable_dirs</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn allocate_overlay_writable_dirs (run_dir : &amp; Path) -&gt; Result &lt; OverlayWritableDirs &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/writable_dirs.rs:52</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn allocates_upper_and_work_dirs private fn allocates_upper_and_work_dirs () -&gt; TestResult crates/eos-overlay/src/writable_dirs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>allocates_upper_and_work_dirs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn allocates_upper_and_work_dirs () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/writable_dirs.rs:76</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

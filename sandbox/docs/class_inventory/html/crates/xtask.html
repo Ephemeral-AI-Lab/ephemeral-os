@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>xtask · xtask/src/main.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>xtask File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>1</b><span>modules</span></div>
+  <div><b>18</b><span>items</span></div>
+  <div><b>6</b><span>fields</span></div>
+  <div><b>1</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">xtask</span><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="xtask.html"><span>main.rs</span><small>1/16</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin xtask/src/main.rs main PackageArgs impl PackageArgs package next_string workspace_root absolutize arch_for_target run_build cargo_build_command rustflags_with_rust_lld set_executable sha256_file write_protocol_version write_checksums write_manifest sign_artifact print_help">
+  <div class="module-head">
+    <div>
+      <h2>xtask/src/main.rs</h2>
+      <p class="path">module <code>bin</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>16 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PackageArgs private struct PackageArgs xtask/src/main.rs target String out_dir PathBuf no_build bool builder String sign bool minisign_key Option &lt; PathBuf &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PackageArgs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct PackageArgs</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>target</td><td><code>String</code></td></tr><tr><td>private</td><td>out_dir</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>no_build</td><td><code>bool</code></td></tr><tr><td>private</td><td>builder</td><td><code>String</code></td></tr><tr><td>private</td><td>sign</td><td><code>bool</code></td></tr><tr><td>private</td><td>minisign_key</td><td><code>Option &lt; PathBuf &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>associated-fn</td><td>parse</td><td><code>fn parse &lt; I &gt; (args : I) -&gt; Result &lt; Self &gt; where I : IntoIterator &lt; Item = OsString &gt; ,</code></td></tr></tbody></table>
+  <p class="source">xtask/src/main.rs:38</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn main private fn main () -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>main</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn main () -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:21</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package private fn package (args : &amp; PackageArgs) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn package (args : &amp; PackageArgs) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:95</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_string private fn next_string &lt; I &gt; (iter : &amp; mut I , flag : &amp; str) -&gt; Result &lt; String &gt; where I : Iterator &lt; Item = OsString &gt; , xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>next_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn next_string &lt; I &gt; (iter : &amp; mut I , flag : &amp; str) -&gt; Result &lt; String &gt; where I : Iterator &lt; Item = OsString &gt; ,</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:141</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_root private fn workspace_root () -&gt; Result &lt; PathBuf &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>workspace_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn workspace_root () -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:151</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn absolutize private fn absolutize (root : &amp; Path , path : &amp; Path) -&gt; PathBuf xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>absolutize</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn absolutize (root : &amp; Path , path : &amp; Path) -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:158</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn arch_for_target private fn arch_for_target (target : &amp; str) -&gt; Result &lt; &amp; 'static str &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>arch_for_target</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn arch_for_target (target : &amp; str) -&gt; Result &lt; &amp; 'static str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:166</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_build private fn run_build (root : &amp; Path , builder : &amp; str , target : &amp; str) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_build</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn run_build (root : &amp; Path , builder : &amp; str , target : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:176</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cargo_build_command private fn cargo_build_command (target : &amp; str) -&gt; Command xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cargo_build_command</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn cargo_build_command (target : &amp; str) -&gt; Command</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:201</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rustflags_with_rust_lld private fn rustflags_with_rust_lld () -&gt; String xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rustflags_with_rust_lld</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rustflags_with_rust_lld () -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:207</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn set_executable private fn set_executable (path : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>set_executable</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn set_executable (path : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:222</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sha256_file private fn sha256_file (path : &amp; Path) -&gt; Result &lt; String &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sha256_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn sha256_file (path : &amp; Path) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:233</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_protocol_version private fn write_protocol_version (out_dir : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_protocol_version</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_protocol_version (out_dir : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:249</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_checksums private fn write_checksums (out_dir : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_checksums</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_checksums (out_dir : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:257</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_manifest private fn write_manifest (out_dir : &amp; Path , target : &amp; str , arch : &amp; str , artifact_name : &amp; str , sha256 : &amp; str ,) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_manifest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_manifest (out_dir : &amp; Path , target : &amp; str , arch : &amp; str , artifact_name : &amp; str , sha256 : &amp; str ,) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:283</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sign_artifact private fn sign_artifact (artifact : &amp; Path , key : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sign_artifact</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn sign_artifact (artifact : &amp; Path , key : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:316</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn print_help private fn print_help () xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>print_help</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn print_help ()</code>
+  <div class="tags"></div>
+
+  <p class="source">xtask/src/main.rs:333</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-isolated-workspace · src/network/netfilter/exprs.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-isolated-workspace File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>149</b><span>items</span></div>
+  <div><b>78</b><span>fields</span></div>
+  <div><b>82</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-command-session-finalize-rs.html"><span>finalize.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-policy-rs.html"><span>policy.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-prepare-rs.html"><span>prepare.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link active" href="eos-isolated-workspace--src-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="network::netfilter::exprs crates/eos-isolated-workspace/src/network/netfilter/exprs.rs nft_masquerade_rule_exprs nft_imds_drop_rule_exprs nft_peer_isolation_rule_exprs nft_bridge_peer_isolation_rule_exprs nft_rfc1918_drop_rule_exprs nft_ipv4_network_match nft_bridge_ipv4_network_match nft_ipv4_addr_match nft_bridge_ipv4_addr_match nft_bridge_ipv4_guard_exprs nft_ipv4_guard_exprs nft_payload_ipv4_expr nft_payload_expr nft_meta_expr nft_bitwise_mask_expr nft_cmp_expr nft_drop_expr nft_expr gateway_addr bridge_network">
+  <div class="module-head">
+    <div>
+      <h2>src/network/netfilter/exprs.rs</h2>
+      <p class="path">module <code>network::netfilter::exprs</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>20 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_masquerade_rule_exprs pub(super) pub(super) fn nft_masquerade_rule_exprs (bridge_index : u32) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_masquerade_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn nft_masquerade_rule_exprs (bridge_index : u32) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:11</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_imds_drop_rule_exprs pub(super) pub(super) fn nft_imds_drop_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_imds_drop_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn nft_imds_drop_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:27</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_peer_isolation_rule_exprs pub(super) pub(super) fn nft_peer_isolation_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_peer_isolation_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn nft_peer_isolation_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:36</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bridge_peer_isolation_rule_exprs pub(super) pub(super) fn nft_bridge_peer_isolation_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bridge_peer_isolation_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn nft_bridge_peer_isolation_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:61</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_rfc1918_drop_rule_exprs pub(super) pub(super) fn nft_rfc1918_drop_rule_exprs (cidr : &amp; str) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_rfc1918_drop_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn nft_rfc1918_drop_rule_exprs (cidr : &amp; str) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:86</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_ipv4_network_match private fn nft_ipv4_network_match (offset : u32 , network : Ipv4Addr , prefix_len : u8 , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_ipv4_network_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_ipv4_network_match (offset : u32 , network : Ipv4Addr , prefix_len : u8 , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:101</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bridge_ipv4_network_match private fn nft_bridge_ipv4_network_match (offset : u32 , network : Ipv4Addr , prefix_len : u8 , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bridge_ipv4_network_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_bridge_ipv4_network_match (offset : u32 , network : Ipv4Addr , prefix_len : u8 , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:114</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_ipv4_addr_match private fn nft_ipv4_addr_match (offset : u32 , address : Ipv4Addr , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_ipv4_addr_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_ipv4_addr_match (offset : u32 , address : Ipv4Addr , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:127</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bridge_ipv4_addr_match private fn nft_bridge_ipv4_addr_match (offset : u32 , address : Ipv4Addr , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bridge_ipv4_addr_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_bridge_ipv4_addr_match (offset : u32 , address : Ipv4Addr , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:138</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bridge_ipv4_guard_exprs private fn nft_bridge_ipv4_guard_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bridge_ipv4_guard_exprs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_bridge_ipv4_guard_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:149</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_ipv4_guard_exprs private fn nft_ipv4_guard_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_ipv4_guard_exprs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_ipv4_guard_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:161</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_payload_ipv4_expr private fn nft_payload_ipv4_expr (offset : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_payload_ipv4_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_payload_ipv4_expr (offset : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:178</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_payload_expr private fn nft_payload_expr (base : u32 , offset : u32 , len : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_payload_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_payload_expr (base : u32 , offset : u32 , len : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:189</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_meta_expr private fn nft_meta_expr (key : u32) -&gt; Vec &lt; u8 &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_meta_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_meta_expr (key : u32) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:198</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bitwise_mask_expr private fn nft_bitwise_mask_expr (mask : [u8 ; 4]) -&gt; Vec &lt; u8 &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bitwise_mask_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_bitwise_mask_expr (mask : [u8 ; 4]) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:205</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_cmp_expr private fn nft_cmp_expr (op : u32 , value : &amp; [u8]) -&gt; Vec &lt; u8 &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_cmp_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_cmp_expr (op : u32 , value : &amp; [u8]) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:215</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_drop_expr private fn nft_drop_expr () -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_drop_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_drop_expr () -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:223</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_expr private fn nft_expr (name : &amp; str , data : &amp; [u8]) -&gt; Vec &lt; u8 &gt; crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn nft_expr (name : &amp; str , data : &amp; [u8]) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:240</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gateway_addr private const fn gateway_addr () -&gt; Ipv4Addr crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>gateway_addr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn gateway_addr () -&gt; Ipv4Addr</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:249</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bridge_network private const fn bridge_network () -&gt; (Ipv4Addr , u8) crates/eos-isolated-workspace/src/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>bridge_network</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn bridge_network () -&gt; (Ipv4Addr , u8)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/netfilter/exprs.rs:253</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

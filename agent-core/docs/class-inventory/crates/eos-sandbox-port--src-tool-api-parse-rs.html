@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-sandbox-port · src/tool_api/parse.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-sandbox-port File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>22</b><span>modules</span></div>
+  <div><b>151</b><span>items</span></div>
+  <div><b>145</b><span>fields</span></div>
+  <div><b>35</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-gateway-rs.html"><span>gateway.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">models</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port--src-models-command-rs.html"><span>command.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-common-rs.html"><span>common.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-file-rs.html"><span>file.rs</span><small>7/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-lifecycle-rs.html"><span>lifecycle.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-tool-call-rs.html"><span>tool_call.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-port--src-ops-rs.html"><span>ops.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-provision-rs.html"><span>provision.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-timeouts-rs.html"><span>timeouts.rs</span><small>0/2</small></a></li><li><span class="folder">tool_api</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port--src-tool-api-command-rs.html"><span>command.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-control-rs.html"><span>control.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-edit-rs.html"><span>edit.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-isolated-rs.html"><span>isolated.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-sandbox-port--src-tool-api-parse-rs.html"><span>parse.rs</span><small>1/40</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-plugin-rs.html"><span>plugin.rs</span><small>14/4</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-read-rs.html"><span>read.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-write-rs.html"><span>write.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-port--src-transport-rs.html"><span>transport.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="tool_api::parse crates/eos-sandbox-port/src/tool_api/parse.rs daemon_request_identity_fields user_visible_error_message matches_conflict is_edit_conflict py_str py_truthy_str get_bool get_string optional_string truthy_or_empty truthy_string strict_int json_type_name parse_path_tuple parse_path_list_unfiltered parse_changed_path_kinds parse_changed_path_kinds_unfiltered parse_conflict_info error_object parse_timing_map parse_workspace simple_result_base parse_read_file_result GuardedCommon parse_guarded_common parse_write_file_result parse_edit_file_result parse_exec_command_result obj identity_envelope_has_top_level_caller_and_optional_invocation parse_read_file_decodes_fields_and_timings parse_missing_success_and_exists_are_false parse_drops_blank_paths_and_kinds parse_exec_derives_success_from_status parse_exec_does_not_filter_changed_paths strict_int_rejects_bool parse_preserves_workspace_field guarded_parses_conflict_and_changed_paths guarded_mutation_source_collapses_falsy user_visible_strips_internal_error_prefix conflict_classifier_matches_code_or_marker">
+  <div class="module-head">
+    <div>
+      <h2>src/tool_api/parse.rs</h2>
+      <p class="path">module <code>tool_api::parse</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>40 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct GuardedCommon private struct GuardedCommon crates/eos-sandbox-port/src/tool_api/parse.rs base SandboxResultBase changed_path_kinds BTreeMap &lt; String , String &gt; mutation_source String status String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>GuardedCommon</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct GuardedCommon</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>SandboxResultBase</code></td></tr><tr><td>private</td><td>changed_path_kinds</td><td><code>BTreeMap &lt; String , String &gt;</code></td></tr><tr><td>private</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>private</td><td>status</td><td><code>String</code></td></tr></tbody></table>
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:322</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_request_identity_fields pub(crate) pub(crate) fn daemon_request_identity_fields (base : &amp; SandboxRequestBase) -&gt; JsonObject crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>daemon_request_identity_fields</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn daemon_request_identity_fields (base : &amp; SandboxRequestBase) -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:26</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn user_visible_error_message pub(crate) pub(crate) fn user_visible_error_message (message : &amp; str) -&gt; &amp; str crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>user_visible_error_message</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn user_visible_error_message (message : &amp; str) -&gt; &amp; str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:49</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_edit_conflict pub(crate) pub(crate) fn is_edit_conflict (err : &amp; SandboxPortError) -&gt; bool crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_edit_conflict</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn is_edit_conflict (err : &amp; SandboxPortError) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:81</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_read_file_result pub(crate) pub(crate) fn parse_read_file_result (response : &amp; JsonObject ,) -&gt; Result &lt; ReadFileResult , SandboxPortError &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_read_file_result</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_read_file_result (response : &amp; JsonObject ,) -&gt; Result &lt; ReadFileResult , SandboxPortError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:311</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_write_file_result pub(crate) pub(crate) fn parse_write_file_result (response : &amp; JsonObject ,) -&gt; Result &lt; WriteFileResult , SandboxPortError &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_write_file_result</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_write_file_result (response : &amp; JsonObject ,) -&gt; Result &lt; WriteFileResult , SandboxPortError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:349</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_edit_file_result pub(crate) pub(crate) fn parse_edit_file_result (response : &amp; JsonObject ,) -&gt; Result &lt; EditFileResult , SandboxPortError &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_edit_file_result</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_edit_file_result (response : &amp; JsonObject ,) -&gt; Result &lt; EditFileResult , SandboxPortError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:361</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_exec_command_result pub(crate) pub(crate) fn parse_exec_command_result (response : &amp; JsonObject ,) -&gt; Result &lt; ExecCommandResult , SandboxPortError &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_exec_command_result</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_exec_command_result (response : &amp; JsonObject ,) -&gt; Result &lt; ExecCommandResult , SandboxPortError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:374</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn matches_conflict private fn matches_conflict (err : &amp; SandboxPortError , codes : &amp; [&amp; str] , markers : &amp; [&amp; str]) -&gt; bool crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>matches_conflict</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn matches_conflict (err : &amp; SandboxPortError , codes : &amp; [&amp; str] , markers : &amp; [&amp; str]) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:70</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn py_str private fn py_str (value : &amp; Value) -&gt; String crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>py_str</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn py_str (value : &amp; Value) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:91</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn py_truthy_str private fn py_truthy_str (value : &amp; Value) -&gt; String crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>py_truthy_str</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn py_truthy_str (value : &amp; Value) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:103</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn get_bool private fn get_bool (map : &amp; JsonObject , key : &amp; str) -&gt; bool crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>get_bool</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn get_bool (map : &amp; JsonObject , key : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:122</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn get_string private fn get_string (map : &amp; JsonObject , key : &amp; str , default : &amp; str) -&gt; String crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>get_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn get_string (map : &amp; JsonObject , key : &amp; str , default : &amp; str) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:127</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn optional_string private fn optional_string (map : &amp; JsonObject , key : &amp; str) -&gt; Option &lt; String &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>optional_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn optional_string (map : &amp; JsonObject , key : &amp; str) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:138</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn truthy_or_empty private fn truthy_or_empty (map : &amp; JsonObject , key : &amp; str) -&gt; String crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>truthy_or_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn truthy_or_empty (map : &amp; JsonObject , key : &amp; str) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:147</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn truthy_string private fn truthy_string (map : &amp; JsonObject , key : &amp; str) -&gt; Option &lt; String &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>truthy_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn truthy_string (map : &amp; JsonObject , key : &amp; str) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:154</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strict_int private fn strict_int (map : &amp; JsonObject , key : &amp; str , default : i64) -&gt; Result &lt; i64 , SandboxPortError &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>strict_int</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn strict_int (map : &amp; JsonObject , key : &amp; str , default : i64) -&gt; Result &lt; i64 , SandboxPortError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:163</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_type_name private fn json_type_name (value : &amp; Value) -&gt; &amp; 'static str crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_type_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn json_type_name (value : &amp; Value) -&gt; &amp; 'static str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:183</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_path_tuple private fn parse_path_tuple (value : Option &lt; &amp; Value &gt;) -&gt; Vec &lt; String &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_path_tuple</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_path_tuple (value : Option &lt; &amp; Value &gt;) -&gt; Vec &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:194</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_path_list_unfiltered private fn parse_path_list_unfiltered (value : Option &lt; &amp; Value &gt;) -&gt; Vec &lt; String &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_path_list_unfiltered</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_path_list_unfiltered (value : Option &lt; &amp; Value &gt;) -&gt; Vec &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:208</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_changed_path_kinds private fn parse_changed_path_kinds (value : Option &lt; &amp; Value &gt;) -&gt; BTreeMap &lt; String , String &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_changed_path_kinds</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_changed_path_kinds (value : Option &lt; &amp; Value &gt;) -&gt; BTreeMap &lt; String , String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:217</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_changed_path_kinds_unfiltered private fn parse_changed_path_kinds_unfiltered (value : Option &lt; &amp; Value &gt;) -&gt; BTreeMap &lt; String , String &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_changed_path_kinds_unfiltered</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_changed_path_kinds_unfiltered (value : Option &lt; &amp; Value &gt;) -&gt; BTreeMap &lt; String , String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:231</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_conflict_info private fn parse_conflict_info (value : Option &lt; &amp; Value &gt;) -&gt; Option &lt; ConflictInfo &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_conflict_info</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_conflict_info (value : Option &lt; &amp; Value &gt;) -&gt; Option &lt; ConflictInfo &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:242</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_object private fn error_object (value : Option &lt; &amp; Value &gt;) -&gt; Option &lt; JsonObject &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_object</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn error_object (value : Option &lt; &amp; Value &gt;) -&gt; Option &lt; JsonObject &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:257</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_timing_map private fn parse_timing_map (value : Option &lt; &amp; Value &gt;) -&gt; BTreeMap &lt; String , f64 &gt; crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_timing_map</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_timing_map (value : Option &lt; &amp; Value &gt;) -&gt; BTreeMap &lt; String , f64 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:265</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_workspace private fn parse_workspace (response : &amp; JsonObject) -&gt; Workspace crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_workspace</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_workspace (response : &amp; JsonObject) -&gt; Workspace</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:281</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn simple_result_base private fn simple_result_base (response : &amp; JsonObject) -&gt; SandboxResultBase crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>simple_result_base</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn simple_result_base (response : &amp; JsonObject) -&gt; SandboxResultBase</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:296</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_guarded_common private fn parse_guarded_common (response : &amp; JsonObject) -&gt; GuardedCommon crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_guarded_common</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_guarded_common (response : &amp; JsonObject) -&gt; GuardedCommon</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:330</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn obj private fn obj (value : Value) -&gt; JsonObject crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>obj</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn obj (value : Value) -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:423</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn identity_envelope_has_top_level_caller_and_optional_invocation private fn identity_envelope_has_top_level_caller_and_optional_invocation () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>identity_envelope_has_top_level_caller_and_optional_invocation</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn identity_envelope_has_top_level_caller_and_optional_invocation ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:433</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_read_file_decodes_fields_and_timings private fn parse_read_file_decodes_fields_and_timings () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_read_file_decodes_fields_and_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_read_file_decodes_fields_and_timings ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:455</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_missing_success_and_exists_are_false private fn parse_missing_success_and_exists_are_false () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_missing_success_and_exists_are_false</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_missing_success_and_exists_are_false ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:473</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_drops_blank_paths_and_kinds private fn parse_drops_blank_paths_and_kinds () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_drops_blank_paths_and_kinds</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_drops_blank_paths_and_kinds ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:489</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_exec_derives_success_from_status private fn parse_exec_derives_success_from_status () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_exec_derives_success_from_status</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_exec_derives_success_from_status ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:507</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_exec_does_not_filter_changed_paths private fn parse_exec_does_not_filter_changed_paths () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_exec_does_not_filter_changed_paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_exec_does_not_filter_changed_paths ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:534</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strict_int_rejects_bool private fn strict_int_rejects_bool () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>strict_int_rejects_bool</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn strict_int_rejects_bool ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:548</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_preserves_workspace_field private fn parse_preserves_workspace_field () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_preserves_workspace_field</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_preserves_workspace_field ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:555</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn guarded_parses_conflict_and_changed_paths private fn guarded_parses_conflict_and_changed_paths () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>guarded_parses_conflict_and_changed_paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn guarded_parses_conflict_and_changed_paths ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:576</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn guarded_mutation_source_collapses_falsy private fn guarded_mutation_source_collapses_falsy () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>guarded_mutation_source_collapses_falsy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn guarded_mutation_source_collapses_falsy ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:595</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn user_visible_strips_internal_error_prefix private fn user_visible_strips_internal_error_prefix () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>user_visible_strips_internal_error_prefix</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn user_visible_strips_internal_error_prefix ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:616</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_classifier_matches_code_or_marker private fn conflict_classifier_matches_code_or_marker () crates/eos-sandbox-port/src/tool_api/parse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>conflict_classifier_matches_code_or_marker</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn conflict_classifier_matches_code_or_marker ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-port/src/tool_api/parse.rs:622</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-skills · src/bundled.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-skills File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>37</b><span>items</span></div>
+  <div><b>16</b><span>fields</span></div>
+  <div><b>11</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-skills.html"><span>bundled.rs</span><small>0/14</small></a></li><li><a class="file-link" href="eos-skills--src-definition-rs.html"><span>definition.rs</span><small>4/3</small></a></li><li><a class="file-link" href="eos-skills--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-skills--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-skills--src-loader-rs.html"><span>loader.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-skills--src-registry-rs.html"><span>registry.rs</span><small>1/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bundled crates/eos-skills/src/bundled.rs load_bundled_skills discover_references parse_skill_metadata frontmatter_str dir_name extension read_dir_sorted read_file discovers_only_md_references_keyed_by_stem malformed_frontmatter_uses_fallback_description description_falls_back_to_full_content_lines dotted_reference_stem_is_keyed empty_frontmatter_name_falls_back_to_dir_name skill_dir_without_skill_md_is_skipped_without_error">
+  <div class="module-head">
+    <div>
+      <h2>src/bundled.rs</h2>
+      <p class="path">module <code>bundled</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>14 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_bundled_skills pub(crate) pub(crate) fn load_bundled_skills (content_dir : &amp; Path ,) -&gt; Result &lt; Vec &lt; SkillDefinition &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_bundled_skills</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn load_bundled_skills (content_dir : &amp; Path ,) -&gt; Result &lt; Vec &lt; SkillDefinition &gt; , SkillLoadError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:23</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discover_references private fn discover_references (skill_dir : &amp; Path ,) -&gt; Result &lt; BTreeMap &lt; ReferenceName , String &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>discover_references</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn discover_references (skill_dir : &amp; Path ,) -&gt; Result &lt; BTreeMap &lt; ReferenceName , String &gt; , SkillLoadError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:54</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_skill_metadata private fn parse_skill_metadata (default_name : &amp; str , content : &amp; str) -&gt; (String , String) crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_skill_metadata</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_skill_metadata (default_name : &amp; str , content : &amp; str) -&gt; (String , String)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:76</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn frontmatter_str private fn frontmatter_str &lt; 'a &gt; (frontmatter : &amp; 'a serde_yaml :: Mapping , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>frontmatter_str</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn frontmatter_str &lt; 'a &gt; (frontmatter : &amp; 'a serde_yaml :: Mapping , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:121</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dir_name private fn dir_name (path : &amp; Path) -&gt; String crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dir_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn dir_name (path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:129</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extension private fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>extension</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:136</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_dir_sorted private fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_dir_sorted</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , SkillLoadError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:140</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_file private fn read_file (path : &amp; Path) -&gt; Result &lt; String , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn read_file (path : &amp; Path) -&gt; Result &lt; String , SkillLoadError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:158</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discovers_only_md_references_keyed_by_stem private fn discovers_only_md_references_keyed_by_stem () crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>discovers_only_md_references_keyed_by_stem</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn discovers_only_md_references_keyed_by_stem ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:172</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn malformed_frontmatter_uses_fallback_description private fn malformed_frontmatter_uses_fallback_description () crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>malformed_frontmatter_uses_fallback_description</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn malformed_frontmatter_uses_fallback_description ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:197</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn description_falls_back_to_full_content_lines private fn description_falls_back_to_full_content_lines () crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>description_falls_back_to_full_content_lines</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn description_falls_back_to_full_content_lines ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:218</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dotted_reference_stem_is_keyed private fn dotted_reference_stem_is_keyed () crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dotted_reference_stem_is_keyed</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn dotted_reference_stem_is_keyed ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:229</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_frontmatter_name_falls_back_to_dir_name private fn empty_frontmatter_name_falls_back_to_dir_name () crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>empty_frontmatter_name_falls_back_to_dir_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn empty_frontmatter_name_falls_back_to_dir_name ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:249</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_dir_without_skill_md_is_skipped_without_error private fn skill_dir_without_skill_md_is_skipped_without_error () crates/eos-skills/src/bundled.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>skill_dir_without_skill_md_is_skipped_without_error</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn skill_dir_without_skill_md_is_skipped_without_error ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-skills/src/bundled.rs:262</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

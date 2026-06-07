@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-def · src/validation.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-agent-def File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>55</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>17</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>2/3</small></a></li><li><a class="file-link active" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="validation crates/eos-agent-def/src/validation.rs role_has_context_builder check_context_recipe_role scan_skill_file find_submit_tokens def_with recipe_role_precheck skill_lint_detects_terminals skill_lint_dedupes_and_ignores_bare_prefix">
+  <div class="module-head">
+    <div>
+      <h2>src/validation.rs</h2>
+      <p class="path">module <code>validation</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>8 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_context_recipe_role pub pub fn check_context_recipe_role (definition : &amp; AgentDefinition) -&gt; Result &lt; () , AgentDefError &gt; crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>check_context_recipe_role</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn check_context_recipe_role (definition : &amp; AgentDefinition) -&gt; Result &lt; () , AgentDefError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:21</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn scan_skill_file pub pub fn scan_skill_file (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt; crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>scan_skill_file</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn scan_skill_file (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:46</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn role_has_context_builder private fn role_has_context_builder (role : AgentRole) -&gt; bool crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>role_has_context_builder</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn role_has_context_builder (role : AgentRole) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:13</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_submit_tokens private fn find_submit_tokens (body : &amp; str) -&gt; Vec &lt; String &gt; crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>find_submit_tokens</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn find_submit_tokens (body : &amp; str) -&gt; Vec &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:80</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn def_with private fn def_with (role : AgentRole , recipe : Option &lt; &amp; str &gt;) -&gt; AgentDefinition crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>def_with</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn def_with (role : AgentRole , recipe : Option &lt; &amp; str &gt;) -&gt; AgentDefinition</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:116</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recipe_role_precheck private fn recipe_role_precheck () crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>recipe_role_precheck</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn recipe_role_precheck ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:134</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_lint_detects_terminals private fn skill_lint_detects_terminals () crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>skill_lint_detects_terminals</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn skill_lint_detects_terminals ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:154</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_lint_dedupes_and_ignores_bare_prefix private fn skill_lint_dedupes_and_ignores_bare_prefix () crates/eos-agent-def/src/validation.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>skill_lint_dedupes_and_ignores_bare_prefix</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn skill_lint_dedupes_and_ignores_bare_prefix ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/validation.rs:170</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

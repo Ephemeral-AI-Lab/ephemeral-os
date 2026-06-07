@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/lease.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-layerstack File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>60</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link active" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lease crates/eos-layerstack/src/lease.rs LayerStackLeaseRecord LeaseRegistry SharedLeaseRegistry shared_registry_for_root lock_shared_registry lock_shared_registry_recover impl LeaseRegistry LayerRefKey impl From &lt; &amp; LayerRef &gt; for LayerRefKey impl From &lt; &amp; LayerRefKey &gt; for LayerRef new_lease_id shared_registries TestResult acquire_rejects_empty_owner_without_panicking">
+  <div class="module-head">
+    <div>
+      <h2>src/lease.rs</h2>
+      <p class="path">module <code>lease</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>3 impls</span>
+      <span>6 fns</span>
+      <span>8 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerStackLeaseRecord pub pub struct LayerStackLeaseRecord crates/eos-layerstack/src/lease.rs lease_id String manifest Manifest ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerStackLeaseRecord</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LayerStackLeaseRecord</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>lease_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>manifest</td><td><code>Manifest</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/lease.rs:24</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LeaseRegistry pub pub struct LeaseRegistry crates/eos-layerstack/src/lease.rs leases HashMap &lt; String , LayerStackLeaseRecord &gt; refcounts BTreeMap &lt; LayerRefKey , usize &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LeaseRegistry</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LeaseRegistry</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>leases</td><td><code>HashMap &lt; String , LayerStackLeaseRecord &gt;</code></td></tr><tr><td>private</td><td>refcounts</td><td><code>BTreeMap &lt; LayerRefKey , usize &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new () -&gt; Self</code></td></tr><tr><td>method</td><td>acquire</td><td><code>pub fn acquire (&amp; mut self , manifest : Manifest , owner_request_id : &amp; str ,) -&gt; Result &lt; LayerStackLeaseRecord , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>release</td><td><code>pub fn release (&amp; mut self , lease_id : &amp; str) -&gt; Option &lt; LayerStackLeaseRecord &gt;</code></td></tr><tr><td>method</td><td>leased_layers</td><td><code>pub fn leased_layers (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code></td></tr><tr><td>method</td><td>lease_head_layers</td><td><code>pub fn lease_head_layers (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code></td></tr><tr><td>method</td><td>active_count</td><td><code>pub fn active_count (&amp; self) -&gt; usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/lease.rs:31</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LayerRefKey private struct LayerRefKey crates/eos-layerstack/src/lease.rs layer_id String path String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerRefKey</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct LayerRefKey</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>layer_id</td><td><code>String</code></td></tr><tr><td>private</td><td>path</td><td><code>String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; LayerRef &gt; for LayerRefKey</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (layer : &amp; LayerRef) -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-layerstack/src/lease.rs:156</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type SharedLeaseRegistry pub(crate) pub(crate) type SharedLeaseRegistry = Arc &lt; Mutex &lt; LeaseRegistry &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>SharedLeaseRegistry</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) type SharedLeaseRegistry = Arc &lt; Mutex &lt; LeaseRegistry &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:41</p>
+</article><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:199</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_registry_for_root pub(crate) pub(crate) fn shared_registry_for_root (storage_root : &amp; Path ,) -&gt; Result &lt; SharedLeaseRegistry , LayerStackError &gt; crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>shared_registry_for_root</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn shared_registry_for_root (storage_root : &amp; Path ,) -&gt; Result &lt; SharedLeaseRegistry , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:43</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_shared_registry pub(crate) pub(crate) fn lock_shared_registry (registry : &amp; SharedLeaseRegistry ,) -&gt; Result &lt; MutexGuard &lt; '_ , LeaseRegistry &gt; , LayerStackError &gt; crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock_shared_registry</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn lock_shared_registry (registry : &amp; SharedLeaseRegistry ,) -&gt; Result &lt; MutexGuard &lt; '_ , LeaseRegistry &gt; , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:62</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_shared_registry_recover pub(crate) pub(crate) fn lock_shared_registry_recover (registry : &amp; SharedLeaseRegistry ,) -&gt; MutexGuard &lt; '_ , LeaseRegistry &gt; crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock_shared_registry_recover</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn lock_shared_registry_recover (registry : &amp; SharedLeaseRegistry ,) -&gt; MutexGuard &lt; '_ , LeaseRegistry &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:70</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_lease_id private fn new_lease_id () -&gt; String crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>new_lease_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn new_lease_id () -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:180</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_registries private fn shared_registries () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , SharedLeaseRegistry &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>shared_registries</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn shared_registries () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , SharedLeaseRegistry &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:190</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn acquire_rejects_empty_owner_without_panicking private fn acquire_rejects_empty_owner_without_panicking () -&gt; TestResult crates/eos-layerstack/src/lease.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>acquire_rejects_empty_owner_without_panicking</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn acquire_rejects_empty_owner_without_panicking () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/lease.rs:201</p>
+</article><div class="group-label">Other Implementations</div><article class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl From &lt; &amp; LayerRefKey &gt; for LayerRef private impl From &lt; &amp; LayerRefKey &gt; for LayerRef crates/eos-layerstack/src/lease.rs  from fn from (layer : &amp; LayerRefKey) -&gt; Self">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl From &lt; &amp; LayerRefKey &gt; for LayerRef</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl From &lt; &amp; LayerRefKey &gt; for LayerRef</code>
+  <div class="tags"><span>impl</span><span>trait-impl</span></div>
+  <h4>Methods</h4><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (layer : &amp; LayerRefKey) -&gt; Self</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/lease.rs:171</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -32,6 +32,7 @@ pub async fn run_agent(
         notifier,
         cancellation,
         foreground,
+        agent_run_registry,
         persist_agent_run,
         record_kind,
     } = input;
@@ -136,11 +137,6 @@ pub async fn run_agent(
             }
         }
     }
-    prepared
-        .background_finalizer
-        .finalize(&prepared.ctx, error.as_deref())
-        .await;
-
     let terminal_result = prepared.ctx.terminal_result.clone();
     publish_agent_run_completed(
         handles,
@@ -149,25 +145,50 @@ pub async fn run_agent(
         error.as_deref(),
     );
     publish_os_resource_sampled(handles, &prepared.ctx);
+
+    // The message-record handle lives only in `ctx` and is ALWAYS finished here
+    // (cancel-aware status): the loop is awaited, not aborted, so this is reached
+    // even on cooperative cancellation. A concurrent `cancel_agent_run` never
+    // finishes the message-record — it owns only the durable row + child teardown
+    // (spec §6.3 + finalization arbitration).
+    let cancelled = prepared.ctx.cancellation.is_cancel_requested();
     if let Some(message_record) = &prepared.ctx.message_record {
-        if let Err(err) = message_record
-            .finish(if error.is_some() {
-                NodeFinishStatus::Failed
-            } else {
-                NodeFinishStatus::Completed
-            })
-            .await
-        {
+        let status = if error.is_some() || cancelled {
+            NodeFinishStatus::Failed
+        } else {
+            NodeFinishStatus::Completed
+        };
+        if let Err(err) = message_record.finish(status).await {
             tracing::warn!(error = %err, "agent-run message-record finish failed");
         }
     }
-    finish_agent_run_if_requested(
-        handles,
-        persistence_requested,
-        &agent_run_id,
-        error.as_deref(),
-    )
-    .await;
+
+    // Claim the registry entry (`Running -> Claimed`). Whoever wins finalizes the
+    // `agent_run` row + child teardown; the loser no-ops. Unregistered helper/
+    // subagent runs (`None`) always win and finalize naturally.
+    let won = agent_run_registry
+        .as_ref()
+        .is_none_or(|registry| registry.begin_cancel(&agent_run_id).is_some());
+    if won {
+        prepared
+            .background_finalizer
+            .finalize(&prepared.ctx, error.as_deref())
+            .await;
+        finish_agent_run_if_requested(
+            handles,
+            persistence_requested,
+            &agent_run_id,
+            error.as_deref(),
+        )
+        .await;
+        if let Some(registry) = &agent_run_registry {
+            registry.finish_cancel(&agent_run_id);
+        }
+    } else {
+        // A concurrent `cancel_agent_run` claimed the entry and owns the row +
+        // child teardown; disarm our finalizer so it does not run a second one.
+        prepared.background_finalizer.disarm();
+    }
 
     AgentRunResult {
         terminal_result,

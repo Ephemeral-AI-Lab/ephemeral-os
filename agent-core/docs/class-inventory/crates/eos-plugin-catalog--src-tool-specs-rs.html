@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin-catalog · src/tool_specs.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-plugin-catalog File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>71</b><span>items</span></div>
+  <div><b>76</b><span>fields</span></div>
+  <div><b>13</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin-catalog.html"><span>discovery.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-frontmatter-rs.html"><span>frontmatter.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-manifest-rs.html"><span>manifest.rs</span><small>4/13</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-names-rs.html"><span>names.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-package-rs.html"><span>package.rs</span><small>0/13</small></a></li><li><a class="file-link active" href="eos-plugin-catalog--src-tool-specs-rs.html"><span>tool_specs.rs</span><small>11/9</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="tool_specs crates/eos-plugin-catalog/src/tool_specs.rs PluginToolSpec plugin_tool_specs spec default_true default_format_options HoverInput FindDefinitionsInput FindReferencesInput DiagnosticsInput QuerySymbolsInput RenameInput FormatInput CodeActionsInput ApplyCodeActionInput ApplyWorkspaceEditInput props_and_required assert_shape ten_lsp_specs_with_intents no_module_import_surface lsp_input_schema_snapshots">
+  <div class="module-head">
+    <div>
+      <h2>src/tool_specs.rs</h2>
+      <p class="path">module <code>tool_specs</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>11 types</span>
+      <span>0 impls</span>
+      <span>9 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginToolSpec pub pub struct PluginToolSpec crates/eos-plugin-catalog/src/tool_specs.rs name PluginToolName description &amp; 'static str input_schema RootSchema intent Intent ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginToolSpec</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginToolSpec</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>PluginToolName</code></td></tr><tr><td>pub</td><td>description</td><td><code>&amp; 'static str</code></td></tr><tr><td>pub</td><td>input_schema</td><td><code>RootSchema</code></td></tr><tr><td>pub</td><td>intent</td><td><code>Intent</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:25</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct HoverInput private struct HoverInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String line u32 character u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>HoverInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct HoverInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>line</td><td><code>u32</code></td></tr><tr><td>private</td><td>character</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:171</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct FindDefinitionsInput private struct FindDefinitionsInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String line u32 character u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FindDefinitionsInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct FindDefinitionsInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>line</td><td><code>u32</code></td></tr><tr><td>private</td><td>character</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:182</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct FindReferencesInput private struct FindReferencesInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String line u32 character u32 include_declaration bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FindReferencesInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct FindReferencesInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>line</td><td><code>u32</code></td></tr><tr><td>private</td><td>character</td><td><code>u32</code></td></tr><tr><td>private</td><td>include_declaration</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:193</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct DiagnosticsInput private struct DiagnosticsInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String wait_for_diagnostics bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DiagnosticsInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct DiagnosticsInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>wait_for_diagnostics</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:207</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct QuerySymbolsInput private struct QuerySymbolsInput crates/eos-plugin-catalog/src/tool_specs.rs query String file_path Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>QuerySymbolsInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct QuerySymbolsInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>query</td><td><code>String</code></td></tr><tr><td>private</td><td>file_path</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:217</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RenameInput private struct RenameInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String line u32 character u32 new_name String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RenameInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RenameInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>line</td><td><code>u32</code></td></tr><tr><td>private</td><td>character</td><td><code>u32</code></td></tr><tr><td>private</td><td>new_name</td><td><code>String</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:227</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct FormatInput private struct FormatInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String options JsonObject ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FormatInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct FormatInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>options</td><td><code>JsonObject</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:240</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CodeActionsInput private struct CodeActionsInput crates/eos-plugin-catalog/src/tool_specs.rs file_path String line u32 character u32 range Option &lt; JsonObject &gt; diagnostics Vec &lt; JsonObject &gt; only Option &lt; Vec &lt; String &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CodeActionsInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct CodeActionsInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file_path</td><td><code>String</code></td></tr><tr><td>private</td><td>line</td><td><code>u32</code></td></tr><tr><td>private</td><td>character</td><td><code>u32</code></td></tr><tr><td>private</td><td>range</td><td><code>Option &lt; JsonObject &gt;</code></td></tr><tr><td>private</td><td>diagnostics</td><td><code>Vec &lt; JsonObject &gt;</code></td></tr><tr><td>private</td><td>only</td><td><code>Option &lt; Vec &lt; String &gt; &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:250</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ApplyCodeActionInput private struct ApplyCodeActionInput crates/eos-plugin-catalog/src/tool_specs.rs action JsonObject ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ApplyCodeActionInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ApplyCodeActionInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>action</td><td><code>JsonObject</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:272</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ApplyWorkspaceEditInput private struct ApplyWorkspaceEditInput crates/eos-plugin-catalog/src/tool_specs.rs edit JsonObject ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ApplyWorkspaceEditInput</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ApplyWorkspaceEditInput</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>edit</td><td><code>JsonObject</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:279</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_tool_specs pub pub fn plugin_tool_specs () -&gt; Vec &lt; PluginToolSpec &gt; crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_tool_specs</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn plugin_tool_specs () -&gt; Vec &lt; PluginToolSpec &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:41</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spec private fn spec (name : &amp; 'static str , description : &amp; 'static str , input_schema : RootSchema , intent : Intent ,) -&gt; PluginToolSpec crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spec</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn spec (name : &amp; 'static str , description : &amp; 'static str , input_schema : RootSchema , intent : Intent ,) -&gt; PluginToolSpec</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:109</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_true private fn default_true () -&gt; bool crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_true</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn default_true () -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:155</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_format_options private fn default_format_options () -&gt; JsonObject crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_format_options</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn default_format_options () -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:159</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn props_and_required private fn props_and_required (schema : &amp; RootSchema) -&gt; (BTreeSet &lt; String &gt; , BTreeSet &lt; String &gt;) crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>props_and_required</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn props_and_required (schema : &amp; RootSchema) -&gt; (BTreeSet &lt; String &gt; , BTreeSet &lt; String &gt;)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:292</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_shape private fn assert_shape (schema : &amp; RootSchema , props : &amp; [&amp; str] , required : &amp; [&amp; str]) crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>assert_shape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn assert_shape (schema : &amp; RootSchema , props : &amp; [&amp; str] , required : &amp; [&amp; str])</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:311</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ten_lsp_specs_with_intents private fn ten_lsp_specs_with_intents () crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ten_lsp_specs_with_intents</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ten_lsp_specs_with_intents ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:322</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn no_module_import_surface private fn no_module_import_surface () crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>no_module_import_surface</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn no_module_import_surface ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:362</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_input_schema_snapshots private fn lsp_input_schema_snapshots () crates/eos-plugin-catalog/src/tool_specs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_input_schema_snapshots</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_input_schema_snapshots ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/tool_specs.rs:373</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

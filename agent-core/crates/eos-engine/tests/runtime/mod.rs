@@ -21,10 +21,10 @@ use eos_testkit::{
     FakeTransport,
 };
 use eos_tools::{
-    BackgroundInflightReport, BackgroundSupervisorPort, ExecutionMetadata, NotificationSink,
-    OutputShape, RegisteredTool, SandboxToolService, SkillToolService, SpawnedSubagent,
-    StartedSubagent, StartedWorkflowHandle, SystemNotification, ToolConfigSet, ToolError,
-    ToolExecutor, ToolIntent, ToolName, ToolRegistry, ToolResult, WorkflowControlPort,
+    BackgroundInflightReport, BackgroundSupervisorPort, CancelPort, ExecutionMetadata,
+    NotificationSink, OutputShape, RegisteredTool, SandboxToolService, SkillToolService,
+    SpawnedSubagent, StartedSubagent, StartedWorkflowHandle, SystemNotification, ToolConfigSet,
+    ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry, ToolResult, WorkflowControlPort,
 };
 use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::json;
@@ -379,6 +379,7 @@ fn input(
         notifier: eos_engine::NotificationService::new(),
         cancellation: eos_engine::AgentRunCancellation::new(),
         foreground,
+        agent_run_registry: None,
         persist_agent_run: true,
         record_kind: AgentRunRecordKind::Root,
     }
@@ -718,9 +719,12 @@ async fn run_agent_routes_ask_advisor_through_child_advisor_run() {
 // AgentRunControl / NotificationService; the registry arbitrates finalization.
 // ---------------------------------------------------------------------------
 
-fn control_factory() -> AgentRunControlFactory {
-    let handles = EngineRunHandles {
-        agent_run_store: Arc::new(RecordingAgentRunStore::default()),
+fn engine_handles(store: Arc<RecordingAgentRunStore>) -> EngineRunHandles {
+    EngineRunHandles {
+        agent_run_store: store,
+        // NoopLlmClient yields an empty stream → the loop reaches finalization with
+        // a framework error; the test asserts the finalization arbitration, not the
+        // run outcome.
         llm_client: Arc::new(NoopLlmClient),
         event_source_factory: None,
         agent_registry: Arc::new(Vec::new().into_iter().collect::<AgentRegistry>()),
@@ -734,7 +738,10 @@ fn control_factory() -> AgentRunControlFactory {
         audit: Arc::new(NoopAuditSink),
         message_records: None,
         workspace_root: "/tmp".to_owned(),
-    };
+    }
+}
+
+fn control_factory_for(handles: EngineRunHandles) -> AgentRunControlFactory {
     AgentRunControlFactory::new(
         ForegroundExecutorFactory,
         // A long interval keeps the per-run heartbeat idle for the duration of
@@ -745,6 +752,122 @@ fn control_factory() -> AgentRunControlFactory {
             std::time::Duration::from_secs(3600),
         ),
     )
+}
+
+fn control_factory() -> AgentRunControlFactory {
+    control_factory_for(engine_handles(Arc::new(RecordingAgentRunStore::default())))
+}
+
+/// A `TaskStore` that does nothing — `cancel_agent_run` never touches it, and the
+/// cancel test exercises only the agent-run arbitration.
+#[derive(Debug, Default)]
+struct NoopTaskStore;
+
+impl Sealed for NoopTaskStore {}
+
+#[async_trait]
+impl eos_state::TaskStore for NoopTaskStore {
+    async fn insert_task(&self, _task: &eos_state::Task) -> Result<(), CoreError> {
+        Ok(())
+    }
+    async fn get(&self, _id: &TaskId) -> Result<Option<eos_state::Task>, CoreError> {
+        Ok(None)
+    }
+    async fn set_task_status_if_current(
+        &self,
+        _id: &TaskId,
+        _expected: eos_state::TaskStatus,
+        _status: eos_state::TaskStatus,
+        _outcomes: Option<&[eos_state::ExecutionTaskOutcome]>,
+        _terminal_tool_result: Option<&JsonObject>,
+    ) -> Result<Option<eos_state::Task>, CoreError> {
+        Ok(None)
+    }
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        _attempt_id: &eos_state::AttemptId,
+        _ids: &[TaskId],
+    ) -> Result<(), CoreError> {
+        Ok(())
+    }
+    async fn list_for_request(
+        &self,
+        _request_id: &eos_types::RequestId,
+    ) -> Result<Vec<eos_state::Task>, CoreError> {
+        Ok(Vec::new())
+    }
+}
+
+/// Spec §6.4 + §12.3 (finalization arbitration, the advisor's gate test):
+/// `run_agent` and a concurrent `cancel_agent_run` race to finalize one
+/// registered run. Under *any* interleaving the `Running -> Claimed` CAS lets
+/// exactly one side finalize the durable row, and a second cancel is a clean
+/// no-op.
+#[tokio::test]
+async fn concurrent_cancel_and_run_finalize_exactly_once() {
+    let store = Arc::new(RecordingAgentRunStore::default());
+    let handles = engine_handles(store.clone());
+    // The control's finalization store must be the SAME store `run_agent` writes,
+    // so "exactly one finish_run" is directly assertable.
+    let factory = control_factory_for(handles.clone());
+    let registry = AgentRunRegistry::new();
+    let run_id: AgentRunId = "run-cancel".parse().expect("run id");
+    let task_id: TaskId = "task-cancel".parse().expect("task id");
+
+    let control = factory.persisted(run_id.clone(), task_id.clone());
+    registry.insert(control.clone());
+
+    let cancel_port = eos_engine::EngineCancelPort::new(
+        registry.clone(),
+        Arc::new(NoopTaskStore),
+        Arc::new(std::sync::OnceLock::new()),
+    );
+
+    let input = AgentRunInput {
+        agent: agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]),
+        initial_messages: vec![eos_llm_client::Message::from_user_text("start")],
+        task_id: Some(task_id.clone()),
+        agent_run_id: run_id.clone(),
+        tool_metadata: metadata(),
+        attempt_submission: None,
+        workflow_control: None,
+        background_supervisor: None,
+        command_session_supervisor: None,
+        notifier: control.notifications(),
+        cancellation: control.cancellation(),
+        foreground: control.foreground(),
+        agent_run_registry: Some(registry.clone()),
+        persist_agent_run: true,
+        record_kind: AgentRunRecordKind::Root,
+    };
+
+    // Race run_agent against cancel. The CAS guarantees exactly one finalizer.
+    let run_fut = run_agent(&handles, input, None);
+    let cancel_fut = cancel_port.cancel_agent_run(&run_id, "external cancel");
+    let (_run, cancel_res) = tokio::join!(run_fut, cancel_fut);
+    cancel_res.expect("cancel_agent_run ok");
+
+    assert_eq!(
+        store.finishes().len(),
+        1,
+        "exactly one finalizer (run_agent OR cancel) finishes the durable row"
+    );
+    assert!(
+        registry.get(&run_id).is_none(),
+        "the live-run entry is removed after finalization"
+    );
+
+    // A second cancel sees no live entry and is a clean no-op.
+    cancel_port
+        .cancel_agent_run(&run_id, "again")
+        .await
+        .expect("second cancel is a no-op");
+    assert_eq!(
+        store.finishes().len(),
+        1,
+        "second cancel does not re-finalize"
+    );
+    drop(control);
 }
 
 /// Spec §17 (Runtime Wiring + Background Notifications): two live runs own

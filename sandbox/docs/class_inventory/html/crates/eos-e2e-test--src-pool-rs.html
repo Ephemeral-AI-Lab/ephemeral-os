@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-e2e-test · src/pool.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-e2e-test File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>57</b><span>items</span></div>
+  <div><b>27</b><span>fields</span></div>
+  <div><b>44</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link active" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="pool crates/eos-e2e-test/src/pool.rs Node Inner NodePool impl NodePool NodeLease impl NodeLease &lt; 'p &gt; impl Drop for NodeLease &lt; '_ &gt; cap_for reap_stale_containers">
+  <div class="module-head">
+    <div>
+      <h2>src/pool.rs</h2>
+      <p class="path">module <code>pool</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>3 impls</span>
+      <span>2 fns</span>
+      <span>19 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct NodePool pub pub struct NodePool crates/eos-e2e-test/src/pool.rs config Config config_yaml String inner Mutex &lt; Inner &gt; cvar Condvar ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NodePool</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct NodePool</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>config</td><td><code>Config</code></td></tr><tr><td>private</td><td>config_yaml</td><td><code>String</code></td></tr><tr><td>private</td><td>inner</td><td><code>Mutex &lt; Inner &gt;</code></td></tr><tr><td>private</td><td>cvar</td><td><code>Condvar</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (config : Config , config_yaml : String) -&gt; Self</code></td></tr><tr><td>method</td><td>cap</td><td><code>fn cap (&amp; self) -&gt; usize</code></td></tr><tr><td>method</td><td>workload</td><td><code>pub fn workload (&amp; self) -&gt; &amp; WorkloadConfig</code></td></tr><tr><td>method</td><td>lock</td><td><code>fn lock (&amp; self) -&gt; MutexGuard &lt; '_ , Inner &gt;</code></td></tr><tr><td>method</td><td>acquire</td><td><code>pub fn acquire (&amp; self) -&gt; Result &lt; NodeLease &lt; '_ &gt; &gt;</code></td></tr><tr><td>method</td><td>take_node</td><td><code>fn take_node (&amp; self) -&gt; Result &lt; Node &gt;</code></td></tr><tr><td>method</td><td>give_back</td><td><code>fn give_back (&amp; self , node : Node , recycle : bool)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-e2e-test/src/pool.rs:32</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct NodeLease pub pub struct NodeLease&lt; 'p &gt; crates/eos-e2e-test/src/pool.rs pool &amp; 'p NodePool node Option &lt; Node &gt; stack_root String workspace_root String caller_id String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NodeLease</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct NodeLease&lt; 'p &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pool</td><td><code>&amp; 'p NodePool</code></td></tr><tr><td>private</td><td>node</td><td><code>Option &lt; Node &gt;</code></td></tr><tr><td>private</td><td>stack_root</td><td><code>String</code></td></tr><tr><td>private</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>private</td><td>caller_id</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>node</td><td><code>fn node (&amp; self) -&gt; &amp; Node</code></td></tr><tr><td>method</td><td>client</td><td><code>pub fn client (&amp; self) -&gt; &amp; ProtocolClient</code></td></tr><tr><td>method</td><td>container</td><td><code>pub fn container (&amp; self) -&gt; &amp; DaemonContainer</code></td></tr><tr><td>method</td><td>root</td><td><code>pub fn root (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>workspace_root</td><td><code>pub fn workspace_root (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>caller_id</td><td><code>pub fn caller_id (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>call</td><td><code>pub fn call (&amp; self , op : &amp; str , args : Value) -&gt; Result &lt; Value &gt;</code></td></tr><tr><td>method</td><td>call_ok</td><td><code>pub fn call_ok (&amp; self , op : &amp; str , args : Value) -&gt; Result &lt; Value &gt;</code></td></tr><tr><td>method</td><td>audit_tap</td><td><code>pub fn audit_tap (&amp; self) -&gt; Result &lt; AuditTap &gt;</code></td></tr><tr><td>method</td><td>restart_daemon</td><td><code>pub fn restart_daemon (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>associated-fn</td><td>open</td><td><code>fn open (pool : &amp; 'p NodePool , mut node : Node) -&gt; Result &lt; Self , Box &lt; (Node , anyhow :: Error) &gt; &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for NodeLease &lt; '_ &gt;</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-e2e-test/src/pool.rs:150</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Node private struct Node crates/eos-e2e-test/src/pool.rs container DaemonContainer checkouts usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Node</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct Node</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>container</td><td><code>DaemonContainer</code></td></tr><tr><td>private</td><td>checkouts</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-e2e-test/src/pool.rs:22</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Inner private struct Inner crates/eos-e2e-test/src/pool.rs available Vec &lt; Node &gt; created usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Inner</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct Inner</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>available</td><td><code>Vec &lt; Node &gt;</code></td></tr><tr><td>private</td><td>created</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-e2e-test/src/pool.rs:27</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cap_for private fn cap_for (config : &amp; Config) -&gt; usize crates/eos-e2e-test/src/pool.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cap_for</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn cap_for (config : &amp; Config) -&gt; usize</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-e2e-test/src/pool.rs:311</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_stale_containers private fn reap_stale_containers () crates/eos-e2e-test/src/pool.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reap_stale_containers</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn reap_stale_containers ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-e2e-test/src/pool.rs:318</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-message-records · src/io.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-agent-message-records File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>41</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-message-records.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link active" href="eos-agent-message-records--src-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="io crates/eos-agent-message-records/src/io.rs MessageRow MessageRowOwned append_message_rows append_initial_message_rows append_rows append_event next_event_seq read_bytes_after read_events_after file_len_or_zero role_wire">
+  <div class="module-head">
+    <div>
+      <h2>src/io.rs</h2>
+      <p class="path">module <code>io</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>0 impls</span>
+      <span>9 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MessageRow private struct MessageRow&lt; 'a &gt; crates/eos-agent-message-records/src/io.rs row_type &amp; 'static str role &amp; 'static str content &amp; 'a [ContentBlock] ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>MessageRow</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct MessageRow&lt; 'a &gt;</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>row_type</td><td><code>&amp; 'static str</code></td></tr><tr><td>private</td><td>role</td><td><code>&amp; 'static str</code></td></tr><tr><td>private</td><td>content</td><td><code>&amp; 'a [ContentBlock]</code></td></tr></tbody></table>
+  <p class="source">crates/eos-agent-message-records/src/io.rs:11</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MessageRowOwned private struct MessageRowOwned crates/eos-agent-message-records/src/io.rs row_type &amp; 'static str role &amp; 'static str content Vec &lt; ContentBlock &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>MessageRowOwned</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct MessageRowOwned</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>row_type</td><td><code>&amp; 'static str</code></td></tr><tr><td>private</td><td>role</td><td><code>&amp; 'static str</code></td></tr><tr><td>private</td><td>content</td><td><code>Vec &lt; ContentBlock &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-agent-message-records/src/io.rs:19</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_message_rows pub(crate) pub(crate) async fn append_message_rows (path : &amp; Path , row_type : &amp; 'static str , messages : &amp; [Message] ,) -&gt; Result &lt; MessageAppendRange &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_message_rows</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn append_message_rows (path : &amp; Path , row_type : &amp; 'static str , messages : &amp; [Message] ,) -&gt; Result &lt; MessageAppendRange &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:27</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_initial_message_rows pub(crate) pub(crate) async fn append_initial_message_rows (path : &amp; Path , system_prompt : &amp; str , initial_messages : &amp; [Message] ,) -&gt; Result &lt; MessageAppendRange &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_initial_message_rows</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn append_initial_message_rows (path : &amp; Path , system_prompt : &amp; str , initial_messages : &amp; [Message] ,) -&gt; Result &lt; MessageAppendRange &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:43</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_event pub(crate) pub(crate) async fn append_event (path : &amp; Path , kind : String , payload : JsonObject) -&gt; Result &lt; () &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_event</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn append_event (path : &amp; Path , kind : String , payload : JsonObject) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:95</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_bytes_after pub(crate) pub(crate) async fn read_bytes_after (path : &amp; Path , after_byte : u64) -&gt; Result &lt; RecordBytes &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_bytes_after</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn read_bytes_after (path : &amp; Path , after_byte : u64) -&gt; Result &lt; RecordBytes &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:135</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_events_after pub(crate) pub(crate) async fn read_events_after (path : &amp; Path , after_seq : u64) -&gt; Result &lt; Vec &lt; NodeEvent &gt; &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_events_after</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn read_events_after (path : &amp; Path , after_seq : u64) -&gt; Result &lt; Vec &lt; NodeEvent &gt; &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:159</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_rows private async fn append_rows &lt; T : Serialize &gt; (path : &amp; Path , rows : &amp; [T]) -&gt; Result &lt; MessageAppendRange &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_rows</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn append_rows &lt; T : Serialize &gt; (path : &amp; Path , rows : &amp; [T]) -&gt; Result &lt; MessageAppendRange &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:64</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_event_seq private async fn next_event_seq (path : &amp; Path) -&gt; Result &lt; u64 &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>next_event_seq</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn next_event_seq (path : &amp; Path) -&gt; Result &lt; u64 &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:118</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn file_len_or_zero private async fn file_len_or_zero (path : &amp; Path) -&gt; Result &lt; u64 &gt; crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>file_len_or_zero</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn file_len_or_zero (path : &amp; Path) -&gt; Result &lt; u64 &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:178</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn role_wire private fn role_wire (role : MessageRole) -&gt; &amp; 'static str crates/eos-agent-message-records/src/io.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>role_wire</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn role_wire (role : MessageRole) -&gt; &amp; 'static str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/io.rs:186</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

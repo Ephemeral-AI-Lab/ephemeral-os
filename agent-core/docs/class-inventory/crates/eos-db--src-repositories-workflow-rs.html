@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-db · src/repositories/workflow.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-db File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>90</b><span>items</span></div>
+  <div><b>113</b><span>fields</span></div>
+  <div><b>57</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>composition.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="repositories::workflow crates/eos-db/src/repositories/workflow.rs SqlWorkflowStore impl SqlWorkflowStore impl Sealed for SqlWorkflowStore impl WorkflowStore for SqlWorkflowStore">
+  <div class="module-head">
+    <div>
+      <h2>src/repositories/workflow.rs</h2>
+      <p class="path">module <code>repositories::workflow</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>3 impls</span>
+      <span>0 fns</span>
+      <span>6 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SqlWorkflowStore pub pub struct SqlWorkflowStore crates/eos-db/src/repositories/workflow.rs pool SqlitePool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SqlWorkflowStore</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct SqlWorkflowStore</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pool</td><td><code>SqlitePool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new (pool : SqlitePool) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for SqlWorkflowStore</code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowStore for SqlWorkflowStore</code></summary><table><tbody><tr><td>method</td><td>insert</td><td><code>async fn insert (&amp; self , request_id : &amp; RequestId , parent_task_id : &amp; TaskId , workflow_goal : &amp; str ,) -&gt; Result &lt; Workflow , CoreError &gt;</code></td></tr><tr><td>method</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; WorkflowId) -&gt; Result &lt; Option &lt; Workflow &gt; , CoreError &gt;</code></td></tr><tr><td>method</td><td>append_iteration_id</td><td><code>async fn append_iteration_id (&amp; self , id : &amp; WorkflowId , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Workflow , CoreError &gt;</code></td></tr><tr><td>method</td><td>set_status</td><td><code>async fn set_status (&amp; self , id : &amp; WorkflowId , status : WorkflowStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Workflow , CoreError &gt;</code></td></tr><tr><td>method</td><td>list_for_parent_task</td><td><code>async fn list_for_parent_task (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; Result &lt; Vec &lt; Workflow &gt; , CoreError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-db/src/repositories/workflow.rs:15</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

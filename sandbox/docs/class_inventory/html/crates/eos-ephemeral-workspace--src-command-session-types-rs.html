@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-ephemeral-workspace · src/command_session/types.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-ephemeral-workspace File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>70</b><span>items</span></div>
+  <div><b>87</b><span>fields</span></div>
+  <div><b>40</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-ephemeral-workspace.html"><span>capture.rs</span><small>1/2</small></a></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html"><span>finalize.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-policy-rs.html"><span>policy.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-prepare-rs.html"><span>prepare.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="eos-ephemeral-workspace--src-command-session-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-ephemeral-workspace--src-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="command_session::types crates/eos-ephemeral-workspace/src/command_session/types.rs EphemeralCommandPrepareContext EphemeralCommandFinalizeContext EphemeralCommandSessionPort">
+  <div class="module-head">
+    <div>
+      <h2>src/command_session/types.rs</h2>
+      <p class="path">module <code>command_session::types</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>5 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralCommandPrepareContext pub pub struct EphemeralCommandPrepareContext crates/eos-ephemeral-workspace/src/command_session/types.rs layer_stack_root PathBuf workspace_root PathBuf writable_root PathBuf session_dir PathBuf final_path PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EphemeralCommandPrepareContext</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct EphemeralCommandPrepareContext</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>writable_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>session_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/types.rs:11</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralCommandFinalizeContext pub pub struct EphemeralCommandFinalizeContext crates/eos-ephemeral-workspace/src/command_session/types.rs workspace EphemeralWorkspace base_timings WorkspaceTimings ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EphemeralCommandFinalizeContext</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct EphemeralCommandFinalizeContext</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace</td><td><code>EphemeralWorkspace</code></td></tr><tr><td>pub</td><td>base_timings</td><td><code>WorkspaceTimings</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/types.rs:21</p>
+</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait EphemeralCommandSessionPort pub pub trait EphemeralCommandSessionPort crates/eos-ephemeral-workspace/src/command_session/types.rs  prepare_context fn prepare_context (&amp; self , command_session_id : &amp; str ,) -&gt; Result &lt; EphemeralCommandPrepareContext , WorkspaceApiError &gt; acquire_snapshot fn acquire_snapshot (&amp; self , request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , EphemeralWorkspaceError &gt; release_snapshot fn release_snapshot (&amp; self , lease_id : &amp; str) -&gt; Result &lt; () , EphemeralWorkspaceError &gt; base_timings fn base_timings (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt; publish_upperdir_changes fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>EphemeralCommandSessionPort</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait EphemeralCommandSessionPort</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr><td>required</td><td>prepare_context</td><td><code>fn prepare_context (&amp; self , command_session_id : &amp; str ,) -&gt; Result &lt; EphemeralCommandPrepareContext , WorkspaceApiError &gt;</code></td></tr><tr><td>required</td><td>acquire_snapshot</td><td><code>fn acquire_snapshot (&amp; self , request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , EphemeralWorkspaceError &gt;</code></td></tr><tr><td>required</td><td>release_snapshot</td><td><code>fn release_snapshot (&amp; self , lease_id : &amp; str) -&gt; Result &lt; () , EphemeralWorkspaceError &gt;</code></td></tr><tr><td>required</td><td>base_timings</td><td><code>fn base_timings (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt;</code></td></tr><tr><td>required</td><td>publish_upperdir_changes</td><td><code>fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/types.rs:28</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

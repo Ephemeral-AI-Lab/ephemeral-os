@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/loader.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>87</b><span>items</span></div>
+  <div><b>48</b><span>fields</span></div>
+  <div><b>37</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>attempt.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-config--src-configs-database-rs.html"><span>database.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-models-rs.html"><span>models.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-providers-rs.html"><span>providers.rs</span><small>8/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-runtime-rs.html"><span>runtime.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-configs-workflow-rs.html"><span>workflow.rs</span><small>1/4</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-config--src-loader-rs.html"><span>loader.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-config--src-markdown-rs.html"><span>markdown.rs</span><small>0/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="loader crates/eos-config/src/loader.rs load load_with_override baseline_path local_override_path config_dir load_layers read_yaml deep_merge temp_yaml test_override_merges_then_section_deserializes test_missing_section_errors test_unknown_field_rejected">
+  <div class="module-head">
+    <div>
+      <h2>src/loader.rs</h2>
+      <p class="path">module <code>loader</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>12 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load pub pub fn load () -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn load () -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:16</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_with_override pub pub fn load_with_override (override_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_with_override</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn load_with_override (override_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:26</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn baseline_path private fn baseline_path () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>baseline_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn baseline_path () -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:34</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn local_override_path private fn local_override_path () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>local_override_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn local_override_path () -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:39</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_dir private fn config_dir () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>config_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn config_dir () -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:44</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_layers private fn load_layers (paths : &amp; [PathBuf]) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_layers</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_layers (paths : &amp; [PathBuf]) -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:53</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_yaml private fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_yaml</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:65</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deep_merge private fn deep_merge (base : &amp; mut Value , overlay : Value) crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>deep_merge</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn deep_merge (base : &amp; mut Value , overlay : Value)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:75</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn temp_yaml private fn temp_yaml (name : &amp; str , content : &amp; str) -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>temp_yaml</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn temp_yaml (name : &amp; str , content : &amp; str) -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:99</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_override_merges_then_section_deserializes private fn test_override_merges_then_section_deserializes () crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>test_override_merges_then_section_deserializes</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn test_override_merges_then_section_deserializes ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:109</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_missing_section_errors private fn test_missing_section_errors () crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>test_missing_section_errors</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn test_missing_section_errors ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:129</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_unknown_field_rejected private fn test_unknown_field_rejected () crates/eos-config/src/loader.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>test_unknown_field_rejected</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn test_unknown_field_rejected ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/loader.rs:139</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

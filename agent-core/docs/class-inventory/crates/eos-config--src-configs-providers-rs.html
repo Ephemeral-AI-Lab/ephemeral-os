@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/configs/providers.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>87</b><span>items</span></div>
+  <div><b>48</b><span>fields</span></div>
+  <div><b>37</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>attempt.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-config--src-configs-database-rs.html"><span>database.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-models-rs.html"><span>models.rs</span><small>2/5</small></a></li><li><a class="file-link active" href="eos-config--src-configs-providers-rs.html"><span>providers.rs</span><small>8/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-runtime-rs.html"><span>runtime.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-configs-workflow-rs.html"><span>workflow.rs</span><small>1/4</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-loader-rs.html"><span>loader.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-config--src-markdown-rs.html"><span>markdown.rs</span><small>0/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::providers crates/eos-config/src/configs/providers.rs RetryConfig impl Default for RetryConfig impl RetryConfig SecretConfigValue impl SecretConfigValue impl std :: fmt :: Debug for SecretConfigValue impl Serialize for SecretConfigValue impl Deserialize &lt; 'de &gt; for SecretConfigValue ProviderKind OpenAiApiConfig impl Default for OpenAiApiConfig AnthropicApiConfig impl Default for AnthropicApiConfig CodexCodingPlanConfig impl Default for CodexCodingPlanConfig ClaudeCodingPlanConfig impl Default for ClaudeCodingPlanConfig ProvidersConfig impl Default for ProvidersConfig impl ProvidersConfig default_openai_api_base_url default_anthropic_api_base_url default_codex_coding_plan_base_url require_non_empty require_secret require_active_model defaults_are_set provider_defaults_are_unconfigured_and_non_secret deserializes_claude_coding_plan_local_config deserializes_codex_coding_plan_local_config active_provider_requires_secret active_provider_requires_active_model secret_debug_and_serialize_are_redacted">
+  <div class="module-head">
+    <div>
+      <h2>src/configs/providers.rs</h2>
+      <p class="path">module <code>configs::providers</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>8 types</span>
+      <span>12 impls</span>
+      <span>13 fns</span>
+      <span>15 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RetryConfig pub pub struct RetryConfig crates/eos-config/src/configs/providers.rs max_retries u32 base_delay_s f64 max_delay_s f64 status_codes BTreeSet &lt; u16 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RetryConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct RetryConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>max_retries</td><td><code>u32</code></td></tr><tr><td>pub</td><td>base_delay_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>max_delay_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>status_codes</td><td><code>BTreeSet &lt; u16 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for RetryConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:12</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SecretConfigValue pub pub struct SecretConfigValue crates/eos-config/src/configs/providers.rs 0 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SecretConfigValue</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct SecretConfigValue</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>expose_secret</td><td><code>pub fn expose_secret (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>is_empty</td><td><code>pub fn is_empty (&amp; self) -&gt; bool</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for SecretConfigValue</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl Serialize for SecretConfigValue</code></summary><table><tbody><tr><td>method</td><td>serialize</td><td><code>fn serialize &lt; S &gt; (&amp; self , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : Serializer ,</code></td></tr></tbody></table></details><details><summary><code>impl Deserialize &lt; 'de &gt; for SecretConfigValue</code></summary><table><tbody><tr><td>associated-fn</td><td>deserialize</td><td><code>fn deserialize &lt; D &gt; (deserializer : D) -&gt; Result &lt; Self , D :: Error &gt; where D : Deserializer &lt; 'de &gt; ,</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:55</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OpenAiApiConfig pub pub struct OpenAiApiConfig crates/eos-config/src/configs/providers.rs base_url String api_key Option &lt; SecretConfigValue &gt; models ModelsConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OpenAiApiConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct OpenAiApiConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>base_url</td><td><code>String</code></td></tr><tr><td>pub</td><td>api_key</td><td><code>Option &lt; SecretConfigValue &gt;</code></td></tr><tr><td>pub</td><td>models</td><td><code>ModelsConfig</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for OpenAiApiConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:115</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AnthropicApiConfig pub pub struct AnthropicApiConfig crates/eos-config/src/configs/providers.rs base_url String api_key Option &lt; SecretConfigValue &gt; models ModelsConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AnthropicApiConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct AnthropicApiConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>base_url</td><td><code>String</code></td></tr><tr><td>pub</td><td>api_key</td><td><code>Option &lt; SecretConfigValue &gt;</code></td></tr><tr><td>pub</td><td>models</td><td><code>ModelsConfig</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for AnthropicApiConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:141</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CodexCodingPlanConfig pub pub struct CodexCodingPlanConfig crates/eos-config/src/configs/providers.rs base_url String access_token Option &lt; SecretConfigValue &gt; models ModelsConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CodexCodingPlanConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct CodexCodingPlanConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>base_url</td><td><code>String</code></td></tr><tr><td>pub</td><td>access_token</td><td><code>Option &lt; SecretConfigValue &gt;</code></td></tr><tr><td>pub</td><td>models</td><td><code>ModelsConfig</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for CodexCodingPlanConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:167</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ClaudeCodingPlanConfig pub pub struct ClaudeCodingPlanConfig crates/eos-config/src/configs/providers.rs base_url String access_token Option &lt; SecretConfigValue &gt; models ModelsConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ClaudeCodingPlanConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ClaudeCodingPlanConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>base_url</td><td><code>String</code></td></tr><tr><td>pub</td><td>access_token</td><td><code>Option &lt; SecretConfigValue &gt;</code></td></tr><tr><td>pub</td><td>models</td><td><code>ModelsConfig</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for ClaudeCodingPlanConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:193</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ProvidersConfig pub pub struct ProvidersConfig crates/eos-config/src/configs/providers.rs active ProviderKind retry RetryConfig openai_api OpenAiApiConfig anthropic_api AnthropicApiConfig codex_coding_plan CodexCodingPlanConfig claude_coding_plan ClaudeCodingPlanConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProvidersConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ProvidersConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active</td><td><code>ProviderKind</code></td></tr><tr><td>pub</td><td>retry</td><td><code>RetryConfig</code></td></tr><tr><td>pub</td><td>openai_api</td><td><code>OpenAiApiConfig</code></td></tr><tr><td>pub</td><td>anthropic_api</td><td><code>AnthropicApiConfig</code></td></tr><tr><td>pub</td><td>codex_coding_plan</td><td><code>CodexCodingPlanConfig</code></td></tr><tr><td>pub</td><td>claude_coding_plan</td><td><code>ClaudeCodingPlanConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>active_models</td><td><code>pub fn active_models (&amp; self) -&gt; Option &lt; &amp; ModelsConfig &gt;</code></td></tr><tr><td>method</td><td>active_model_registration</td><td><code>pub fn active_model_registration (&amp; self) -&gt; Option &lt; ModelRegistrationConfig &gt;</code></td></tr><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for ProvidersConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-config/src/configs/providers.rs:219</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProviderKind pub pub enum ProviderKind crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ProviderKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum ProviderKind</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Unconfigured</td><td><code></code></td></tr><tr><td>OpenAiApi</td><td><code></code></td></tr><tr><td>AnthropicApi</td><td><code></code></td></tr><tr><td>CodexCodingPlan</td><td><code></code></td></tr><tr><td>ClaudeCodingPlan</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/providers.rs:97</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_openai_api_base_url private fn default_openai_api_base_url () -&gt; String crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_openai_api_base_url</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn default_openai_api_base_url () -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:356</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_anthropic_api_base_url private fn default_anthropic_api_base_url () -&gt; String crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_anthropic_api_base_url</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn default_anthropic_api_base_url () -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:360</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_codex_coding_plan_base_url private fn default_codex_coding_plan_base_url () -&gt; String crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_codex_coding_plan_base_url</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn default_codex_coding_plan_base_url () -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:364</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_non_empty private fn require_non_empty (field : &amp; str , value : &amp; str) -&gt; Result &lt; () , ConfigError &gt; crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_non_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_non_empty (field : &amp; str , value : &amp; str) -&gt; Result &lt; () , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:368</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_secret private fn require_secret (field : &amp; str , value : Option &lt; &amp; SecretConfigValue &gt;) -&gt; Result &lt; () , ConfigError &gt; crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_secret</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_secret (field : &amp; str , value : Option &lt; &amp; SecretConfigValue &gt;) -&gt; Result &lt; () , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:377</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_active_model private fn require_active_model (field : &amp; str , models : &amp; ModelsConfig) -&gt; Result &lt; () , ConfigError &gt; crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_active_model</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_active_model (field : &amp; str , models : &amp; ModelsConfig) -&gt; Result &lt; () , ConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:386</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn defaults_are_set private fn defaults_are_set () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>defaults_are_set</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn defaults_are_set ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:401</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn provider_defaults_are_unconfigured_and_non_secret private fn provider_defaults_are_unconfigured_and_non_secret () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>provider_defaults_are_unconfigured_and_non_secret</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn provider_defaults_are_unconfigured_and_non_secret ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:413</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deserializes_claude_coding_plan_local_config private fn deserializes_claude_coding_plan_local_config () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>deserializes_claude_coding_plan_local_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn deserializes_claude_coding_plan_local_config ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:432</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deserializes_codex_coding_plan_local_config private fn deserializes_codex_coding_plan_local_config () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>deserializes_codex_coding_plan_local_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn deserializes_codex_coding_plan_local_config ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:466</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn active_provider_requires_secret private fn active_provider_requires_secret () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>active_provider_requires_secret</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn active_provider_requires_secret ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:504</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn active_provider_requires_active_model private fn active_provider_requires_active_model () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>active_provider_requires_active_model</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn active_provider_requires_active_model ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:518</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn secret_debug_and_serialize_are_redacted private fn secret_debug_and_serialize_are_redacted () crates/eos-config/src/configs/providers.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>secret_debug_and_serialize_are_redacted</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn secret_debug_and_serialize_are_redacted ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/providers.rs:536</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

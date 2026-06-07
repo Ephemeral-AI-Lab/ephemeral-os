@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-audit · src/jsonl.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-audit File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>47</b><span>items</span></div>
+  <div><b>38</b><span>fields</span></div>
+  <div><b>31</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-audit.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-audit--src-event-rs.html"><span>event.rs</span><small>2/6</small></a></li><li><a class="file-link active" href="eos-audit--src-jsonl-rs.html"><span>jsonl.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-audit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-audit--src-node-rs.html"><span>node.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-audit--src-obs-rs.html"><span>obs.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-audit--src-sink-rs.html"><span>sink.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="jsonl crates/eos-audit/src/jsonl.rs event_line open_append JsonlSink impl JsonlSink impl AuditSink for JsonlSink WriterMsg BufferedJsonlSink impl BufferedJsonlSink impl AuditSink for BufferedJsonlSink writer_loop BufferedAuditShutdown impl BufferedAuditShutdown impl Drop for BufferedAuditShutdown TempDir impl TempDir impl Drop for TempDir event append_only_untruncated buffered_shutdown_flushes">
+  <div class="module-head">
+    <div>
+      <h2>src/jsonl.rs</h2>
+      <p class="path">module <code>jsonl</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>8 impls</span>
+      <span>6 fns</span>
+      <span>9 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct JsonlSink pub pub struct JsonlSink crates/eos-audit/src/jsonl.rs path PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>JsonlSink</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct JsonlSink</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (path : impl Into &lt; PathBuf &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AuditSink for JsonlSink</code></summary><table><tbody><tr><td>method</td><td>publish</td><td><code>fn publish (&amp; self , event : &amp; AuditEvent) -&gt; Result &lt; () , AuditError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-audit/src/jsonl.rs:35</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct BufferedJsonlSink pub pub struct BufferedJsonlSink crates/eos-audit/src/jsonl.rs tx SyncSender &lt; WriterMsg &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>BufferedJsonlSink</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct BufferedJsonlSink</code>
+  <div class="tags"><span>error</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>tx</td><td><code>SyncSender &lt; WriterMsg &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (path : impl Into &lt; PathBuf &gt; , capacity : usize ,) -&gt; Result &lt; (Self , BufferedAuditShutdown) , AuditError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AuditSink for BufferedJsonlSink</code></summary><table><tbody><tr><td>method</td><td>publish</td><td><code>fn publish (&amp; self , event : &amp; AuditEvent) -&gt; Result &lt; () , AuditError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-audit/src/jsonl.rs:67</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct BufferedAuditShutdown pub pub struct BufferedAuditShutdown crates/eos-audit/src/jsonl.rs ctrl_tx Option &lt; SyncSender &lt; WriterMsg &gt; &gt; handle Option &lt; JoinHandle &lt; () &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>BufferedAuditShutdown</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct BufferedAuditShutdown</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>ctrl_tx</td><td><code>Option &lt; SyncSender &lt; WriterMsg &gt; &gt;</code></td></tr><tr><td>private</td><td>handle</td><td><code>Option &lt; JoinHandle &lt; () &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>shutdown</td><td><code>pub fn shutdown (mut self)</code></td></tr><tr><td>method</td><td>stop</td><td><code>fn stop (&amp; mut self)</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for BufferedAuditShutdown</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-audit/src/jsonl.rs:132</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TempDir private struct TempDir crates/eos-audit/src/jsonl.rs path PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TempDir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct TempDir</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new () -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for TempDir</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-audit/src/jsonl.rs:180</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum WriterMsg private enum WriterMsg crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>WriterMsg</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum WriterMsg</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Event</td><td><code>0: Box &lt; AuditEvent &gt;</code></td></tr><tr><td>Shutdown</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-audit/src/jsonl.rs:59</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn event_line private fn event_line (event : &amp; AuditEvent) -&gt; Result &lt; String , AuditError &gt; crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>event_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn event_line (event : &amp; AuditEvent) -&gt; Result &lt; String , AuditError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-audit/src/jsonl.rs:22</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_append private fn open_append (path : &amp; Path) -&gt; Result &lt; File , AuditError &gt; crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>open_append</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn open_append (path : &amp; Path) -&gt; Result &lt; File , AuditError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-audit/src/jsonl.rs:27</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn writer_loop private fn writer_loop (rx : &amp; Receiver &lt; WriterMsg &gt; , file : File) crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>writer_loop</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn writer_loop (rx : &amp; Receiver &lt; WriterMsg &gt; , file : File)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-audit/src/jsonl.rs:111</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn event private fn event (event_type : &amp; str) -&gt; AuditEvent crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>event</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn event (event_type : &amp; str) -&gt; AuditEvent</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-audit/src/jsonl.rs:201</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_only_untruncated private fn append_only_untruncated () crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_only_untruncated</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn append_only_untruncated ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-audit/src/jsonl.rs:214</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn buffered_shutdown_flushes private fn buffered_shutdown_flushes () crates/eos-audit/src/jsonl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>buffered_shutdown_flushes</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn buffered_shutdown_flushes ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-audit/src/jsonl.rs:238</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

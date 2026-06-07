@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-occ · src/route.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-occ File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>46</b><span>items</span></div>
+  <div><b>41</b><span>fields</span></div>
+  <div><b>31</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-occ.html"><span>commit_queue.rs</span><small>8/12</small></a></li><li><a class="file-link" href="eos-occ--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-occ--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-occ--src-route-rs.html"><span>route.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-occ--src-service-rs.html"><span>service.rs</span><small>4/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="route crates/eos-occ/src/route.rs Route OccStatus impl OccStatus PublishDecision FileResult impl FileResult ChangesetResult impl ChangesetResult">
+  <div class="module-head">
+    <div>
+      <h2>src/route.rs</h2>
+      <p class="path">module <code>route</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>3 impls</span>
+      <span>0 fns</span>
+      <span>8 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishDecision pub pub struct PublishDecision crates/eos-occ/src/route.rs path LayerPath route Route base_hash Option &lt; String &gt; message Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PublishDecision</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PublishDecision</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>LayerPath</code></td></tr><tr><td>pub</td><td>route</td><td><code>Route</code></td></tr><tr><td>pub</td><td>base_hash</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>message</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/route.rs:92</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FileResult pub pub struct FileResult crates/eos-occ/src/route.rs path LayerPath status OccStatus message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FileResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct FileResult</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>LayerPath</code></td></tr><tr><td>pub</td><td>status</td><td><code>OccStatus</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>conflict_message</td><td><code>pub fn conflict_message &lt; 'a &gt; (&amp; 'a self , fallback : &amp; 'a str) -&gt; &amp; 'a str</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/route.rs:111</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ChangesetResult pub pub struct ChangesetResult crates/eos-occ/src/route.rs files Vec &lt; FileResult &gt; published_manifest_version Option &lt; u64 &gt; timings BTreeMap &lt; String , f64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ChangesetResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ChangesetResult</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>files</td><td><code>Vec &lt; FileResult &gt;</code></td></tr><tr><td>pub</td><td>published_manifest_version</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code>BTreeMap &lt; String , f64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>success</td><td><code>pub fn success (&amp; self) -&gt; bool</code></td></tr><tr><td>method</td><td>first_conflict</td><td><code>pub fn first_conflict (&amp; self) -&gt; Option &lt; &amp; FileResult &gt;</code></td></tr><tr><td>method</td><td>published_paths</td><td><code>pub fn published_paths (&amp; self) -&gt; Vec &lt; String &gt;</code></td></tr><tr><td>method</td><td>published_file_count</td><td><code>pub fn published_file_count (&amp; self) -&gt; usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/route.rs:134</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Route pub pub enum Route crates/eos-occ/src/route.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Route</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum Route</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Gated</td><td><code></code></td></tr><tr><td>Direct</td><td><code></code></td></tr><tr><td>Drop</td><td><code></code></td></tr><tr><td>Reject</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/route.rs:14</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OccStatus pub pub enum OccStatus crates/eos-occ/src/route.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>OccStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum OccStatus</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Accepted</td><td><code></code></td></tr><tr><td>Committed</td><td><code></code></td></tr><tr><td>AbortedVersion</td><td><code></code></td></tr><tr><td>AbortedOverlap</td><td><code></code></td></tr><tr><td>Dropped</td><td><code></code></td></tr><tr><td>Rejected</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>wire_str</td><td><code>pub const fn wire_str (self) -&gt; &amp; 'static str</code></td></tr><tr><td>method</td><td>is_published</td><td><code>pub const fn is_published (self) -&gt; bool</code></td></tr><tr><td>method</td><td>is_success</td><td><code>pub const fn is_success (self) -&gt; bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/route.rs:34</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

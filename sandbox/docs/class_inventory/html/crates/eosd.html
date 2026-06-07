@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eosd · src/daemon.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eosd File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>3</b><span>modules</span></div>
+  <div><b>24</b><span>items</span></div>
+  <div><b>16</b><span>fields</span></div>
+  <div><b>4</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="daemon crates/eosd/src/daemon.rs run DaemonRuntimeConfig load_runtime_config daemon_worker_threads DaemonCliConfig impl DaemonCliConfig required_arg run_daemon_client run_daemon_client spawn_daemon daemon_already_running io_error_name">
+  <div class="module-head">
+    <div>
+      <h2>src/daemon.rs</h2>
+      <p class="path">module <code>daemon</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>1 impls</span>
+      <span>9 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct DaemonRuntimeConfig private struct DaemonRuntimeConfig crates/eosd/src/daemon.rs daemon DaemonConfig isolated_workspace IsolatedWorkspaceConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DaemonRuntimeConfig</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct DaemonRuntimeConfig</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>daemon</td><td><code>DaemonConfig</code></td></tr><tr><td>private</td><td>isolated_workspace</td><td><code>IsolatedWorkspaceConfig</code></td></tr></tbody></table>
+  <p class="source">crates/eosd/src/daemon.rs:58</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DaemonCliConfig private struct DaemonCliConfig crates/eosd/src/daemon.rs socket_path PathBuf pid_path PathBuf log_path Option &lt; PathBuf &gt; tcp_host Option &lt; String &gt; tcp_port Option &lt; u16 &gt; auth_token Option &lt; String &gt; spawn bool client Option &lt; (PathBuf , String) &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DaemonCliConfig</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct DaemonCliConfig</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>socket_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>pid_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>log_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>tcp_host</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>tcp_port</td><td><code>Option &lt; u16 &gt;</code></td></tr><tr><td>private</td><td>auth_token</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>spawn</td><td><code>bool</code></td></tr><tr><td>private</td><td>client</td><td><code>Option &lt; (PathBuf , String) &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>foreground_args</td><td><code>fn foreground_args (&amp; self) -&gt; Vec &lt; String &gt;</code></td></tr><tr><td>associated-fn</td><td>parse</td><td><code>fn parse (args : std :: env :: Args , server_defaults : &amp; DaemonServerConfig) -&gt; Result &lt; Self &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eosd/src/daemon.rs:89</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run pub(crate) pub(crate) fn run (args : std :: env :: Args) -&gt; Result &lt; () &gt; crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn run (args : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:15</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_runtime_config private fn load_runtime_config () -&gt; Result &lt; DaemonRuntimeConfig &gt; crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_runtime_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_runtime_config () -&gt; Result &lt; DaemonRuntimeConfig &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:63</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_worker_threads private fn daemon_worker_threads (max_worker_threads : usize) -&gt; usize crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>daemon_worker_threads</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn daemon_worker_threads (max_worker_threads : usize) -&gt; usize</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:81</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn required_arg private fn required_arg (args : &amp; mut impl Iterator &lt; Item = String &gt; , flag : &amp; str) -&gt; Result &lt; String &gt; crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>required_arg</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn required_arg (args : &amp; mut impl Iterator &lt; Item = String &gt; , flag : &amp; str) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:178</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_daemon_client private fn run_daemon_client (socket_path : &amp; PathBuf , payload : &amp; str) -&gt; Result &lt; () &gt; crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_daemon_client</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn run_daemon_client (socket_path : &amp; PathBuf , payload : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:183</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_daemon_client private fn run_daemon_client (_socket_path : &amp; PathBuf , _payload : &amp; str) -&gt; Result &lt; () &gt; crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_daemon_client</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn run_daemon_client (_socket_path : &amp; PathBuf , _payload : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:215</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_daemon private fn spawn_daemon (config : &amp; DaemonCliConfig) -&gt; Result &lt; () &gt; crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawn_daemon</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn spawn_daemon (config : &amp; DaemonCliConfig) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:221</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_already_running private fn daemon_already_running (pid_path : &amp; Path , socket_path : &amp; Path) -&gt; bool crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>daemon_already_running</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn daemon_already_running (pid_path : &amp; Path , socket_path : &amp; Path) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:260</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn io_error_name private fn io_error_name (err : &amp; std :: io :: Error) -&gt; &amp; 'static str crates/eosd/src/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>io_error_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn io_error_name (err : &amp; std :: io :: Error) -&gt; &amp; 'static str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/daemon.rs:280</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

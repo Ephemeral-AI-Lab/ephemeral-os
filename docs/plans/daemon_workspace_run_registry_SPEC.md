@@ -1,6 +1,6 @@
 # Daemon Workspace-Run Registry — Migration SPEC
 
-Status: in progress — Phases 1–4 + 6 landed (see Progress tracker below)
+Status: in progress — Phases 1–7 landed; Phase 8 superseded by the divergence (see Progress tracker below)
 Owner: sandbox (daemon substrate)
 Scope: `sandbox/crates/eos-daemon`, `eos-command-session`,
 `eos-ephemeral-workspace`, `eos-isolated-workspace`, `eos-workspace-api`
@@ -57,10 +57,10 @@ clean run.
 | 2 — reap/publish split (cancel → discard, never publish) | ✅ done + committed |
 | 3 — introduce caller-keyed registry | ✅ done + committed (`107eec33b`) |
 | 4 — re-home ephemeral (N runs/caller, no cap) | ✅ done + committed (`107eec33b`) |
-| 5 — re-home isolated | 🟡 partial — registry owns the isolated run's sessions, but the `active_command_sessions` side-map and folding namespace teardown into the run are deferred |
+| 5 — re-home isolated | ✅ done — `active_command_sessions` side-map dropped (`register/unregister_command_session` removed); the caller-keyed command-session registry is the sole owner of isolated sessions, and `ttl_sweep` + the rebind gate consult it. Namespace teardown stays delegated to `IsolatedSession::exit` (divergence). |
 | 6 — re-point completion/sweep onto runs | ✅ done (`107eec33b`) |
-| 7 — cancel surface (`cancel_all_workspace_runs_by_caller_id` / `_runs`) | ⬜ not started — the headline §7 prerequisite for the cancellation spec |
-| 8 — remove flat manager / merge services | ⬜ not started |
+| 7 — cancel surface (`cancel_all_workspace_runs_by_caller_id` / `_runs`) | ✅ done — `services/workspace_run.rs` coordinator + wire ops `api.v1.cancel_workspace_runs_by_caller_id` and `api.v1.cancel_workspace_runs`; `op_exit` routes through the per-caller coordinator. E2E: cancel-by-caller discards owner runs + spares siblings + parks no completion; whole-sandbox sweep tears down every caller. |
+| 8 — remove flat manager / merge services | ⚪ superseded — the registry stays re-keyed in `eos-command-session` per the advisor-vetted divergence; the flat manager was re-keyed (not removed) and services were not merged into a `workspace_run/` tree. Only the daemon-side coordinator + wire ops live in `eos-daemon/src/services/workspace_run.rs`. |
 
 **Implementation divergences from the §3.2/§5.3 sketch (deliberate, advisor-vetted):**
 the caller-keyed registry currently lives **in `eos-command-session`** (the
@@ -72,6 +72,16 @@ calling in as before. Isolated namespace teardown stays delegated to
 lease/dirs still live in the session's policy (the §3.3 policy-ectomy was not
 needed — Phase 2 already makes cancel→discard structural). These can be revisited in
 Phases 5/7/8 if a later need (e.g. namespace re-homing) justifies it.
+
+Phases 5 and 7 now landed within this divergence: the cancel surface is a thin
+`eos-daemon/src/services/workspace_run.rs` coordinator (not the full §3.4
+`workspace_run/` service tree), composing the existing command-session manager +
+`IsolatedSession::exit`. Phase 5 dropped the `active_command_sessions` side-map so the
+caller-keyed command-session registry is the sole owner of isolated sessions; the
+isolated **rebind gate** is now keyed on open isolated callers alone (an isolated
+session always belongs to an open caller, so this preserves the old gate while no
+longer letting an unrelated ephemeral session block a rebind). Phase 8's flat-manager
+removal / service merge stays superseded.
 
 ## 1. Why this migration
 
@@ -416,6 +426,19 @@ The rest of this spec assumes **Option B**.
 > `exit_isolated_workspace.rs:60`). So `caller_id` is **per-agent-run**: each run
 > (root, subagent) has its own caller, and cancelling one run cancels exactly its own
 > workspace run — never a sibling's. The one-RPC-per-caller design below is sound.
+
+> **Daemon wire ops — LANDED.** The two primitives are served by the daemon and
+> agent-core binds to these exact strings:
+> - per-caller: `api.v1.cancel_workspace_runs_by_caller_id` (const
+>   `API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER`), args `{caller_id (required), grace_s?}`
+>   → `{success, caller_id, cancelled_command_sessions, isolated_exited}`.
+> - whole-sandbox: `api.v1.cancel_workspace_runs` (const `API_V1_CANCEL_WORKSPACE_RUNS`),
+>   args `{grace_s?}` → `{success, cancelled_command_sessions, isolated_callers_exited}`.
+>
+> Both live in `eos-daemon/src/services/workspace_run.rs` (coordinator) +
+> `ops/workspace_run.rs` (handlers). The per-caller op composes the caller's
+> command-session discard (`cleanup_command_sessions_for_caller`) with its isolated
+> exit-if-open (`exit_isolated`); `op_exit` routes through the same coordinator.
 
 Two cancellation layers use the daemon primitives; command-session teardown collapses
 to **one RPC per agent run**, and the sandbox stage adds a request-level backstop.

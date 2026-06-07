@@ -133,6 +133,7 @@ impl AgentRunner for RuntimeAgentRunner {
                 notifier: control.notifications(),
                 cancellation: control.cancellation(),
                 foreground: control.foreground(),
+                agent_run_registry: Some(self.agent_run_registry.clone()),
                 persist_agent_run: true,
                 record_kind: AgentRunRecordKind::WorkflowTask {
                     workflow_id: launch.workflow_id().clone(),
@@ -145,9 +146,10 @@ impl AgentRunner for RuntimeAgentRunner {
         )
         .await;
 
-        // The run's own per-run finalizer already tore down its background work;
-        // drop the live-run entry (the control + heartbeat release at scope end).
-        self.agent_run_registry.finish_cancel(control.agent_run_id());
+        // `run_agent` claims and finalizes (or skips, if a concurrent cancel won)
+        // the row + child teardown, removing the live-run entry. Dropping `control`
+        // releases its heartbeat (RAII).
+        drop(control);
 
         // The submit tool already recorded the agent's submission during the run
         // (Path A-recording); the runner reports only a framework fault, which

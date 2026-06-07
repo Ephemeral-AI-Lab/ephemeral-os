@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-tools · src/registry/config.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-tools File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>65</b><span>modules</span></div>
+  <div><b>397</b><span>items</span></div>
+  <div><b>236</b><span>fields</span></div>
+  <div><b>173</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-tools.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-intent-rs.html"><span>intent.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tools--src-core-metadata-rs.html"><span>metadata.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-name-rs.html"><span>name.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-tools--src-core-result-rs.html"><span>result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">hooks</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-hooks-advisor-approval-rs.html"><span>advisor_approval.rs</span><small>0/11</small></a></li><li><a class="file-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html"><span>disallow_nested_planner_deferral.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tools--src-hooks-mod-rs.html"><span>mod.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html"><span>require_no_background_sessions.rs</span><small>2/14</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-ports-mod-rs.html"><span>mod.rs</span><small>18/0</small></a></li></ul></li><li><span class="folder">registry</span><ul class="file-tree"><li><a class="file-link active" href="eos-tools--src-registry-config-rs.html"><span>config.rs</span><small>4/21</small></a></li><li><a class="file-link" href="eos-tools--src-registry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tools--src-registry-spec-rs.html"><span>spec.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-tools--src-registry-tool-registry-rs.html"><span>tool_registry.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-runtime-dispatch-rs.html"><span>dispatch.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-tools--src-runtime-execution-rs.html"><span>execution.rs</span><small>5/12</small></a></li><li><a class="file-link" href="eos-tools--src-runtime-executor-rs.html"><span>executor.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">tools</span><ul class="file-tree"><li><span class="folder">ask_helper</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html"><span>ask_advisor.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-ask-helper-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">isolated_workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html"><span>enter_isolated_workspace.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html"><span>exit_isolated_workspace.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html"><span>mod.rs</span><small>0/9</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-mod-rs.html"><span>mod.rs</span><small>1/4</small></a></li><li><span class="folder">sandbox</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-sandbox-edit-file-rs.html"><span>edit_file.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-exec-command-rs.html"><span>exec_command.rs</span><small>2/0</small></a></li><li><span class="folder">lib</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html"><span>outputs.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-lib-registration-rs.html"><span>registration.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-lib-rs.html"><span>lib.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-multi-edit-rs.html"><span>multi_edit.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html"><span>read_command_progress.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-read-file-rs.html"><span>read_file.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-write-file-rs.html"><span>write_file.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-write-stdin-rs.html"><span>write_stdin.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-services-rs.html"><span>services.rs</span><small>7/0</small></a></li><li><span class="folder">skills</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-skills-load-skill-reference-rs.html"><span>load_skill_reference.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-tools--src-tools-skills-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">subagent</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-subagent-cancel-subagent-rs.html"><span>cancel_subagent.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-check-subagent-progress-rs.html"><span>check_subagent_progress.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-lib-rs.html"><span>lib.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-run-subagent-rs.html"><span>run_subagent.rs</span><small>2/2</small></a></li></ul></li><li><span class="folder">submission</span><ul class="file-tree"><li><span class="folder">advisor</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-advisor-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html"><span>submit_advisor_feedback.rs</span><small>3/1</small></a></li></ul></li><li><span class="folder">explorer</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-explorer-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-explorer-submit-exploration-result-rs.html"><span>submit_exploration_result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">generator</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-generator-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html"><span>submit_generator_outcome.rs</span><small>1/1</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-submission-lib-rs.html"><span>lib.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><span class="folder">planner</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-planner-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html"><span>submit_planner_outcome.rs</span><small>4/4</small></a></li></ul></li><li><span class="folder">reducer</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-reducer-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html"><span>submit_reducer_outcome.rs</span><small>1/1</small></a></li></ul></li><li><span class="folder">root</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-root-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html"><span>submit_root_outcome.rs</span><small>2/7</small></a></li></ul></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-terminal-rs.html"><span>terminal.rs</span><small>3/3</small></a></li><li><span class="folder">workflow</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-workflow-cancel-workflow-rs.html"><span>cancel_workflow.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html"><span>check_workflow_status.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html"><span>delegate_workflow.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry::config crates/eos-tools/src/registry/config.rs ToolConfig ToolConfigSet impl ToolConfigSet ToolConfigError parse_tool_config parse_hooks parse_hook_item hook_from_token extension read_dir_sorted Scratch impl Scratch impl Drop for Scratch valid_file parses_a_well_formed_file absent_hooks_is_empty rejects_unknown_intent rejects_missing_intent rejects_unknown_hook_token rejects_terminal_mismatch rejects_empty_description load_rejects_non_directory_root load_rejects_unknown_tool_file load_rejects_missing_tool load_full_valid_set_is_total hook_tokens_round_trip disallow_nested_max_depth_parses_from_entry workflow_max_depth_overrides_deferral_hooks">
+  <div class="module-head">
+    <div>
+      <h2>src/registry/config.rs</h2>
+      <p class="path">module <code>registry::config</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>3 impls</span>
+      <span>21 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolConfig pub pub struct ToolConfig crates/eos-tools/src/registry/config.rs description String intent ToolIntent terminal bool hooks Vec &lt; Hook &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ToolConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ToolConfig</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>intent</td><td><code>ToolIntent</code></td></tr><tr><td>pub</td><td>terminal</td><td><code>bool</code></td></tr><tr><td>pub</td><td>hooks</td><td><code>Vec &lt; Hook &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-tools/src/registry/config.rs:30</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolConfigSet pub pub struct ToolConfigSet crates/eos-tools/src/registry/config.rs configs HashMap &lt; ToolName , ToolConfig &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ToolConfigSet</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ToolConfigSet</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>configs</td><td><code>HashMap &lt; ToolName , ToolConfig &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>get</td><td><code>pub fn get (&amp; self , name : ToolName) -&gt; &amp; ToolConfig</code></td></tr><tr><td>method</td><td>with_workflow_max_depth</td><td><code>pub fn with_workflow_max_depth (mut self , max_depth : u32) -&gt; Self</code></td></tr><tr><td>associated-fn</td><td>load_from_dir</td><td><code>pub fn load_from_dir (root : &amp; Path) -&gt; Result &lt; Self , ToolConfigError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-tools/src/registry/config.rs:45</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ToolConfigError pub pub enum ToolConfigError crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ToolConfigError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum ToolConfigError</code>
+  <div class="tags"><span>config</span><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>RootNotDir</td><td><code>0: PathBuf</code></td></tr><tr><td>ReadDir</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>ReadFile</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>UnknownToolFile</td><td><code>0: PathBuf</code></td></tr><tr><td>MissingTool</td><td><code>0: ToolName</code></td></tr><tr><td>MissingIntent</td><td><code>0: ToolName</code></td></tr><tr><td>UnknownIntent</td><td><code>tool: ToolName, value: String</code></td></tr><tr><td>UnknownHook</td><td><code>tool: ToolName, token: String</code></td></tr><tr><td>TerminalMismatch</td><td><code>tool: ToolName, declared: bool, expected: bool</code></td></tr><tr><td>EmptyDescription</td><td><code>0: ToolName</code></td></tr></tbody></table>
+  <p class="source">crates/eos-tools/src/registry/config.rs:116</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Scratch private struct Scratch crates/eos-tools/src/registry/config.rs 0 PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Scratch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct Scratch</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (tag : &amp; str) -&gt; Self</code></td></tr><tr><td>method</td><td>write</td><td><code>fn write (&amp; self , name : &amp; str , content : &amp; str)</code></td></tr><tr><td>method</td><td>path</td><td><code>fn path (&amp; self) -&gt; &amp; Path</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for Scratch</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-tools/src/registry/config.rs:310</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_tool_config private fn parse_tool_config (name : ToolName , content : &amp; str) -&gt; Result &lt; ToolConfig , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_tool_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_tool_config (name : ToolName , content : &amp; str) -&gt; Result &lt; ToolConfig , ToolConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:178</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_hooks private fn parse_hooks (name : ToolName , frontmatter : &amp; Mapping) -&gt; Result &lt; Vec &lt; Hook &gt; , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_hooks</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_hooks (name : ToolName , frontmatter : &amp; Mapping) -&gt; Result &lt; Vec &lt; Hook &gt; , ToolConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:217</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_hook_item private fn parse_hook_item (name : ToolName , item : &amp; Value) -&gt; Result &lt; Hook , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_hook_item</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_hook_item (name : ToolName , item : &amp; Value) -&gt; Result &lt; Hook , ToolConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:234</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hook_from_token private fn hook_from_token (tool : ToolName , token : &amp; str , params : Option &lt; &amp; Value &gt;) -&gt; Option &lt; Hook &gt; crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hook_from_token</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn hook_from_token (tool : ToolName , token : &amp; str , params : Option &lt; &amp; Value &gt;) -&gt; Option &lt; Hook &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:262</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extension private fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt; crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>extension</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:282</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_dir_sorted private fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_dir_sorted</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , ToolConfigError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:286</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn valid_file private fn valid_file (name : ToolName) -&gt; String crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>valid_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn valid_file (name : ToolName) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:337</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_a_well_formed_file private fn parses_a_well_formed_file () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parses_a_well_formed_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parses_a_well_formed_file ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:346</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn absent_hooks_is_empty private fn absent_hooks_is_empty () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>absent_hooks_is_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn absent_hooks_is_empty ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:369</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_intent private fn rejects_unknown_intent () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_unknown_intent</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_unknown_intent ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:379</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_missing_intent private fn rejects_missing_intent () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_missing_intent</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_missing_intent ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:392</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_hook_token private fn rejects_unknown_hook_token () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_unknown_hook_token</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_unknown_hook_token ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:399</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_terminal_mismatch private fn rejects_terminal_mismatch () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_terminal_mismatch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_terminal_mismatch ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:412</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_empty_description private fn rejects_empty_description () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_empty_description</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_empty_description ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:426</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_non_directory_root private fn load_rejects_non_directory_root () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_rejects_non_directory_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_rejects_non_directory_root ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:439</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_unknown_tool_file private fn load_rejects_unknown_tool_file () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_rejects_unknown_tool_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_rejects_unknown_tool_file ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:445</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_missing_tool private fn load_rejects_missing_tool () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_rejects_missing_tool</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_rejects_missing_tool ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:459</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_full_valid_set_is_total private fn load_full_valid_set_is_total () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_full_valid_set_is_total</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_full_valid_set_is_total ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:475</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hook_tokens_round_trip private fn hook_tokens_round_trip () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hook_tokens_round_trip</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn hook_tokens_round_trip ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:487</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disallow_nested_max_depth_parses_from_entry private fn disallow_nested_max_depth_parses_from_entry () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>disallow_nested_max_depth_parses_from_entry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn disallow_nested_max_depth_parses_from_entry ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:504</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_max_depth_overrides_deferral_hooks private fn workflow_max_depth_overrides_deferral_hooks () crates/eos-tools/src/registry/config.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>workflow_max_depth_overrides_deferral_hooks</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn workflow_max_depth_overrides_deferral_hooks ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tools/src/registry/config.rs:529</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

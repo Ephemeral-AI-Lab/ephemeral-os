@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/audit/buffer.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-daemon File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>57</b><span>modules</span></div>
+  <div><b>571</b><span>items</span></div>
+  <div><b>245</b><span>fields</span></div>
+  <div><b>131</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link active" href="eos-daemon.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-base-rs.html"><span>base.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>1/20</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-command-session-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-command-session-mod-rs.html"><span>mod.rs</span><small>0/23</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-command-session-ports-ephemeral-rs.html"><span>ephemeral.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-command-session-ports-isolated-rs.html"><span>isolated.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-command-session-ports-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-command-session-wire-rs.html"><span>wire.rs</span><small>0/12</small></a></li></ul></li><li><span class="folder">isolated_workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-isolated-workspace-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html"><span>runtime.rs</span><small>3/11</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-occ-mod-rs.html"><span>mod.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_router</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html"><span>ppc_router.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-process-rs.html"><span>process.rs</span><small>3/19</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-rs.html"><span>workspace_run.rs</span><small>1/5</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/7</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="audit::buffer crates/eos-daemon/src/audit/buffer.rs BufferedEvent LaneCounters AuditBuffer RingState impl AuditBuffer impl Default for AuditBuffer safe_emit global_audit_buffer default_boot_epoch_id encoded_size u128_to_i64_saturating usize_to_u64_saturating lane_index lane_name enforce_caps_locked evict_one_locked retained_events retained_bytes pressure_locked u64_to_f64_lossy buffer_block snapshot_block pull_preserves_negative_cursor_when_no_events_match pull_filters_after_seq_with_checked_cursor_conversion integer_size_helpers_saturate_at_wire_limits">
+  <div class="module-head">
+    <div>
+      <h2>src/audit/buffer.rs</h2>
+      <p class="path">module <code>audit::buffer</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>2 impls</span>
+      <span>19 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AuditBuffer pub(crate) pub(crate) struct AuditBuffer crates/eos-daemon/src/audit/buffer.rs inner Mutex &lt; RingState &gt; boot_epoch_id i64 pressure_threshold f64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AuditBuffer</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct AuditBuffer</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Mutex &lt; RingState &gt;</code></td></tr><tr><td>private</td><td>boot_epoch_id</td><td><code>i64</code></td></tr><tr><td>private</td><td>pressure_threshold</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new () -&gt; Self</code></td></tr><tr><td>constructor</td><td>with_caps</td><td><code>fn with_caps (max_events : u64 , max_bytes : u64 , boot_epoch_id : Option &lt; i64 &gt;) -&gt; Self</code></td></tr><tr><td>method</td><td>lock_state</td><td><code>fn lock_state (&amp; self) -&gt; MutexGuard &lt; '_ , RingState &gt;</code></td></tr><tr><td>method</td><td>append</td><td><code>fn append (&amp; self , event : Value , lane : Lane) -&gt; u64</code></td></tr><tr><td>method</td><td>pull</td><td><code>pub(crate) fn pull (&amp; self , after_seq : i64 , limit : usize) -&gt; Value</code></td></tr><tr><td>method</td><td>snapshot</td><td><code>pub(crate) fn snapshot (&amp; self) -&gt; Value</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for AuditBuffer</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:57</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BufferedEvent private struct BufferedEvent crates/eos-daemon/src/audit/buffer.rs seq u64 lane Lane encoded_bytes u64 payload Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>BufferedEvent</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct BufferedEvent</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>lane</td><td><code>Lane</code></td></tr><tr><td>private</td><td>encoded_bytes</td><td><code>u64</code></td></tr><tr><td>private</td><td>payload</td><td><code>Value</code></td></tr></tbody></table>
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:32</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LaneCounters private struct LaneCounters crates/eos-daemon/src/audit/buffer.rs events u64 bytes u64 dropped u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LaneCounters</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct LaneCounters</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>events</td><td><code>u64</code></td></tr><tr><td>private</td><td>bytes</td><td><code>u64</code></td></tr><tr><td>private</td><td>dropped</td><td><code>u64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:46</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RingState private struct RingState crates/eos-daemon/src/audit/buffer.rs max_events u64 max_bytes u64 next_seq u64 lost_before_seq u64 dropped_total u64 all VecDeque &lt; BufferedEvent &gt; lanes [VecDeque &lt; BufferedEvent &gt; ; 3] counters [LaneCounters ; 3] pressure_above bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RingState</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RingState</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>max_events</td><td><code>u64</code></td></tr><tr><td>private</td><td>max_bytes</td><td><code>u64</code></td></tr><tr><td>private</td><td>next_seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>lost_before_seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>dropped_total</td><td><code>u64</code></td></tr><tr><td>private</td><td>all</td><td><code>VecDeque &lt; BufferedEvent &gt;</code></td></tr><tr><td>private</td><td>lanes</td><td><code>[VecDeque &lt; BufferedEvent &gt; ; 3]</code></td></tr><tr><td>private</td><td>counters</td><td><code>[LaneCounters ; 3]</code></td></tr><tr><td>private</td><td>pressure_above</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:70</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_emit pub(crate) pub(crate) fn safe_emit (event : Value , lane : Lane) crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>safe_emit</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn safe_emit (event : Value , lane : Lane)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:215</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn global_audit_buffer pub(crate) pub(crate) fn global_audit_buffer () -&gt; &amp; 'static AuditBuffer crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>global_audit_buffer</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn global_audit_buffer () -&gt; &amp; 'static AuditBuffer</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:227</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_boot_epoch_id private fn default_boot_epoch_id () -&gt; i64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_boot_epoch_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn default_boot_epoch_id () -&gt; i64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:232</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encoded_size private fn encoded_size (value : &amp; Value) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encoded_size</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn encoded_size (value : &amp; Value) -&gt; u64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:239</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u128_to_i64_saturating private fn u128_to_i64_saturating (value : u128) -&gt; i64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>u128_to_i64_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn u128_to_i64_saturating (value : u128) -&gt; i64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:246</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_u64_saturating private fn usize_to_u64_saturating (value : usize) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_u64_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn usize_to_u64_saturating (value : usize) -&gt; u64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:250</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lane_index private const fn lane_index (lane : Lane) -&gt; usize crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lane_index</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn lane_index (lane : Lane) -&gt; usize</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:254</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lane_name private const fn lane_name (lane : Lane) -&gt; &amp; 'static str crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lane_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn lane_name (lane : Lane) -&gt; &amp; 'static str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:262</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enforce_caps_locked private fn enforce_caps_locked (state : &amp; mut RingState) crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>enforce_caps_locked</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn enforce_caps_locked (state : &amp; mut RingState)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:270</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn evict_one_locked private fn evict_one_locked (state : &amp; mut RingState) -&gt; bool crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>evict_one_locked</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn evict_one_locked (state : &amp; mut RingState) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:278</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retained_events private fn retained_events (state : &amp; RingState) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>retained_events</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn retained_events (state : &amp; RingState) -&gt; u64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:299</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retained_bytes private fn retained_bytes (state : &amp; RingState) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>retained_bytes</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn retained_bytes (state : &amp; RingState) -&gt; u64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:303</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pressure_locked private fn pressure_locked (state : &amp; RingState) -&gt; f64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>pressure_locked</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn pressure_locked (state : &amp; RingState) -&gt; f64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:307</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_lossy private fn u64_to_f64_lossy (value : u64) -&gt; f64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>u64_to_f64_lossy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn u64_to_f64_lossy (value : u64) -&gt; f64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:312</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn buffer_block private fn buffer_block (state : &amp; RingState) -&gt; Value crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>buffer_block</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn buffer_block (state : &amp; RingState) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:319</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn snapshot_block private fn snapshot_block (state : &amp; RingState , boot_epoch_id : i64) -&gt; Value crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>snapshot_block</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn snapshot_block (state : &amp; RingState , boot_epoch_id : i64) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:341</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pull_preserves_negative_cursor_when_no_events_match private fn pull_preserves_negative_cursor_when_no_events_match () crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>pull_preserves_negative_cursor_when_no_events_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn pull_preserves_negative_cursor_when_no_events_match ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:356</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pull_filters_after_seq_with_checked_cursor_conversion private fn pull_filters_after_seq_with_checked_cursor_conversion () crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>pull_filters_after_seq_with_checked_cursor_conversion</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn pull_filters_after_seq_with_checked_cursor_conversion ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:366</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn integer_size_helpers_saturate_at_wire_limits private fn integer_size_helpers_saturate_at_wire_limits () crates/eos-daemon/src/audit/buffer.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>integer_size_helpers_saturate_at_wire_limits</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn integer_size_helpers_saturate_at_wire_limits ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/audit/buffer.rs:380</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin-catalog · src/discovery.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-plugin-catalog File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>71</b><span>items</span></div>
+  <div><b>76</b><span>fields</span></div>
+  <div><b>13</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-plugin-catalog.html"><span>discovery.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-frontmatter-rs.html"><span>frontmatter.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-manifest-rs.html"><span>manifest.rs</span><small>4/13</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-names-rs.html"><span>names.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-package-rs.html"><span>package.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-tool-specs-rs.html"><span>tool_specs.rs</span><small>11/9</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="discovery crates/eos-plugin-catalog/src/discovery.rs PluginCatalog impl PluginCatalog is_candidate_dir discovers_sorted_dedup_and_roots duplicate_plugin_name_via_symlink">
+  <div class="module-head">
+    <div>
+      <h2>src/discovery.rs</h2>
+      <p class="path">module <code>discovery</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>3 fns</span>
+      <span>5 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginCatalog pub pub struct PluginCatalog crates/eos-plugin-catalog/src/discovery.rs plugins BTreeMap &lt; PluginName , PluginManifest &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginCatalog</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginCatalog</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>plugins</td><td><code>BTreeMap &lt; PluginName , PluginManifest &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>get</td><td><code>pub fn get (&amp; self , name : &amp; PluginName) -&gt; Option &lt; &amp; PluginManifest &gt;</code></td></tr><tr><td>method</td><td>manifests</td><td><code>pub fn manifests (&amp; self) -&gt; impl Iterator &lt; Item = &amp; PluginManifest &gt;</code></td></tr><tr><td>method</td><td>len</td><td><code>pub fn len (&amp; self) -&gt; usize</code></td></tr><tr><td>method</td><td>is_empty</td><td><code>pub fn is_empty (&amp; self) -&gt; bool</code></td></tr><tr><td>associated-fn</td><td>discover_under</td><td><code>pub fn discover_under (catalog_root : &amp; Path) -&gt; Result &lt; Self , PluginCatalogError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/discovery.rs:18</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_candidate_dir private fn is_candidate_dir (path : &amp; Path) -&gt; bool crates/eos-plugin-catalog/src/discovery.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_candidate_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn is_candidate_dir (path : &amp; Path) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/discovery.rs:99</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discovers_sorted_dedup_and_roots private fn discovers_sorted_dedup_and_roots () crates/eos-plugin-catalog/src/discovery.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>discovers_sorted_dedup_and_roots</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn discovers_sorted_dedup_and_roots ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/discovery.rs:119</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn duplicate_plugin_name_via_symlink private fn duplicate_plugin_name_via_symlink () crates/eos-plugin-catalog/src/discovery.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>duplicate_plugin_name_via_symlink</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn duplicate_plugin_name_via_symlink ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/discovery.rs:155</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

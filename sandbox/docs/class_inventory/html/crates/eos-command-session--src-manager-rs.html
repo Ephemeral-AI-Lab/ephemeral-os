@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-command-session · src/manager.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-command-session File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>86</b><span>items</span></div>
+  <div><b>83</b><span>fields</span></div>
+  <div><b>109</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-command-session--src-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-command-session--src-registry-rs.html"><span>registry.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>5/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="manager crates/eos-command-session/src/manager.rs CommandSessionManager impl CommandSessionManager is_teardown_control contains_teardown_control impl Default for CommandSessionManager SweepReport ExpiringPolicy impl CommandWorkspacePolicy for ExpiringPolicy manager_registers_counts_and_sweeps_sessions ephemeral_request caller_may_hold_multiple_sessions_per_kind collected_completion_preserves_finalized_stdout">
+  <div class="module-head">
+    <div>
+      <h2>src/manager.rs</h2>
+      <p class="path">module <code>manager</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>3 impls</span>
+      <span>6 fns</span>
+      <span>27 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionManager pub pub struct CommandSessionManager crates/eos-command-session/src/manager.rs config CommandSessionConfig registry Arc &lt; CommandSessionRegistry &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandSessionManager</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct CommandSessionManager</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>config</td><td><code>CommandSessionConfig</code></td></tr><tr><td>private</td><td>registry</td><td><code>Arc &lt; CommandSessionRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (config : CommandSessionConfig) -&gt; Self</code></td></tr><tr><td>method</td><td>start</td><td><code>pub fn start &lt; P &gt; (&amp; self , request : StartCommandSession , policy : P , kind : WorkspaceRunKind ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt; where P : CommandWorkspacePolicy + 'static ,</code></td></tr><tr><td>method</td><td>cancel</td><td><code>pub fn cancel (&amp; self , request : CancelCommandSession ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>start_boxed</td><td><code>pub fn start_boxed (&amp; self , request : StartCommandSession , policy : DynCommandWorkspacePolicy , kind : WorkspaceRunKind ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>start_boxed_scaffold</td><td><code>fn start_boxed_scaffold (&amp; self , request : StartCommandSession , policy : DynCommandWorkspacePolicy , kind : WorkspaceRunKind ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>start_boxed_linux</td><td><code>fn start_boxed_linux (&amp; self , request : StartCommandSession , policy : DynCommandWorkspacePolicy , kind : WorkspaceRunKind ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>write_stdin</td><td><code>pub fn write_stdin (&amp; self , request : WriteStdin) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>write_stdin_scaffold</td><td><code>fn write_stdin_scaffold (&amp; self , request : WriteStdin ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>write_stdin_linux</td><td><code>fn write_stdin_linux (&amp; self , request : WriteStdin ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>read_progress</td><td><code>pub fn read_progress (&amp; self , request : ReadCommandProgress ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>cancel_scaffold</td><td><code>fn cancel_scaffold (&amp; self , request : CancelCommandSession ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>cancel_linux</td><td><code>fn cancel_linux (&amp; self , request : CancelCommandSession ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>count_by_caller</td><td><code>pub fn count_by_caller (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code></td></tr><tr><td>method</td><td>collect_completed</td><td><code>pub fn collect_completed (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code></td></tr><tr><td>method</td><td>push_completed</td><td><code>pub fn push_completed (&amp; self , completion : CommandSessionCompletion)</code></td></tr><tr><td>method</td><td>cleanup_caller</td><td><code>pub fn cleanup_caller (&amp; self , caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; usize</code></td></tr><tr><td>method</td><td>cancel_all</td><td><code>pub fn cancel_all (&amp; self , grace_s : Option &lt; f64 &gt;) -&gt; usize</code></td></tr><tr><td>method</td><td>cancel_and_drain</td><td><code>fn cancel_and_drain (&amp; self , sessions : Vec &lt; Arc &lt; CommandSession &gt; &gt; , grace_s : Option &lt; f64 &gt;) -&gt; usize</code></td></tr><tr><td>method</td><td>sweep_expired</td><td><code>pub fn sweep_expired (&amp; self , now : Instant) -&gt; SweepReport</code></td></tr><tr><td>method</td><td>sweep_scaffold</td><td><code>fn sweep_scaffold (&amp; self , now : Instant) -&gt; SweepReport</code></td></tr><tr><td>method</td><td>sweep_linux</td><td><code>fn sweep_linux (&amp; self , now : Instant) -&gt; SweepReport</code></td></tr><tr><td>method</td><td>finish_session</td><td><code>fn finish_session (&amp; self , session : Arc &lt; CommandSession &gt; , status : &amp; str , exit_code : Option &lt; i64 &gt; , include_session_id : bool ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code></td></tr><tr><td>method</td><td>finish_completed</td><td><code>fn finish_completed (&amp; self , session : Arc &lt; CommandSession &gt; , result : CommandResponse , publish_completion : bool ,) -&gt; CommandResponse</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for CommandSessionManager</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-command-session/src/manager.rs:22</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SweepReport pub pub struct SweepReport crates/eos-command-session/src/manager.rs expired usize live usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SweepReport</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct SweepReport</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>expired</td><td><code>usize</code></td></tr><tr><td>pub</td><td>live</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/manager.rs:504</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct ExpiringPolicy private struct ExpiringPolicy crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ExpiringPolicy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ExpiringPolicy</code>
+  <div class="tags"></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl CommandWorkspacePolicy for ExpiringPolicy</code></summary><table><tbody><tr><td>method</td><td>prepare_command_workspace</td><td><code>fn prepare_command_workspace (&amp; self , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt;</code></td></tr><tr><td>method</td><td>finalize_command_workspace</td><td><code>fn finalize_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code></td></tr><tr><td>method</td><td>discard_command_workspace</td><td><code>fn discard_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-command-session/src/manager.rs:524</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_teardown_control private fn is_teardown_control (chars : &amp; str) -&gt; bool crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_teardown_control</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn is_teardown_control (chars : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/manager.rs:490</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn contains_teardown_control private fn contains_teardown_control (chars : &amp; str) -&gt; bool crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>contains_teardown_control</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn contains_teardown_control (chars : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/manager.rs:494</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manager_registers_counts_and_sweeps_sessions private fn manager_registers_counts_and_sweeps_sessions () crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manager_registers_counts_and_sweeps_sessions</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn manager_registers_counts_and_sweeps_sessions ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/manager.rs:575</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ephemeral_request private fn ephemeral_request (caller_id : &amp; str) -&gt; StartCommandSession crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ephemeral_request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ephemeral_request (caller_id : &amp; str) -&gt; StartCommandSession</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/manager.rs:604</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn caller_may_hold_multiple_sessions_per_kind private fn caller_may_hold_multiple_sessions_per_kind () crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>caller_may_hold_multiple_sessions_per_kind</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn caller_may_hold_multiple_sessions_per_kind ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/manager.rs:614</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collected_completion_preserves_finalized_stdout private fn collected_completion_preserves_finalized_stdout () crates/eos-command-session/src/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>collected_completion_preserves_finalized_stdout</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn collected_completion_preserves_finalized_stdout ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/manager.rs:630</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-runner · src/fresh_ns/command.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-runner File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>9</b><span>modules</span></div>
+  <div><b>71</b><span>items</span></div>
+  <div><b>28</b><span>fields</span></div>
+  <div><b>9</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runner.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">fresh_ns</span><ul class="file-tree"><li><a class="file-link" href="eos-runner--src-fresh-ns-child-rs.html"><span>child.rs</span><small>1/4</small></a></li><li><a class="file-link active" href="eos-runner--src-fresh-ns-command-rs.html"><span>command.rs</span><small>0/9</small></a></li></ul></li><li><a class="file-link" href="eos-runner--src-fresh-ns-rs.html"><span>fresh_ns.rs</span><small>1/8</small></a></li><li><a class="file-link" href="eos-runner--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-runner--src-mount-mask-rs.html"><span>mount_mask.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-runner--src-path-rs.html"><span>path.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-runner--src-request-rs.html"><span>request.rs</span><small>8/1</small></a></li><li><a class="file-link" href="eos-runner--src-setns-rs.html"><span>setns.rs</span><small>0/25</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="fresh_ns::command crates/eos-runner/src/fresh_ns/command.rs plugin_service_argv shell_argv shell_cwd command_environment TestResult exec_command_string_uses_non_login_bash exec_command_rejects_raw_argv plugin_service_requires_argv_command normalizes_paths_without_touching_fs request">
+  <div class="module-head">
+    <div>
+      <h2>src/fresh_ns/command.rs</h2>
+      <p class="path">module <code>fresh_ns::command</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>9 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:171</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_service_argv pub(super) pub(super) fn plugin_service_argv (request : &amp; RunRequest) -&gt; Result &lt; Vec &lt; String &gt; , RunnerError &gt; crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_service_argv</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn plugin_service_argv (request : &amp; RunRequest) -&gt; Result &lt; Vec &lt; String &gt; , RunnerError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:17</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shell_argv pub(super) pub(super) fn shell_argv (request : &amp; RunRequest) -&gt; Result &lt; Vec &lt; String &gt; , RunnerError &gt; crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>shell_argv</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn shell_argv (request : &amp; RunRequest) -&gt; Result &lt; Vec &lt; String &gt; , RunnerError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:54</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shell_cwd pub(super) pub(super) fn shell_cwd (request : &amp; RunRequest) -&gt; Result &lt; PathBuf , RunnerError &gt; crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>shell_cwd</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn shell_cwd (request : &amp; RunRequest) -&gt; Result &lt; PathBuf , RunnerError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:82</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_environment pub(super) pub(super) fn command_environment (args : &amp; serde_json :: Value) -&gt; BTreeMap &lt; String , String &gt; crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>command_environment</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn command_environment (args : &amp; serde_json :: Value) -&gt; BTreeMap &lt; String , String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:110</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exec_command_string_uses_non_login_bash private fn exec_command_string_uses_non_login_bash () -&gt; TestResult crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>exec_command_string_uses_non_login_bash</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn exec_command_string_uses_non_login_bash () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:173</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exec_command_rejects_raw_argv private fn exec_command_rejects_raw_argv () -&gt; TestResult crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>exec_command_rejects_raw_argv</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn exec_command_rejects_raw_argv () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:188</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_service_requires_argv_command private fn plugin_service_requires_argv_command () -&gt; TestResult crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_service_requires_argv_command</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn plugin_service_requires_argv_command () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:203</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalizes_paths_without_touching_fs private fn normalizes_paths_without_touching_fs () crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalizes_paths_without_touching_fs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn normalizes_paths_without_touching_fs ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:232</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request private fn request (verb : &amp; str , args : serde_json :: Value) -&gt; RunRequest crates/eos-runner/src/fresh_ns/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn request (verb : &amp; str , args : serde_json :: Value) -&gt; RunRequest</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/fresh_ns/command.rs:240</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

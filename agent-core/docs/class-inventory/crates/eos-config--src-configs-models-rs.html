@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/configs/models.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>87</b><span>items</span></div>
+  <div><b>48</b><span>fields</span></div>
+  <div><b>37</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>attempt.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-config--src-configs-database-rs.html"><span>database.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-config--src-configs-models-rs.html"><span>models.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-providers-rs.html"><span>providers.rs</span><small>8/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-runtime-rs.html"><span>runtime.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-configs-workflow-rs.html"><span>workflow.rs</span><small>1/4</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-loader-rs.html"><span>loader.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-config--src-markdown-rs.html"><span>markdown.rs</span><small>0/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::models crates/eos-config/src/configs/models.rs ModelsConfig impl ModelsConfig ModelRegistrationConfig impl ModelRegistrationConfig defaults_are_empty parses_registrations active_only_config_is_valid rejects_blank_and_duplicate_keys validate_at_uses_nested_field_prefix">
+  <div class="module-head">
+    <div>
+      <h2>src/configs/models.rs</h2>
+      <p class="path">module <code>configs::models</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>2 impls</span>
+      <span>5 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ModelsConfig pub pub struct ModelsConfig crates/eos-config/src/configs/models.rs active Option &lt; String &gt; registrations Vec &lt; ModelRegistrationConfig &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ModelsConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ModelsConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>registrations</td><td><code>Vec &lt; ModelRegistrationConfig &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>active_key</td><td><code>pub fn active_key (&amp; self) -&gt; Option &lt; &amp; str &gt;</code></td></tr><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr><tr><td>method</td><td>validate_at</td><td><code>pub fn validate_at (&amp; self , field_prefix : &amp; str) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr><tr><td>method</td><td>active_registration</td><td><code>pub fn active_registration (&amp; self) -&gt; Option &lt; ModelRegistrationConfig &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/models.rs:15</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ModelRegistrationConfig pub pub struct ModelRegistrationConfig crates/eos-config/src/configs/models.rs key String label Option &lt; String &gt; class_path String kwargs Map &lt; String , Value &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ModelRegistrationConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ModelRegistrationConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>key</td><td><code>String</code></td></tr><tr><td>pub</td><td>label</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>class_path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kwargs</td><td><code>Map &lt; String , Value &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>key</td><td><code>pub fn key (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>label</td><td><code>pub fn label (&amp; self) -&gt; String</code></td></tr><tr><td>method</td><td>class_path</td><td><code>pub fn class_path (&amp; self) -&gt; &amp; str</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/models.rs:102</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn defaults_are_empty private fn defaults_are_empty () crates/eos-config/src/configs/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>defaults_are_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn defaults_are_empty ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/models.rs:153</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_registrations private fn parses_registrations () crates/eos-config/src/configs/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parses_registrations</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parses_registrations ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/models.rs:162</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn active_only_config_is_valid private fn active_only_config_is_valid () crates/eos-config/src/configs/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>active_only_config_is_valid</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn active_only_config_is_valid ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/models.rs:185</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_blank_and_duplicate_keys private fn rejects_blank_and_duplicate_keys () crates/eos-config/src/configs/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_blank_and_duplicate_keys</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_blank_and_duplicate_keys ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/models.rs:197</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_at_uses_nested_field_prefix private fn validate_at_uses_nested_field_prefix () crates/eos-config/src/configs/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>validate_at_uses_nested_field_prefix</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn validate_at_uses_nested_field_prefix ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/models.rs:231</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

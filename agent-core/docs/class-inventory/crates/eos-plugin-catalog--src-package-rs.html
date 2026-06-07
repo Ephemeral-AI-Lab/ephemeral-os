@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin-catalog · src/package.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-plugin-catalog File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>71</b><span>items</span></div>
+  <div><b>76</b><span>fields</span></div>
+  <div><b>13</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin-catalog.html"><span>discovery.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-frontmatter-rs.html"><span>frontmatter.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-manifest-rs.html"><span>manifest.rs</span><small>4/13</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-names-rs.html"><span>names.rs</span><small>3/4</small></a></li><li><a class="file-link active" href="eos-plugin-catalog--src-package-rs.html"><span>package.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-tool-specs-rs.html"><span>tool_specs.rs</span><small>11/9</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="package crates/eos-plugin-catalog/src/package.rs plugin_package_descriptor lsp_plugin_package_descriptor lsp_package_tree package_file lsp_operations canonical_tree_digest lsp_descriptor_is_neutral_daemon_package_contract lsp_package_tree_contains_normal_package_material lsp_package_source_omits_retired_global_runtime_fragments lsp_operations_follow_catalog_tool_specs lsp_manifest_serializes_to_daemon_shape package_file_named package_paths">
+  <div class="module-head">
+    <div>
+      <h2>src/package.rs</h2>
+      <p class="path">module <code>package</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>13 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_package_descriptor pub pub fn plugin_package_descriptor (plugin_id : &amp; str) -&gt; Option &lt; PluginPackageDescriptor &gt; crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_package_descriptor</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn plugin_package_descriptor (plugin_id : &amp; str) -&gt; Option &lt; PluginPackageDescriptor &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:27</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_plugin_package_descriptor pub pub fn lsp_plugin_package_descriptor () -&gt; PluginPackageDescriptor crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_plugin_package_descriptor</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn lsp_plugin_package_descriptor () -&gt; PluginPackageDescriptor</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:36</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_package_tree private fn lsp_package_tree () -&gt; PluginPackageTree crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_package_tree</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_package_tree () -&gt; PluginPackageTree</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:79</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_file private fn package_file (path : &amp; str , contents : &amp; [u8] , mode : u32) -&gt; PluginPackageFile crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn package_file (path : &amp; str , contents : &amp; [u8] , mode : u32) -&gt; PluginPackageFile</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:90</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_operations private fn lsp_operations () -&gt; Vec &lt; PluginOperationDescriptor &gt; crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_operations</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_operations () -&gt; Vec &lt; PluginOperationDescriptor &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:98</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn canonical_tree_digest private fn canonical_tree_digest (files : &amp; [PluginPackageFile]) -&gt; String crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>canonical_tree_digest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn canonical_tree_digest (files : &amp; [PluginPackageFile]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:114</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_descriptor_is_neutral_daemon_package_contract private fn lsp_descriptor_is_neutral_daemon_package_contract () crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_descriptor_is_neutral_daemon_package_contract</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_descriptor_is_neutral_daemon_package_contract ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:134</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_package_tree_contains_normal_package_material private fn lsp_package_tree_contains_normal_package_material () crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_package_tree_contains_normal_package_material</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_package_tree_contains_normal_package_material ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:183</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_package_source_omits_retired_global_runtime_fragments private fn lsp_package_source_omits_retired_global_runtime_fragments () crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_package_source_omits_retired_global_runtime_fragments</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_package_source_omits_retired_global_runtime_fragments ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:207</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_operations_follow_catalog_tool_specs private fn lsp_operations_follow_catalog_tool_specs () crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_operations_follow_catalog_tool_specs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_operations_follow_catalog_tool_specs ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:230</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_manifest_serializes_to_daemon_shape private fn lsp_manifest_serializes_to_daemon_shape () crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_manifest_serializes_to_daemon_shape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lsp_manifest_serializes_to_daemon_shape ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:249</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_file_named private fn package_file_named &lt; 'a &gt; (descriptor : &amp; 'a PluginPackageDescriptor , path : &amp; str ,) -&gt; &amp; 'a PluginPackageFile crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package_file_named</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn package_file_named &lt; 'a &gt; (descriptor : &amp; 'a PluginPackageDescriptor , path : &amp; str ,) -&gt; &amp; 'a PluginPackageFile</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:270</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_paths private fn package_paths (descriptor : &amp; PluginPackageDescriptor) -&gt; Vec &lt; &amp; str &gt; crates/eos-plugin-catalog/src/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package_paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn package_paths (descriptor : &amp; PluginPackageDescriptor) -&gt; Vec &lt; &amp; str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/package.rs:282</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

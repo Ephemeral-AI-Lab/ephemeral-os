@@ -3,6 +3,7 @@ mod support;
 
 const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/eos-command-session/config/default.test.yml";
 
+mod test_eos_command_session_cancel_runs;
 mod test_eos_command_session_command_matrix;
 mod test_eos_command_session_ephemeral_workspace;
 mod test_eos_command_session_error_and_backpressure;

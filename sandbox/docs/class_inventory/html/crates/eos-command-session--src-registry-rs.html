@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-command-session · src/registry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-command-session File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>86</b><span>items</span></div>
+  <div><b>83</b><span>fields</span></div>
+  <div><b>109</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link active" href="eos-command-session--src-registry-rs.html"><span>registry.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>5/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry crates/eos-command-session/src/registry.rs CommandSessionCompletion WorkspaceRunKind EphemeralWorkspaceRun IsolatedWorkspaceRun CallerRun impl CallerRun CommandSessionRegistry impl CommandSessionRegistry lock">
+  <div class="module-head">
+    <div>
+      <h2>src/registry.rs</h2>
+      <p class="path">module <code>registry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>2 impls</span>
+      <span>1 fns</span>
+      <span>16 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionCompletion pub pub struct CommandSessionCompletion crates/eos-command-session/src/registry.rs command_session_id String caller_id String command String result CommandResponse notification_result CommandResponse ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandSessionCompletion</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct CommandSessionCompletion</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>result</td><td><code>CommandResponse</code></td></tr><tr><td>pub</td><td>notification_result</td><td><code>CommandResponse</code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/registry.rs:10</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum WorkspaceRunKind pub pub enum WorkspaceRunKind crates/eos-command-session/src/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>WorkspaceRunKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum WorkspaceRunKind</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code></code></td></tr><tr><td>Isolated</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/registry.rs:19</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionRegistry pub(crate) pub(crate) struct CommandSessionRegistry crates/eos-command-session/src/registry.rs runs Mutex &lt; HashMap &lt; String , CallerRun &gt; &gt; completed Mutex &lt; HashMap &lt; String , CommandSessionCompletion &gt; &gt; counter AtomicU64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandSessionRegistry</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct CommandSessionRegistry</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>runs</td><td><code>Mutex &lt; HashMap &lt; String , CallerRun &gt; &gt;</code></td></tr><tr><td>private</td><td>completed</td><td><code>Mutex &lt; HashMap &lt; String , CommandSessionCompletion &gt; &gt;</code></td></tr><tr><td>private</td><td>counter</td><td><code>AtomicU64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new () -&gt; Self</code></td></tr><tr><td>method</td><td>next_id</td><td><code>pub(crate) fn next_id (&amp; self) -&gt; String</code></td></tr><tr><td>method</td><td>insert</td><td><code>pub(crate) fn insert (&amp; self , session : Arc &lt; CommandSession &gt; , kind : WorkspaceRunKind)</code></td></tr><tr><td>method</td><td>get</td><td><code>pub(crate) fn get (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>remove</td><td><code>pub(crate) fn remove (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>count_by_caller</td><td><code>pub(crate) fn count_by_caller (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code></td></tr><tr><td>method</td><td>live</td><td><code>pub(crate) fn live (&amp; self) -&gt; Vec &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>caller_sessions</td><td><code>pub(crate) fn caller_sessions (&amp; self , caller_id : &amp; str) -&gt; Vec &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>push_completed</td><td><code>pub(crate) fn push_completed (&amp; self , completion : CommandSessionCompletion)</code></td></tr><tr><td>method</td><td>take_completed_result</td><td><code>pub(crate) fn take_completed_result (&amp; self , id : &amp; str) -&gt; Option &lt; CommandResponse &gt;</code></td></tr><tr><td>method</td><td>completed_result</td><td><code>pub(crate) fn completed_result (&amp; self , id : &amp; str) -&gt; Option &lt; CommandResponse &gt;</code></td></tr><tr><td>method</td><td>collect_completed</td><td><code>pub(crate) fn collect_completed (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/registry.rs:91</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralWorkspaceRun private struct EphemeralWorkspaceRun crates/eos-command-session/src/registry.rs session Arc &lt; CommandSession &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EphemeralWorkspaceRun</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct EphemeralWorkspaceRun</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>session</td><td><code>Arc &lt; CommandSession &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/registry.rs:28</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedWorkspaceRun private struct IsolatedWorkspaceRun crates/eos-command-session/src/registry.rs sessions HashMap &lt; String , Arc &lt; CommandSession &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IsolatedWorkspaceRun</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct IsolatedWorkspaceRun</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sessions</td><td><code>HashMap &lt; String , Arc &lt; CommandSession &gt; &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/registry.rs:36</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum CallerRun private enum CallerRun crates/eos-command-session/src/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CallerRun</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum CallerRun</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code>0: HashMap &lt; String , EphemeralWorkspaceRun &gt;</code></td></tr><tr><td>Isolated</td><td><code>0: IsolatedWorkspaceRun</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>sessions</td><td><code>fn sessions (&amp; self) -&gt; Vec &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>get</td><td><code>fn get (&amp; self , session_id : &amp; str) -&gt; Option &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>count</td><td><code>fn count (&amp; self) -&gt; usize</code></td></tr><tr><td>method</td><td>take</td><td><code>fn take (&amp; mut self , session_id : &amp; str) -&gt; (Option &lt; Arc &lt; CommandSession &gt; &gt; , bool)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-command-session/src/registry.rs:43</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock pub(crate) pub(crate) fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-command-session/src/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:241</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -9,7 +9,7 @@ use eos_state::{
     TaskStatus, TaskStore, WorkflowId, WorkflowStatus,
 };
 use eos_tools::{
-    AttemptSubmissionPort, OutstandingWorkflow, PlannerPlan, SubmissionAck, ToolError,
+    AttemptSubmissionPort, CancelPort, OutstandingWorkflow, PlannerPlan, SubmissionAck, ToolError,
     WorkflowControlPort,
 };
 use eos_types::{AgentRunId, WorkflowSessionId};
@@ -108,6 +108,9 @@ pub struct WorkflowControlAdapter {
     attempt_store: Arc<dyn eos_state::AttemptStore>,
     task_store: Arc<dyn TaskStore>,
     handles: Arc<WorkflowHandleRegistry>,
+    /// The recursive cancellation port (spec §12.4): workflow cancellation
+    /// decomposes through `cancel_task` rather than flipping task rows directly.
+    cancel_port: Arc<dyn CancelPort>,
 }
 
 impl std::fmt::Debug for WorkflowControlAdapter {
@@ -126,6 +129,7 @@ impl WorkflowControlAdapter {
         iteration_store: Arc<dyn eos_state::IterationStore>,
         attempt_store: Arc<dyn eos_state::AttemptStore>,
         task_store: Arc<dyn TaskStore>,
+        cancel_port: Arc<dyn CancelPort>,
     ) -> Self {
         Self {
             starter,
@@ -134,6 +138,7 @@ impl WorkflowControlAdapter {
             attempt_store,
             task_store,
             handles: Arc::new(WorkflowHandleRegistry::default()),
+            cancel_port,
         }
     }
 }

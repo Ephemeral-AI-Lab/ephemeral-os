@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-runtime · src/plugin_tools.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-runtime File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>17</b><span>modules</span></div>
+  <div><b>75</b><span>items</span></div>
+  <div><b>71</b><span>fields</span></div>
+  <div><b>45</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime.html"><span>agent_runner.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-entry-rs.html"><span>entry.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-runtime--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-runtime--src-observability-rs.html"><span>observability.rs</span><small>1/2</small></a></li><li><a class="file-link active" href="eos-runtime--src-plugin-tools-rs.html"><span>plugin_tools.rs</span><small>3/10</small></a></li><li><a class="file-link" href="eos-runtime--src-request-input-rs.html"><span>request_input.rs</span><small>1/0</small></a></li><li><span class="folder">runtime_services</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime--src-runtime-services-agent-core-registry-rs.html"><span>agent_core_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-builder-rs.html"><span>builder.rs</span><small>4/14</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-db-store-rs.html"><span>db_store.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-message-records-rs.html"><span>message_records.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-state-reader-rs.html"><span>state_reader.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-runtime--src-tool-context-rs.html"><span>tool_context.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="plugin_tools crates/eos-runtime/src/plugin_tools.rs register_plugin_tools registered_plugin_tool split_plugin_tool_name split_plugin_tool_name_parts PluginToolExecutor impl ToolExecutor for PluginToolExecutor ensure_plugin_runtime json_object plugin_result registers_lsp_plugin_tools lsp_executor_ensures_package_before_dispatch RecordedCall RecordingTransport impl SandboxTransport for RecordingTransport metadata_with">
+  <div class="module-head">
+    <div>
+      <h2>src/plugin_tools.rs</h2>
+      <p class="path">module <code>plugin_tools</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>2 impls</span>
+      <span>10 fns</span>
+      <span>3 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginToolExecutor private struct PluginToolExecutor crates/eos-runtime/src/plugin_tools.rs parsed_name Option &lt; (String , String) &gt; intent Intent package PluginPackageDescriptor service SandboxToolService ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginToolExecutor</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct PluginToolExecutor</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>parsed_name</td><td><code>Option &lt; (String , String) &gt;</code></td></tr><tr><td>private</td><td>intent</td><td><code>Intent</code></td></tr><tr><td>private</td><td>package</td><td><code>PluginPackageDescriptor</code></td></tr><tr><td>private</td><td>service</td><td><code>SandboxToolService</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl ToolExecutor for PluginToolExecutor</code></summary><table><tbody><tr><td>method</td><td>execute</td><td><code>async fn execute (&amp; self , input : &amp; JsonObject , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; ToolResult , ToolError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:78</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RecordedCall private struct RecordedCall crates/eos-runtime/src/plugin_tools.rs op String payload JsonObject timeout_s u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RecordedCall</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RecordedCall</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>op</td><td><code>String</code></td></tr><tr><td>private</td><td>payload</td><td><code>JsonObject</code></td></tr><tr><td>private</td><td>timeout_s</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:270</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RecordingTransport private struct RecordingTransport crates/eos-runtime/src/plugin_tools.rs calls Mutex &lt; Vec &lt; RecordedCall &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RecordingTransport</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RecordingTransport</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>calls</td><td><code>Mutex &lt; Vec &lt; RecordedCall &gt; &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl SandboxTransport for RecordingTransport</code></summary><table><tbody><tr><td>method</td><td>call</td><td><code>async fn call (&amp; self , _sandbox_id : &amp; SandboxId , op : DaemonOp , payload : JsonObject , timeout_s : u32 ,) -&gt; Result &lt; JsonObject , SandboxPortError &gt;</code></td></tr><tr><td>method</td><td>call_dynamic</td><td><code>async fn call_dynamic (&amp; self , _sandbox_id : &amp; SandboxId , op : &amp; str , payload : JsonObject , timeout_s : u32 ,) -&gt; Result &lt; JsonObject , SandboxPortError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:277</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register_plugin_tools pub(crate) pub(crate) fn register_plugin_tools (registry : &amp; mut ToolRegistry , sandbox_service : &amp; SandboxToolService ,) crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>register_plugin_tools</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn register_plugin_tools (registry : &amp; mut ToolRegistry , sandbox_service : &amp; SandboxToolService ,)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:27</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn registered_plugin_tool private fn registered_plugin_tool (spec : PluginToolSpec , sandbox_service : SandboxToolService ,) -&gt; Option &lt; RegisteredTool &gt; crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>registered_plugin_tool</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn registered_plugin_tool (spec : PluginToolSpec , sandbox_service : SandboxToolService ,) -&gt; Option &lt; RegisteredTool &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:39</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn split_plugin_tool_name private fn split_plugin_tool_name (name : &amp; str) -&gt; Option &lt; (String , String) &gt; crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>split_plugin_tool_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn split_plugin_tool_name (name : &amp; str) -&gt; Option &lt; (String , String) &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:68</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn split_plugin_tool_name_parts private fn split_plugin_tool_name_parts (name : &amp; str) -&gt; Option &lt; (&amp; str , &amp; str) &gt; crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>split_plugin_tool_name_parts</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn split_plugin_tool_name_parts (name : &amp; str) -&gt; Option &lt; (&amp; str , &amp; str) &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:73</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_plugin_runtime private async fn ensure_plugin_runtime (service : &amp; SandboxToolService , package : &amp; PluginPackageDescriptor , base : &amp; SandboxRequestBase , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; () , ToolError &gt; crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_plugin_runtime</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn ensure_plugin_runtime (service : &amp; SandboxToolService , package : &amp; PluginPackageDescriptor , base : &amp; SandboxRequestBase , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; () , ToolError &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:124</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_object private fn json_object (value : Value) -&gt; JsonObject crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_object</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn json_object (value : Value) -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:146</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_result private fn plugin_result (response : &amp; JsonObject) -&gt; ToolResult crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_result</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn plugin_result (response : &amp; JsonObject) -&gt; ToolResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:154</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn registers_lsp_plugin_tools private fn registers_lsp_plugin_tools () crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>registers_lsp_plugin_tools</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn registers_lsp_plugin_tools ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:174</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lsp_executor_ensures_package_before_dispatch private async fn lsp_executor_ensures_package_before_dispatch () crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lsp_executor_ensures_package_before_dispatch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn lsp_executor_ensures_package_before_dispatch ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:188</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn metadata_with private fn metadata_with (_transport : Arc &lt; dyn SandboxTransport &gt;) -&gt; ExecutionMetadata crates/eos-runtime/src/plugin_tools.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>metadata_with</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn metadata_with (_transport : Arc &lt; dyn SandboxTransport &gt;) -&gt; ExecutionMetadata</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/plugin_tools.rs:315</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

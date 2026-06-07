@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-types · src/time.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-types File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>24</b><span>items</span></div>
+  <div><b>5</b><span>fields</span></div>
+  <div><b>10</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-types.html"><span>error.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-types--src-ids-rs.html"><span>ids.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-types--src-json-rs.html"><span>json.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-types--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-types--src-time-rs.html"><span>time.rs</span><small>4/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="time crates/eos-types/src/time.rs UtcDateTime impl UtcDateTime rfc3339_schema deserialize_rfc3339_utc Clock SystemClock impl Clock for SystemClock TestClock impl TestClock impl Clock for TestClock utc_datetime_rfc3339_roundtrip test_clock_is_settable json_schema_utc_datetime_is_date_time_string serde_is_transparent_rfc3339_string deserialize_normalizes_non_utc_offset">
+  <div class="module-head">
+    <div>
+      <h2>src/time.rs</h2>
+      <p class="path">module <code>time</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>4 impls</span>
+      <span>7 fns</span>
+      <span>10 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct UtcDateTime pub pub struct UtcDateTime crates/eos-types/src/time.rs 0 OffsetDateTime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>UtcDateTime</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct UtcDateTime</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>OffsetDateTime</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_offset</td><td><code>pub fn from_offset (dt : OffsetDateTime) -&gt; Self</code></td></tr><tr><td>method</td><td>to_rfc3339</td><td><code>pub fn to_rfc3339 (self) -&gt; String</code></td></tr><tr><td>method</td><td>into_inner</td><td><code>pub fn into_inner (self) -&gt; OffsetDateTime</code></td></tr><tr><td>associated-fn</td><td>now</td><td><code>pub fn now () -&gt; Self</code></td></tr><tr><td>associated-fn</td><td>parse_rfc3339</td><td><code>pub fn parse_rfc3339 (s : &amp; str) -&gt; Result &lt; Self , crate :: error :: CoreError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-types/src/time.rs:14</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct SystemClock pub pub struct SystemClock crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SystemClock</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct SystemClock</code>
+  <div class="tags"></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Clock for SystemClock</code></summary><table><tbody><tr><td>method</td><td>now</td><td><code>fn now (&amp; self) -&gt; UtcDateTime</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-types/src/time.rs:106</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TestClock pub pub struct TestClock crates/eos-types/src/time.rs instant RwLock &lt; UtcDateTime &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TestClock</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct TestClock</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>instant</td><td><code>RwLock &lt; UtcDateTime &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (instant : UtcDateTime) -&gt; Self</code></td></tr><tr><td>method</td><td>set</td><td><code>pub fn set (&amp; self , instant : UtcDateTime)</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Clock for TestClock</code></summary><table><tbody><tr><td>method</td><td>now</td><td><code>fn now (&amp; self) -&gt; UtcDateTime</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-types/src/time.rs:116</p>
+</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait Clock pub pub trait Clock crates/eos-types/src/time.rs  now fn now (&amp; self) -&gt; UtcDateTime">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>Clock</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait Clock</code>
+  <div class="tags"></div>
+  <h4>Methods</h4><table><tbody><tr><td>required</td><td>now</td><td><code>fn now (&amp; self) -&gt; UtcDateTime</code></td></tr></tbody></table>
+  <p class="source">crates/eos-types/src/time.rs:99</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rfc3339_schema private fn rfc3339_schema (_gen : &amp; mut schemars :: gen :: SchemaGenerator) -&gt; schemars :: schema :: Schema crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rfc3339_schema</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rfc3339_schema (_gen : &amp; mut schemars :: gen :: SchemaGenerator) -&gt; schemars :: schema :: Schema</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:75</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deserialize_rfc3339_utc private fn deserialize_rfc3339_utc &lt; 'de , D &gt; (deserializer : D) -&gt; Result &lt; OffsetDateTime , D :: Error &gt; where D : serde :: Deserializer &lt; 'de &gt; , crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>deserialize_rfc3339_utc</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn deserialize_rfc3339_utc &lt; 'de , D &gt; (deserializer : D) -&gt; Result &lt; OffsetDateTime , D :: Error &gt; where D : serde :: Deserializer &lt; 'de &gt; ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:87</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn utc_datetime_rfc3339_roundtrip private fn utc_datetime_rfc3339_roundtrip () crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>utc_datetime_rfc3339_roundtrip</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn utc_datetime_rfc3339_roundtrip ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:160</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_clock_is_settable private fn test_clock_is_settable () crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>test_clock_is_settable</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn test_clock_is_settable ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:179</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_schema_utc_datetime_is_date_time_string private fn json_schema_utc_datetime_is_date_time_string () crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_schema_utc_datetime_is_date_time_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn json_schema_utc_datetime_is_date_time_string ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:200</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serde_is_transparent_rfc3339_string private fn serde_is_transparent_rfc3339_string () crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serde_is_transparent_rfc3339_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn serde_is_transparent_rfc3339_string ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:210</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deserialize_normalizes_non_utc_offset private fn deserialize_normalizes_non_utc_offset () crates/eos-types/src/time.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>deserialize_normalizes_non_utc_offset</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn deserialize_normalizes_non_utc_offset ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-types/src/time.rs:221</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

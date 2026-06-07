@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/configs/daemon.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>95</b><span>items</span></div>
+  <div><b>127</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>8/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>10/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::daemon crates/eos-config/src/configs/daemon.rs DaemonConfig DaemonServerConfig InflightConfig AuditConfig IsolatedSweeperConfig PluginRuntimeConfig LayerStackConfig FileLimitsConfig impl DaemonConfig config_prd_daemon_section_deserializes_and_validates config_validation_rejects_invalid_daemon_values config_plugin_child_module_does_not_own_config_rs prd_config assert_invalid">
+  <div class="module-head">
+    <div>
+      <h2>src/configs/daemon.rs</h2>
+      <p class="path">module <code>configs::daemon</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>8 types</span>
+      <span>1 impls</span>
+      <span>5 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DaemonConfig pub pub struct DaemonConfig crates/eos-config/src/configs/daemon.rs server DaemonServerConfig inflight InflightConfig audit AuditConfig command_sessions CommandSessionConfig isolated_sweeper IsolatedSweeperConfig plugin PluginRuntimeConfig layer_stack LayerStackConfig files FileLimitsConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DaemonConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct DaemonConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>server</td><td><code>DaemonServerConfig</code></td></tr><tr><td>pub</td><td>inflight</td><td><code>InflightConfig</code></td></tr><tr><td>pub</td><td>audit</td><td><code>AuditConfig</code></td></tr><tr><td>pub</td><td>command_sessions</td><td><code>CommandSessionConfig</code></td></tr><tr><td>pub</td><td>isolated_sweeper</td><td><code>IsolatedSweeperConfig</code></td></tr><tr><td>pub</td><td>plugin</td><td><code>PluginRuntimeConfig</code></td></tr><tr><td>pub</td><td>layer_stack</td><td><code>LayerStackConfig</code></td></tr><tr><td>pub</td><td>files</td><td><code>FileLimitsConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () , ConfigFieldError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:17</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct DaemonServerConfig pub pub struct DaemonServerConfig crates/eos-config/src/configs/daemon.rs socket_path PathBuf pid_path PathBuf max_worker_threads usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DaemonServerConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct DaemonServerConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>socket_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>pid_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>max_worker_threads</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:30</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct InflightConfig pub pub struct InflightConfig crates/eos-config/src/configs/daemon.rs ttl_s f64 reaper_interval_s f64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>InflightConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct InflightConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>ttl_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>reaper_interval_s</td><td><code>f64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:38</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AuditConfig pub pub struct AuditConfig crates/eos-config/src/configs/daemon.rs allow_floor_reset bool pull_limit_default usize ring_max_events u64 ring_max_bytes u64 pressure_threshold f64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AuditConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct AuditConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>allow_floor_reset</td><td><code>bool</code></td></tr><tr><td>pub</td><td>pull_limit_default</td><td><code>usize</code></td></tr><tr><td>pub</td><td>ring_max_events</td><td><code>u64</code></td></tr><tr><td>pub</td><td>ring_max_bytes</td><td><code>u64</code></td></tr><tr><td>pub</td><td>pressure_threshold</td><td><code>f64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:45</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedSweeperConfig pub pub struct IsolatedSweeperConfig crates/eos-config/src/configs/daemon.rs ttl_sweep_interval_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IsolatedSweeperConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct IsolatedSweeperConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>ttl_sweep_interval_ms</td><td><code>u64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:55</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginRuntimeConfig pub pub struct PluginRuntimeConfig crates/eos-config/src/configs/daemon.rs ppc_root PathBuf ppc_timeout_ms u64 service_probe_timeout_ms u64 max_response_bytes usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginRuntimeConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginRuntimeConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>ppc_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>ppc_timeout_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>service_probe_timeout_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>max_response_bytes</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:61</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerStackConfig pub pub struct LayerStackConfig crates/eos-config/src/configs/daemon.rs auto_squash_max_depth usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerStackConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LayerStackConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>auto_squash_max_depth</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:70</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct FileLimitsConfig pub pub struct FileLimitsConfig crates/eos-config/src/configs/daemon.rs max_read_bytes usize max_write_bytes usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FileLimitsConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct FileLimitsConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>max_read_bytes</td><td><code>usize</code></td></tr><tr><td>pub</td><td>max_write_bytes</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/daemon.rs:76</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_prd_daemon_section_deserializes_and_validates private fn config_prd_daemon_section_deserializes_and_validates () crates/eos-config/src/configs/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>config_prd_daemon_section_deserializes_and_validates</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn config_prd_daemon_section_deserializes_and_validates ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/daemon.rs:203</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_validation_rejects_invalid_daemon_values private fn config_validation_rejects_invalid_daemon_values () crates/eos-config/src/configs/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>config_validation_rejects_invalid_daemon_values</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn config_validation_rejects_invalid_daemon_values ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/daemon.rs:208</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_plugin_child_module_does_not_own_config_rs private fn config_plugin_child_module_does_not_own_config_rs () crates/eos-config/src/configs/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>config_plugin_child_module_does_not_own_config_rs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn config_plugin_child_module_does_not_own_config_rs ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/daemon.rs:243</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prd_config private fn prd_config () -&gt; DaemonConfig crates/eos-config/src/configs/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prd_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn prd_config () -&gt; DaemonConfig</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/daemon.rs:257</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_invalid private fn assert_invalid (config : DaemonConfig , field : &amp; str) crates/eos-config/src/configs/daemon.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>assert_invalid</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn assert_invalid (config : DaemonConfig , field : &amp; str)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/daemon.rs:264</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

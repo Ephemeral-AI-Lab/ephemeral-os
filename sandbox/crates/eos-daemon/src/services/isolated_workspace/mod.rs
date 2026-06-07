@@ -9,7 +9,7 @@
 
 mod runtime;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
@@ -40,7 +40,6 @@ struct DaemonIsolatedState {
     #[cfg(target_os = "linux")]
     layer_stack_root: PathBuf,
     session: DaemonSession,
-    active_command_sessions: HashMap<String, String>,
 }
 
 pub(crate) fn configure_isolated_workspace(config: &IsolatedWorkspaceConfig) {
@@ -93,15 +92,12 @@ pub fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Dae
         Err(error) => return Ok(error),
     };
     let grace_s = args.get("grace_s").and_then(Value::as_f64);
-    command_session::cleanup_command_sessions_for_caller(&caller_id, grace_s);
-    with_state(|state| {
-        let response = state.session.exit(&CallerId(caller_id.clone()), grace_s)?;
-        state
-            .active_command_sessions
-            .retain(|_, owner| owner != &caller_id);
-        Ok(response)
-    })
-    .map_or_else(|error| Ok(error_payload(&error)), Ok)
+    // Exit is the per-caller workspace-run teardown: discard the caller's
+    // isolated command sessions, then tear down its namespace + lease. The
+    // isolated exit result carries this op's response shape.
+    crate::services::workspace_run::cancel_workspace_runs_by_caller_id(&caller_id, grace_s)
+        .isolated
+        .map_or_else(|error| Ok(error_payload(&error)), Ok)
 }
 
 // Dispatcher op handlers share the fallible ABI even though status misses are
@@ -162,7 +158,6 @@ pub fn op_test_reset(_args: &Value, _context: DispatchContext<'_>) -> Result<Val
         let mut guard = lock_state_cell();
         let exited_callers = if let Some(state) = guard.as_mut() {
             let callers = state.session.list_open_callers();
-            state.active_command_sessions.clear();
             for caller_id in &callers {
                 let _ = state.session.exit(&CallerId(caller_id.clone()), Some(0.0));
             }
@@ -242,36 +237,16 @@ pub fn ttl_sweep() -> usize {
     let Some(state) = guard.as_mut() else {
         return 0;
     };
+    // Protect callers that still own at least one live command session. The
+    // command-session registry is the authority for this now that the isolated
+    // side-map is gone (lock order: isolated state -> command-session registry).
     let active_callers = state
-        .active_command_sessions
-        .values()
-        .cloned()
+        .session
+        .list_open_callers()
+        .into_iter()
+        .filter(|caller| command_session::active_command_sessions_for_caller(caller) > 0)
         .collect::<HashSet<_>>();
     state.session.ttl_sweep(&active_callers)
-}
-
-#[cfg(any(target_os = "linux", test))]
-pub fn register_command_session(caller_id: &str, command_session_id: &str) {
-    let mut guard = lock_state_cell();
-    if let Some(state) = guard.as_mut() {
-        state
-            .active_command_sessions
-            .insert(command_session_id.to_owned(), caller_id.to_owned());
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub fn unregister_command_session(caller_id: &str, command_session_id: &str) {
-    let mut guard = lock_state_cell();
-    if let Some(state) = guard.as_mut() {
-        if state
-            .active_command_sessions
-            .get(command_session_id)
-            .is_some_and(|owner| owner == caller_id)
-        {
-            state.active_command_sessions.remove(command_session_id);
-        }
-    }
 }
 
 #[cfg(target_os = "linux")]
@@ -291,8 +266,13 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
         #[cfg(target_os = "linux")]
         if let Some(state) = guard.as_mut() {
             if state.layer_stack_root != root {
+                // Block rebinding to a new root only while an isolated workspace
+                // is open: those handles pin leases/namespaces on the old root.
+                // (Isolated command sessions belong to an open caller, so this
+                // already covers them; ephemeral command sessions are unrelated
+                // to the isolated manager's binding and must not block a rebind.)
                 let open_callers = state.session.list_open_callers();
-                if !open_callers.is_empty() || !state.active_command_sessions.is_empty() {
+                if !open_callers.is_empty() {
                     return Err(IsolatedError::SetupFailed {
                         step: format!(
                             "isolated workspace manager is bound to {} with active callers",
@@ -328,7 +308,6 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
                 #[cfg(target_os = "linux")]
                 layer_stack_root: root,
                 session,
-                active_command_sessions: HashMap::new(),
             });
         }
     }

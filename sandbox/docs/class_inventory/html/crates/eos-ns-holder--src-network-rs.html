@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-ns-holder · src/network.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-ns-holder File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>4</b><span>modules</span></div>
+  <div><b>65</b><span>items</span></div>
+  <div><b>44</b><span>fields</span></div>
+  <div><b>8</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-ns-holder.html"><span>handshake.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-ns-holder--src-lib-rs.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ns-holder--src-namespace-rs.html"><span>namespace.rs</span><small>2/14</small></a></li><li><a class="file-link active" href="eos-ns-holder--src-network-rs.html"><span>network.rs</span><small>6/26</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="network crates/eos-ns-holder/src/network.rs NetworkConfig parse_network_config disable_ipv6_ra bring_loopback_up bring_loopback_up configure_namespace_veth configure_namespace_veth link_index set_link_up add_ipv4_address add_ipv4_default_route flush_ipv6_default_route flush_ipv6_default_route netlink_request_flags netlink_create_flags send_netlink_message send_netlink_message_with_attrs append_struct_bytes append_attr libc_c_int_to_u8 libc_c_int_to_u16 libc_c_int_to_u32 libc_c_int_to_sock_family libc_socklen usize_to_u16_saturating align4 NetlinkAttr impl NetlinkAttr IfInfoMsg IfAddrMsg RouteMsg NetlinkSocketAddress TestResult parse_net_ready_with_optional_veth_config">
+  <div class="module-head">
+    <div>
+      <h2>src/network.rs</h2>
+      <p class="path">module <code>network</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>1 impls</span>
+      <span>26 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct NetworkConfig pub(crate) pub(crate) struct NetworkConfig crates/eos-ns-holder/src/network.rs iface String ns_ip Ipv4Addr prefix_len u8 gateway Ipv4Addr ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NetworkConfig</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct NetworkConfig</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>iface</td><td><code>String</code></td></tr><tr><td>pub(crate)</td><td>ns_ip</td><td><code>Ipv4Addr</code></td></tr><tr><td>pub(crate)</td><td>prefix_len</td><td><code>u8</code></td></tr><tr><td>pub(crate)</td><td>gateway</td><td><code>Ipv4Addr</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ns-holder/src/network.rs:9</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct NetlinkAttr private struct NetlinkAttr crates/eos-ns-holder/src/network.rs kind u16 value Vec &lt; u8 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NetlinkAttr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct NetlinkAttr</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>kind</td><td><code>u16</code></td></tr><tr><td>private</td><td>value</td><td><code>Vec &lt; u8 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>const fn new (kind : u16 , value : Vec &lt; u8 &gt;) -&gt; Self</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ns-holder/src/network.rs:412</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IfInfoMsg private struct IfInfoMsg crates/eos-ns-holder/src/network.rs ifi_family u8 ifi_pad u8 ifi_type u16 ifi_index i32 ifi_flags u32 ifi_change u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IfInfoMsg</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct IfInfoMsg</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>ifi_family</td><td><code>u8</code></td></tr><tr><td>private</td><td>ifi_pad</td><td><code>u8</code></td></tr><tr><td>private</td><td>ifi_type</td><td><code>u16</code></td></tr><tr><td>private</td><td>ifi_index</td><td><code>i32</code></td></tr><tr><td>private</td><td>ifi_flags</td><td><code>u32</code></td></tr><tr><td>private</td><td>ifi_change</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ns-holder/src/network.rs:425</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IfAddrMsg private struct IfAddrMsg crates/eos-ns-holder/src/network.rs ifa_family u8 ifa_prefixlen u8 ifa_flags u8 ifa_scope u8 ifa_index u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IfAddrMsg</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct IfAddrMsg</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>ifa_family</td><td><code>u8</code></td></tr><tr><td>private</td><td>ifa_prefixlen</td><td><code>u8</code></td></tr><tr><td>private</td><td>ifa_flags</td><td><code>u8</code></td></tr><tr><td>private</td><td>ifa_scope</td><td><code>u8</code></td></tr><tr><td>private</td><td>ifa_index</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ns-holder/src/network.rs:440</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RouteMsg private struct RouteMsg crates/eos-ns-holder/src/network.rs rtm_family u8 rtm_dst_len u8 rtm_src_len u8 rtm_tos u8 rtm_table u8 rtm_protocol u8 rtm_scope u8 rtm_type u8 rtm_flags u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RouteMsg</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RouteMsg</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>rtm_family</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_dst_len</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_src_len</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_tos</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_table</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_protocol</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_scope</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_type</td><td><code>u8</code></td></tr><tr><td>private</td><td>rtm_flags</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ns-holder/src/network.rs:454</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct NetlinkSocketAddress private struct NetlinkSocketAddress crates/eos-ns-holder/src/network.rs nl_family libc :: sa_family_t nl_pad u16 nl_pid u32 nl_groups u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NetlinkSocketAddress</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct NetlinkSocketAddress</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>nl_family</td><td><code>libc :: sa_family_t</code></td></tr><tr><td>private</td><td>nl_pad</td><td><code>u16</code></td></tr><tr><td>private</td><td>nl_pid</td><td><code>u32</code></td></tr><tr><td>private</td><td>nl_groups</td><td><code>u32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ns-holder/src/network.rs:472</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:489</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_network_config pub(crate) pub(crate) fn parse_network_config (buf : &amp; [u8]) -&gt; Option &lt; NetworkConfig &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_network_config</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_network_config (buf : &amp; [u8]) -&gt; Option &lt; NetworkConfig &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:17</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disable_ipv6_ra pub(crate) pub(crate) fn disable_ipv6_ra () crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>disable_ipv6_ra</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn disable_ipv6_ra ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:35</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bring_loopback_up pub(crate) pub(crate) fn bring_loopback_up () crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>bring_loopback_up</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn bring_loopback_up ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:66</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bring_loopback_up pub(crate) pub(crate) const fn bring_loopback_up () crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>bring_loopback_up</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) const fn bring_loopback_up ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:104</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_namespace_veth pub(crate) pub(crate) fn configure_namespace_veth (config : &amp; NetworkConfig) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>configure_namespace_veth</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn configure_namespace_veth (config : &amp; NetworkConfig)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:107</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_namespace_veth pub(crate) pub(crate) const fn configure_namespace_veth (_config : &amp; NetworkConfig) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>configure_namespace_veth</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) const fn configure_namespace_veth (_config : &amp; NetworkConfig)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:123</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn flush_ipv6_default_route pub(crate) pub(crate) fn flush_ipv6_default_route () crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>flush_ipv6_default_route</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn flush_ipv6_default_route ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:209</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn flush_ipv6_default_route pub(crate) pub(crate) const fn flush_ipv6_default_route () crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>flush_ipv6_default_route</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) const fn flush_ipv6_default_route ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:236</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn link_index private fn link_index (name : &amp; str) -&gt; libc :: c_uint crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>link_index</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn link_index (name : &amp; str) -&gt; libc :: c_uint</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:126</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn set_link_up private fn set_link_up (index : libc :: c_uint) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>set_link_up</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn set_link_up (index : libc :: c_uint)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:136</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn add_ipv4_address private fn add_ipv4_address (index : libc :: c_uint , ip : Ipv4Addr , prefix_len : u8) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>add_ipv4_address</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn add_ipv4_address (index : libc :: c_uint , ip : Ipv4Addr , prefix_len : u8)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:161</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn add_ipv4_default_route private fn add_ipv4_default_route (index : libc :: c_uint , gateway : Ipv4Addr) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>add_ipv4_default_route</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn add_ipv4_default_route (index : libc :: c_uint , gateway : Ipv4Addr)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:183</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn netlink_request_flags private fn netlink_request_flags () -&gt; Option &lt; u16 &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>netlink_request_flags</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn netlink_request_flags () -&gt; Option &lt; u16 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:239</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn netlink_create_flags private fn netlink_create_flags () -&gt; Option &lt; u16 &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>netlink_create_flags</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn netlink_create_flags () -&gt; Option &lt; u16 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:244</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn send_netlink_message private fn send_netlink_message &lt; T &gt; (message_type : u16 , flags : u16 , payload : &amp; T ,) -&gt; Result &lt; () , std :: io :: Error &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>send_netlink_message</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn send_netlink_message &lt; T &gt; (message_type : u16 , flags : u16 , payload : &amp; T ,) -&gt; Result &lt; () , std :: io :: Error &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:249</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn send_netlink_message_with_attrs private fn send_netlink_message_with_attrs &lt; T &gt; (message_type : u16 , flags : u16 , payload : &amp; T , attrs : &amp; [NetlinkAttr] ,) -&gt; Result &lt; () , std :: io :: Error &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>send_netlink_message_with_attrs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn send_netlink_message_with_attrs &lt; T &gt; (message_type : u16 , flags : u16 , payload : &amp; T , attrs : &amp; [NetlinkAttr] ,) -&gt; Result &lt; () , std :: io :: Error &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:258</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_struct_bytes private fn append_struct_bytes &lt; T &gt; (buffer : &amp; mut Vec &lt; u8 &gt; , value : &amp; T) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_struct_bytes</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn append_struct_bytes &lt; T &gt; (buffer : &amp; mut Vec &lt; u8 &gt; , value : &amp; T)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:341</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_attr private fn append_attr (buffer : &amp; mut Vec &lt; u8 &gt; , attr : &amp; NetlinkAttr) crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_attr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn append_attr (buffer : &amp; mut Vec &lt; u8 &gt; , attr : &amp; NetlinkAttr)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:356</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn libc_c_int_to_u8 private fn libc_c_int_to_u8 (value : libc :: c_int) -&gt; Option &lt; u8 &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>libc_c_int_to_u8</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn libc_c_int_to_u8 (value : libc :: c_int) -&gt; Option &lt; u8 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:366</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn libc_c_int_to_u16 private fn libc_c_int_to_u16 (value : libc :: c_int) -&gt; Option &lt; u16 &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>libc_c_int_to_u16</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn libc_c_int_to_u16 (value : libc :: c_int) -&gt; Option &lt; u16 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:371</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn libc_c_int_to_u32 private fn libc_c_int_to_u32 (value : libc :: c_int) -&gt; Option &lt; u32 &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>libc_c_int_to_u32</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn libc_c_int_to_u32 (value : libc :: c_int) -&gt; Option &lt; u32 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:376</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn libc_c_int_to_sock_family private fn libc_c_int_to_sock_family (value : libc :: c_int) -&gt; Option &lt; libc :: sa_family_t &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>libc_c_int_to_sock_family</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn libc_c_int_to_sock_family (value : libc :: c_int) -&gt; Option &lt; libc :: sa_family_t &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:381</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn libc_socklen private fn libc_socklen (value : usize) -&gt; Option &lt; libc :: socklen_t &gt; crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>libc_socklen</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn libc_socklen (value : usize) -&gt; Option &lt; libc :: socklen_t &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:386</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_u16_saturating private fn usize_to_u16_saturating (value : usize) -&gt; u16 crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_u16_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn usize_to_u16_saturating (value : usize) -&gt; u16</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:391</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn align4 private const fn align4 (length : usize) -&gt; usize crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>align4</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn align4 (length : usize) -&gt; usize</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:396</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_net_ready_with_optional_veth_config private fn parse_net_ready_with_optional_veth_config () -&gt; TestResult crates/eos-ns-holder/src/network.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_net_ready_with_optional_veth_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_net_ready_with_optional_veth_config () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ns-holder/src/network.rs:491</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

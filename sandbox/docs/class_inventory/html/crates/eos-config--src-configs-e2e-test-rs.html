@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/configs/e2e-test.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>95</b><span>items</span></div>
+  <div><b>127</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>8/5</small></a></li><li><a class="file-link active" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>10/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::e2e-test crates/eos-config/src/configs/e2e-test.rs NodeMode impl NodeMode Config WorkloadConfig EosE2eTestConfig E2eDockerConfig E2ePoolConfig E2eNodeMode E2eTimeoutConfig E2eAuditConfig E2eWorkloadConfig impl EosE2eTestConfig impl Config resolve_eosd_path require_non_empty require_non_empty_path require_absolute require_non_empty_items require_concurrency_levels require_u16_nonzero require_u64_at_least require_usize_at_least prd_e2e_section_deserializes_and_validates validation_rejects_invalid_e2e_values prd_config assert_invalid">
+  <div class="module-head">
+    <div>
+      <h2>src/configs/e2e-test.rs</h2>
+      <p class="path">module <code>configs::e2e-test</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>10 types</span>
+      <span>3 impls</span>
+      <span>13 fns</span>
+      <span>6 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Config pub pub struct Config crates/eos-config/src/configs/e2e-test.rs image String platform Option &lt; String &gt; eosd_path PathBuf remote_daemon_dir PathBuf remote_eosd_path PathBuf root_dir PathBuf cap_add Vec &lt; String &gt; security_opt Vec &lt; String &gt; tmpfs Vec &lt; String &gt; tcp_port u16 sandboxes usize mode NodeMode recycle_after usize ready_timeout Duration request_timeout Duration base_build_timeout Duration workspace_root String keep_container bool non_kept_container_ttl Duration audit_pull_limit u64 workload WorkloadConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Config</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct Config</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>image</td><td><code>String</code></td></tr><tr><td>pub</td><td>platform</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>eosd_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>remote_daemon_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>remote_eosd_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>root_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>cap_add</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>security_opt</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tmpfs</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tcp_port</td><td><code>u16</code></td></tr><tr><td>pub</td><td>sandboxes</td><td><code>usize</code></td></tr><tr><td>pub</td><td>mode</td><td><code>NodeMode</code></td></tr><tr><td>pub</td><td>recycle_after</td><td><code>usize</code></td></tr><tr><td>pub</td><td>ready_timeout</td><td><code>Duration</code></td></tr><tr><td>pub</td><td>request_timeout</td><td><code>Duration</code></td></tr><tr><td>pub</td><td>base_build_timeout</td><td><code>Duration</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>keep_container</td><td><code>bool</code></td></tr><tr><td>pub</td><td>non_kept_container_ttl</td><td><code>Duration</code></td></tr><tr><td>pub</td><td>audit_pull_limit</td><td><code>u64</code></td></tr><tr><td>pub</td><td>workload</td><td><code>WorkloadConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_document</td><td><code>pub fn from_document (doc : &amp; ConfigDocument) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>constructor</td><td>from_sections</td><td><code>fn from_sections (e2e : EosE2eTestConfig , isolated : IsolatedWorkspaceConfig) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>associated-fn</td><td>load_test_override</td><td><code>pub fn load_test_override (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; (Self , ConfigDocument) &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:41</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkloadConfig pub pub struct WorkloadConfig crates/eos-config/src/configs/e2e-test.rs concurrency_levels Vec &lt; usize &gt; write_iterations usize sample_count usize perf_artifact_dir PathBuf timeout Duration ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkloadConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct WorkloadConfig</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>concurrency_levels</td><td><code>Vec &lt; usize &gt;</code></td></tr><tr><td>pub</td><td>write_iterations</td><td><code>usize</code></td></tr><tr><td>pub</td><td>sample_count</td><td><code>usize</code></td></tr><tr><td>pub</td><td>perf_artifact_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>timeout</td><td><code>Duration</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:88</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct EosE2eTestConfig pub pub struct EosE2eTestConfig crates/eos-config/src/configs/e2e-test.rs docker E2eDockerConfig pool E2ePoolConfig timeouts E2eTimeoutConfig audit E2eAuditConfig workload E2eWorkloadConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EosE2eTestConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct EosE2eTestConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>docker</td><td><code>E2eDockerConfig</code></td></tr><tr><td>pub</td><td>pool</td><td><code>E2ePoolConfig</code></td></tr><tr><td>pub</td><td>timeouts</td><td><code>E2eTimeoutConfig</code></td></tr><tr><td>pub</td><td>audit</td><td><code>E2eAuditConfig</code></td></tr><tr><td>pub</td><td>workload</td><td><code>E2eWorkloadConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_document</td><td><code>pub fn from_document (doc : &amp; ConfigDocument) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:103</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct E2eDockerConfig pub pub struct E2eDockerConfig crates/eos-config/src/configs/e2e-test.rs image String platform Option &lt; String &gt; eosd_path PathBuf remote_daemon_dir PathBuf remote_eosd_path PathBuf root_dir PathBuf cap_add Vec &lt; String &gt; security_opt Vec &lt; String &gt; tmpfs Vec &lt; String &gt; tcp_port u16 non_kept_container_ttl_s u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>E2eDockerConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct E2eDockerConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>image</td><td><code>String</code></td></tr><tr><td>pub</td><td>platform</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>eosd_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>remote_daemon_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>remote_eosd_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>root_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>cap_add</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>security_opt</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tmpfs</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tcp_port</td><td><code>u16</code></td></tr><tr><td>pub</td><td>non_kept_container_ttl_s</td><td><code>u64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:114</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct E2ePoolConfig pub pub struct E2ePoolConfig crates/eos-config/src/configs/e2e-test.rs mode E2eNodeMode sandboxes usize recycle_after usize keep_container bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>E2ePoolConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct E2ePoolConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code>E2eNodeMode</code></td></tr><tr><td>pub</td><td>sandboxes</td><td><code>usize</code></td></tr><tr><td>pub</td><td>recycle_after</td><td><code>usize</code></td></tr><tr><td>pub</td><td>keep_container</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:131</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct E2eTimeoutConfig pub pub struct E2eTimeoutConfig crates/eos-config/src/configs/e2e-test.rs ready_s u64 request_s u64 base_build_s u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>E2eTimeoutConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct E2eTimeoutConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>ready_s</td><td><code>u64</code></td></tr><tr><td>pub</td><td>request_s</td><td><code>u64</code></td></tr><tr><td>pub</td><td>base_build_s</td><td><code>u64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:151</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct E2eAuditConfig pub pub struct E2eAuditConfig crates/eos-config/src/configs/e2e-test.rs pull_limit u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>E2eAuditConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct E2eAuditConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>pull_limit</td><td><code>u64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:160</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct E2eWorkloadConfig pub pub struct E2eWorkloadConfig crates/eos-config/src/configs/e2e-test.rs concurrency_levels Vec &lt; usize &gt; write_iterations usize sample_count usize perf_artifact_dir PathBuf timeout_s u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>E2eWorkloadConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct E2eWorkloadConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>concurrency_levels</td><td><code>Vec &lt; usize &gt;</code></td></tr><tr><td>pub</td><td>write_iterations</td><td><code>usize</code></td></tr><tr><td>pub</td><td>sample_count</td><td><code>usize</code></td></tr><tr><td>pub</td><td>perf_artifact_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>timeout_s</td><td><code>u64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:167</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum NodeMode pub pub enum NodeMode crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>NodeMode</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum NodeMode</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Shared</td><td><code></code></td></tr><tr><td>Pool</td><td><code></code></td></tr><tr><td>PerFile</td><td><code></code></td></tr><tr><td>PerTest</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_config</td><td><code>const fn from_config (value : E2eNodeMode) -&gt; Self</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:17</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum E2eNodeMode pub pub enum E2eNodeMode crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>E2eNodeMode</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum E2eNodeMode</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Shared</td><td><code></code></td></tr><tr><td>Pool</td><td><code></code></td></tr><tr><td>PerFile</td><td><code></code></td></tr><tr><td>PerTest</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:141</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_eosd_path private fn resolve_eosd_path (value : &amp; Path) -&gt; PathBuf crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_eosd_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn resolve_eosd_path (value : &amp; Path) -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:327</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_non_empty private fn require_non_empty (value : &amp; str , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_non_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_non_empty (value : &amp; str , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:342</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_non_empty_path private fn require_non_empty_path (path : &amp; std :: path :: Path , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_non_empty_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_non_empty_path (path : &amp; std :: path :: Path , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:349</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_absolute private fn require_absolute (path : &amp; std :: path :: Path , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_absolute</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_absolute (path : &amp; std :: path :: Path , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:356</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_non_empty_items private fn require_non_empty_items (values : &amp; [String] , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_non_empty_items</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_non_empty_items (values : &amp; [String] , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:363</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_concurrency_levels private fn require_concurrency_levels (values : &amp; [usize] , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_concurrency_levels</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_concurrency_levels (values : &amp; [usize] , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:370</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_u16_nonzero private fn require_u16_nonzero (value : u16 , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_u16_nonzero</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_u16_nonzero (value : u16 , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:391</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_u64_at_least private fn require_u64_at_least (value : u64 , minimum : u64 , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_u64_at_least</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_u64_at_least (value : u64 , minimum : u64 , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:398</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_usize_at_least private fn require_usize_at_least (value : usize , minimum : usize , field : &amp; str) -&gt; Result &lt; () &gt; crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_usize_at_least</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn require_usize_at_least (value : usize , minimum : usize , field : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:405</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prd_e2e_section_deserializes_and_validates private fn prd_e2e_section_deserializes_and_validates () crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prd_e2e_section_deserializes_and_validates</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn prd_e2e_section_deserializes_and_validates ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:416</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validation_rejects_invalid_e2e_values private fn validation_rejects_invalid_e2e_values () crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>validation_rejects_invalid_e2e_values</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn validation_rejects_invalid_e2e_values ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:422</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prd_config private fn prd_config () -&gt; EosE2eTestConfig crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prd_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn prd_config () -&gt; EosE2eTestConfig</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:457</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_invalid private fn assert_invalid (config : EosE2eTestConfig , field : &amp; str) crates/eos-config/src/configs/e2e-test.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>assert_invalid</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn assert_invalid (config : EosE2eTestConfig , field : &amp; str)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/e2e-test.rs:462</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

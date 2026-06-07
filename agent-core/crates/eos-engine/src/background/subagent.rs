@@ -256,6 +256,10 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             notifier: subagent_control.notifications(),
             cancellation: subagent_control.cancellation(),
             foreground: subagent_control.foreground(),
+            // The subagent run is not (yet) inserted in the registry, so it
+            // finalizes naturally; the parent observes its completion via the
+            // SubagentRecord settle path.
+            agent_run_registry: None,
             persist_agent_run: false,
             record_kind: AgentRunRecordKind::Subagent {
                 parent_agent_run_id: caller_agent_run_id.clone(),

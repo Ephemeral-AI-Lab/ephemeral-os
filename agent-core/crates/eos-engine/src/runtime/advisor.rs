@@ -148,6 +148,9 @@ pub(crate) async fn run_advisor(
             notifier: NotificationService::new(),
             cancellation: AgentRunCancellation::new(),
             foreground,
+            // Helper run: never inserted in the registry, so it finalizes
+            // naturally (no claim arbitration).
+            agent_run_registry: None,
             persist_agent_run: false,
             record_kind: parent_agent_run_id
                 .map(|parent_agent_run_id| AgentRunRecordKind::Advisor {

@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-llm-client · src/clients/anthropic_api_client.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-llm-client File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>140</b><span>items</span></div>
+  <div><b>94</b><span>fields</span></div>
+  <div><b>53</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-llm-client.html"><span>auth.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-llm-client--src-client-rs.html"><span>client.rs</span><small>5/8</small></a></li><li><span class="folder">clients</span><ul class="file-tree"><li><a class="file-link active" href="eos-llm-client--src-clients-anthropic-api-client-rs.html"><span>anthropic_api_client.rs</span><small>3/16</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-claude-coding-plan-rs.html"><span>claude_coding_plan.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-codex-coding-plan-rs.html"><span>codex_coding_plan.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-openai-api-client-rs.html"><span>openai_api_client.rs</span><small>4/12</small></a></li></ul></li><li><a class="file-link" href="eos-llm-client--src-error-rs.html"><span>error.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-llm-client--src-events-rs.html"><span>events.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-llm-client--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-message-rs.html"><span>message.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-llm-client--src-retry-rs.html"><span>retry.rs</span><small>1/15</small></a></li><li><a class="file-link" href="eos-llm-client--src-sse-rs.html"><span>sse.rs</span><small>1/15</small></a></li><li><a class="file-link" href="eos-llm-client--src-types-rs.html"><span>types.rs</span><small>6/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="clients::anthropic_api_client crates/eos-llm-client/src/clients/anthropic_api_client.rs AnthropicApiClient impl AnthropicApiClient impl LlmClient for AnthropicApiClient BlockAccum AnthropicState decode_anthropic encode_anthropic_body encode_anthropic_body_with_options serialize_anthropic_block serialize_anthropic_tool encode_anthropic_tool_choice decode_anthropic_for_test decode_fixture in_stream_error_frame_is_swallowed_at_decoder_level decodes_anthropic_sse_fixture reasoning_compat_decode_maps_thinking_delta encode_projects_tools_per_provider tool_result_wire_omits_metadata_and_is_terminal system_notification_wraps_in_reminder_tag claude_coding_plan_uses_oauth_transport_shape parse_error_log_omits_secrets">
+  <div class="module-head">
+    <div>
+      <h2>src/clients/anthropic_api_client.rs</h2>
+      <p class="path">module <code>clients::anthropic_api_client</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>2 impls</span>
+      <span>16 fns</span>
+      <span>5 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AnthropicApiClient pub pub struct AnthropicApiClient crates/eos-llm-client/src/clients/anthropic_api_client.rs http reqwest :: Client endpoint reqwest :: Url auth Arc &lt; Auth &gt; retry Arc &lt; RetryConfig &gt; extra_headers HeaderMap prepend_claude_code_system_prompt bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AnthropicApiClient</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct AnthropicApiClient</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>http</td><td><code>reqwest :: Client</code></td></tr><tr><td>private</td><td>endpoint</td><td><code>reqwest :: Url</code></td></tr><tr><td>private</td><td>auth</td><td><code>Arc &lt; Auth &gt;</code></td></tr><tr><td>private</td><td>retry</td><td><code>Arc &lt; RetryConfig &gt;</code></td></tr><tr><td>private</td><td>extra_headers</td><td><code>HeaderMap</code></td></tr><tr><td>private</td><td>prepend_claude_code_system_prompt</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt;) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr><tr><td>method</td><td>build_headers</td><td><code>fn build_headers (&amp; self) -&gt; Result &lt; HeaderMap , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_claude_coding_plan</td><td><code>pub(crate) fn new_claude_coding_plan (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt; , beta_header : HeaderValue ,) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_with_options</td><td><code>fn new_with_options (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt; , extra_headers : HeaderMap , prepend_claude_code_system_prompt : bool ,) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for AnthropicApiClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:41</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BlockAccum private struct BlockAccum crates/eos-llm-client/src/clients/anthropic_api_client.rs block_type String id String name String text String input_json String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>BlockAccum</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct BlockAccum</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>block_type</td><td><code>String</code></td></tr><tr><td>private</td><td>id</td><td><code>String</code></td></tr><tr><td>private</td><td>name</td><td><code>String</code></td></tr><tr><td>private</td><td>text</td><td><code>String</code></td></tr><tr><td>private</td><td>input_json</td><td><code>String</code></td></tr></tbody></table>
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:148</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AnthropicState private struct AnthropicState crates/eos-llm-client/src/clients/anthropic_api_client.rs blocks HashMap &lt; usize , BlockAccum &gt; content Vec &lt; ContentBlock &gt; input_tokens u32 output_tokens u32 stop_reason Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AnthropicState</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct AnthropicState</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>blocks</td><td><code>HashMap &lt; usize , BlockAccum &gt;</code></td></tr><tr><td>private</td><td>content</td><td><code>Vec &lt; ContentBlock &gt;</code></td></tr><tr><td>private</td><td>input_tokens</td><td><code>u32</code></td></tr><tr><td>private</td><td>output_tokens</td><td><code>u32</code></td></tr><tr><td>private</td><td>stop_reason</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:158</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_body pub(crate) pub(crate) fn encode_anthropic_body (request : &amp; LlmRequest) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encode_anthropic_body</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn encode_anthropic_body (request : &amp; LlmRequest) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:318</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_anthropic_for_test pub(crate) pub(crate) async fn decode_anthropic_for_test (frames : impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,) -&gt; Vec &lt; LlmStreamEvent &gt; crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decode_anthropic_for_test</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn decode_anthropic_for_test (frames : impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,) -&gt; Vec &lt; LlmStreamEvent &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:419</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_anthropic private fn decode_anthropic &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send , crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decode_anthropic</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn decode_anthropic &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:168</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_body_with_options private fn encode_anthropic_body_with_options (request : &amp; LlmRequest , prepend_claude_code_system_prompt : bool ,) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encode_anthropic_body_with_options</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn encode_anthropic_body_with_options (request : &amp; LlmRequest , prepend_claude_code_system_prompt : bool ,) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:323</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_anthropic_block private fn serialize_anthropic_block (block : &amp; ContentBlock) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serialize_anthropic_block</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn serialize_anthropic_block (block : &amp; ContentBlock) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:371</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_anthropic_tool private fn serialize_anthropic_tool (spec : &amp; ToolSpec) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serialize_anthropic_tool</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn serialize_anthropic_tool (spec : &amp; ToolSpec) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:402</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_tool_choice private fn encode_anthropic_tool_choice (choice : &amp; ToolChoice) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encode_anthropic_tool_choice</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn encode_anthropic_tool_choice (choice : &amp; ToolChoice) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:411</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_fixture private async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; Result &lt; LlmStreamEvent , ProviderError &gt; &gt; crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decode_fixture</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; Result &lt; LlmStreamEvent , ProviderError &gt; &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:444</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn in_stream_error_frame_is_swallowed_at_decoder_level private async fn in_stream_error_frame_is_swallowed_at_decoder_level () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>in_stream_error_frame_is_swallowed_at_decoder_level</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn in_stream_error_frame_is_swallowed_at_decoder_level ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:461</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decodes_anthropic_sse_fixture private async fn decodes_anthropic_sse_fixture () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decodes_anthropic_sse_fixture</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn decodes_anthropic_sse_fixture ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:497</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reasoning_compat_decode_maps_thinking_delta private async fn reasoning_compat_decode_maps_thinking_delta () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reasoning_compat_decode_maps_thinking_delta</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn reasoning_compat_decode_maps_thinking_delta ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:560</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_projects_tools_per_provider private fn encode_projects_tools_per_provider () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encode_projects_tools_per_provider</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn encode_projects_tools_per_provider ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:584</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_wire_omits_metadata_and_is_terminal private fn tool_result_wire_omits_metadata_and_is_terminal () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>tool_result_wire_omits_metadata_and_is_terminal</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn tool_result_wire_omits_metadata_and_is_terminal ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:634</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn system_notification_wraps_in_reminder_tag private fn system_notification_wraps_in_reminder_tag () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>system_notification_wraps_in_reminder_tag</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn system_notification_wraps_in_reminder_tag ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:663</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn claude_coding_plan_uses_oauth_transport_shape private fn claude_coding_plan_uses_oauth_transport_shape () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>claude_coding_plan_uses_oauth_transport_shape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn claude_coding_plan_uses_oauth_transport_shape ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:680</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_error_log_omits_secrets private async fn parse_error_log_omits_secrets () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_error_log_omits_secrets</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn parse_error_log_omits_secrets ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:737</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

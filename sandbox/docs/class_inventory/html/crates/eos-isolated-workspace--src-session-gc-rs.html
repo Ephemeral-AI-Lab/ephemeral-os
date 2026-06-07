@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-isolated-workspace · src/session/gc.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-isolated-workspace File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>149</b><span>items</span></div>
+  <div><b>78</b><span>fields</span></div>
+  <div><b>82</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-command-session-finalize-rs.html"><span>finalize.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-policy-rs.html"><span>policy.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-prepare-rs.html"><span>prepare.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link active" href="eos-isolated-workspace--src-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="session::gc crates/eos-isolated-workspace/src/session/gc.rs impl IsolatedSession &lt; S , R , A &gt; persisted_string persisted_i32 persisted_ipv4 persisted_path path_identifier kill_cgroup_pids">
+  <div class="module-head">
+    <div>
+      <h2>src/session/gc.rs</h2>
+      <p class="path">module <code>session::gc</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>1 impls</span>
+      <span>6 fns</span>
+      <span>11 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_string private fn persisted_string (row : &amp; Value , key : &amp; str) -&gt; Option &lt; String &gt; crates/eos-isolated-workspace/src/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn persisted_string (row : &amp; Value , key : &amp; str) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:211</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_i32 private fn persisted_i32 (row : &amp; Value , key : &amp; str) -&gt; Option &lt; i32 &gt; crates/eos-isolated-workspace/src/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_i32</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn persisted_i32 (row : &amp; Value , key : &amp; str) -&gt; Option &lt; i32 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:219</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_ipv4 private fn persisted_ipv4 (row : &amp; Value , key : &amp; str) -&gt; Option &lt; Ipv4Addr &gt; crates/eos-isolated-workspace/src/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_ipv4</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn persisted_ipv4 (row : &amp; Value , key : &amp; str) -&gt; Option &lt; Ipv4Addr &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:224</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_path private fn persisted_path (row : &amp; Value , key : &amp; str) -&gt; Option &lt; PathBuf &gt; crates/eos-isolated-workspace/src/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn persisted_path (row : &amp; Value , key : &amp; str) -&gt; Option &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:228</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_identifier private fn path_identifier (path : &amp; Path) -&gt; String crates/eos-isolated-workspace/src/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_identifier</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn path_identifier (path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:232</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn kill_cgroup_pids private fn kill_cgroup_pids (cgroup_path : &amp; Path) crates/eos-isolated-workspace/src/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>kill_cgroup_pids</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn kill_cgroup_pids (cgroup_path : &amp; Path)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:239</p>
+</article><div class="group-label">Other Implementations</div><article class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-isolated-workspace/src/session/gc.rs  reap_startup_orphans pub(super) fn reap_startup_orphans (&amp; mut self) -&gt; Result &lt; () , IsolatedError &gt; reap_persisted_lease fn reap_persisted_lease (&amp; self , row : &amp; Value) reap_persisted_holder fn reap_persisted_holder (&amp; self , row : &amp; Value) reap_persisted_veth fn reap_persisted_veth (&amp; mut self , row : &amp; Value) reap_persisted_cgroup fn reap_persisted_cgroup (&amp; self , row : &amp; Value) reap_persisted_scratch fn reap_persisted_scratch (&amp; self , row : &amp; Value) reap_named_orphans pub(super) fn reap_named_orphans (&amp; mut self) reap_named_veth_orphans fn reap_named_veth_orphans (&amp; mut self) reap_named_cgroup_orphans fn reap_named_cgroup_orphans (&amp; self) reap_named_scratch_orphans fn reap_named_scratch_orphans (&amp; self) emit_gc_orphan fn emit_gc_orphan (&amp; self , kind : &amp; str , identifier : String , timer : Instant , extra : &amp; [(&amp; str , Value)] ,)">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl IsolatedSession &lt; S , R , A &gt;</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl IsolatedSession &lt; S , R , A &gt;</code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr><td>method</td><td>reap_startup_orphans</td><td><code>pub(super) fn reap_startup_orphans (&amp; mut self) -&gt; Result &lt; () , IsolatedError &gt;</code></td></tr><tr><td>method</td><td>reap_persisted_lease</td><td><code>fn reap_persisted_lease (&amp; self , row : &amp; Value)</code></td></tr><tr><td>method</td><td>reap_persisted_holder</td><td><code>fn reap_persisted_holder (&amp; self , row : &amp; Value)</code></td></tr><tr><td>method</td><td>reap_persisted_veth</td><td><code>fn reap_persisted_veth (&amp; mut self , row : &amp; Value)</code></td></tr><tr><td>method</td><td>reap_persisted_cgroup</td><td><code>fn reap_persisted_cgroup (&amp; self , row : &amp; Value)</code></td></tr><tr><td>method</td><td>reap_persisted_scratch</td><td><code>fn reap_persisted_scratch (&amp; self , row : &amp; Value)</code></td></tr><tr><td>method</td><td>reap_named_orphans</td><td><code>pub(super) fn reap_named_orphans (&amp; mut self)</code></td></tr><tr><td>method</td><td>reap_named_veth_orphans</td><td><code>fn reap_named_veth_orphans (&amp; mut self)</code></td></tr><tr><td>method</td><td>reap_named_cgroup_orphans</td><td><code>fn reap_named_cgroup_orphans (&amp; self)</code></td></tr><tr><td>method</td><td>reap_named_scratch_orphans</td><td><code>fn reap_named_scratch_orphans (&amp; self)</code></td></tr><tr><td>method</td><td>emit_gc_orphan</td><td><code>fn emit_gc_orphan (&amp; self , kind : &amp; str , identifier : String , timer : Instant , extra : &amp; [(&amp; str , Value)] ,)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-isolated-workspace/src/session/gc.rs:13</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

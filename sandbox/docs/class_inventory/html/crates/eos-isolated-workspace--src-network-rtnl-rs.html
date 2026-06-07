@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-isolated-workspace · src/network/rtnl.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-isolated-workspace File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>149</b><span>items</span></div>
+  <div><b>78</b><span>fields</span></div>
+  <div><b>82</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-command-session-finalize-rs.html"><span>finalize.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-policy-rs.html"><span>policy.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-prepare-rs.html"><span>prepare.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-command-session-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link active" href="eos-isolated-workspace--src-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="network::rtnl crates/eos-isolated-workspace/src/network/rtnl.rs run_netlink ensure_bridge install_veth_pair require_link_index link_index ignore_exists ignore_not_found ignore_unsupported is_error_text network_error_at gateway_addr">
+  <div class="module-head">
+    <div>
+      <h2>src/network/rtnl.rs</h2>
+      <p class="path">module <code>network::rtnl</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>11 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_netlink pub(super) pub(super) fn run_netlink &lt; T , F , Fut &gt; (operation : F) -&gt; Result &lt; T , IsolatedError &gt; where T : Send + 'static , F : FnOnce (Handle) -&gt; Fut + Send + 'static , Fut : Future &lt; Output = Result &lt; T , IsolatedError &gt; &gt; + Send + 'static , crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_netlink</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn run_netlink &lt; T , F , Fut &gt; (operation : F) -&gt; Result &lt; T , IsolatedError &gt; where T : Send + 'static , F : FnOnce (Handle) -&gt; Fut + Send + 'static , Fut : Future &lt; Output = Result &lt; T , IsolatedError &gt; &gt; + Send + 'static ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:10</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_bridge pub(super) pub(super) async fn ensure_bridge (handle : &amp; Handle) -&gt; Result &lt; u32 , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_bridge</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) async fn ensure_bridge (handle : &amp; Handle) -&gt; Result &lt; u32 , IsolatedError &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:32</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn install_veth_pair pub(super) pub(super) async fn install_veth_pair (handle : &amp; Handle , host_name : &amp; str , ns_name : &amp; str , holder_pid : u32 ,) -&gt; Result &lt; () , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>install_veth_pair</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) async fn install_veth_pair (handle : &amp; Handle , host_name : &amp; str , ns_name : &amp; str , holder_pid : u32 ,) -&gt; Result &lt; () , IsolatedError &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:63</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn link_index pub(super) pub(super) async fn link_index (handle : &amp; Handle , name : &amp; str) -&gt; Result &lt; Option &lt; u32 &gt; , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>link_index</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) async fn link_index (handle : &amp; Handle , name : &amp; str) -&gt; Result &lt; Option &lt; u32 &gt; , IsolatedError &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:130</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ignore_not_found pub(super) pub(super) fn ignore_not_found (step : impl Into &lt; String &gt; , result : Result &lt; () , rtnetlink :: Error &gt; ,) -&gt; Result &lt; () , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ignore_not_found</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn ignore_not_found (step : impl Into &lt; String &gt; , result : Result &lt; () , rtnetlink :: Error &gt; ,) -&gt; Result &lt; () , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:151</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_link_index private async fn require_link_index (handle : &amp; Handle , name : &amp; str) -&gt; Result &lt; u32 , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_link_index</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn require_link_index (handle : &amp; Handle , name : &amp; str) -&gt; Result &lt; u32 , IsolatedError &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:124</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ignore_exists private fn ignore_exists (step : impl Into &lt; String &gt; , result : Result &lt; () , rtnetlink :: Error &gt; ,) -&gt; Result &lt; () , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ignore_exists</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ignore_exists (step : impl Into &lt; String &gt; , result : Result &lt; () , rtnetlink :: Error &gt; ,) -&gt; Result &lt; () , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:139</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ignore_unsupported private fn ignore_unsupported (step : impl Into &lt; String &gt; , result : Result &lt; () , rtnetlink :: Error &gt; ,) -&gt; Result &lt; () , IsolatedError &gt; crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ignore_unsupported</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ignore_unsupported (step : impl Into &lt; String &gt; , result : Result &lt; () , rtnetlink :: Error &gt; ,) -&gt; Result &lt; () , IsolatedError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:163</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_error_text private fn is_error_text (error : &amp; rtnetlink :: Error , needles : &amp; [&amp; str]) -&gt; bool crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_error_text</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn is_error_text (error : &amp; rtnetlink :: Error , needles : &amp; [&amp; str]) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:180</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn network_error_at private fn network_error_at (step : impl Into &lt; String &gt; , error : impl std :: fmt :: Display) -&gt; IsolatedError crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>network_error_at</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn network_error_at (step : impl Into &lt; String &gt; , error : impl std :: fmt :: Display) -&gt; IsolatedError</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:185</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gateway_addr private const fn gateway_addr () -&gt; Ipv4Addr crates/eos-isolated-workspace/src/network/rtnl.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>gateway_addr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn gateway_addr () -&gt; Ipv4Addr</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-isolated-workspace/src/network/rtnl.rs:189</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-runtime · src/entry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-runtime File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>17</b><span>modules</span></div>
+  <div><b>75</b><span>items</span></div>
+  <div><b>71</b><span>fields</span></div>
+  <div><b>45</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime.html"><span>agent_runner.rs</span><small>1/1</small></a></li><li><a class="file-link active" href="eos-runtime--src-entry-rs.html"><span>entry.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-runtime--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-runtime--src-observability-rs.html"><span>observability.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-runtime--src-plugin-tools-rs.html"><span>plugin_tools.rs</span><small>3/10</small></a></li><li><a class="file-link" href="eos-runtime--src-request-input-rs.html"><span>request_input.rs</span><small>1/0</small></a></li><li><span class="folder">runtime_services</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime--src-runtime-services-agent-core-registry-rs.html"><span>agent_core_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-builder-rs.html"><span>builder.rs</span><small>4/14</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-db-store-rs.html"><span>db_store.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-message-records-rs.html"><span>message_records.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-state-reader-rs.html"><span>state_reader.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-runtime--src-tool-context-rs.html"><span>tool_context.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="entry crates/eos-runtime/src/entry.rs RequestOutcome root_task_id_for run_request resolve_root_def fail_unfinished_root">
+  <div class="module-head">
+    <div>
+      <h2>src/entry.rs</h2>
+      <p class="path">module <code>entry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>4 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RequestOutcome pub pub struct RequestOutcome crates/eos-runtime/src/entry.rs status TaskStatus terminal Option &lt; JsonObject &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RequestOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct RequestOutcome</code>
+  <div class="tags"><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>TaskStatus</code></td></tr><tr><td>pub</td><td>terminal</td><td><code>Option &lt; JsonObject &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runtime/src/entry.rs:38</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_request pub pub async fn run_request (services : &amp; RuntimeServices , input : RequestRunInput , on_event : Option &lt; EventCallback &gt; ,) -&gt; Result &lt; RequestOutcome &gt; crates/eos-runtime/src/entry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_request</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn run_request (services : &amp; RuntimeServices , input : RequestRunInput , on_event : Option &lt; EventCallback &gt; ,) -&gt; Result &lt; RequestOutcome &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-runtime/src/entry.rs:65</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_task_id_for pub(crate) pub(crate) fn root_task_id_for (request_id : &amp; RequestId) -&gt; TaskId crates/eos-runtime/src/entry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>root_task_id_for</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn root_task_id_for (request_id : &amp; RequestId) -&gt; TaskId</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/entry.rs:54</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_root_def private fn resolve_root_def (services : &amp; RuntimeServices) -&gt; Option &lt; AgentDefinition &gt; crates/eos-runtime/src/entry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_root_def</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn resolve_root_def (services : &amp; RuntimeServices) -&gt; Option &lt; AgentDefinition &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runtime/src/entry.rs:299</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fail_unfinished_root private async fn fail_unfinished_root (services : &amp; RuntimeServices , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,) crates/eos-runtime/src/entry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>fail_unfinished_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn fail_unfinished_root (services : &amp; RuntimeServices , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,)</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-runtime/src/entry.rs:310</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

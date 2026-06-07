@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-db · src/model_registry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-db File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>90</b><span>items</span></div>
+  <div><b>113</b><span>fields</span></div>
+  <div><b>57</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>composition.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="model_registry crates/eos-db/src/model_registry.rs ResolvedModel ModelRegistrationRow ModelRegistry impl Sealed for ModelRegistry impl ModelRegistry impl ModelStore for ModelRegistry row_to_model redact_kwargs_json redact_secrets resolved_kwargs resolve_placeholders parse_dollar_var registry obj dollar_var_parsing_is_fullmatch resolve_placeholders_uses_lookup redaction_masks_secrets_keeps_placeholders model_registry_active_and_resolve sync_from_config_imports_and_updates_active sync_from_config_synthesizes_active_only_model">
+  <div class="module-head">
+    <div>
+      <h2>src/model_registry.rs</h2>
+      <p class="path">module <code>model_registry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>3 impls</span>
+      <span>14 fns</span>
+      <span>8 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ResolvedModel pub pub struct ResolvedModel crates/eos-db/src/model_registry.rs model_key String label String class_path String kwargs JsonObject is_active bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ResolvedModel</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ResolvedModel</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>model_key</td><td><code>String</code></td></tr><tr><td>pub</td><td>label</td><td><code>String</code></td></tr><tr><td>pub</td><td>class_path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kwargs</td><td><code>JsonObject</code></td></tr><tr><td>pub</td><td>is_active</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/model_registry.rs:27</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ModelRegistry pub pub struct ModelRegistry crates/eos-db/src/model_registry.rs pool SqlitePool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ModelRegistry</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ModelRegistry</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pool</td><td><code>SqlitePool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new (pool : SqlitePool) -&gt; Self</code></td></tr><tr><td>method</td><td>active_resolved</td><td><code>pub async fn active_resolved (&amp; self) -&gt; Result &lt; Option &lt; ResolvedModel &gt; , DbError &gt;</code></td></tr><tr><td>method</td><td>sync_from_config</td><td><code>pub async fn sync_from_config (&amp; self , config : &amp; ModelsConfig) -&gt; Result &lt; usize , DbError &gt;</code></td></tr><tr><td>method</td><td>register_inner</td><td><code>async fn register_inner (&amp; self , model_key : &amp; str , label : &amp; str , class_path : &amp; str , kwargs : &amp; JsonObject , activate : bool ,) -&gt; Result &lt; ModelRegistration , DbError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for ModelRegistry</code></summary><table><tbody></tbody></table></details><details><summary><code>impl ModelStore for ModelRegistry</code></summary><table><tbody><tr><td>method</td><td>register</td><td><code>async fn register (&amp; self , model_key : &amp; str , label : &amp; str , class_path : &amp; str , kwargs : &amp; JsonObject , activate : bool ,) -&gt; Result &lt; ModelRegistration , CoreError &gt;</code></td></tr><tr><td>method</td><td>delete</td><td><code>async fn delete (&amp; self , model_key : &amp; str) -&gt; Result &lt; bool , CoreError &gt;</code></td></tr><tr><td>method</td><td>get</td><td><code>async fn get (&amp; self , model_key : &amp; str) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt;</code></td></tr><tr><td>method</td><td>active</td><td><code>async fn active (&amp; self) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-db/src/model_registry.rs:55</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ModelRegistrationRow private struct ModelRegistrationRow crates/eos-db/src/model_registry.rs id i64 key String label String class_path String kwargs_json String is_active bool created_at OffsetDateTime updated_at OffsetDateTime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ModelRegistrationRow</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ModelRegistrationRow</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>id</td><td><code>i64</code></td></tr><tr><td>private</td><td>key</td><td><code>String</code></td></tr><tr><td>private</td><td>label</td><td><code>String</code></td></tr><tr><td>private</td><td>class_path</td><td><code>String</code></td></tr><tr><td>private</td><td>kwargs_json</td><td><code>String</code></td></tr><tr><td>private</td><td>is_active</td><td><code>bool</code></td></tr><tr><td>private</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>private</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/model_registry.rs:43</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_model private fn row_to_model (row : ModelRegistrationRow , redact : bool) -&gt; ModelRegistration crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_model</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn row_to_model (row : ModelRegistrationRow , redact : bool) -&gt; ModelRegistration</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:230</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn redact_kwargs_json private fn redact_kwargs_json (kwargs_json : &amp; str) -&gt; String crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>redact_kwargs_json</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn redact_kwargs_json (kwargs_json : &amp; str) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:251</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn redact_secrets private fn redact_secrets (map : &amp; Map &lt; String , Value &gt;) -&gt; Map &lt; String , Value &gt; crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>redact_secrets</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn redact_secrets (map : &amp; Map &lt; String , Value &gt;) -&gt; Map &lt; String , Value &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:258</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolved_kwargs private fn resolved_kwargs (kwargs_json : &amp; str , lookup : &amp; dyn Fn (&amp; str) -&gt; Option &lt; String &gt;) -&gt; JsonObject crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolved_kwargs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn resolved_kwargs (kwargs_json : &amp; str , lookup : &amp; dyn Fn (&amp; str) -&gt; Option &lt; String &gt;) -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:280</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_placeholders private fn resolve_placeholders (value : &amp; Value , lookup : &amp; dyn Fn (&amp; str) -&gt; Option &lt; String &gt;) -&gt; Value crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_placeholders</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn resolve_placeholders (value : &amp; Value , lookup : &amp; dyn Fn (&amp; str) -&gt; Option &lt; String &gt;) -&gt; Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:289</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_dollar_var private fn parse_dollar_var (s : &amp; str) -&gt; Option &lt; &amp; str &gt; crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_dollar_var</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_dollar_var (s : &amp; str) -&gt; Option &lt; &amp; str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:317</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn registry private async fn registry () -&gt; (tempfile :: TempDir , ModelRegistry) crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>registry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn registry () -&gt; (tempfile :: TempDir , ModelRegistry)</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:341</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn obj private fn obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>obj</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:351</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dollar_var_parsing_is_fullmatch private fn dollar_var_parsing_is_fullmatch () crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dollar_var_parsing_is_fullmatch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn dollar_var_parsing_is_fullmatch ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:358</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_placeholders_uses_lookup private fn resolve_placeholders_uses_lookup () crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_placeholders_uses_lookup</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn resolve_placeholders_uses_lookup ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:370</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn redaction_masks_secrets_keeps_placeholders private fn redaction_masks_secrets_keeps_placeholders () crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>redaction_masks_secrets_keeps_placeholders</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn redaction_masks_secrets_keeps_placeholders ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:393</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn model_registry_active_and_resolve private async fn model_registry_active_and_resolve () crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>model_registry_active_and_resolve</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn model_registry_active_and_resolve ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:408</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sync_from_config_imports_and_updates_active private async fn sync_from_config_imports_and_updates_active () crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sync_from_config_imports_and_updates_active</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn sync_from_config_imports_and_updates_active ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:463</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sync_from_config_synthesizes_active_only_model private async fn sync_from_config_synthesizes_active_only_model () crates/eos-db/src/model_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sync_from_config_synthesizes_active_only_model</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn sync_from_config_synthesizes_active_only_model ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-db/src/model_registry.rs:495</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/stack/projection.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-layerstack File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>60</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="stack::projection crates/eos-layerstack/src/stack/projection.rs apply_layer ProjectEntry ProjectEntryKind collect_project_entries clear_directory ensure_directory">
+  <div class="module-head">
+    <div>
+      <h2>src/stack/projection.rs</h2>
+      <p class="path">module <code>stack::projection</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>0 impls</span>
+      <span>4 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ProjectEntry private struct ProjectEntry crates/eos-layerstack/src/stack/projection.rs path PathBuf rel PathBuf kind ProjectEntryKind ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProjectEntry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ProjectEntry</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>rel</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kind</td><td><code>ProjectEntryKind</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/stack/projection.rs:84</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProjectEntryKind private enum ProjectEntryKind crates/eos-layerstack/src/stack/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ProjectEntryKind</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum ProjectEntryKind</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Opaque</td><td><code></code></td></tr><tr><td>LogicalWhiteout</td><td><code></code></td></tr><tr><td>KernelWhiteout</td><td><code></code></td></tr><tr><td>Directory</td><td><code></code></td></tr><tr><td>File</td><td><code></code></td></tr><tr><td>Symlink</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/stack/projection.rs:91</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_layer pub(super) pub(super) fn apply_layer (layer_dir : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>apply_layer</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn apply_layer (layer_dir : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/stack/projection.rs:9</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_project_entries private fn collect_project_entries (layer_dir : &amp; Path) -&gt; Result &lt; Vec &lt; ProjectEntry &gt; , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>collect_project_entries</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn collect_project_entries (layer_dir : &amp; Path) -&gt; Result &lt; Vec &lt; ProjectEntry &gt; , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/stack/projection.rs:101</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn clear_directory private fn clear_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>clear_directory</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn clear_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/stack/projection.rs:144</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_directory private fn ensure_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_directory</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ensure_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/stack/projection.rs:158</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

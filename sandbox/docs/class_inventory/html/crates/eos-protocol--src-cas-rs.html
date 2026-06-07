@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-protocol · src/cas.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-protocol File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>9</b><span>modules</span></div>
+  <div><b>65</b><span>items</span></div>
+  <div><b>114</b><span>fields</span></div>
+  <div><b>8</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-protocol.html"><span>audit.rs</span><small>7/3</small></a></li><li><a class="file-link" href="eos-protocol--src-canonical-rs.html"><span>canonical.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eos-protocol--src-cas-rs.html"><span>cas.rs</span><small>5/18</small></a></li><li><a class="file-link" href="eos-protocol--src-envelope-rs.html"><span>envelope.rs</span><small>6/7</small></a></li><li><a class="file-link" href="eos-protocol--src-ids-rs.html"><span>ids.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-protocol--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-protocol--src-models-rs.html"><span>models.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-protocol--src-ops-rs.html"><span>ops.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-protocol--src-version-rs.html"><span>version.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="cas crates/eos-protocol/src/cas.rs CasError LayerPath impl LayerPath impl fmt :: Display for LayerPath LayerRef Manifest impl Manifest push_json_ascii_escaped push_u_escape manifest_layers_json manifest_root_hash LayerChange impl LayerChange aggregate_layer_changes update_digest layer_digest hex_lower hex_char TestResult lp ascii_escaper_reproduces_documented_literal ascii_escaper_surrogate_pair_for_nonbmp escaper_short_escapes_and_control_chars normalize_layer_path_rules manifest_new_rejects_bad_schema aggregate_is_idempotent_and_order_insensitive aggregate_last_write_wins arb_change_unique">
+  <div class="module-head">
+    <div>
+      <h2>src/cas.rs</h2>
+      <p class="path">module <code>cas</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>4 impls</span>
+      <span>18 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LayerPath pub pub struct LayerPath crates/eos-protocol/src/cas.rs 0 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerPath</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LayerPath</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>associated-fn</td><td>parse</td><td><code>pub fn parse (path : &amp; str) -&gt; Result &lt; Self , CasError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for LayerPath</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-protocol/src/cas.rs:38</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerRef pub pub struct LayerRef crates/eos-protocol/src/cas.rs layer_id String path String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerRef</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LayerRef</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>path</td><td><code>String</code></td></tr></tbody></table>
+  <p class="source">crates/eos-protocol/src/cas.rs:92</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Manifest pub pub struct Manifest crates/eos-protocol/src/cas.rs version i64 layers Vec &lt; LayerRef &gt; schema_version i64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Manifest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct Manifest</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr><tr><td>pub</td><td>schema_version</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (version : i64 , layers : Vec &lt; LayerRef &gt; , schema_version : i64) -&gt; Result &lt; Self , CasError &gt;</code></td></tr><tr><td>method</td><td>depth</td><td><code>pub fn depth (&amp; self) -&gt; usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-protocol/src/cas.rs:99</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum CasError pub pub enum CasError crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CasError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum CasError</code>
+  <div class="tags"><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>InvalidPath</td><td><code>0: String</code></td></tr><tr><td>UnsupportedSchemaVersion</td><td><code>0: i64</code></td></tr></tbody></table>
+  <p class="source">crates/eos-protocol/src/cas.rs:26</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum LayerChange pub pub enum LayerChange crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>LayerChange</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum LayerChange</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code>path: LayerPath, content: Vec &lt; u8 &gt;</code></td></tr><tr><td>Delete</td><td><code>path: LayerPath</code></td></tr><tr><td>Symlink</td><td><code>path: LayerPath, source_path: String</code></td></tr><tr><td>OpaqueDir</td><td><code>path: LayerPath</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>kind</td><td><code>pub const fn kind (&amp; self) -&gt; &amp; 'static str</code></td></tr><tr><td>method</td><td>path</td><td><code>pub const fn path (&amp; self) -&gt; &amp; LayerPath</code></td></tr></tbody></table>
+  <p class="source">crates/eos-protocol/src/cas.rs:209</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:309</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_root_hash pub pub fn manifest_root_hash (manifest : &amp; Manifest) -&gt; String crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manifest_root_hash</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn manifest_root_hash (manifest : &amp; Manifest) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:197</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn aggregate_layer_changes pub pub fn aggregate_layer_changes (changes : &amp; [LayerChange]) -&gt; Vec &lt; LayerChange &gt; crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>aggregate_layer_changes</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn aggregate_layer_changes (changes : &amp; [LayerChange]) -&gt; Vec &lt; LayerChange &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:252</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_digest pub pub fn layer_digest (changes : &amp; [LayerChange]) -&gt; String crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>layer_digest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn layer_digest (changes : &amp; [LayerChange]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:279</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn push_json_ascii_escaped private fn push_json_ascii_escaped (out : &amp; mut String , s : &amp; str) crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>push_json_ascii_escaped</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn push_json_ascii_escaped (out : &amp; mut String , s : &amp; str)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:134</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn push_u_escape private fn push_u_escape (out : &amp; mut String , value : u32) crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>push_u_escape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn push_u_escape (out : &amp; mut String , value : u32)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:170</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_layers_json private fn manifest_layers_json (layers : &amp; [LayerRef]) -&gt; String crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manifest_layers_json</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn manifest_layers_json (layers : &amp; [LayerRef]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:178</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn update_digest private fn update_digest (hasher : &amp; mut Sha256 , change : &amp; LayerChange) crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>update_digest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn update_digest (hasher : &amp; mut Sha256 , change : &amp; LayerChange)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:264</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_lower private fn hex_lower (bytes : &amp; [u8]) -&gt; String crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hex_lower</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn hex_lower (bytes : &amp; [u8]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:289</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_char private fn hex_char (nibble : u32) -&gt; char crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hex_char</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn hex_char (nibble : u32) -&gt; char</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:299</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lp private fn lp (s : &amp; str) -&gt; Result &lt; LayerPath , CasError &gt; crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lp</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lp (s : &amp; str) -&gt; Result &lt; LayerPath , CasError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:311</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ascii_escaper_reproduces_documented_literal private fn ascii_escaper_reproduces_documented_literal () crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ascii_escaper_reproduces_documented_literal</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ascii_escaper_reproduces_documented_literal ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:315</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ascii_escaper_surrogate_pair_for_nonbmp private fn ascii_escaper_surrogate_pair_for_nonbmp () crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ascii_escaper_surrogate_pair_for_nonbmp</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ascii_escaper_surrogate_pair_for_nonbmp ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:328</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn escaper_short_escapes_and_control_chars private fn escaper_short_escapes_and_control_chars () crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>escaper_short_escapes_and_control_chars</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn escaper_short_escapes_and_control_chars ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:340</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_layer_path_rules private fn normalize_layer_path_rules () -&gt; TestResult crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalize_layer_path_rules</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn normalize_layer_path_rules () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:347</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_new_rejects_bad_schema private fn manifest_new_rejects_bad_schema () crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manifest_new_rejects_bad_schema</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn manifest_new_rejects_bad_schema ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:360</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn aggregate_is_idempotent_and_order_insensitive private fn aggregate_is_idempotent_and_order_insensitive () -&gt; TestResult crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>aggregate_is_idempotent_and_order_insensitive</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn aggregate_is_idempotent_and_order_insensitive () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:366</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn aggregate_last_write_wins private fn aggregate_last_write_wins () -&gt; TestResult crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>aggregate_last_write_wins</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn aggregate_last_write_wins () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:392</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn arb_change_unique private fn arb_change_unique () -&gt; impl Strategy &lt; Value = LayerChange &gt; crates/eos-protocol/src/cas.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>arb_change_unique</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn arb_change_unique () -&gt; impl Strategy &lt; Value = LayerChange &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-protocol/src/cas.rs:409</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eosd · src/runner.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eosd File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>3</b><span>modules</span></div>
+  <div><b>24</b><span>items</span></div>
+  <div><b>16</b><span>fields</span></div>
+  <div><b>4</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runner crates/eosd/src/runner.rs run load_runner_config RunnerCliConfig impl RunnerCliConfig remount_overlay_from_request read_payload OutputTarget impl OutputTarget write_payload">
+  <div class="module-head">
+    <div>
+      <h2>src/runner.rs</h2>
+      <p class="path">module <code>runner</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>2 impls</span>
+      <span>5 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RunnerCliConfig private struct RunnerCliConfig crates/eosd/src/runner.rs request_path Option &lt; PathBuf &gt; output_path Option &lt; PathBuf &gt; mount_overlay bool remount_overlay bool configure_dns bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunnerCliConfig</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RunnerCliConfig</code>
+  <div class="tags"><span>config</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>request_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>output_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>mount_overlay</td><td><code>bool</code></td></tr><tr><td>private</td><td>remount_overlay</td><td><code>bool</code></td></tr><tr><td>private</td><td>configure_dns</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>associated-fn</td><td>parse</td><td><code>fn parse (args : std :: env :: Args) -&gt; Result &lt; Self &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eosd/src/runner.rs:72</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OutputTarget private enum OutputTarget crates/eosd/src/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>OutputTarget</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum OutputTarget</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>File</td><td><code>0: File</code></td></tr><tr><td>Stdout</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>associated-fn</td><td>open</td><td><code>fn open (path : Option &lt; &amp; PathBuf &gt;) -&gt; Result &lt; Self &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eosd/src/runner.rs:182</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run pub(crate) pub(crate) fn run (args : std :: env :: Args) -&gt; Result &lt; () &gt; crates/eosd/src/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn run (args : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/runner.rs:9</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_runner_config private fn load_runner_config () -&gt; Result &lt; eos_runner :: config :: RunnerConfig &gt; crates/eosd/src/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>load_runner_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn load_runner_config () -&gt; Result &lt; eos_runner :: config :: RunnerConfig &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/runner.rs:63</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remount_overlay_from_request private fn remount_overlay_from_request (request : &amp; eos_runner :: RunRequest) -&gt; Result &lt; () &gt; crates/eosd/src/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>remount_overlay_from_request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn remount_overlay_from_request (request : &amp; eos_runner :: RunRequest) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/runner.rs:142</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_payload private fn read_payload (path : Option &lt; &amp; PathBuf &gt;) -&gt; Result &lt; String &gt; crates/eosd/src/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_payload</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn read_payload (path : Option &lt; &amp; PathBuf &gt;) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/runner.rs:167</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_payload private fn write_payload (target : &amp; mut OutputTarget , payload : &amp; [u8]) -&gt; Result &lt; () &gt; crates/eosd/src/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_payload</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_payload (target : &amp; mut OutputTarget , payload : &amp; [u8]) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eosd/src/runner.rs:205</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

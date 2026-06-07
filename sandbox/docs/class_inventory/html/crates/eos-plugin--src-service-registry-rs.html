@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin · src/service_registry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-plugin File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>72</b><span>items</span></div>
+  <div><b>71</b><span>fields</span></div>
+  <div><b>19</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/17</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-plugin--src-registry-rs.html"><span>registry.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/8</small></a></li><li><a class="file-link active" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="service_registry crates/eos-plugin/src/service_registry.rs PluginServiceState PluginServiceStatus impl PluginServiceStatus TestResult key ready_check_rejects_stale_manifest">
+  <div class="module-head">
+    <div>
+      <h2>src/service_registry.rs</h2>
+      <p class="path">module <code>service_registry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>1 impls</span>
+      <span>2 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceStatus pub pub struct PluginServiceStatus crates/eos-plugin/src/service_registry.rs key PluginServiceKey state PluginServiceState manifest_key Option &lt; String &gt; registered_ops Vec &lt; String &gt; refresh_count u64 restart_count u64 last_error Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginServiceStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginServiceStatus</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>key</td><td><code>PluginServiceKey</code></td></tr><tr><td>pub</td><td>state</td><td><code>PluginServiceState</code></td></tr><tr><td>pub</td><td>manifest_key</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>registered_ops</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>refresh_count</td><td><code>u64</code></td></tr><tr><td>pub</td><td>restart_count</td><td><code>u64</code></td></tr><tr><td>pub</td><td>last_error</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub const fn new (key : PluginServiceKey) -&gt; Self</code></td></tr><tr><td>method</td><td>require_ready_on_manifest</td><td><code>pub fn require_ready_on_manifest (&amp; self , target_manifest_key : &amp; str) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin/src/service_registry.rs:25</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PluginServiceState pub pub enum PluginServiceState crates/eos-plugin/src/service_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>PluginServiceState</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum PluginServiceState</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Starting</td><td><code></code></td></tr><tr><td>Ready</td><td><code></code></td></tr><tr><td>Refreshing</td><td><code></code></td></tr><tr><td>Stale</td><td><code></code></td></tr><tr><td>Restarting</td><td><code></code></td></tr><tr><td>Stopped</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin/src/service_registry.rs:11</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , PluginError &gt; crates/eos-plugin/src/service_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult = std :: result :: Result &lt; () , PluginError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin/src/service_registry.rs:85</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn key private fn key (profile : &amp; str) -&gt; Result &lt; PluginServiceKey &gt; crates/eos-plugin/src/service_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>key</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn key (profile : &amp; str) -&gt; Result &lt; PluginServiceKey &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin/src/service_registry.rs:87</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ready_check_rejects_stale_manifest private fn ready_check_rejects_stale_manifest () -&gt; TestResult crates/eos-plugin/src/service_registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ready_check_rejects_stale_manifest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ready_check_rejects_stale_manifest () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin/src/service_registry.rs:100</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/squash.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-layerstack File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>60</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="squash crates/eos-layerstack/src/squash.rs CheckpointSegment impl CheckpointSegment SquashPlanEntry SquashPlan impl SquashPlan LayerCheckpointSquasher impl LayerCheckpointSquasher manifest_prefix_before_plan segment_around_lease_heads flush_run">
+  <div class="module-head">
+    <div>
+      <h2>src/squash.rs</h2>
+      <p class="path">module <code>squash</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>3 impls</span>
+      <span>3 fns</span>
+      <span>10 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CheckpointSegment pub pub struct CheckpointSegment crates/eos-layerstack/src/squash.rs layers Vec &lt; LayerRef &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CheckpointSegment</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct CheckpointSegment</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (layers : Vec &lt; LayerRef &gt;) -&gt; Result &lt; Self , LayerStackError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/squash.rs:28</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SquashPlan pub pub struct SquashPlan crates/eos-layerstack/src/squash.rs active_version i64 active_layers Vec &lt; LayerRef &gt; entries Vec &lt; SquashPlanEntry &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SquashPlan</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct SquashPlan</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>active_layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr><tr><td>pub</td><td>entries</td><td><code>Vec &lt; SquashPlanEntry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (active_version : i64 , active_layers : Vec &lt; LayerRef &gt; , entries : Vec &lt; SquashPlanEntry &gt; ,) -&gt; Result &lt; Self , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>checkpoint_segments</td><td><code>pub fn checkpoint_segments (&amp; self) -&gt; Vec &lt; &amp; CheckpointSegment &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/squash.rs:61</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LayerCheckpointSquasher pub pub struct LayerCheckpointSquasher crates/eos-layerstack/src/squash.rs storage_root PathBuf view MergedView ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerCheckpointSquasher</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LayerCheckpointSquasher</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>view</td><td><code>MergedView</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (storage_root : PathBuf) -&gt; Self</code></td></tr><tr><td>method</td><td>plan</td><td><code>pub fn plan (&amp; self , active_manifest : &amp; Manifest , max_depth : usize , lease_head_layers : &amp; [LayerRef] , min_reduction : usize ,) -&gt; Result &lt; Option &lt; SquashPlan &gt; , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>build_checkpoint</td><td><code>pub fn build_checkpoint (&amp; self , segment : &amp; CheckpointSegment , active_version : i64 ,) -&gt; Result &lt; LayerRef , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>relabel_checkpoint</td><td><code>pub fn relabel_checkpoint (&amp; self , checkpoint : &amp; LayerRef , manifest_version : i64 ,) -&gt; Result &lt; LayerRef , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>discard_checkpoint</td><td><code>pub fn discard_checkpoint (&amp; self , checkpoint : &amp; LayerRef) -&gt; Result &lt; () , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>allocate_checkpoint_paths</td><td><code>fn allocate_checkpoint_paths (&amp; self , next_version : i64 ,) -&gt; Result &lt; (String , PathBuf , PathBuf) , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>layer_path</td><td><code>fn layer_path (&amp; self , layer : &amp; LayerRef) -&gt; Result &lt; PathBuf , LayerStackError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/squash.rs:123</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SquashPlanEntry pub pub enum SquashPlanEntry crates/eos-layerstack/src/squash.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>SquashPlanEntry</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum SquashPlanEntry</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Keep</td><td><code>0: LayerRef</code></td></tr><tr><td>Segment</td><td><code>0: CheckpointSegment</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/squash.rs:52</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_prefix_before_plan pub pub fn manifest_prefix_before_plan &lt; 'm &gt; (manifest : &amp; 'm Manifest , plan : &amp; SquashPlan ,) -&gt; Option &lt; &amp; 'm [LayerRef] &gt; crates/eos-layerstack/src/squash.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manifest_prefix_before_plan</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn manifest_prefix_before_plan &lt; 'm &gt; (manifest : &amp; 'm Manifest , plan : &amp; SquashPlan ,) -&gt; Option &lt; &amp; 'm [LayerRef] &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/squash.rs:320</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn segment_around_lease_heads private fn segment_around_lease_heads (layers : &amp; [LayerRef] , lease_head_layers : &amp; [LayerRef] ,) -&gt; Result &lt; Vec &lt; SquashPlanEntry &gt; , LayerStackError &gt; crates/eos-layerstack/src/squash.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>segment_around_lease_heads</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn segment_around_lease_heads (layers : &amp; [LayerRef] , lease_head_layers : &amp; [LayerRef] ,) -&gt; Result &lt; Vec &lt; SquashPlanEntry &gt; , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/squash.rs:339</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn flush_run private fn flush_run (entries : &amp; mut Vec &lt; SquashPlanEntry &gt; , run : &amp; mut Vec &lt; LayerRef &gt; ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/squash.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>flush_run</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn flush_run (entries : &amp; mut Vec &lt; SquashPlanEntry &gt; , run : &amp; mut Vec &lt; LayerRef &gt; ,) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/squash.rs:357</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

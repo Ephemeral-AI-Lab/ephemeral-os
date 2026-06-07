@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-runner · src/request.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-runner File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>9</b><span>modules</span></div>
+  <div><b>71</b><span>items</span></div>
+  <div><b>28</b><span>fields</span></div>
+  <div><b>9</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runner.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">fresh_ns</span><ul class="file-tree"><li><a class="file-link" href="eos-runner--src-fresh-ns-child-rs.html"><span>child.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-runner--src-fresh-ns-command-rs.html"><span>command.rs</span><small>0/9</small></a></li></ul></li><li><a class="file-link" href="eos-runner--src-fresh-ns-rs.html"><span>fresh_ns.rs</span><small>1/8</small></a></li><li><a class="file-link" href="eos-runner--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-runner--src-mount-mask-rs.html"><span>mount_mask.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-runner--src-path-rs.html"><span>path.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-runner--src-request-rs.html"><span>request.rs</span><small>8/1</small></a></li><li><a class="file-link" href="eos-runner--src-setns-rs.html"><span>setns.rs</span><small>0/25</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="request crates/eos-runner/src/request.rs RunMode Fd WorkspaceRoot NsFds RunnerVerb impl RunnerVerb impl From &lt; &amp; str &gt; for RunnerVerb impl From &lt; String &gt; for RunnerVerb impl Serialize for RunnerVerb impl Deserialize &lt; 'de &gt; for RunnerVerb ToolCall RunRequest RunResult runner_verb_preserves_wire_strings_and_unknowns">
+  <div class="module-head">
+    <div>
+      <h2>src/request.rs</h2>
+      <p class="path">module <code>request</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>8 types</span>
+      <span>5 impls</span>
+      <span>1 fns</span>
+      <span>5 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Fd pub pub struct Fd crates/eos-runner/src/request.rs 0 RawFd ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Fd</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct Fd</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>0</td><td><code>RawFd</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:29</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceRoot pub pub struct WorkspaceRoot crates/eos-runner/src/request.rs 0 PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceRoot</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct WorkspaceRoot</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:37</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct NsFds pub pub struct NsFds crates/eos-runner/src/request.rs user Option &lt; Fd &gt; mnt Option &lt; Fd &gt; pid Option &lt; Fd &gt; net Option &lt; Fd &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NsFds</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct NsFds</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>user</td><td><code>Option &lt; Fd &gt;</code></td></tr><tr><td>pub</td><td>mnt</td><td><code>Option &lt; Fd &gt;</code></td></tr><tr><td>pub</td><td>pid</td><td><code>Option &lt; Fd &gt;</code></td></tr><tr><td>pub</td><td>net</td><td><code>Option &lt; Fd &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:41</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolCall pub pub struct ToolCall crates/eos-runner/src/request.rs invocation_id String caller_id String verb RunnerVerb intent Intent args Value background bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ToolCall</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ToolCall</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>verb</td><td><code>RunnerVerb</code></td></tr><tr><td>pub</td><td>intent</td><td><code>Intent</code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr><tr><td>pub</td><td>background</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:119</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunRequest pub pub struct RunRequest crates/eos-runner/src/request.rs mode RunMode tool_call ToolCall workspace_root WorkspaceRoot layer_paths Vec &lt; PathBuf &gt; upperdir Option &lt; PathBuf &gt; workdir Option &lt; PathBuf &gt; ns_fds Option &lt; NsFds &gt; cgroup_path Option &lt; PathBuf &gt; timeout_seconds Option &lt; f64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunRequest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct RunRequest</code>
+  <div class="tags"><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code>RunMode</code></td></tr><tr><td>pub</td><td>tool_call</td><td><code>ToolCall</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>WorkspaceRoot</code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>ns_fds</td><td><code>Option &lt; NsFds &gt;</code></td></tr><tr><td>pub</td><td>cgroup_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:135</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunResult pub pub struct RunResult crates/eos-runner/src/request.rs tool_result Value exit_code i32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct RunResult</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>tool_result</td><td><code>Value</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i32</code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:167</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum RunMode pub pub enum RunMode crates/eos-runner/src/request.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>RunMode</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum RunMode</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>FreshNs</td><td><code></code></td></tr><tr><td>SetNs</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-runner/src/request.rs:17</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RunnerVerb pub pub enum RunnerVerb crates/eos-runner/src/request.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>RunnerVerb</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum RunnerVerb</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>PluginService</td><td><code></code></td></tr><tr><td>Unknown</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; str &gt; for RunnerVerb</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (value : &amp; str) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl From &lt; String &gt; for RunnerVerb</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (value : String) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl Serialize for RunnerVerb</code></summary><table><tbody><tr><td>method</td><td>serialize</td><td><code>fn serialize &lt; S &gt; (&amp; self , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : Serializer ,</code></td></tr></tbody></table></details><details><summary><code>impl Deserialize &lt; 'de &gt; for RunnerVerb</code></summary><table><tbody><tr><td>associated-fn</td><td>deserialize</td><td><code>fn deserialize &lt; D &gt; (deserializer : D) -&gt; Result &lt; Self , D :: Error &gt; where D : Deserializer &lt; 'de &gt; ,</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-runner/src/request.rs:58</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runner_verb_preserves_wire_strings_and_unknowns private fn runner_verb_preserves_wire_strings_and_unknowns () crates/eos-runner/src/request.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>runner_verb_preserves_wire_strings_and_unknowns</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn runner_verb_preserves_wire_strings_and_unknowns ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-runner/src/request.rs:185</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

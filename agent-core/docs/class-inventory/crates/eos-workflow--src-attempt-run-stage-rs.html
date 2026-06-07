@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workflow · src/attempt/run_stage.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-workflow File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>20</b><span>modules</span></div>
+  <div><b>136</b><span>items</span></div>
+  <div><b>129</b><span>fields</span></div>
+  <div><b>138</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link active" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>4/4</small></a></li><li><a class="file-link" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="attempt::run_stage crates/eos-workflow/src/attempt/run_stage.rs AttemptStageAdvancer impl AttemptStageAdvancer task_role_label budget node injected_runner_double dead_agent_synthesizes_failure dead_planner_synthesizes_failure fanout_respects_concurrency_cap launch_failure_marks_task_failed">
+  <div class="module-head">
+    <div>
+      <h2>src/attempt/run_stage.rs</h2>
+      <p class="path">module <code>attempt::run_stage</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>8 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptStageAdvancer pub pub struct AttemptStageAdvancer crates/eos-workflow/src/attempt/run_stage.rs orchestrator Arc &lt; AttemptOrchestrator &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AttemptStageAdvancer</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct AttemptStageAdvancer</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>orchestrator</td><td><code>Arc &lt; AttemptOrchestrator &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (orchestrator : Arc &lt; AttemptOrchestrator &gt;) -&gt; Self</code></td></tr><tr><td>method</td><td>advance_run_stage</td><td><code>pub async fn advance_run_stage (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>build_launch</td><td><code>async fn build_launch (&amp; self , deps : &amp; AttemptDeps , attempt : &amp; Attempt , task : &amp; Task ,) -&gt; Result &lt; AgentLaunch &gt;</code></td></tr><tr><td>method</td><td>mark_launch_failed</td><td><code>async fn mark_launch_failed (&amp; self , task : &amp; Task , summary : &amp; str) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>emit_task_event</td><td><code>fn emit_task_event (&amp; self , event_type : &amp; str , task : &amp; Task , extra : &amp; [(&amp; str , Value)])</code></td></tr><tr><td>method</td><td>settle_run_task</td><td><code>async fn settle_run_task (&amp; self , launch : AgentLaunch , report : Result &lt; AgentRunReport &gt; ,) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>synthesize_failure</td><td><code>async fn synthesize_failure (&amp; self , launch : &amp; AgentLaunch , summary : &amp; str) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:24</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_role_label private fn task_role_label (role : TaskRole) -&gt; &amp; 'static str crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>task_role_label</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn task_role_label (role : TaskRole) -&gt; &amp; 'static str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:331</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn budget private fn budget (value : u32) -&gt; AttemptBudget crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>budget</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn budget (value : u32) -&gt; AttemptBudget</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:362</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn node private fn node (id : &amp; str) -&gt; PlanNodeId crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>node</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn node (id : &amp; str) -&gt; PlanNodeId</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:366</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn injected_runner_double private async fn injected_runner_double () crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>injected_runner_double</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn injected_runner_double ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:373</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dead_agent_synthesizes_failure private async fn dead_agent_synthesizes_failure () crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dead_agent_synthesizes_failure</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn dead_agent_synthesizes_failure ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:418</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dead_planner_synthesizes_failure private async fn dead_planner_synthesizes_failure () crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dead_planner_synthesizes_failure</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn dead_planner_synthesizes_failure ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:459</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fanout_respects_concurrency_cap private async fn fanout_respects_concurrency_cap () crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>fanout_respects_concurrency_cap</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn fanout_respects_concurrency_cap ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:496</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn launch_failure_marks_task_failed private async fn launch_failure_marks_task_failed () crates/eos-workflow/src/attempt/run_stage.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>launch_failure_marks_task_failed</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn launch_failure_marks_task_failed ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-workflow/src/attempt/run_stage.rs:543</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

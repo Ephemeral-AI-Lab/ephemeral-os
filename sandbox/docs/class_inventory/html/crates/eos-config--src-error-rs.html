@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/error.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>95</b><span>items</span></div>
+  <div><b>127</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>8/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>10/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-config/src/error.rs ConfigError">
+  <div class="module-head">
+    <div>
+      <h2>src/error.rs</h2>
+      <p class="path">module <code>error</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ConfigError pub pub enum ConfigError crates/eos-config/src/error.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ConfigError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum ConfigError</code>
+  <div class="tags"><span>config</span><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>WorkspaceRoot</td><td><code>manifest_dir: PathBuf</code></td></tr><tr><td>Read</td><td><code>path: PathBuf, source: std :: io :: Error</code></td></tr><tr><td>Parse</td><td><code>path: PathBuf, source: serde_yaml :: Error</code></td></tr><tr><td>Serialize</td><td><code>source: serde_yaml :: Error</code></td></tr><tr><td>InvalidOverridePath</td><td><code>path: PathBuf, reason: String</code></td></tr><tr><td>MissingSection</td><td><code>section: String</code></td></tr><tr><td>InvalidDocumentRoot</td><td><code></code></td></tr><tr><td>Merge</td><td><code>0: MergeConflict</code></td></tr><tr><td>DeserializeSection</td><td><code>section: String, source: serde_path_to_error :: Error &lt; serde_yaml :: Error &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/error.rs:7</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

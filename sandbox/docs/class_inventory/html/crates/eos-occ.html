@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-occ · src/commit_queue.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-occ File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>46</b><span>items</span></div>
+  <div><b>41</b><span>fields</span></div>
+  <div><b>31</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-occ.html"><span>commit_queue.rs</span><small>8/12</small></a></li><li><a class="file-link" href="eos-occ--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-occ--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-occ--src-route-rs.html"><span>route.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-occ--src-service-rs.html"><span>service.rs</span><small>4/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="commit_queue crates/eos-occ/src/commit_queue.rs PreparedChangeset CommitTransactionPort PublishConflict WorkItem QueueItem CommitQueue CommitWorker impl CommitQueue &lt; T &gt; impl CommitWorker &lt; T &gt; drain_ready usize_to_f64_saturating disjoint_batches combine_prepared result_files_for_item cas_exhaustion_result TestResult RecordingTransaction impl RecordingTransaction impl CommitTransactionPort for RecordingTransaction prepared recv_ok batches_disjoint_non_atomic_changesets atomic_changesets_are_not_batched retries_cas_conflict_then_succeeds cas_retry_exhaustion_surfaces_aborted_version">
+  <div class="module-head">
+    <div>
+      <h2>src/commit_queue.rs</h2>
+      <p class="path">module <code>commit_queue</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>8 types</span>
+      <span>4 impls</span>
+      <span>12 fns</span>
+      <span>10 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PreparedChangeset pub pub struct PreparedChangeset crates/eos-occ/src/commit_queue.rs snapshot_version Option &lt; u64 &gt; path_groups Vec &lt; PublishDecision &gt; changes Vec &lt; LayerChange &gt; atomic bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PreparedChangeset</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PreparedChangeset</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>snapshot_version</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>path_groups</td><td><code>Vec &lt; PublishDecision &gt;</code></td></tr><tr><td>pub</td><td>changes</td><td><code>Vec &lt; LayerChange &gt;</code></td></tr><tr><td>pub</td><td>atomic</td><td><code>bool</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:49</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishConflict pub pub struct PublishConflict crates/eos-occ/src/commit_queue.rs observed_version Option &lt; u64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PublishConflict</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PublishConflict</code>
+  <div class="tags"><span>error</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>observed_version</td><td><code>Option &lt; u64 &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:86</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitQueue pub pub struct CommitQueue&lt; T : CommitTransactionPort + 'static &gt; crates/eos-occ/src/commit_queue.rs sender mpsc :: Sender &lt; QueueItem &gt; receiver Mutex &lt; Option &lt; mpsc :: Receiver &lt; QueueItem &gt; &gt; &gt; transaction Mutex &lt; Option &lt; T &gt; &gt; handle Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt; max_batch_size usize batch_window_s f64 max_cas_retries u32 closed bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommitQueue</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct CommitQueue&lt; T : CommitTransactionPort + 'static &gt;</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sender</td><td><code>mpsc :: Sender &lt; QueueItem &gt;</code></td></tr><tr><td>private</td><td>receiver</td><td><code>Mutex &lt; Option &lt; mpsc :: Receiver &lt; QueueItem &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>Mutex &lt; Option &lt; T &gt; &gt;</code></td></tr><tr><td>private</td><td>handle</td><td><code>Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt;</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr><tr><td>private</td><td>closed</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (transaction : T) -&gt; Self</code></td></tr><tr><td>constructor</td><td>with_config</td><td><code>pub fn with_config (transaction : T , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -&gt; Self</code></td></tr><tr><td>method</td><td>start</td><td><code>pub fn start (&amp; mut self) -&gt; Result &lt; () , OccError &gt;</code></td></tr><tr><td>method</td><td>close</td><td><code>pub fn close (&amp; mut self) -&gt; Result &lt; () , OccError &gt;</code></td></tr><tr><td>method</td><td>submit</td><td><code>pub fn submit (&amp; self , prepared : PreparedChangeset ,) -&gt; Result &lt; mpsc :: Receiver &lt; Result &lt; ChangesetResult , OccError &gt; &gt; , OccError &gt;</code></td></tr><tr><td>associated-fn</td><td>commit_batch</td><td><code>fn commit_batch (transaction : &amp; T , batch : Vec &lt; WorkItem &gt; , max_cas_retries : u32)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:108</p>
+</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CommitTransactionPort pub pub trait CommitTransactionPort crates/eos-occ/src/commit_queue.rs  revalidate_and_publish fn revalidate_and_publish (&amp; self , combined : &amp; PreparedChangeset ,) -&gt; Result &lt; ChangesetResult , PublishConflict &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>CommitTransactionPort</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait CommitTransactionPort</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr><td>required</td><td>revalidate_and_publish</td><td><code>fn revalidate_and_publish (&amp; self , combined : &amp; PreparedChangeset ,) -&gt; Result &lt; ChangesetResult , PublishConflict &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:67</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkItem private struct WorkItem crates/eos-occ/src/commit_queue.rs prepared PreparedChangeset reply mpsc :: Sender &lt; Result &lt; ChangesetResult , OccError &gt; &gt; enqueued_at Instant ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkItem</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct WorkItem</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>prepared</td><td><code>PreparedChangeset</code></td></tr><tr><td>private</td><td>reply</td><td><code>mpsc :: Sender &lt; Result &lt; ChangesetResult , OccError &gt; &gt;</code></td></tr><tr><td>private</td><td>enqueued_at</td><td><code>Instant</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:94</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitWorker private struct CommitWorker&lt; T : CommitTransactionPort + 'static &gt; crates/eos-occ/src/commit_queue.rs receiver mpsc :: Receiver &lt; QueueItem &gt; transaction T max_batch_size usize batch_window_s f64 max_cas_retries u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommitWorker</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct CommitWorker&lt; T : CommitTransactionPort + 'static &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>receiver</td><td><code>mpsc :: Receiver &lt; QueueItem &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>T</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>run</td><td><code>fn run (self)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:123</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RecordingTransaction private struct RecordingTransaction crates/eos-occ/src/commit_queue.rs calls Arc &lt; Mutex &lt; Vec &lt; PreparedChangeset &gt; &gt; &gt; conflicts_before_success Arc &lt; Mutex &lt; u32 &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RecordingTransaction</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct RecordingTransaction</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>calls</td><td><code>Arc &lt; Mutex &lt; Vec &lt; PreparedChangeset &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>conflicts_before_success</td><td><code>Arc &lt; Mutex &lt; u32 &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (conflicts_before_success : u32) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl CommitTransactionPort for RecordingTransaction</code></summary><table><tbody><tr><td>method</td><td>revalidate_and_publish</td><td><code>fn revalidate_and_publish (&amp; self , combined : &amp; PreparedChangeset ,) -&gt; Result &lt; ChangesetResult , PublishConflict &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:473</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum QueueItem private enum QueueItem crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>QueueItem</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum QueueItem</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Work</td><td><code>0: WorkItem</code></td></tr><tr><td>Stop</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:102</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:471</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn drain_ready private fn drain_ready (receiver : &amp; mpsc :: Receiver &lt; QueueItem &gt; , items : &amp; mut Vec &lt; WorkItem &gt; , max_batch_size : usize ,) -&gt; bool crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>drain_ready</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn drain_ready (receiver : &amp; mpsc :: Receiver &lt; QueueItem &gt; , items : &amp; mut Vec &lt; WorkItem &gt; , max_batch_size : usize ,) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:332</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_f64_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn usize_to_f64_saturating (value : usize) -&gt; f64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:347</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disjoint_batches private fn disjoint_batches (items : Vec &lt; WorkItem &gt;) -&gt; Vec &lt; Vec &lt; WorkItem &gt; &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>disjoint_batches</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn disjoint_batches (items : Vec &lt; WorkItem &gt;) -&gt; Vec &lt; Vec &lt; WorkItem &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:351</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn combine_prepared private fn combine_prepared &lt; 'a &gt; (items : impl Iterator &lt; Item = &amp; 'a PreparedChangeset &gt; ,) -&gt; Option &lt; PreparedChangeset &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>combine_prepared</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn combine_prepared &lt; 'a &gt; (items : impl Iterator &lt; Item = &amp; 'a PreparedChangeset &gt; ,) -&gt; Option &lt; PreparedChangeset &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:387</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn result_files_for_item private fn result_files_for_item (result : &amp; ChangesetResult , prepared : &amp; PreparedChangeset ,) -&gt; Vec &lt; FileResult &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>result_files_for_item</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn result_files_for_item (result : &amp; ChangesetResult , prepared : &amp; PreparedChangeset ,) -&gt; Vec &lt; FileResult &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:407</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_exhaustion_result private fn cas_exhaustion_result (prepared : &amp; PreparedChangeset , conflict : &amp; PublishConflict , max_cas_retries : u32 ,) -&gt; ChangesetResult crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cas_exhaustion_result</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn cas_exhaustion_result (prepared : &amp; PreparedChangeset , conflict : &amp; PublishConflict , max_cas_retries : u32 ,) -&gt; ChangesetResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:424</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepared private fn prepared (path : &amp; str , atomic : bool) -&gt; TestResult &lt; PreparedChangeset &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prepared</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn prepared (path : &amp; str , atomic : bool) -&gt; TestResult &lt; PreparedChangeset &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:530</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recv_ok private fn recv_ok (receiver : &amp; mpsc :: Receiver &lt; Result &lt; ChangesetResult , OccError &gt; &gt; ,) -&gt; TestResult &lt; ChangesetResult &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>recv_ok</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn recv_ok (receiver : &amp; mpsc :: Receiver &lt; Result &lt; ChangesetResult , OccError &gt; &gt; ,) -&gt; TestResult &lt; ChangesetResult &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:548</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn batches_disjoint_non_atomic_changesets private fn batches_disjoint_non_atomic_changesets () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>batches_disjoint_non_atomic_changesets</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn batches_disjoint_non_atomic_changesets () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:557</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn atomic_changesets_are_not_batched private fn atomic_changesets_are_not_batched () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>atomic_changesets_are_not_batched</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn atomic_changesets_are_not_batched () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:581</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retries_cas_conflict_then_succeeds private fn retries_cas_conflict_then_succeeds () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>retries_cas_conflict_then_succeeds</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn retries_cas_conflict_then_succeeds () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:606</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_retry_exhaustion_surfaces_aborted_version private fn cas_retry_exhaustion_surfaces_aborted_version () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cas_retry_exhaustion_surfaces_aborted_version</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn cas_retry_exhaustion_surfaces_aborted_version () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-occ/src/commit_queue.rs:627</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

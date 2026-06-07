@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-llm-client · src/sse.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-llm-client File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>140</b><span>items</span></div>
+  <div><b>94</b><span>fields</span></div>
+  <div><b>53</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-llm-client.html"><span>auth.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-llm-client--src-client-rs.html"><span>client.rs</span><small>5/8</small></a></li><li><span class="folder">clients</span><ul class="file-tree"><li><a class="file-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html"><span>anthropic_api_client.rs</span><small>3/16</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-claude-coding-plan-rs.html"><span>claude_coding_plan.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-codex-coding-plan-rs.html"><span>codex_coding_plan.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-openai-api-client-rs.html"><span>openai_api_client.rs</span><small>4/12</small></a></li></ul></li><li><a class="file-link" href="eos-llm-client--src-error-rs.html"><span>error.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-llm-client--src-events-rs.html"><span>events.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-llm-client--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-message-rs.html"><span>message.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-llm-client--src-retry-rs.html"><span>retry.rs</span><small>1/15</small></a></li><li><a class="file-link active" href="eos-llm-client--src-sse-rs.html"><span>sse.rs</span><small>1/15</small></a></li><li><a class="file-link" href="eos-llm-client--src-types-rs.html"><span>types.rs</span><small>6/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="sse crates/eos-llm-client/src/sse.rs SseFrameSplitter impl SseFrameSplitter decode_line frame_data parse_sse_value frame_stream at json_str json_u32 json_usize parse_tool_args split_all splits_blank_line_delimited_frames flushes_final_frame_without_trailing_blank_line tolerates_crlf_line_endings concatenates_multi_line_data never_bisects_a_multibyte_char_across_chunks">
+  <div class="module-head">
+    <div>
+      <h2>src/sse.rs</h2>
+      <p class="path">module <code>sse</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>15 fns</span>
+      <span>3 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SseFrameSplitter pub(crate) pub(crate) struct SseFrameSplitter crates/eos-llm-client/src/sse.rs buf Vec &lt; u8 &gt; current Vec &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SseFrameSplitter</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct SseFrameSplitter</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>buf</td><td><code>Vec &lt; u8 &gt;</code></td></tr><tr><td>private</td><td>current</td><td><code>Vec &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>finish</td><td><code>pub(crate) fn finish (&amp; mut self , out : &amp; mut Vec &lt; String &gt;)</code></td></tr><tr><td>method</td><td>push</td><td><code>pub(crate) fn push (&amp; mut self , chunk : &amp; [u8] , out : &amp; mut Vec &lt; String &gt;)</code></td></tr><tr><td>method</td><td>consume_line</td><td><code>fn consume_line (&amp; mut self , line : String , out : &amp; mut Vec &lt; String &gt;)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-llm-client/src/sse.rs:22</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn frame_data pub(crate) pub(crate) fn frame_data (frame : &amp; str) -&gt; Option &lt; String &gt; crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>frame_data</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn frame_data (frame : &amp; str) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:84</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_sse_value pub(crate) pub(crate) fn parse_sse_value (frame : &amp; str , request_id : &amp; Option &lt; String &gt; , provider : &amp; str , frame_index : usize ,) -&gt; Result &lt; Option &lt; Value &gt; , ProviderError &gt; crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_sse_value</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_sse_value (frame : &amp; str , request_id : &amp; Option &lt; String &gt; , provider : &amp; str , frame_index : usize ,) -&gt; Result &lt; Option &lt; Value &gt; , ProviderError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:106</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn frame_stream pub(crate) pub(crate) fn frame_stream &lt; S &gt; (bytes : S) -&gt; impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; where S : Stream &lt; Item = Result &lt; Bytes , ProviderError &gt; &gt; , crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>frame_stream</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn frame_stream &lt; S &gt; (bytes : S) -&gt; impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; where S : Stream &lt; Item = Result &lt; Bytes , ProviderError &gt; &gt; ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:139</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_str pub(crate) pub(crate) fn json_str (value : &amp; Value , path : &amp; [&amp; str]) -&gt; String crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_str</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn json_str (value : &amp; Value , path : &amp; [&amp; str]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:182</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_u32 pub(crate) pub(crate) fn json_u32 (value : &amp; Value , path : &amp; [&amp; str]) -&gt; u32 crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_u32</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn json_u32 (value : &amp; Value , path : &amp; [&amp; str]) -&gt; u32</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:187</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_usize pub(crate) pub(crate) fn json_usize (value : &amp; Value , path : &amp; [&amp; str]) -&gt; usize crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_usize</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn json_usize (value : &amp; Value , path : &amp; [&amp; str]) -&gt; usize</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:196</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_tool_args pub(crate) pub(crate) fn parse_tool_args (raw : &amp; str) -&gt; JsonObject crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_tool_args</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_tool_args (raw : &amp; str) -&gt; JsonObject</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:201</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn split_all pub(crate) pub(crate) fn split_all (buf : &amp; [u8]) -&gt; Vec &lt; String &gt; crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>split_all</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn split_all (buf : &amp; [u8]) -&gt; Vec &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:214</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_line private fn decode_line (bytes : &amp; [u8]) -&gt; String crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decode_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn decode_line (bytes : &amp; [u8]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:75</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn at private fn at &lt; 'v &gt; (value : &amp; 'v Value , path : &amp; [&amp; str]) -&gt; &amp; 'v Value crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>at</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn at &lt; 'v &gt; (value : &amp; 'v Value , path : &amp; [&amp; str]) -&gt; &amp; 'v Value</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:172</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn splits_blank_line_delimited_frames private fn splits_blank_line_delimited_frames () crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>splits_blank_line_delimited_frames</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn splits_blank_line_delimited_frames ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:229</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn flushes_final_frame_without_trailing_blank_line private fn flushes_final_frame_without_trailing_blank_line () crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>flushes_final_frame_without_trailing_blank_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn flushes_final_frame_without_trailing_blank_line ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:238</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tolerates_crlf_line_endings private fn tolerates_crlf_line_endings () crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>tolerates_crlf_line_endings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn tolerates_crlf_line_endings ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:246</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn concatenates_multi_line_data private fn concatenates_multi_line_data () crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>concatenates_multi_line_data</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn concatenates_multi_line_data ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:257</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn never_bisects_a_multibyte_char_across_chunks private fn never_bisects_a_multibyte_char_across_chunks () crates/eos-llm-client/src/sse.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>never_bisects_a_multibyte_char_across_chunks</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn never_bisects_a_multibyte_char_across_chunks ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/sse.rs:263</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

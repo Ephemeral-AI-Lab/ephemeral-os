@@ -3,7 +3,10 @@ use super::*;
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
-fn active_command_session_records_do_not_guard_exit() -> TestResult {
+fn exit_tears_down_caller_handle() -> TestResult {
+    // op_exit is the per-caller workspace-run teardown: it discards the
+    // caller's command sessions (owned by the command-session registry now,
+    // not an isolated side-map) and removes the handle.
     let _guard = lock_isolated_test_state();
     let root = std::env::temp_dir().join(format!(
         "eos-daemon-iws-command-session-block-{}",
@@ -26,7 +29,6 @@ fn active_command_session_records_do_not_guard_exit() -> TestResult {
         DispatchContext::empty(),
     )?;
     assert_eq!(entered["success"], true);
-    register_command_session("caller-command-session", "cmd-block");
 
     let exited = op_exit(
         &json!({"caller_id": "caller-command-session"}),

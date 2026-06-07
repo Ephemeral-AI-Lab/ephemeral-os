@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-ephemeral-workspace · src/command_session/finalize.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-ephemeral-workspace File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>70</b><span>items</span></div>
+  <div><b>87</b><span>fields</span></div>
+  <div><b>40</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-ephemeral-workspace.html"><span>capture.rs</span><small>1/2</small></a></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link active" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html"><span>finalize.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-policy-rs.html"><span>policy.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-prepare-rs.html"><span>prepare.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-ephemeral-workspace--src-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="command_session::finalize crates/eos-ephemeral-workspace/src/command_session/finalize.rs finalize_command_workspace CommandPublisher impl WorkspacePublisherPort for CommandPublisher &lt; '_ , P &gt; PublishFile workspace_api_error publish_files path_changes_to_wire path_change_kind_wire status_is_published status_is_success conflict_from_file conflict_message timing_as_f64 insert_tree_resource_timings insert_resource_timing FakePort impl EphemeralCommandSessionPort for FakePort finalize_captures_publishes_and_shapes_command_outcome finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds">
+  <div class="module-head">
+    <div>
+      <h2>src/command_session/finalize.rs</h2>
+      <p class="path">module <code>command_session::finalize</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>2 impls</span>
+      <span>14 fns</span>
+      <span>6 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandPublisher private struct CommandPublisher&lt; 'a , P &gt; crates/eos-ephemeral-workspace/src/command_session/finalize.rs port &amp; 'a P ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandPublisher</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct CommandPublisher&lt; 'a , P &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>port</td><td><code>&amp; 'a P</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspacePublisherPort for CommandPublisher &lt; '_ , P &gt;</code></summary><table><tbody><tr><td>method</td><td>publish_upperdir_changes</td><td><code>fn publish_upperdir_changes (&amp; self , root : &amp; crate :: WorkspaceRoot , snapshot : &amp; crate :: EphemeralSnapshot , changes : &amp; [eos_protocol :: LayerChange] , path_kinds : &amp; [crate :: PathChange] ,) -&gt; Result &lt; crate :: PublishOutcome , EphemeralWorkspaceError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:95</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishFile private struct PublishFile crates/eos-ephemeral-workspace/src/command_session/finalize.rs path String status String message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PublishFile</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct PublishFile</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>String</code></td></tr><tr><td>private</td><td>status</td><td><code>String</code></td></tr><tr><td>private</td><td>message</td><td><code>String</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:115</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct FakePort private struct FakePort crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FakePort</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct FakePort</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl EphemeralCommandSessionPort for FakePort</code></summary><table><tbody><tr><td>method</td><td>prepare_context</td><td><code>fn prepare_context (&amp; self , _command_session_id : &amp; str ,) -&gt; Result &lt; crate :: command_session :: types :: EphemeralCommandPrepareContext , WorkspaceApiError &gt;</code></td></tr><tr><td>method</td><td>acquire_snapshot</td><td><code>fn acquire_snapshot (&amp; self , _request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , EphemeralWorkspaceError &gt;</code></td></tr><tr><td>method</td><td>release_snapshot</td><td><code>fn release_snapshot (&amp; self , _lease_id : &amp; str) -&gt; Result &lt; () , EphemeralWorkspaceError &gt;</code></td></tr><tr><td>method</td><td>base_timings</td><td><code>fn base_timings (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt;</code></td></tr><tr><td>method</td><td>publish_upperdir_changes</td><td><code>fn publish_upperdir_changes (&amp; self , _root : &amp; WorkspaceRoot , _snapshot : &amp; EphemeralSnapshot , changes : &amp; [eos_protocol :: LayerChange] , _path_kinds : &amp; [crate :: PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:266</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_command_workspace pub(super) pub(super) fn finalize_command_workspace &lt; P &gt; (port : &amp; P , context : EphemeralCommandFinalizeContext , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; where P : EphemeralCommandSessionPort , crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_command_workspace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn finalize_command_workspace &lt; P &gt; (port : &amp; P , context : EphemeralCommandFinalizeContext , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; where P : EphemeralCommandSessionPort ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:14</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error private fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>workspace_api_error</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:122</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn publish_files private fn publish_files (outcome : &amp; PublishOutcome) -&gt; Result &lt; Vec &lt; PublishFile &gt; , WorkspaceApiError &gt; crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>publish_files</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn publish_files (outcome : &amp; PublishOutcome) -&gt; Result &lt; Vec &lt; PublishFile &gt; , WorkspaceApiError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:130</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_changes_to_wire private fn path_changes_to_wire (path_changes : &amp; [crate :: PathChange]) -&gt; Vec &lt; (String , String) &gt; crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_changes_to_wire</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn path_changes_to_wire (path_changes : &amp; [crate :: PathChange]) -&gt; Vec &lt; (String , String) &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:179</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_kind_wire private const fn path_change_kind_wire (kind : PathChangeKind) -&gt; &amp; 'static str crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_change_kind_wire</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn path_change_kind_wire (kind : PathChangeKind) -&gt; &amp; 'static str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:191</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_is_published private fn status_is_published (status : &amp; str) -&gt; bool crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>status_is_published</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn status_is_published (status : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:200</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_is_success private fn status_is_success (status : &amp; str) -&gt; bool crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>status_is_success</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn status_is_success (status : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:204</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_from_file private fn conflict_from_file (file : &amp; PublishFile) -&gt; WorkspaceConflict crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>conflict_from_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn conflict_from_file (file : &amp; PublishFile) -&gt; WorkspaceConflict</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:208</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_message private fn conflict_message (file : &amp; PublishFile) -&gt; &amp; str crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>conflict_message</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn conflict_message (file : &amp; PublishFile) -&gt; &amp; str</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:212</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timing_as_f64 private fn timing_as_f64 (timings : &amp; WorkspaceTimings , key : &amp; str) -&gt; Option &lt; f64 &gt; crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>timing_as_f64</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn timing_as_f64 (timings : &amp; WorkspaceTimings , key : &amp; str) -&gt; Option &lt; f64 &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:220</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_tree_resource_timings private fn insert_tree_resource_timings (timings : &amp; mut WorkspaceTimings , prefix : &amp; str , stats : &amp; TreeResourceStats ,) crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_tree_resource_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn insert_tree_resource_timings (timings : &amp; mut WorkspaceTimings , prefix : &amp; str , stats : &amp; TreeResourceStats ,)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:224</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_resource_timing private fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64) crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_resource_timing</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:247</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_captures_publishes_and_shapes_command_outcome private fn finalize_captures_publishes_and_shapes_command_outcome () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_captures_publishes_and_shapes_command_outcome</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn finalize_captures_publishes_and_shapes_command_outcome () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:319</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds private fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-ephemeral-workspace/src/command_session/finalize.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/command_session/finalize.rs:383</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

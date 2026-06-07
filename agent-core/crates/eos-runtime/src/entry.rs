@@ -247,16 +247,18 @@ pub async fn run_request(
                     notifier: control.notifications(),
                     cancellation: control.cancellation(),
                     foreground: control.foreground(),
+                    agent_run_registry: Some(agent_run_registry.clone()),
                     persist_agent_run: true,
                     record_kind: AgentRunRecordKind::Root,
                 },
                 on_event.as_ref(),
             )
             .await;
-            // The root's own per-run finalizer (inside `run_agent`) already cancelled
-            // its subagents/workflows/command sessions. Drop the live-run entry; the
-            // control (and its heartbeat) is released at end of scope.
-            agent_run_registry.finish_cancel(control.agent_run_id());
+            // `run_agent` claims the registry entry and finalizes (or, if a
+            // concurrent cancel won the claim, skips) the row + child teardown, and
+            // removes the live-run entry. Dropping `control` here releases its
+            // heartbeat (RAII).
+            drop(control);
             // Success leaves the engine-stamped terminal as the persisted outcome.
             let has_terminal = run.terminal_result.is_some();
             run.error.unwrap_or_else(|| {

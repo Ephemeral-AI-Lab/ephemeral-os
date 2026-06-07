@@ -24,9 +24,9 @@ pub use query::{
 };
 pub use runtime::{
     run_agent, AgentRunCancellation, AgentRunControl, AgentRunControlFactory, AgentRunFinalization,
-    AgentRunInput, AgentRunPersistence, AgentRunRegistry, AgentRunResult, EngineRunHandles,
-    EventCallback, EventSourceFactory, ForegroundExecutor, ForegroundExecutorFactory,
-    ForegroundResourceId, ToolRegistryExtender,
+    AgentRunInput, AgentRunPersistence, AgentRunRegistry, AgentRunResult, EngineCancelPort,
+    EngineRunHandles, EventCallback, EventSourceFactory, ForegroundExecutor,
+    ForegroundExecutorFactory, ForegroundResourceId, ToolRegistryExtender,
 };
 pub use support::EngineError;
 pub use telemetry::{stamp_identity, AssistantMessageComplete, PromptReportRecorder, StreamEvent};

@@ -42,7 +42,11 @@ impl BackgroundRunFinalizer {
         self.disarm();
     }
 
-    fn disarm(&mut self) {
+    /// Disarm without running cleanup: the caller has handed background teardown
+    /// to another owner (e.g. a concurrent `cancel_agent_run` won the
+    /// finalization claim), so neither `finalize` nor the `Drop` backstop should
+    /// fire a second teardown.
+    pub(crate) fn disarm(&mut self) {
         self.armed = false;
     }
 }

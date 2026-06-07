@@ -8,7 +8,6 @@
 
 use std::sync::{Arc, Mutex};
 
-use eos_agent_message_records::{AgentRunRecordHandle, NodeFinishStatus};
 use eos_state::AgentRunStore;
 use eos_types::{AgentRunId, JsonObject, TaskId};
 use tokio::sync::Notify;
@@ -110,11 +109,19 @@ pub enum AgentRunPersistence {
 }
 
 /// Finalization data and the cancelled-finish path for one agent run (spec §6.3).
+///
+/// Finalization owns only the **durable `agent_run` row** completion. The
+/// message-record handle is deliberately *not* held here: it stays in the
+/// `QueryContext` and is always finished by `run_agent` itself (cancel-aware
+/// status), since the loop is awaited rather than aborted on cancellation. This
+/// keeps record ownership in one place and avoids cloning the record handle into
+/// the control (a documented, observably-equivalent divergence from §12.3's
+/// literal "`finish_cancelled` finishes the message-record": finished once, and
+/// cancel-aware either way).
 pub struct AgentRunFinalization {
     agent_run_id: AgentRunId,
     persistence: AgentRunPersistence,
     agent_run_store: Arc<dyn AgentRunStore>,
-    message_record: Mutex<Option<AgentRunRecordHandle>>,
 }
 
 impl std::fmt::Debug for AgentRunFinalization {
@@ -136,7 +143,6 @@ impl AgentRunFinalization {
             agent_run_id,
             persistence,
             agent_run_store,
-            message_record: Mutex::new(None),
         }
     }
 
@@ -149,26 +155,10 @@ impl AgentRunFinalization {
         }
     }
 
-    /// Hand the run's message-record handle to finalization so a later
-    /// cancellation can finish it. Called once, after the loop's record start.
-    pub fn attach_message_record(&self, handle: AgentRunRecordHandle) {
-        *self.message_record.lock().expect("message-record lock") = Some(handle);
-    }
-
-    /// Finish the run as cancelled: finish the message-record handle (if any) and,
-    /// for persisted runs, finish the durable `agent_run` row with the cancelled
-    /// terminal payload. Ephemeral runs skip the durable completion.
+    /// Finish the run's durable `agent_run` row as cancelled. Ephemeral runs own
+    /// no row, so this is a no-op for them. The message-record handle is finished
+    /// by `run_agent`, not here.
     pub async fn finish_cancelled(&self, reason: &str) -> Result<(), EngineError> {
-        // Take the handle out from under the lock before awaiting, so no
-        // `MutexGuard` is held across the `.await`.
-        let message_record = self
-            .message_record
-            .lock()
-            .expect("message-record lock")
-            .take();
-        if let Some(handle) = message_record {
-            handle.finish(NodeFinishStatus::Failed).await?;
-        }
         if matches!(self.persistence, AgentRunPersistence::Persisted { .. }) {
             let mut terminal = JsonObject::new();
             terminal.insert("fail_reason".to_owned(), "cancelled".into());

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-def · src/model.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-agent-def File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>55</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>17</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link active" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="model crates/eos-agent-def/src/model.rs AgentType impl Default for AgentType AgentRole impl AgentRole impl fmt :: Display for AgentRole AgentName impl AgentName impl fmt :: Display for AgentName RawAgentDefinition AgentDefinition impl AgentDefinition valid_raw definition_rejects_unknown_field definition_enforces_terminals_and_limit from_frontmatter_strips_blank_triggers_and_terminals role_and_type_serde_values agent_name_trims_and_rejects_empty">
+  <div class="module-head">
+    <div>
+      <h2>src/model.rs</h2>
+      <p class="path">module <code>model</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>6 impls</span>
+      <span>6 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentName pub pub struct AgentName crates/eos-agent-def/src/model.rs 0 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AgentName</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct AgentName</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (raw : impl Into &lt; String &gt;) -&gt; Result &lt; Self , AgentDefError &gt;</code></td></tr><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for AgentName</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-agent-def/src/model.rs:80</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentDefinition pub pub struct AgentDefinition crates/eos-agent-def/src/model.rs name AgentName description String system_prompt Option &lt; String &gt; model Option &lt; String &gt; tool_call_limit NonZeroU32 role AgentRole agent_type AgentType allowed_tools Vec &lt; String &gt; terminals Vec &lt; String &gt; notification_triggers Vec &lt; String &gt; skill Option &lt; PathBuf &gt; context_recipe Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AgentDefinition</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct AgentDefinition</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>AgentName</code></td></tr><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>system_prompt</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>model</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tool_call_limit</td><td><code>NonZeroU32</code></td></tr><tr><td>pub</td><td>role</td><td><code>AgentRole</code></td></tr><tr><td>pub</td><td>agent_type</td><td><code>AgentType</code></td></tr><tr><td>pub</td><td>allowed_tools</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminals</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>notification_triggers</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>context_recipe</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_frontmatter</td><td><code>pub(crate) fn from_frontmatter (raw : RawAgentDefinition , path : &amp; Path ,) -&gt; Result &lt; Self , AgentDefError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-agent-def/src/model.rs:157</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AgentType pub pub enum AgentType crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>AgentType</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum AgentType</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Agent</td><td><code></code></td></tr><tr><td>Subagent</td><td><code></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for AgentType</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-agent-def/src/model.rs:19</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AgentRole pub pub enum AgentRole crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>AgentRole</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum AgentRole</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Root</td><td><code></code></td></tr><tr><td>Planner</td><td><code></code></td></tr><tr><td>Generator</td><td><code></code></td></tr><tr><td>Reducer</td><td><code></code></td></tr><tr><td>Helper</td><td><code></code></td></tr><tr><td>Subagent</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; 'static str</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for AgentRole</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-agent-def/src/model.rs:36</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RawAgentDefinition pub(crate) pub(crate) struct RawAgentDefinition crates/eos-agent-def/src/model.rs name Option &lt; String &gt; description Option &lt; String &gt; system_prompt Option &lt; String &gt; model Option &lt; String &gt; tool_call_limit u32 role Option &lt; AgentRole &gt; agent_type AgentType allowed_tools Vec &lt; String &gt; terminals Vec &lt; String &gt; notification_triggers Vec &lt; String &gt; skill Option &lt; PathBuf &gt; context_recipe Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RawAgentDefinition</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct RawAgentDefinition</code>
+  <div class="tags"><span>error</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>description</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>system_prompt</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>model</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tool_call_limit</td><td><code>u32</code></td></tr><tr><td>pub</td><td>role</td><td><code>Option &lt; AgentRole &gt;</code></td></tr><tr><td>pub</td><td>agent_type</td><td><code>AgentType</code></td></tr><tr><td>pub</td><td>allowed_tools</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminals</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>notification_triggers</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>context_recipe</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-agent-def/src/model.rs:120</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn valid_raw private fn valid_raw () -&gt; RawAgentDefinition crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>valid_raw</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn valid_raw () -&gt; RawAgentDefinition</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:256</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_rejects_unknown_field private fn definition_rejects_unknown_field () crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>definition_rejects_unknown_field</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn definition_rejects_unknown_field ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:268</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_enforces_terminals_and_limit private fn definition_enforces_terminals_and_limit () crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>definition_enforces_terminals_and_limit</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn definition_enforces_terminals_and_limit ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:276</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn from_frontmatter_strips_blank_triggers_and_terminals private fn from_frontmatter_strips_blank_triggers_and_terminals () crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>from_frontmatter_strips_blank_triggers_and_terminals</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn from_frontmatter_strips_blank_triggers_and_terminals ()</code>
+  <div class="tags"><span>constructor</span></div>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:302</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn role_and_type_serde_values private fn role_and_type_serde_values () crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>role_and_type_serde_values</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn role_and_type_serde_values ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:313</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_name_trims_and_rejects_empty private fn agent_name_trims_and_rejects_empty () crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>agent_name_trims_and_rejects_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn agent_name_trims_and_rejects_empty ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:336</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

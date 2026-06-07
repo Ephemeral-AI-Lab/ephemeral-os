@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/workspace_binding.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-layerstack File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>60</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link active" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="workspace_binding crates/eos-layerstack/src/workspace_binding.rs WorkspaceBinding impl WorkspaceBinding read_workspace_binding require_workspace_binding normalize_layer_path">
+  <div class="module-head">
+    <div>
+      <h2>src/workspace_binding.rs</h2>
+      <p class="path">module <code>workspace_binding</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>3 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceBinding pub pub struct WorkspaceBinding crates/eos-layerstack/src/workspace_binding.rs workspace_root String layer_stack_root String active_manifest_version i64 active_root_hash String base_manifest_version i64 base_root_hash String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceBinding</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct WorkspaceBinding</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>active_manifest_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>active_root_hash</td><td><code>String</code></td></tr><tr><td>pub</td><td>base_manifest_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>base_root_hash</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>layer_path_from_relative</td><td><code>pub fn layer_path_from_relative (&amp; self , path : &amp; str) -&gt; Result &lt; String , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>layer_path_from_absolute</td><td><code>pub fn layer_path_from_absolute (&amp; self , path : &amp; str) -&gt; Result &lt; String , LayerStackError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/workspace_binding.rs:14</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_workspace_binding pub pub fn read_workspace_binding (layer_stack_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; Option &lt; WorkspaceBinding &gt; , LayerStackError &gt; crates/eos-layerstack/src/workspace_binding.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_workspace_binding</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn read_workspace_binding (layer_stack_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; Option &lt; WorkspaceBinding &gt; , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_binding.rs:77</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_workspace_binding pub pub fn require_workspace_binding (layer_stack_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; WorkspaceBinding , LayerStackError &gt; crates/eos-layerstack/src/workspace_binding.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_workspace_binding</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn require_workspace_binding (layer_stack_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; WorkspaceBinding , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_binding.rs:95</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_layer_path private fn normalize_layer_path (path : &amp; str) -&gt; Result &lt; String , LayerStackError &gt; crates/eos-layerstack/src/workspace_binding.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalize_layer_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn normalize_layer_path (path : &amp; str) -&gt; Result &lt; String , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_binding.rs:115</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

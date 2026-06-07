@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-ephemeral-workspace · src/dirs.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-ephemeral-workspace File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>70</b><span>items</span></div>
+  <div><b>87</b><span>fields</span></div>
+  <div><b>40</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-ephemeral-workspace.html"><span>capture.rs</span><small>1/2</small></a></li><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html"><span>finalize.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-policy-rs.html"><span>policy.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-prepare-rs.html"><span>prepare.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-session-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link active" href="eos-ephemeral-workspace--src-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="dirs crates/eos-ephemeral-workspace/src/dirs.rs EphemeralDirAllocator RunDirCleanup impl EphemeralDirAllocator impl RunDirCleanup impl Drop for RunDirCleanup sanitized_segment">
+  <div class="module-head">
+    <div>
+      <h2>src/dirs.rs</h2>
+      <p class="path">module <code>dirs</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>3 impls</span>
+      <span>1 fns</span>
+      <span>4 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct EphemeralDirAllocator pub pub struct EphemeralDirAllocator crates/eos-ephemeral-workspace/src/dirs.rs writable_root PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EphemeralDirAllocator</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct EphemeralDirAllocator</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>writable_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (writable_root : PathBuf) -&gt; Self</code></td></tr><tr><td>method</td><td>allocate</td><td><code>pub fn allocate (&amp; self , kind : &amp; str , invocation_id : &amp; InvocationId ,) -&gt; Result &lt; EphemeralRunDirs , EphemeralWorkspaceError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-ephemeral-workspace/src/dirs.rs:6</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RunDirCleanup pub pub struct RunDirCleanup crates/eos-ephemeral-workspace/src/dirs.rs path Option &lt; PathBuf &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunDirCleanup</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct RunDirCleanup</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (path : PathBuf) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for RunDirCleanup</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-ephemeral-workspace/src/dirs.rs:12</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sanitized_segment private fn sanitized_segment (value : &amp; str) -&gt; String crates/eos-ephemeral-workspace/src/dirs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sanitized_segment</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn sanitized_segment (value : &amp; str) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/dirs.rs:82</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

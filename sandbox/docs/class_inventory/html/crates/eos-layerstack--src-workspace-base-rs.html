@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/workspace_base.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-layerstack File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>60</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>7/5</small></a></li><li><a class="file-link active" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="workspace_base crates/eos-layerstack/src/workspace_base.rs WorkspaceBaseBuild BaseEntry impl BaseEntry ensure_workspace_base build_workspace_base reject_existing_base_state collect_base_entries collect_dir symlink_entry write_base_layer validate_manifest_for_root validate_workspace_binding_paths write_workspace_binding write_layer_digest file_hash update_root_hash record_inventory usize_to_f64_lossy u64_to_f64_lossy relative_path dir_has_entries format_path_sample hex_digest">
+  <div class="module-head">
+    <div>
+      <h2>src/workspace_base.rs</h2>
+      <p class="path">module <code>workspace_base</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>1 impls</span>
+      <span>20 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceBaseBuild pub pub struct WorkspaceBaseBuild crates/eos-layerstack/src/workspace_base.rs binding WorkspaceBinding timings BTreeMap &lt; String , f64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceBaseBuild</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct WorkspaceBaseBuild</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>binding</td><td><code>WorkspaceBinding</code></td></tr><tr><td>pub</td><td>timings</td><td><code>BTreeMap &lt; String , f64 &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:21</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum BaseEntry private enum BaseEntry crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>BaseEntry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum BaseEntry</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Directory</td><td><code>path: String</code></td></tr><tr><td>File</td><td><code>path: String, source_path: PathBuf, size: u64, content_hash: String</code></td></tr><tr><td>Symlink</td><td><code>path: String, link_target: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>path</td><td><code>fn path (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>kind</td><td><code>const fn kind (&amp; self) -&gt; &amp; 'static str</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:28</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_workspace_base pub pub fn ensure_workspace_base (layer_stack_root : impl AsRef &lt; Path &gt; , workspace_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; (WorkspaceBinding , bool) , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_workspace_base</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn ensure_workspace_base (layer_stack_root : impl AsRef &lt; Path &gt; , workspace_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; (WorkspaceBinding , bool) , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:61</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_workspace_base pub pub fn build_workspace_base (layer_stack_root : impl AsRef &lt; Path &gt; , workspace_root : impl AsRef &lt; Path &gt; , reset : bool ,) -&gt; Result &lt; WorkspaceBaseBuild , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>build_workspace_base</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn build_workspace_base (layer_stack_root : impl AsRef &lt; Path &gt; , workspace_root : impl AsRef &lt; Path &gt; , reset : bool ,) -&gt; Result &lt; WorkspaceBaseBuild , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:89</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reject_existing_base_state private fn reject_existing_base_state (stack : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reject_existing_base_state</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn reject_existing_base_state (stack : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:168</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_base_entries private fn collect_base_entries (workspace : &amp; Path) -&gt; Result &lt; (Vec &lt; BaseEntry &gt; , String) , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>collect_base_entries</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn collect_base_entries (workspace : &amp; Path) -&gt; Result &lt; (Vec &lt; BaseEntry &gt; , String) , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:191</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_dir private fn collect_dir (workspace : &amp; Path , current : &amp; Path , entries : &amp; mut Vec &lt; BaseEntry &gt; , special : &amp; mut Vec &lt; String &gt; , unstable : &amp; mut Vec &lt; String &gt; ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>collect_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn collect_dir (workspace : &amp; Path , current : &amp; Path , entries : &amp; mut Vec &lt; BaseEntry &gt; , special : &amp; mut Vec &lt; String &gt; , unstable : &amp; mut Vec &lt; String &gt; ,) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:221</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn symlink_entry private fn symlink_entry (path : &amp; Path , rel : String) -&gt; Result &lt; BaseEntry , String &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>symlink_entry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn symlink_entry (path : &amp; Path , rel : String) -&gt; Result &lt; BaseEntry , String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:282</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_base_layer private fn write_base_layer (stack : &amp; Path , entries : &amp; [BaseEntry]) -&gt; Result &lt; LayerRef , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_base_layer</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_base_layer (stack : &amp; Path , entries : &amp; [BaseEntry]) -&gt; Result &lt; LayerRef , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:291</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_manifest_for_root private fn validate_manifest_for_root (stack : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>validate_manifest_for_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn validate_manifest_for_root (stack : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:358</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_workspace_binding_paths private fn validate_workspace_binding_paths (workspace : &amp; Path , stack : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>validate_workspace_binding_paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn validate_workspace_binding_paths (workspace : &amp; Path , stack : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:376</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_workspace_binding private fn write_workspace_binding (binding : &amp; WorkspaceBinding) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_workspace_binding</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_workspace_binding (binding : &amp; WorkspaceBinding) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:399</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_layer_digest private fn write_layer_digest (stack : &amp; Path , layer_id : &amp; str , digest : &amp; str) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_layer_digest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn write_layer_digest (stack : &amp; Path , layer_id : &amp; str , digest : &amp; str) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:412</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn file_hash private fn file_hash (path : &amp; Path) -&gt; Result &lt; String , std :: io :: Error &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>file_hash</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn file_hash (path : &amp; Path) -&gt; Result &lt; String , std :: io :: Error &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:421</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn update_root_hash private fn update_root_hash (digest : &amp; mut Sha256 , entry : &amp; BaseEntry) crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>update_root_hash</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn update_root_hash (digest : &amp; mut Sha256 , entry : &amp; BaseEntry)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:435</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_inventory private fn record_inventory (timings : &amp; mut BTreeMap &lt; String , f64 &gt; , entries : &amp; [BaseEntry]) crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>record_inventory</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn record_inventory (timings : &amp; mut BTreeMap &lt; String , f64 &gt; , entries : &amp; [BaseEntry])</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:456</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_lossy private fn usize_to_f64_lossy (value : usize) -&gt; f64 crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_f64_lossy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn usize_to_f64_lossy (value : usize) -&gt; f64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:498</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_lossy private fn u64_to_f64_lossy (value : u64) -&gt; f64 crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>u64_to_f64_lossy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn u64_to_f64_lossy (value : u64) -&gt; f64</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:502</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_path private fn relative_path (workspace : &amp; Path , path : &amp; Path) -&gt; String crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>relative_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn relative_path (workspace : &amp; Path , path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:509</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dir_has_entries private fn dir_has_entries (path : &amp; Path) -&gt; Result &lt; bool , LayerStackError &gt; crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dir_has_entries</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn dir_has_entries (path : &amp; Path) -&gt; Result &lt; bool , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:516</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn format_path_sample private fn format_path_sample (paths : &amp; [String]) -&gt; String crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>format_path_sample</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn format_path_sample (paths : &amp; [String]) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:524</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_digest private fn hex_digest (bytes : impl AsRef &lt; [u8] &gt;) -&gt; String crates/eos-layerstack/src/workspace_base.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hex_digest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn hex_digest (bytes : impl AsRef &lt; [u8] &gt;) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/workspace_base.rs:533</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

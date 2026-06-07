@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-config · src/configs/isolated-workspace.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-config File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>95</b><span>items</span></div>
+  <div><b>127</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>8/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>10/13</small></a></li><li><a class="file-link active" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::isolated-workspace crates/eos-config/src/configs/isolated-workspace.rs IsolatedWorkspaceConfig Rfc1918Egress impl IsolatedWorkspaceConfig config_prd_isolated_workspace_section_deserializes_and_validates config_validation_rejects_invalid_isolated_values prd_config assert_invalid">
+  <div class="module-head">
+    <div>
+      <h2>src/configs/isolated-workspace.rs</h2>
+      <p class="path">module <code>configs::isolated-workspace</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>1 impls</span>
+      <span>4 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct IsolatedWorkspaceConfig pub pub struct IsolatedWorkspaceConfig crates/eos-config/src/configs/isolated-workspace.rs enabled bool scratch_root PathBuf audit_jsonl_path PathBuf ttl_s f64 total_cap u32 upperdir_bytes u64 memavail_fraction f64 setup_timeout_s f64 exit_grace_s f64 rfc1918_egress Rfc1918Egress fallback_dns String workspace_root PathBuf sample_interval_s f64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IsolatedWorkspaceConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct IsolatedWorkspaceConfig</code>
+  <div class="tags"><span>config</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>enabled</td><td><code>bool</code></td></tr><tr><td>pub</td><td>scratch_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>audit_jsonl_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>ttl_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>total_cap</td><td><code>u32</code></td></tr><tr><td>pub</td><td>upperdir_bytes</td><td><code>u64</code></td></tr><tr><td>pub</td><td>memavail_fraction</td><td><code>f64</code></td></tr><tr><td>pub</td><td>setup_timeout_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>exit_grace_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>rfc1918_egress</td><td><code>Rfc1918Egress</code></td></tr><tr><td>pub</td><td>fallback_dns</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>sample_interval_s</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () , ConfigFieldError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/isolated-workspace.rs:15</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Rfc1918Egress pub pub enum Rfc1918Egress crates/eos-config/src/configs/isolated-workspace.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Rfc1918Egress</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum Rfc1918Egress</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Allow</td><td><code></code></td></tr><tr><td>Deny</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-config/src/configs/isolated-workspace.rs:33</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_prd_isolated_workspace_section_deserializes_and_validates private fn config_prd_isolated_workspace_section_deserializes_and_validates () crates/eos-config/src/configs/isolated-workspace.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>config_prd_isolated_workspace_section_deserializes_and_validates</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn config_prd_isolated_workspace_section_deserializes_and_validates ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/isolated-workspace.rs:83</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_validation_rejects_invalid_isolated_values private fn config_validation_rejects_invalid_isolated_values () crates/eos-config/src/configs/isolated-workspace.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>config_validation_rejects_invalid_isolated_values</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn config_validation_rejects_invalid_isolated_values ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/isolated-workspace.rs:90</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prd_config private fn prd_config () -&gt; IsolatedWorkspaceConfig crates/eos-config/src/configs/isolated-workspace.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prd_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn prd_config () -&gt; IsolatedWorkspaceConfig</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/isolated-workspace.rs:114</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_invalid private fn assert_invalid (config : IsolatedWorkspaceConfig , field : &amp; str) crates/eos-config/src/configs/isolated-workspace.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>assert_invalid</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn assert_invalid (config : IsolatedWorkspaceConfig , field : &amp; str)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-config/src/configs/isolated-workspace.rs:121</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

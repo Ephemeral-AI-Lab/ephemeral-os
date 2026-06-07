@@ -1427,7 +1427,7 @@ Status values: `Not started`, `In progress`, `Blocked`, `Done`.
 | 3. Local supervisor composition | In progress | none | factories create per-run background handles and notifiers |
 | 4. Lane handles and heartbeat | Not started | completion collection interface only | lanes own records, handles, and heartbeat wiring |
 | 5. Sandbox registry integration | Blocked on sandbox work | requires daemon registry implementation | one per-caller cancel RPC is wired and tested |
-| 6. Agent-core cancellation ports | Not started | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
+| 6. Agent-core cancellation ports | In progress | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
 | 7. Workflow cancellation decomposition | Not started | none | workflow cancellation decomposes through task state |
 | 8. Request cancellation entry | Not started | Phase 6 | backend-facing request cancellation entry exists |
 | 9. Tests and documentation | Not started | all prior phases | docs, tests, and architecture pages match the final design |

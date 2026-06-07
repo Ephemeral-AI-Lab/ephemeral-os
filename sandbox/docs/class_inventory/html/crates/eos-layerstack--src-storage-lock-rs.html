@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/storage_lock.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-layerstack File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>60</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link active" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="storage_lock crates/eos-layerstack/src/storage_lock.rs StorageWriterLockLease impl StorageWriterLockLease impl Drop for StorageWriterLockLease SharedGuard impl Drop for SharedGuard &lt; '_ &gt; ExclusiveGuard impl Drop for ExclusiveGuard &lt; '_ &gt; LockRecord ReentrantRwLock ReentrantRwState impl ReentrantRwLock registry lock_registry TestResult shared_guards_overlap_and_block_exclusive exclusive_guard_is_reentrant_and_blocks_shared join_test_thread Fixture impl Fixture impl Drop for Fixture">
+  <div class="module-head">
+    <div>
+      <h2>src/storage_lock.rs</h2>
+      <p class="path">module <code>storage_lock</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>7 types</span>
+      <span>7 impls</span>
+      <span>5 fns</span>
+      <span>13 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct StorageWriterLockLease pub pub struct StorageWriterLockLease crates/eos-layerstack/src/storage_lock.rs key String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StorageWriterLockLease</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct StorageWriterLockLease</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>key</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>shared</td><td><code>pub fn shared (&amp; self) -&gt; Result &lt; SharedGuard &lt; '_ &gt; , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>exclusive</td><td><code>pub fn exclusive (&amp; self) -&gt; Result &lt; ExclusiveGuard &lt; '_ &gt; , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>lock</td><td><code>fn lock (&amp; self) -&gt; Result &lt; Arc &lt; ReentrantRwLock &gt; , LayerStackError &gt;</code></td></tr><tr><td>associated-fn</td><td>acquire</td><td><code>pub fn acquire (storage_root : &amp; Path) -&gt; Result &lt; Self , LayerStackError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for StorageWriterLockLease</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:44</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SharedGuard pub pub struct SharedGuard&lt; 'lease &gt; crates/eos-layerstack/src/storage_lock.rs lock Arc &lt; ReentrantRwLock &gt; _lease PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SharedGuard</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct SharedGuard&lt; 'lease &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; ReentrantRwLock &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for SharedGuard &lt; '_ &gt;</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:175</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ExclusiveGuard pub pub struct ExclusiveGuard&lt; 'lease &gt; crates/eos-layerstack/src/storage_lock.rs lock Arc &lt; ReentrantRwLock &gt; _lease PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ExclusiveGuard</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ExclusiveGuard&lt; 'lease &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; ReentrantRwLock &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for ExclusiveGuard &lt; '_ &gt;</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:188</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LockRecord private struct LockRecord crates/eos-layerstack/src/storage_lock.rs file File refcount usize lock Arc &lt; ReentrantRwLock &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LockRecord</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct LockRecord</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file</td><td><code>File</code></td></tr><tr><td>private</td><td>refcount</td><td><code>usize</code></td></tr><tr><td>private</td><td>lock</td><td><code>Arc &lt; ReentrantRwLock &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:201</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ReentrantRwLock private struct ReentrantRwLock crates/eos-layerstack/src/storage_lock.rs state Mutex &lt; ReentrantRwState &gt; waiters Condvar ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ReentrantRwLock</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ReentrantRwLock</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state</td><td><code>Mutex &lt; ReentrantRwState &gt;</code></td></tr><tr><td>private</td><td>waiters</td><td><code>Condvar</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>read</td><td><code>fn read (&amp; self) -&gt; Result &lt; () , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>read_unlock</td><td><code>fn read_unlock (&amp; self)</code></td></tr><tr><td>method</td><td>write</td><td><code>fn write (&amp; self) -&gt; Result &lt; () , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>write_unlock</td><td><code>fn write_unlock (&amp; self)</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:208</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReentrantRwState private struct ReentrantRwState crates/eos-layerstack/src/storage_lock.rs writer Option &lt; ThreadId &gt; write_depth usize readers usize waiting_writers usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ReentrantRwState</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct ReentrantRwState</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>writer</td><td><code>Option &lt; ThreadId &gt;</code></td></tr><tr><td>private</td><td>write_depth</td><td><code>usize</code></td></tr><tr><td>private</td><td>readers</td><td><code>usize</code></td></tr><tr><td>private</td><td>waiting_writers</td><td><code>usize</code></td></tr></tbody></table>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:214</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Fixture private struct Fixture crates/eos-layerstack/src/storage_lock.rs root PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Fixture</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct Fixture</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (label : &amp; str) -&gt; TestResult &lt; Self &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for Fixture</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:401</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-layerstack/src/storage_lock.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:321</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn registry private fn registry () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , LockRecord &gt; &gt; crates/eos-layerstack/src/storage_lock.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>registry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn registry () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , LockRecord &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:301</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_registry private fn lock_registry () -&gt; Result &lt; MutexGuard &lt; 'static , HashMap &lt; String , LockRecord &gt; &gt; , LayerStackError &gt; crates/eos-layerstack/src/storage_lock.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock_registry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lock_registry () -&gt; Result &lt; MutexGuard &lt; 'static , HashMap &lt; String , LockRecord &gt; &gt; , LayerStackError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:306</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_guards_overlap_and_block_exclusive private fn shared_guards_overlap_and_block_exclusive () -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>shared_guards_overlap_and_block_exclusive</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn shared_guards_overlap_and_block_exclusive () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:325</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exclusive_guard_is_reentrant_and_blocks_shared private fn exclusive_guard_is_reentrant_and_blocks_shared () -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>exclusive_guard_is_reentrant_and_blocks_shared</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn exclusive_guard_is_reentrant_and_blocks_shared () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:365</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn join_test_thread private fn join_test_thread (handle : std :: thread :: JoinHandle &lt; TestResult &gt;) -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>join_test_thread</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn join_test_thread (handle : std :: thread :: JoinHandle &lt; TestResult &gt;) -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-layerstack/src/storage_lock.rs:395</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -20,6 +20,7 @@ use crate::telemetry::StreamEvent;
 
 use super::control::AgentRunCancellation;
 use super::foreground::ForegroundExecutor;
+use super::registry::AgentRunRegistry;
 
 /// Per-agent event-source factory seam.
 ///
@@ -116,6 +117,13 @@ pub struct AgentRunInput {
     /// The run's foreground cancelable-effect registry (shared from
     /// `AgentRunControl`), threaded onto the `QueryContext` for cancellation.
     pub foreground: Arc<ForegroundExecutor>,
+    /// The live-run registry, **only for registered (root/workflow) runs**. When
+    /// `Some`, `run_agent` claims the registry entry (`Running -> Claimed`) before
+    /// finalizing the `agent_run` row + child teardown, so a concurrent
+    /// `cancel_agent_run` cannot double-finalize. Helper/subagent runs that were
+    /// never inserted pass `None` and finalize naturally (spec §6.4, finalization
+    /// arbitration).
+    pub agent_run_registry: Option<AgentRunRegistry>,
     /// Whether to record an `agent_run` row (create + finish).
     pub persist_agent_run: bool,
     /// Message-record node kind and parent/location facts for this run.

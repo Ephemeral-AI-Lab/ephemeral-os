@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-db · src/rows.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-db File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>90</b><span>items</span></div>
+  <div><b>113</b><span>fields</span></div>
+  <div><b>57</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>composition.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link active" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="rows crates/eos-db/src/rows.rs RequestRow TaskRow WorkflowRow IterationRow AttemptRow AgentRunRow parse_id opt_id parse_enum enum_to_db execution_role normalize_status record_str outcome_from_record normalize_task_outcomes normalize_attempt_outcomes row_to_request row_to_task row_to_workflow row_to_iteration row_to_attempt AttemptLifecycleColumns attempt_state_from_columns row_to_agent_run ids task_outcomes_parity attempt_outcomes_parity attempt_outcomes_roundtrip_typed tid epoch base_cols attempt_state_plan_reconstructs_and_rejects_incoherent_columns attempt_state_run_requires_materialized_plan_and_running_status attempt_state_closed_passed_and_failed_reconstruct_with_required_fields attempt_state_closed_cancelled_reconstructs_without_fail_reason">
+  <div class="module-head">
+    <div>
+      <h2>src/rows.rs</h2>
+      <p class="path">module <code>rows</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>7 types</span>
+      <span>0 impls</span>
+      <span>28 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RequestRow pub(crate) pub(crate) struct RequestRow crates/eos-db/src/rows.rs id String cwd String sandbox_id Option &lt; String &gt; request_prompt String root_task_id Option &lt; String &gt; status String created_at OffsetDateTime updated_at OffsetDateTime finished_at Option &lt; OffsetDateTime &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RequestRow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct RequestRow</code>
+  <div class="tags"><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>cwd</td><td><code>String</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>request_prompt</td><td><code>String</code></td></tr><tr><td>pub</td><td>root_task_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>finished_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:24</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TaskRow pub(crate) pub(crate) struct TaskRow crates/eos-db/src/rows.rs id String request_id String role String instruction String status String workflow_id Option &lt; String &gt; iteration_id Option &lt; String &gt; attempt_id Option &lt; String &gt; agent_name Option &lt; String &gt; needs String outcomes String terminal_tool_result Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TaskRow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct TaskRow</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>role</td><td><code>String</code></td></tr><tr><td>pub</td><td>instruction</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>needs</td><td><code>String</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>String</code></td></tr><tr><td>pub</td><td>terminal_tool_result</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:37</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkflowRow pub(crate) pub(crate) struct WorkflowRow crates/eos-db/src/rows.rs id String request_id String parent_task_id String goal String status String iteration_ids String outcomes Option &lt; String &gt; created_at OffsetDateTime updated_at OffsetDateTime closed_at Option &lt; OffsetDateTime &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkflowRow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct WorkflowRow</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>parent_task_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>goal</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>iteration_ids</td><td><code>String</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>closed_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:55</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IterationRow pub(crate) pub(crate) struct IterationRow crates/eos-db/src/rows.rs id String workflow_id String sequence_no i64 creation_reason String goal String attempt_budget i64 status String attempt_ids String deferred_goal Option &lt; String &gt; created_at OffsetDateTime updated_at OffsetDateTime closed_at Option &lt; OffsetDateTime &gt; outcomes Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IterationRow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct IterationRow</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>sequence_no</td><td><code>i64</code></td></tr><tr><td>pub</td><td>creation_reason</td><td><code>String</code></td></tr><tr><td>pub</td><td>goal</td><td><code>String</code></td></tr><tr><td>pub</td><td>attempt_budget</td><td><code>i64</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>attempt_ids</td><td><code>String</code></td></tr><tr><td>pub</td><td>deferred_goal</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>closed_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:69</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AttemptRow pub(crate) pub(crate) struct AttemptRow crates/eos-db/src/rows.rs id String iteration_id String workflow_id String attempt_sequence_no i64 stage String status String planner_task_id Option &lt; String &gt; generator_task_ids String reducer_task_ids String outcomes String deferred_goal Option &lt; String &gt; fail_reason Option &lt; String &gt; created_at OffsetDateTime updated_at OffsetDateTime closed_at Option &lt; OffsetDateTime &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AttemptRow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct AttemptRow</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>attempt_sequence_no</td><td><code>i64</code></td></tr><tr><td>pub</td><td>stage</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>planner_task_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>generator_task_ids</td><td><code>String</code></td></tr><tr><td>pub</td><td>reducer_task_ids</td><td><code>String</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>String</code></td></tr><tr><td>pub</td><td>deferred_goal</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>fail_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>closed_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:86</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRow pub(crate) pub(crate) struct AgentRunRow crates/eos-db/src/rows.rs id String task_id String initial_messages Option &lt; String &gt; agent_name String message_history Option &lt; String &gt; terminal_tool_result Option &lt; String &gt; token_count i64 error Option &lt; String &gt; created_at OffsetDateTime finished_at Option &lt; OffsetDateTime &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AgentRunRow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct AgentRunRow</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>initial_messages</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>message_history</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminal_tool_result</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>token_count</td><td><code>i64</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>finished_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:105</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AttemptLifecycleColumns private struct AttemptLifecycleColumns&lt; 'a &gt; crates/eos-db/src/rows.rs stage AttemptStage status AttemptStatus planner_task_id Option &lt; eos_state :: TaskId &gt; generator_task_ids Vec &lt; eos_state :: TaskId &gt; reducer_task_ids Vec &lt; eos_state :: TaskId &gt; deferred_goal Option &lt; &amp; 'a DeferredGoal &gt; fail_reason Option &lt; AttemptFailReason &gt; closed_at Option &lt; UtcDateTime &gt; outcomes Vec &lt; ExecutionTaskOutcome &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AttemptLifecycleColumns</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct AttemptLifecycleColumns&lt; 'a &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stage</td><td><code>AttemptStage</code></td></tr><tr><td>private</td><td>status</td><td><code>AttemptStatus</code></td></tr><tr><td>private</td><td>planner_task_id</td><td><code>Option &lt; eos_state :: TaskId &gt;</code></td></tr><tr><td>private</td><td>generator_task_ids</td><td><code>Vec &lt; eos_state :: TaskId &gt;</code></td></tr><tr><td>private</td><td>reducer_task_ids</td><td><code>Vec &lt; eos_state :: TaskId &gt;</code></td></tr><tr><td>private</td><td>deferred_goal</td><td><code>Option &lt; &amp; 'a DeferredGoal &gt;</code></td></tr><tr><td>private</td><td>fail_reason</td><td><code>Option &lt; AttemptFailReason &gt;</code></td></tr><tr><td>private</td><td>closed_at</td><td><code>Option &lt; UtcDateTime &gt;</code></td></tr><tr><td>private</td><td>outcomes</td><td><code>Vec &lt; ExecutionTaskOutcome &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-db/src/rows.rs:375</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_enum pub(crate) pub(crate) fn parse_enum &lt; T : serde :: de :: DeserializeOwned &gt; (field : &amp; 'static str , raw : &amp; str ,) -&gt; Result &lt; T , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_enum</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parse_enum &lt; T : serde :: de :: DeserializeOwned &gt; (field : &amp; 'static str , raw : &amp; str ,) -&gt; Result &lt; T , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:138</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enum_to_db pub(crate) pub(crate) fn enum_to_db &lt; T : serde :: Serialize &gt; (value : &amp; T) -&gt; String crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>enum_to_db</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn enum_to_db &lt; T : serde :: Serialize &gt; (value : &amp; T) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:148</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_task_outcomes pub(crate) pub(crate) fn normalize_task_outcomes (records : &amp; [JsonValue] , task_status : &amp; str , task_role : &amp; str , owning_task_id : &amp; str ,) -&gt; Vec &lt; ExecutionTaskOutcome &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalize_task_outcomes</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn normalize_task_outcomes (records : &amp; [JsonValue] , task_status : &amp; str , task_role : &amp; str , owning_task_id : &amp; str ,) -&gt; Vec &lt; ExecutionTaskOutcome &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:210</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_attempt_outcomes pub(crate) pub(crate) fn normalize_attempt_outcomes (records : &amp; [JsonValue]) -&gt; Vec &lt; ExecutionTaskOutcome &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalize_attempt_outcomes</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn normalize_attempt_outcomes (records : &amp; [JsonValue]) -&gt; Vec &lt; ExecutionTaskOutcome &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:236</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_request pub(crate) pub(crate) fn row_to_request (r : RequestRow) -&gt; Result &lt; Request , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_request</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn row_to_request (r : RequestRow) -&gt; Result &lt; Request , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:252</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_task pub(crate) pub(crate) fn row_to_task (r : TaskRow) -&gt; Result &lt; Task , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_task</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn row_to_task (r : TaskRow) -&gt; Result &lt; Task , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:266</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_workflow pub(crate) pub(crate) fn row_to_workflow (r : WorkflowRow) -&gt; Result &lt; Workflow , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_workflow</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn row_to_workflow (r : WorkflowRow) -&gt; Result &lt; Workflow , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:285</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_iteration pub(crate) pub(crate) fn row_to_iteration (r : IterationRow) -&gt; Result &lt; Iteration , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_iteration</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn row_to_iteration (r : IterationRow) -&gt; Result &lt; Iteration , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:300</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_attempt pub(crate) pub(crate) fn row_to_attempt (r : AttemptRow) -&gt; Result &lt; Attempt , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_attempt</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn row_to_attempt (r : AttemptRow) -&gt; Result &lt; Attempt , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:331</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_agent_run pub(crate) pub(crate) fn row_to_agent_run (r : AgentRunRow) -&gt; Result &lt; AgentRun , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>row_to_agent_run</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn row_to_agent_run (r : AgentRunRow) -&gt; Result &lt; AgentRun , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:482</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_id private fn parse_id &lt; T &gt; (field : &amp; 'static str , raw : &amp; str) -&gt; Result &lt; T , DbError &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; , crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_id &lt; T &gt; (field : &amp; 'static str , raw : &amp; str) -&gt; Result &lt; T , DbError &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:121</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn opt_id private fn opt_id &lt; T &gt; (field : &amp; 'static str , raw : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; , crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>opt_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn opt_id &lt; T &gt; (field : &amp; 'static str , raw : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; ,</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:131</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execution_role private fn execution_role (raw : Option &lt; &amp; str &gt;) -&gt; Option &lt; ExecutionRole &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>execution_role</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn execution_role (raw : Option &lt; &amp; str &gt;) -&gt; Option &lt; ExecutionRole &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:159</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_status private fn normalize_status (raw : Option &lt; &amp; str &gt;) -&gt; TaskOutcomeStatus crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalize_status</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn normalize_status (raw : Option &lt; &amp; str &gt;) -&gt; TaskOutcomeStatus</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:167</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_str private fn record_str &lt; 'a &gt; (record : &amp; 'a serde_json :: Map &lt; String , JsonValue &gt; , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>record_str</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn record_str &lt; 'a &gt; (record : &amp; 'a serde_json :: Map &lt; String , JsonValue &gt; , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:176</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn outcome_from_record private fn outcome_from_record (record : &amp; serde_json :: Map &lt; String , JsonValue &gt; , status : TaskOutcomeStatus , fallback_role : Option &lt; ExecutionRole &gt; , fallback_task_id : &amp; str ,) -&gt; Option &lt; ExecutionTaskOutcome &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>outcome_from_record</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn outcome_from_record (record : &amp; serde_json :: Map &lt; String , JsonValue &gt; , status : TaskOutcomeStatus , fallback_role : Option &lt; ExecutionRole &gt; , fallback_task_id : &amp; str ,) -&gt; Option &lt; ExecutionTaskOutcome &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:180</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_from_columns private fn attempt_state_from_columns (columns : AttemptLifecycleColumns &lt; '_ &gt; ,) -&gt; Result &lt; AttemptState , DbError &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_state_from_columns</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_state_from_columns (columns : AttemptLifecycleColumns &lt; '_ &gt; ,) -&gt; Result &lt; AttemptState , DbError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:387</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ids private fn ids (o : &amp; ExecutionTaskOutcome) -&gt; (TaskOutcomeStatus , ExecutionRole , String , String) crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ids</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn ids (o : &amp; ExecutionTaskOutcome) -&gt; (TaskOutcomeStatus , ExecutionRole , String , String)</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:504</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_outcomes_parity private fn task_outcomes_parity () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>task_outcomes_parity</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn task_outcomes_parity ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:516</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_outcomes_parity private fn attempt_outcomes_parity () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_outcomes_parity</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_outcomes_parity ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:564</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_outcomes_roundtrip_typed private fn attempt_outcomes_roundtrip_typed () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_outcomes_roundtrip_typed</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_outcomes_roundtrip_typed ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:596</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tid private fn tid (raw : &amp; str) -&gt; eos_state :: TaskId crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>tid</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn tid (raw : &amp; str) -&gt; eos_state :: TaskId</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:627</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn epoch private fn epoch () -&gt; UtcDateTime crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>epoch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn epoch () -&gt; UtcDateTime</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:631</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_cols private fn base_cols (stage : AttemptStage , status : AttemptStatus) -&gt; AttemptLifecycleColumns &lt; 'static &gt; crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>base_cols</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn base_cols (stage : AttemptStage , status : AttemptStatus) -&gt; AttemptLifecycleColumns &lt; 'static &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:635</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns private fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_state_plan_reconstructs_and_rejects_incoherent_columns</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:649</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_run_requires_materialized_plan_and_running_status private fn attempt_state_run_requires_materialized_plan_and_running_status () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_state_run_requires_materialized_plan_and_running_status</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_state_run_requires_materialized_plan_and_running_status ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:701</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields private fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:751</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_closed_cancelled_reconstructs_without_fail_reason private fn attempt_state_closed_cancelled_reconstructs_without_fail_reason () crates/eos-db/src/rows.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attempt_state_closed_cancelled_reconstructs_without_fail_reason</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn attempt_state_closed_cancelled_reconstructs_without_fail_reason ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-db/src/rows.rs:810</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

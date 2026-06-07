@@ -21,19 +21,11 @@ impl DaemonIsolatedCommandPort {
 }
 
 impl IsolatedCommandSessionPort for DaemonIsolatedCommandPort {
-    fn command_session_started(&self, command_session_id: &str, caller_id: &str) {
-        crate::services::isolated_workspace::register_command_session(
-            caller_id,
-            command_session_id,
-        );
-    }
+    // The caller-keyed command-session registry now owns the isolated run's
+    // sessions directly, so start/finish need no side-map bookkeeping here.
+    fn command_session_started(&self, _command_session_id: &str, _caller_id: &str) {}
 
-    fn command_session_finished(&self, command_session_id: &str, caller_id: &str, _status: &str) {
-        crate::services::isolated_workspace::unregister_command_session(
-            caller_id,
-            command_session_id,
-        );
-    }
+    fn command_session_finished(&self, _command_session_id: &str, _caller_id: &str, _status: &str) {}
 
     fn prepare_context(&self) -> Result<IsolatedCommandPrepareContext, WorkspaceApiError> {
         Ok(IsolatedCommandPrepareContext {

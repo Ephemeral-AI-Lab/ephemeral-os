@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-overlay · src/path_change.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-overlay File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>56</b><span>items</span></div>
+  <div><b>24</b><span>fields</span></div>
+  <div><b>9</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/16</small></a></li><li><a class="file-link" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>3/17</small></a></li><li><a class="file-link" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="path_change crates/eos-overlay/src/path_change.rs OverlayPathChangeKind OverlayPathChange impl OverlayPathChange capture_upperdir walk_upperdir capture_file_entry content_change normalize_overlay_path relative_path relative_overlay_path relative_to_string is_whiteout_marker whiteout_target is_overlay_whiteout has_overlay_opaque_xattr content_hash xattr_value xattr_value TestResult validates_overlay_path_change_fields captures_upperdir_files_whiteouts_symlinks_and_opaque_markers Fixture impl Fixture impl Drop for Fixture">
+  <div class="module-head">
+    <div>
+      <h2>src/path_change.rs</h2>
+      <p class="path">module <code>path_change</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>3 impls</span>
+      <span>17 fns</span>
+      <span>4 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OverlayPathChange pub pub struct OverlayPathChange crates/eos-overlay/src/path_change.rs path String kind OverlayPathChangeKind content_path Option &lt; String &gt; final_hash Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OverlayPathChange</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct OverlayPathChange</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kind</td><td><code>OverlayPathChangeKind</code></td></tr><tr><td>pub</td><td>content_path</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>final_hash</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (path : &amp; str , kind : OverlayPathChangeKind , content_path : Option &lt; String &gt; , final_hash : Option &lt; String &gt; ,) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>method</td><td>into_layer_change</td><td><code>pub fn into_layer_change (self) -&gt; Result &lt; LayerChange &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-overlay/src/path_change.rs:34</p>
+</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayPathChangeKind pub pub enum OverlayPathChangeKind crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>OverlayPathChangeKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum OverlayPathChangeKind</code>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Delete</td><td><code></code></td></tr><tr><td>Symlink</td><td><code></code></td></tr><tr><td>OpaqueDir</td><td><code></code></td></tr></tbody></table>
+  <p class="source">crates/eos-overlay/src/path_change.rs:21</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Fixture private struct Fixture crates/eos-overlay/src/path_change.rs base PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Fixture</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct Fixture</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (label : &amp; str) -&gt; TestResult &lt; Self &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for Fixture</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-overlay/src/path_change.rs:470</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:421</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_upperdir pub pub fn capture_upperdir (upperdir : &amp; Path) -&gt; Result &lt; Vec &lt; LayerChange &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>capture_upperdir</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn capture_upperdir (upperdir : &amp; Path) -&gt; Result &lt; Vec &lt; LayerChange &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:137</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn walk_upperdir private fn walk_upperdir (root : &amp; Path , dir : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>walk_upperdir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn walk_upperdir (root : &amp; Path , dir : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:159</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_file_entry private fn capture_file_entry (root : &amp; Path , entry : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>capture_file_entry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn capture_file_entry (root : &amp; Path , entry : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:204</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn content_change private fn content_change (kind : OverlayPathChangeKind , path : &amp; str , entry : &amp; Path ,) -&gt; Result &lt; OverlayPathChange &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>content_change</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn content_change (kind : OverlayPathChangeKind , path : &amp; str , entry : &amp; Path ,) -&gt; Result &lt; OverlayPathChange &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:263</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_overlay_path private fn normalize_overlay_path (path : &amp; str , allow_root : bool) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalize_overlay_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn normalize_overlay_path (path : &amp; str , allow_root : bool) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:276</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_path private fn relative_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; PathBuf &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>relative_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn relative_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:285</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_overlay_path private fn relative_overlay_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>relative_overlay_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn relative_overlay_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:292</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_to_string private fn relative_to_string (path : &amp; Path) -&gt; String crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>relative_to_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn relative_to_string (path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:296</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_whiteout_marker private fn is_whiteout_marker (name : &amp; str) -&gt; bool crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_whiteout_marker</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn is_whiteout_marker (name : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:303</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn whiteout_target private fn whiteout_target (rel : &amp; Path) -&gt; PathBuf crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>whiteout_target</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn whiteout_target (rel : &amp; Path) -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:307</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_overlay_whiteout private fn is_overlay_whiteout (entry : &amp; Path) -&gt; Result &lt; bool &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_overlay_whiteout</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn is_overlay_whiteout (entry : &amp; Path) -&gt; Result &lt; bool &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:321</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn has_overlay_opaque_xattr private fn has_overlay_opaque_xattr (entry : &amp; Path) -&gt; bool crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>has_overlay_opaque_xattr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn has_overlay_opaque_xattr (entry : &amp; Path) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:333</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn content_hash private fn content_hash (path : &amp; Path , symlink : bool) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>content_hash</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn content_hash (path : &amp; Path , symlink : bool) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:338</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn xattr_value private fn xattr_value (path : &amp; Path , name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>xattr_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn xattr_value (path : &amp; Path , name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:353</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn xattr_value private const fn xattr_value (_path : &amp; Path , _name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>xattr_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn xattr_value (_path : &amp; Path , _name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:403</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validates_overlay_path_change_fields private fn validates_overlay_path_change_fields () crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>validates_overlay_path_change_fields</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn validates_overlay_path_change_fields ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:423</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers private fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers () -&gt; TestResult crates/eos-overlay/src/path_change.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers () -&gt; TestResult</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-overlay/src/path_change.rs:442</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

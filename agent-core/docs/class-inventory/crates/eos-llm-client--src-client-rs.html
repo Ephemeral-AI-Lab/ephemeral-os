@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-llm-client · src/client.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-llm-client File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>140</b><span>items</span></div>
+  <div><b>94</b><span>fields</span></div>
+  <div><b>53</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-llm-client.html"><span>auth.rs</span><small>3/7</small></a></li><li><a class="file-link active" href="eos-llm-client--src-client-rs.html"><span>client.rs</span><small>5/8</small></a></li><li><span class="folder">clients</span><ul class="file-tree"><li><a class="file-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html"><span>anthropic_api_client.rs</span><small>3/16</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-claude-coding-plan-rs.html"><span>claude_coding_plan.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-codex-coding-plan-rs.html"><span>codex_coding_plan.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-clients-openai-api-client-rs.html"><span>openai_api_client.rs</span><small>4/12</small></a></li></ul></li><li><a class="file-link" href="eos-llm-client--src-error-rs.html"><span>error.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-llm-client--src-events-rs.html"><span>events.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-llm-client--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-llm-client--src-message-rs.html"><span>message.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-llm-client--src-retry-rs.html"><span>retry.rs</span><small>1/15</small></a></li><li><a class="file-link" href="eos-llm-client--src-sse-rs.html"><span>sse.rs</span><small>1/15</small></a></li><li><a class="file-link" href="eos-llm-client--src-types-rs.html"><span>types.rs</span><small>6/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="client crates/eos-llm-client/src/client.rs LlmStream LlmClient LlmRequestDefaults impl LlmRequestDefaults ConfiguredLlmClient impl std :: fmt :: Debug for ConfiguredLlmClient impl ConfiguredLlmClient impl LlmClient for ConfiguredLlmClient reasoning_effort_from_kwargs parse_reasoning_effort build_endpoint extract_request_id error_detail open_stream MockLlmClient CaptureClient impl LlmClient for CaptureClient configured_client_applies_model_defaults impl LlmClient for MockLlmClient mock_client_is_object_safe_and_streams">
+  <div class="module-head">
+    <div>
+      <h2>src/client.rs</h2>
+      <p class="path">module <code>client</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>6 impls</span>
+      <span>8 fns</span>
+      <span>10 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LlmRequestDefaults pub pub struct LlmRequestDefaults crates/eos-llm-client/src/client.rs model String reasoning_effort Option &lt; ReasoningEffort &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LlmRequestDefaults</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct LlmRequestDefaults</code>
+  <div class="tags"><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>model</td><td><code>String</code></td></tr><tr><td>pub</td><td>reasoning_effort</td><td><code>Option &lt; ReasoningEffort &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (model : impl Into &lt; String &gt;) -&gt; Self</code></td></tr><tr><td>constructor</td><td>from_model_kwargs</td><td><code>pub fn from_model_kwargs (model : impl Into &lt; String &gt; , kwargs : &amp; eos_types :: JsonObject) -&gt; Self</code></td></tr><tr><td>method</td><td>apply</td><td><code>fn apply (&amp; self , mut request : LlmRequest) -&gt; LlmRequest</code></td></tr></tbody></table>
+  <p class="source">crates/eos-llm-client/src/client.rs:45</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfiguredLlmClient pub pub struct ConfiguredLlmClient crates/eos-llm-client/src/client.rs inner Arc &lt; dyn LlmClient &gt; defaults LlmRequestDefaults ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ConfiguredLlmClient</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct ConfiguredLlmClient</code>
+  <div class="tags"><span>config</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; dyn LlmClient &gt;</code></td></tr><tr><td>private</td><td>defaults</td><td><code>LlmRequestDefaults</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (inner : Arc &lt; dyn LlmClient &gt; , defaults : LlmRequestDefaults) -&gt; Self</code></td></tr><tr><td>method</td><td>defaults</td><td><code>pub fn defaults (&amp; self) -&gt; &amp; LlmRequestDefaults</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for ConfiguredLlmClient</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl LlmClient for ConfiguredLlmClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-llm-client/src/client.rs:85</p>
+</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait LlmClient pub pub trait LlmClient crates/eos-llm-client/src/client.rs  stream_message async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>LlmClient</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait LlmClient</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr><td>required</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-llm-client/src/client.rs:28</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct MockLlmClient private struct MockLlmClient crates/eos-llm-client/src/client.rs events Vec &lt; LlmStreamEvent &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>MockLlmClient</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct MockLlmClient</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>events</td><td><code>Vec &lt; LlmStreamEvent &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for MockLlmClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , _request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-llm-client/src/client.rs:240</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CaptureClient private struct CaptureClient crates/eos-llm-client/src/client.rs request std :: sync :: Mutex &lt; Option &lt; LlmRequest &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CaptureClient</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct CaptureClient</code>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>request</td><td><code>std :: sync :: Mutex &lt; Option &lt; LlmRequest &gt; &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for CaptureClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <p class="source">crates/eos-llm-client/src/client.rs:247</p>
+</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type LlmStream pub pub type LlmStream = Pin &lt; Box &lt; dyn Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send &gt; &gt; crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>LlmStream</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub type LlmStream = Pin &lt; Box &lt; dyn Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:22</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_endpoint pub(crate) pub(crate) fn build_endpoint (base_url : &amp; str , path : &amp; str) -&gt; Result &lt; reqwest :: Url , ProviderError &gt; crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>build_endpoint</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn build_endpoint (base_url : &amp; str , path : &amp; str) -&gt; Result &lt; reqwest :: Url , ProviderError &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:147</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extract_request_id pub(crate) pub(crate) fn extract_request_id (headers : &amp; reqwest :: header :: HeaderMap) -&gt; Option &lt; String &gt; crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>extract_request_id</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn extract_request_id (headers : &amp; reqwest :: header :: HeaderMap) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:156</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_detail pub(crate) pub(crate) fn error_detail (body : &amp; str) -&gt; String crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_detail</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn error_detail (body : &amp; str) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:167</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_stream pub(crate) pub(crate) async fn open_stream &lt; D , R &gt; (http : reqwest :: Client , url : reqwest :: Url , headers : HeaderMap , body : Bytes , decode : D ,) -&gt; Result &lt; LlmStream , ProviderError &gt; where D : FnOnce (BoxStream &lt; 'static , Result &lt; String , ProviderError &gt; &gt; , Option &lt; String &gt;) -&gt; R , R : Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send + 'static , crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>open_stream</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn open_stream &lt; D , R &gt; (http : reqwest :: Client , url : reqwest :: Url , headers : HeaderMap , body : Bytes , decode : D ,) -&gt; Result &lt; LlmStream , ProviderError &gt; where D : FnOnce (BoxStream &lt; 'static , Result &lt; String , ProviderError &gt; &gt; , Option &lt; String &gt;) -&gt; R , R : Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send + 'static ,</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:177</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reasoning_effort_from_kwargs private fn reasoning_effort_from_kwargs (kwargs : &amp; eos_types :: JsonObject) -&gt; Option &lt; ReasoningEffort &gt; crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reasoning_effort_from_kwargs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn reasoning_effort_from_kwargs (kwargs : &amp; eos_types :: JsonObject) -&gt; Option &lt; ReasoningEffort &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:123</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_reasoning_effort private fn parse_reasoning_effort (raw : &amp; str) -&gt; Option &lt; ReasoningEffort &gt; crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_reasoning_effort</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parse_reasoning_effort (raw : &amp; str) -&gt; Option &lt; ReasoningEffort &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:137</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configured_client_applies_model_defaults private async fn configured_client_applies_model_defaults () crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>configured_client_applies_model_defaults</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn configured_client_applies_model_defaults ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:260</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mock_client_is_object_safe_and_streams private async fn mock_client_is_object_safe_and_streams () crates/eos-llm-client/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>mock_client_is_object_safe_and_streams</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn mock_client_is_object_safe_and_streams ()</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-llm-client/src/client.rs:291</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

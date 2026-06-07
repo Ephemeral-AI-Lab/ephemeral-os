@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin-catalog · src/names.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-plugin-catalog File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>71</b><span>items</span></div>
+  <div><b>76</b><span>fields</span></div>
+  <div><b>13</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin-catalog.html"><span>discovery.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-frontmatter-rs.html"><span>frontmatter.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-manifest-rs.html"><span>manifest.rs</span><small>4/13</small></a></li><li><a class="file-link active" href="eos-plugin-catalog--src-names-rs.html"><span>names.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-package-rs.html"><span>package.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-plugin-catalog--src-tool-specs-rs.html"><span>tool_specs.rs</span><small>11/9</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="names crates/eos-plugin-catalog/src/names.rs PluginName impl PluginName PluginToolName impl PluginToolName PluginResolvedPath impl PluginResolvedPath is_valid_plugin_name lexical_normalize rejects_path_escape plugin_name_pattern">
+  <div class="module-head">
+    <div>
+      <h2>src/names.rs</h2>
+      <p class="path">module <code>names</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>3 impls</span>
+      <span>4 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginName pub pub struct PluginName crates/eos-plugin-catalog/src/names.rs 0 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginName</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginName</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>associated-fn</td><td>parse</td><td><code>pub fn parse (s : impl Into &lt; String &gt;) -&gt; Result &lt; Self , PluginCatalogError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:19</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginToolName pub pub struct PluginToolName crates/eos-plugin-catalog/src/names.rs 0 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginToolName</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginToolName</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new (s : impl Into &lt; String &gt;) -&gt; Self</code></td></tr><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:51</p>
+</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginResolvedPath pub pub struct PluginResolvedPath crates/eos-plugin-catalog/src/names.rs 0 PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginResolvedPath</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct PluginResolvedPath</code>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_path</td><td><code>pub fn as_path (&amp; self) -&gt; &amp; Path</code></td></tr><tr><td>method</td><td>into_path_buf</td><td><code>pub(crate) fn into_path_buf (self) -&gt; PathBuf</code></td></tr><tr><td>associated-fn</td><td>resolve_under</td><td><code>pub(crate) fn resolve_under (plugin_dir : &amp; Path , raw : &amp; str) -&gt; Result &lt; Self , PluginCatalogError &gt;</code></td></tr></tbody></table>
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:76</p>
+</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_plugin_name private fn is_valid_plugin_name (s : &amp; str) -&gt; bool crates/eos-plugin-catalog/src/names.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_valid_plugin_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn is_valid_plugin_name (s : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:116</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lexical_normalize private fn lexical_normalize (p : &amp; Path) -&gt; PathBuf crates/eos-plugin-catalog/src/names.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lexical_normalize</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn lexical_normalize (p : &amp; Path) -&gt; PathBuf</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:126</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_path_escape private fn rejects_path_escape () crates/eos-plugin-catalog/src/names.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_path_escape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn rejects_path_escape ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:158</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_name_pattern private fn plugin_name_pattern () crates/eos-plugin-catalog/src/names.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_name_pattern</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn plugin_name_pattern ()</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-plugin-catalog/src/names.rs:189</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

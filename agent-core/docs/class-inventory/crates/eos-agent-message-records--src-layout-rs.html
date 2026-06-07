@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-message-records · src/layout.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+    <h1>eos-agent-message-records File Inventory</h1>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>41</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-message-records.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-agent-message-records--src-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-message-records--src-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="layout crates/eos-agent-message-records/src/layout.rs resolve_agent_run node_dir parent_announcement request_root required_task_id parent_or_request_dir find_root_agent_dir find_agent_run_dir_in find_dir_named safe_prefixed_segment safe_segment path_to_slash_string">
+  <div class="module-head">
+    <div>
+      <h2>src/layout.rs</h2>
+      <p class="path">module <code>layout</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>12 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_agent_run pub(crate) pub(crate) async fn resolve_agent_run (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_agent_run</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn resolve_agent_run (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"><span>async</span></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:8</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn node_dir pub(crate) pub(crate) fn node_dir (root : &amp; Path , input : &amp; AgentRunRecordStart &lt; '_ &gt;) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>node_dir</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn node_dir (root : &amp; Path , input : &amp; AgentRunRecordStart &lt; '_ &gt;) -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:16</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parent_announcement pub(crate) pub(crate) fn parent_announcement (root : &amp; Path , input : &amp; AgentRunRecordStart &lt; '_ &gt; , node_dir : &amp; Path ,) -&gt; Result &lt; Option &lt; (PathBuf , String) &gt; &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parent_announcement</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn parent_announcement (root : &amp; Path , input : &amp; AgentRunRecordStart &lt; '_ &gt; , node_dir : &amp; Path ,) -&gt; Result &lt; Option &lt; (PathBuf , String) &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:63</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_root private fn request_root (root : &amp; Path , request_id : &amp; str) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn request_root (root : &amp; Path , request_id : &amp; str) -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:90</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn required_task_id private fn required_task_id &lt; 'a &gt; (input : &amp; AgentRunRecordStart &lt; 'a &gt;) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>required_task_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn required_task_id &lt; 'a &gt; (input : &amp; AgentRunRecordStart &lt; 'a &gt;) -&gt; Result &lt; &amp; 'a str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:96</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parent_or_request_dir private fn parent_or_request_dir (request_root : &amp; Path , parent_agent_run_id : &amp; AgentRunId) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parent_or_request_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn parent_or_request_dir (request_root : &amp; Path , parent_agent_run_id : &amp; AgentRunId) -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:103</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_root_agent_dir private fn find_root_agent_dir (request_root : &amp; Path) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>find_root_agent_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn find_root_agent_dir (request_root : &amp; Path) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:113</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_agent_run_dir_in private fn find_agent_run_dir_in (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>find_agent_run_dir_in</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn find_agent_run_dir_in (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:149</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_dir_named private fn find_dir_named (root : &amp; Path , needles : &amp; [String]) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>find_dir_named</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn find_dir_named (root : &amp; Path , needles : &amp; [String]) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:159</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_prefixed_segment private fn safe_prefixed_segment (prefix : &amp; 'static str , id : &amp; str) -&gt; Result &lt; String &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>safe_prefixed_segment</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn safe_prefixed_segment (prefix : &amp; 'static str , id : &amp; str) -&gt; Result &lt; String &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:183</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_segment private fn safe_segment &lt; 'a &gt; (field : &amp; 'static str , value : &amp; 'a str) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>safe_segment</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn safe_segment &lt; 'a &gt; (field : &amp; 'static str , value : &amp; 'a str) -&gt; Result &lt; &amp; 'a str &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:187</p>
+</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_to_slash_string private fn path_to_slash_string (path : &amp; Path) -&gt; String crates/eos-agent-message-records/src/layout.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_to_slash_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn path_to_slash_string (path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-agent-message-records/src/layout.rs:200</p>
+</article></div>
+</section></div>
+</main>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>
