@@ -46,7 +46,11 @@ struct ErrorDetail {
 impl ApiError {
     fn parts(self) -> (StatusCode, &'static str, String) {
         match self {
-            Self::NotFound(what) => (StatusCode::NOT_FOUND, "not_found", format!("{what} not found")),
+            Self::NotFound(what) => (
+                StatusCode::NOT_FOUND,
+                "not_found",
+                format!("{what} not found"),
+            ),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, "bad_request", msg),
             Self::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg),
             Self::Internal => (
@@ -61,7 +65,13 @@ impl ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, code, message) = self.parts();
-        (status, Json(ErrorBody { error: ErrorDetail { code, message } })).into_response()
+        (
+            status,
+            Json(ErrorBody {
+                error: ErrorDetail { code, message },
+            }),
+        )
+            .into_response()
     }
 }
 
@@ -83,17 +93,16 @@ impl From<CoreError> for ApiError {
     }
 }
 
-/// Artifact read failures are sanitized like store failures, except the
+/// Message-record read failures are sanitized like store failures, except the
 /// client-controllable lookup/range cases stay specific.
 impl From<MessageRecordError> for ApiError {
     fn from(err: MessageRecordError) -> Self {
         match err {
-            MessageRecordError::NotFound(_) => Self::NotFound("agent run artifact"),
-            MessageRecordError::OffsetOutOfRange { .. } | MessageRecordError::UnsafeSegment { .. } => {
-                Self::BadRequest(err.to_string())
-            }
+            MessageRecordError::NotFound(_) => Self::NotFound("agent run message record"),
+            MessageRecordError::OffsetOutOfRange { .. }
+            | MessageRecordError::UnsafeSegment { .. } => Self::BadRequest(err.to_string()),
             other => {
-                tracing::error!(error = %other, "agent artifact error");
+                tracing::error!(error = %other, "agent message-record error");
                 Self::Internal
             }
         }

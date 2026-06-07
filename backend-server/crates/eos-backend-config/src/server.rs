@@ -52,7 +52,7 @@ impl AgentCoreConfigSource {
     ///
     /// # Errors
     /// [`ConfigError::Empty`] when `config_dir`, `database_url`, or
-    /// `artifact_root` is empty.
+    /// `message_records_root` is empty.
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.config_dir.as_os_str().is_empty() {
             return Err(ConfigError::Empty {
@@ -64,9 +64,9 @@ impl AgentCoreConfigSource {
                 field: "agent_core.database_url",
             });
         }
-        if self.artifact_root.as_os_str().is_empty() {
+        if self.message_records_root.as_os_str().is_empty() {
             return Err(ConfigError::Empty {
-                field: "agent_core.artifact_root",
+                field: "agent_core.message_records_root",
             });
         }
         Ok(())
@@ -86,6 +86,6 @@ pub struct AgentCoreConfigSource {
     pub config_dir: PathBuf,
     /// Deployable agent-core database url the backend supplies.
     pub database_url: String,
-    /// Root directory for agent-core-owned node artifacts.
-    pub artifact_root: PathBuf,
+    /// Root directory for agent-core-owned node message records.
+    pub message_records_root: PathBuf,
 }

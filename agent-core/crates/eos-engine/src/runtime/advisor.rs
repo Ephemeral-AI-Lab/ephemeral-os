@@ -142,7 +142,7 @@ pub(crate) async fn run_advisor(
             command_session_supervisor: None,
             notifier: NotificationService::new(),
             persist_agent_run: false,
-            artifact_kind: parent_agent_run_id
+            record_kind: parent_agent_run_id
                 .map(|parent_agent_run_id| AgentRunRecordKind::Advisor {
                     parent_agent_run_id,
                 })

@@ -1,6 +1,6 @@
-//! File-backed agent-node message and event artifacts.
+//! File-backed agent-node message records.
 //!
-//! The artifact root is supplied by the backend composition root, but the
+//! The message-record root is supplied by the backend composition root, but the
 //! message/event contents are written by agent-core at the engine boundary where
 //! request, task, agent-run, and provider-visible message facts are available.
 #![forbid(unsafe_code)]
@@ -17,23 +17,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
-/// Result alias for artifact operations.
+/// Result alias for message-record operations.
 pub type Result<T> = std::result::Result<T, MessageRecordError>;
 
-/// File-backed artifact service failures.
+/// File-backed message-record service failures.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum MessageRecordError {
-    /// A path segment would escape the artifact root or create ambiguous layout.
-    #[error("unsafe artifact path segment for {field}: {value:?}")]
+    /// A path segment would escape the message-record root or create ambiguous layout.
+    #[error("unsafe message-record path segment for {field}: {value:?}")]
     UnsafeSegment {
         /// Field whose value was rejected.
         field: &'static str,
         /// Rejected value.
         value: String,
     },
-    /// The requested agent-run artifact directory does not exist.
-    #[error("agent-run artifact not found: {0}")]
+    /// The requested agent-run message-record directory does not exist.
+    #[error("agent-run message record not found: {0}")]
     NotFound(String),
     /// A byte offset was beyond the current file length.
     #[error("message offset {offset} is beyond file length {len}")]
@@ -44,32 +44,30 @@ pub enum MessageRecordError {
         len: u64,
     },
     /// Filesystem I/O failed.
-    #[error("artifact io error: {0}")]
+    #[error("message-record io error: {0}")]
     Io(#[from] std::io::Error),
     /// JSON encoding or decoding failed.
-    #[error("artifact json error: {0}")]
+    #[error("message-record json error: {0}")]
     Json(#[from] serde_json::Error),
     /// A blocking filesystem scan panicked or was cancelled.
-    #[error("artifact scan task failed: {0}")]
+    #[error("message-record scan task failed: {0}")]
     Join(#[from] tokio::task::JoinError),
 }
 
-/// Shared artifact root service.
+/// Shared message-record root service.
 #[derive(Debug, Clone)]
 pub struct AgentMessageRecords {
     root: PathBuf,
 }
 
 impl AgentMessageRecords {
-    /// Create a service rooted at `artifact_root`.
+    /// Create a service rooted at `root`.
     #[must_use]
-    pub fn new(artifact_root: impl Into<PathBuf>) -> Self {
-        Self {
-            root: artifact_root.into(),
-        }
+    pub fn new(root: impl Into<PathBuf>) -> Self {
+        Self { root: root.into() }
     }
 
-    /// Artifact root path.
+    /// Message-record root path.
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
@@ -114,10 +112,7 @@ impl AgentMessageRecords {
             .await?;
         let mut payload = JsonObject::new();
         payload.insert("count".to_owned(), json!(range.count));
-        payload.insert(
-            "messages_start_byte".to_owned(),
-            json!(range.start_byte),
-        );
+        payload.insert("messages_start_byte".to_owned(), json!(range.start_byte));
         payload.insert("messages_end_byte".to_owned(), json!(range.end_byte));
         handle.append_event("messages_initialized", payload).await?;
 
@@ -184,10 +179,12 @@ impl AgentMessageRecords {
         let agent_run_segment = safe_prefixed_segment("agent-run", input.agent_run_id.as_str())?;
         match &input.kind {
             AgentRunRecordKind::Root => {
-                let task_id = input.task_id.ok_or_else(|| MessageRecordError::UnsafeSegment {
-                    field: "task_id",
-                    value: String::new(),
-                })?;
+                let task_id = input
+                    .task_id
+                    .ok_or_else(|| MessageRecordError::UnsafeSegment {
+                        field: "task_id",
+                        value: String::new(),
+                    })?;
                 Ok(request_root
                     .join(safe_prefixed_segment("root-task", task_id.as_str())?)
                     .join(agent_run_segment))
@@ -198,10 +195,12 @@ impl AgentMessageRecords {
                 attempt_id,
                 role,
             } => {
-                let task_id = input.task_id.ok_or_else(|| MessageRecordError::UnsafeSegment {
-                    field: "task_id",
-                    value: String::new(),
-                })?;
+                let task_id = input
+                    .task_id
+                    .ok_or_else(|| MessageRecordError::UnsafeSegment {
+                        field: "task_id",
+                        value: String::new(),
+                    })?;
                 let workflow_parent =
                     find_root_agent_dir(&request_root)?.unwrap_or_else(|| request_root.clone());
                 Ok(workflow_parent
@@ -209,7 +208,10 @@ impl AgentMessageRecords {
                     .join(safe_prefixed_segment("workflow", workflow_id.as_str())?)
                     .join(safe_prefixed_segment("iteration", iteration_id.as_str())?)
                     .join(safe_prefixed_segment("attempt", attempt_id.as_str())?)
-                    .join(safe_prefixed_segment(role.task_segment_prefix(), task_id.as_str())?)
+                    .join(safe_prefixed_segment(
+                        role.task_segment_prefix(),
+                        task_id.as_str(),
+                    )?)
                     .join(agent_run_segment))
             }
             AgentRunRecordKind::Subagent {
@@ -263,7 +265,7 @@ impl AgentMessageRecords {
     }
 }
 
-/// Input for starting an agent-run artifact node.
+/// Input for starting an agent-run message-record node.
 #[derive(Debug, Clone, Copy)]
 pub struct AgentRunRecordStart<'a> {
     /// Owning request id.
@@ -282,7 +284,7 @@ pub struct AgentRunRecordStart<'a> {
     pub initial_messages: &'a [Message],
 }
 
-/// Agent-run artifact node type and location facts.
+/// Agent-run message-record node type and location facts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum AgentRunRecordKind {
@@ -353,7 +355,7 @@ impl AgentRunRecordKind {
     }
 }
 
-/// Workflow task role used for artifact path labels.
+/// Workflow task role used for message-record path labels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum WorkflowTaskRole {
@@ -391,7 +393,7 @@ impl WorkflowTaskRole {
     }
 }
 
-/// A started agent-run artifact node.
+/// A started agent-run message-record node.
 #[derive(Debug, Clone)]
 pub struct AgentRunRecordHandle {
     node_dir: PathBuf,
@@ -416,14 +418,16 @@ impl AgentRunRecordHandle {
         if range.count > 0 {
             let mut payload = JsonObject::new();
             payload.insert("count".to_owned(), json!(range.count));
-            payload.insert(
-                "messages_start_byte".to_owned(),
-                json!(range.start_byte),
-            );
+            payload.insert("messages_start_byte".to_owned(), json!(range.start_byte));
             payload.insert("messages_end_byte".to_owned(), json!(range.end_byte));
             payload.insert(
                 "message_types".to_owned(),
-                Value::Array(message_types(messages).into_iter().map(Value::String).collect()),
+                Value::Array(
+                    message_types(messages)
+                        .into_iter()
+                        .map(Value::String)
+                        .collect(),
+                ),
             );
             self.append_event("messages_appended", payload).await?;
         }
@@ -504,7 +508,7 @@ pub struct MessageAppendRange {
     pub end_byte: u64,
 }
 
-/// Raw artifact bytes plus the next tail offset.
+/// Raw message-record bytes plus the next tail offset.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordBytes {
     /// Raw JSONL bytes.
@@ -701,6 +705,7 @@ fn message_types(messages: &[Message]) -> Vec<String> {
                 ContentBlock::Reasoning { .. } => "reasoning",
                 ContentBlock::ToolResult { .. } => "tool_result",
                 ContentBlock::SystemNotification { .. } => "system_notification",
+                _ => "unknown",
             }
             .to_owned(),
         );
@@ -709,11 +714,13 @@ fn message_types(messages: &[Message]) -> Vec<String> {
 }
 
 fn parent_or_request_dir(request_root: &Path, parent_agent_run_id: &AgentRunId) -> Result<PathBuf> {
-    Ok(find_agent_run_dir_in(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
-        request_root
-            .join("parents-missing")
-            .join(parent_agent_run_id.as_str())
-    }))
+    Ok(
+        find_agent_run_dir_in(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
+            request_root
+                .join("parents-missing")
+                .join(parent_agent_run_id.as_str())
+        }),
+    )
 }
 
 fn find_root_agent_dir(request_root: &Path) -> Result<Option<PathBuf>> {
@@ -786,7 +793,7 @@ fn safe_prefixed_segment(prefix: &'static str, id: &str) -> Result<String> {
     Ok(format!("{prefix}-{}", safe_segment(prefix, id)?))
 }
 
-fn safe_segment(field: &'static str, value: &str) -> Result<&str> {
+fn safe_segment<'a>(field: &'static str, value: &'a str) -> Result<&'a str> {
     if value.is_empty()
         || value == "."
         || value == ".."
@@ -830,9 +837,9 @@ mod tests {
     #[tokio::test]
     async fn root_start_writes_initial_messages_and_events() {
         let dir = tempfile::tempdir().unwrap();
-        let artifacts = AgentMessageRecords::new(dir.path());
+        let records = AgentMessageRecords::new(dir.path());
         let (request_id, task_id, agent_run_id) = ids();
-        let handle = artifacts
+        let handle = records
             .start_agent_run(AgentRunRecordStart {
                 request_id: &request_id,
                 task_id: Some(&task_id),
@@ -860,7 +867,7 @@ mod tests {
         assert!(rows[0].get("turn").is_none());
         assert!(rows[0].get("initial_index").is_none());
 
-        let events = artifacts.read_events(&agent_run_id, 0).await.unwrap();
+        let events = records.read_events(&agent_run_id, 0).await.unwrap();
         assert_eq!(events.len(), 2);
         assert_eq!(events[0].seq, 1);
         assert_eq!(events[0].kind, "node_started");
@@ -872,9 +879,9 @@ mod tests {
     #[tokio::test]
     async fn later_messages_append_byte_ranges_without_event_content() {
         let dir = tempfile::tempdir().unwrap();
-        let artifacts = AgentMessageRecords::new(dir.path());
+        let records = AgentMessageRecords::new(dir.path());
         let (request_id, task_id, agent_run_id) = ids();
-        let handle = artifacts
+        let handle = records
             .start_agent_run(AgentRunRecordStart {
                 request_id: &request_id,
                 task_id: Some(&task_id),
@@ -899,13 +906,16 @@ mod tests {
         assert_eq!(range.count, 1);
         assert!(range.end_byte > range.start_byte);
 
-        let events = artifacts.read_events(&agent_run_id, 2).await.unwrap();
+        let events = records.read_events(&agent_run_id, 2).await.unwrap();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].kind, "messages_appended");
-        assert_eq!(events[0].payload["message_types"], json!(["system_notification"]));
+        assert_eq!(
+            events[0].payload["message_types"],
+            json!(["system_notification"])
+        );
         assert!(events[0].payload.get("content").is_none());
 
-        let tail = artifacts
+        let tail = records
             .read_messages(&agent_run_id, range.start_byte)
             .await
             .unwrap();
@@ -917,9 +927,9 @@ mod tests {
     #[tokio::test]
     async fn child_created_waits_until_child_files_exist() {
         let dir = tempfile::tempdir().unwrap();
-        let artifacts = AgentMessageRecords::new(dir.path());
+        let records = AgentMessageRecords::new(dir.path());
         let (request_id, task_id, parent_id) = ids();
-        let parent = artifacts
+        let parent = records
             .start_agent_run(AgentRunRecordStart {
                 request_id: &request_id,
                 task_id: Some(&task_id),
@@ -932,7 +942,7 @@ mod tests {
             .await
             .unwrap();
         let child_id: AgentRunId = "child-run".parse().unwrap();
-        let child = artifacts
+        let child = records
             .start_agent_run(AgentRunRecordStart {
                 request_id: &request_id,
                 task_id: None,

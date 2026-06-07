@@ -32,7 +32,9 @@ pub async fn response(
             }
         }
     });
-    Ok(Sse::new(events).keep_alive(KeepAlive::default()).into_response())
+    Ok(Sse::new(events)
+        .keep_alive(KeepAlive::default())
+        .into_response())
 }
 
 /// Map one record to an SSE event (id = seq, event = kind, data = JSON payload).

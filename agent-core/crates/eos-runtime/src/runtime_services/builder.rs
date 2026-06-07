@@ -31,7 +31,7 @@ use eos_types::{JsonObject, RequestId, SandboxId};
 
 use super::{
     AgentCoreRegistryService, AuditService, DbStoreService, EngineService, EventSourceFactory,
-    ArtifactService, RuntimeServices, SandboxService,
+    MessageRecordService, RuntimeServices, SandboxService,
 };
 use crate::plugin_tools::register_plugin_tools;
 
@@ -105,7 +105,7 @@ pub struct RuntimeServicesBuilder {
     event_source_factory: Option<EventSourceFactory>,
     audit: Option<Arc<dyn AuditSink>>,
     audit_path: Option<PathBuf>,
-    artifact_root: Option<PathBuf>,
+    message_records_root: Option<PathBuf>,
     agent_registry: Option<Arc<AgentRegistry>>,
     agents_dir: Option<PathBuf>,
     tool_config: Option<Arc<ToolConfigSet>>,
@@ -168,9 +168,9 @@ impl RuntimeServicesBuilder {
     }
 
     /// Write and serve agent-node `messages.jsonl` / `events.jsonl` under this
-    /// artifact root.
-    pub fn artifact_root(mut self, path: impl Into<PathBuf>) -> Self {
-        self.artifact_root = Some(path.into());
+    /// message-record root.
+    pub fn message_records_root(mut self, path: impl Into<PathBuf>) -> Self {
+        self.message_records_root = Some(path.into());
         self
     }
 
@@ -354,8 +354,8 @@ impl RuntimeServicesBuilder {
                 sink: audit,
                 shutdown: Arc::new(StdMutex::new(audit_shutdown)),
             },
-            artifacts: ArtifactService {
-                artifacts: self.artifact_root.map(AgentMessageRecords::new),
+            message_records: MessageRecordService {
+                message_records: self.message_records_root.map(AgentMessageRecords::new),
             },
         })
     }

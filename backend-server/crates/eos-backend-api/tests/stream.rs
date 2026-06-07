@@ -1,8 +1,8 @@
-//! Stream replay tests for both transports. The replay/live handoff correctness
-//! is proven in `eos-backend-runtime`; here we prove the API layer forwards
-//! persisted `event_log` rows from `last_seq`, over SSE and over a real
-//! WebSocket. Events are seeded directly through the public `EventLogRepo`
-//! (the bus's `register` is crate-private), exercising the replay-only path.
+//! SSE stream replay tests. The replay/live handoff correctness is proven in
+//! `eos-backend-runtime`; here we prove the API layer forwards persisted
+//! `event_log` rows from `last_seq`. Events are seeded directly through the
+//! public `EventLogRepo` (the bus's `register` is crate-private), exercising the
+//! replay-only path.
 
 mod support;
 
@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use futures::StreamExt;
-use serde_json::{json, Value};
-use tokio_tungstenite::tungstenite::Message;
+use serde_json::json;
 use tower::ServiceExt;
 
 use eos_backend_runtime::CancelOutcome;
@@ -101,7 +99,10 @@ async fn sse_replay_resumes_after_last_seq() {
 
     let request = Request::builder()
         .method("GET")
-        .uri(format!("/api/user-requests/{}/stream?last_seq=2", id.as_str()))
+        .uri(format!(
+            "/api/user-requests/{}/stream?last_seq=2",
+            id.as_str()
+        ))
         .body(Body::empty())
         .expect("request");
     let response = app.oneshot(request).await.expect("response");
@@ -110,9 +111,15 @@ async fn sse_replay_resumes_after_last_seq() {
         .expect("body");
     let text = String::from_utf8(bytes.to_vec()).expect("utf8");
 
-    assert!(!text.contains(r#"{"n":1}"#), "replayed an event before last_seq");
+    assert!(
+        !text.contains(r#"{"n":1}"#),
+        "replayed an event before last_seq"
+    );
     assert!(!text.contains(r#"{"n":2}"#), "replayed last_seq itself");
-    assert!(text.contains(r#"{"n":3}"#), "missed the event after last_seq");
+    assert!(
+        text.contains(r#"{"n":3}"#),
+        "missed the event after last_seq"
+    );
 }
 
 #[tokio::test]
@@ -126,49 +133,6 @@ async fn stream_unknown_request_is_404() {
         .expect("request");
     let response = app.oneshot(request).await.expect("response");
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
-}
-
-#[tokio::test]
-async fn websocket_replays_persisted_events() {
-    let (store, _dir) = test_store().await;
-    let id = RequestId::new_v4();
-    seed_run(&store, &id).await;
-    seed_events(&store, &id, 3).await;
-    let app = app(&store);
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("bind");
-    let addr = listener.local_addr().expect("addr");
-    let server = tokio::spawn(async move {
-        axum::serve(listener, app.into_make_service())
-            .await
-            .expect("serve");
-    });
-
-    let url = format!(
-        "ws://{addr}/api/user-requests/{}/stream?last_seq=0",
-        id.as_str()
-    );
-    let (mut socket, _resp) = tokio_tungstenite::connect_async(url)
-        .await
-        .expect("ws connect");
-
-    let mut seqs = Vec::new();
-    while let Some(message) = socket.next().await {
-        match message.expect("ws frame") {
-            Message::Text(text) => {
-                let record: Value = serde_json::from_str(&text).expect("event json");
-                seqs.push(record["seq"].as_i64().expect("seq"));
-            }
-            Message::Close(_) => break,
-            _ => {}
-        }
-    }
-    let _ = socket.close(None).await;
-    server.abort();
-
-    assert_eq!(seqs, vec![1, 2, 3], "websocket replay sequence mismatch");
 }
 
 /// A persisted `event_stream_gap` marker (dropped-milestone loss) must replay to
@@ -208,6 +172,12 @@ async fn sse_replays_event_stream_gap_marker() {
     let text = String::from_utf8(bytes.to_vec()).expect("utf8");
 
     // The gap marker rides the stream as its own milestone kind (loss is visible).
-    assert!(text.contains(EVENT_STREAM_GAP), "gap marker not replayed: {text}");
-    assert!(text.contains(r#"{"dropped":3}"#), "gap payload missing: {text}");
+    assert!(
+        text.contains(EVENT_STREAM_GAP),
+        "gap marker not replayed: {text}"
+    );
+    assert!(
+        text.contains(r#"{"dropped":3}"#),
+        "gap payload missing: {text}"
+    );
 }

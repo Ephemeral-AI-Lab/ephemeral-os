@@ -21,9 +21,7 @@ use eos_state::{
     AgentRun, ExecutionTaskOutcome, Page, PageResult, Request, RequestListFilter, RequestStatus,
     Sealed, Task, TaskRole, TaskStatus,
 };
-use eos_types::{
-    AgentRunId, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime,
-};
+use eos_types::{AgentRunId, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
 
 /// A temp-backed [`BackendStore`]; keep the [`TempDir`] alive for the test's life.
 pub async fn test_store() -> (BackendStore, TempDir) {
@@ -41,25 +39,25 @@ pub fn router(
     sandboxes: Arc<dyn SandboxRegistry>,
     reads: AgentCoreReads,
 ) -> Router {
-    router_with_artifacts(
+    router_with_message_records(
         store,
         runs,
         sandboxes,
         reads,
         AgentMessageRecords::new(std::env::temp_dir().join(format!(
-            "eos_backend_api_artifacts_{}",
+            "eos_backend_api_message_records_{}",
             std::process::id()
         ))),
     )
 }
 
-/// Build a router using an explicit artifact root service.
-pub fn router_with_artifacts(
+/// Build a router using an explicit message-record service.
+pub fn router_with_message_records(
     store: &BackendStore,
     runs: Arc<dyn RunControl>,
     sandboxes: Arc<dyn SandboxRegistry>,
     reads: AgentCoreReads,
-    artifacts: AgentMessageRecords,
+    records: AgentMessageRecords,
 ) -> Router {
     let event_bus = Arc::new(EventBus::new(store.event_log().clone()));
     let stats = StatsReader::new(store.obs_events().clone(), store.audit_cursors().clone());
@@ -71,7 +69,7 @@ pub fn router_with_artifacts(
         store.event_log().clone(),
         stats,
         reads,
-        artifacts,
+        records,
     );
     eos_backend_api::build_router(state)
 }
@@ -83,7 +81,9 @@ pub fn fake_reads(
     run: Option<AgentRun>,
 ) -> AgentCoreReads {
     AgentCoreReads {
-        requests: Arc::new(FakeRequestStore { status: request_status }),
+        requests: Arc::new(FakeRequestStore {
+            status: request_status,
+        }),
         tasks: Arc::new(FakeTaskStore { tasks }),
         agent_runs: Arc::new(FakeAgentRunStore { run }),
     }
@@ -353,7 +353,10 @@ impl eos_state::AgentRunStore for FakeAgentRunStore {
         unimplemented!("not used by api tests")
     }
 
-    async fn get(&self, agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, eos_types::CoreError> {
+    async fn get(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<Option<AgentRun>, eos_types::CoreError> {
         Ok(self
             .run
             .as_ref()
@@ -361,7 +364,10 @@ impl eos_state::AgentRunStore for FakeAgentRunStore {
             .cloned())
     }
 
-    async fn get_for_task(&self, _task_id: &TaskId) -> Result<Option<AgentRun>, eos_types::CoreError> {
+    async fn get_for_task(
+        &self,
+        _task_id: &TaskId,
+    ) -> Result<Option<AgentRun>, eos_types::CoreError> {
         Ok(self.run.clone())
     }
 }

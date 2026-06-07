@@ -120,11 +120,11 @@ impl AgentRunner for RuntimeAgentRunner {
                 command_session_supervisor: Some(self.command_session_supervisor.clone()),
                 notifier: self.notifier.clone(),
                 persist_agent_run: true,
-                artifact_kind: AgentRunRecordKind::WorkflowTask {
+                record_kind: AgentRunRecordKind::WorkflowTask {
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),
-                    role: workflow_artifact_role(launch.role()),
+                    role: workflow_message_record_role(launch.role()),
                 },
             },
             None,
@@ -140,7 +140,7 @@ impl AgentRunner for RuntimeAgentRunner {
     }
 }
 
-fn workflow_artifact_role(role: AgentRole) -> WorkflowTaskRole {
+fn workflow_message_record_role(role: AgentRole) -> WorkflowTaskRole {
     match role {
         AgentRole::Planner => WorkflowTaskRole::Planner,
         AgentRole::Generator => WorkflowTaskRole::Generator,

@@ -43,6 +43,7 @@ fn ctx(source: Arc<dyn EventSource>) -> QueryContext {
         terminal_result: None,
         event_source: Some(source),
         prompt_report: None,
+        message_record: None,
         notification_rules: Vec::new(),
         notification_fired: BTreeSet::new(),
         notifier: NotificationService::new(),

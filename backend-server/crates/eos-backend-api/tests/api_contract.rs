@@ -20,7 +20,7 @@ use eos_state::RequestStatus;
 use eos_types::{AgentRunId, RequestId, SandboxId, TaskId, UtcDateTime};
 
 use support::{
-    fake_reads, make_agent_run, make_sandbox_view, make_task, router, router_with_artifacts,
+    fake_reads, make_agent_run, make_sandbox_view, make_task, router, router_with_message_records,
     test_store, FakeRunControl, FakeSandboxRegistry,
 };
 
@@ -83,11 +83,14 @@ async fn seed_run(store: &BackendStore, id: &RequestId, status: BackendRunStatus
         .expect("seed run_meta");
 }
 
-fn seed_agent_artifact(root: &std::path::Path, agent_run_id: &AgentRunId) -> std::path::PathBuf {
+fn seed_agent_message_record(
+    root: &std::path::Path,
+    agent_run_id: &AgentRunId,
+) -> std::path::PathBuf {
     let node = root
         .join("requests/req-1/root-task-task-1")
         .join(format!("agent-run-{}", agent_run_id.as_str()));
-    std::fs::create_dir_all(&node).expect("artifact dir");
+    std::fs::create_dir_all(&node).expect("message-record dir");
     std::fs::write(
         node.join("messages.jsonl"),
         concat!(
@@ -122,7 +125,11 @@ async fn post_create_returns_202_with_request_id() {
         fake_reads(None, vec![], None),
     );
 
-    let (status, body) = send(&app, post_json("/api/user-requests", &json!({ "prompt": "hi" }))).await;
+    let (status, body) = send(
+        &app,
+        post_json("/api/user-requests", &json!({ "prompt": "hi" })),
+    )
+    .await;
 
     assert_eq!(status, StatusCode::ACCEPTED);
     let body = json_of(&body);
@@ -144,7 +151,8 @@ async fn post_rejects_unsupported_sandbox_override() {
     let (status, _) = send(
         &app,
         post_json(
-            "/api/user-requests", &json!({ "prompt": "hi", "sandbox_args": { "image": "ubuntu" } }),
+            "/api/user-requests",
+            &json!({ "prompt": "hi", "sandbox_args": { "image": "ubuntu" } }),
         ),
     )
     .await;
@@ -165,7 +173,8 @@ async fn post_accepts_sandbox_id_override() {
     let (status, _) = send(
         &app,
         post_json(
-            "/api/user-requests", &json!({ "prompt": "hi", "sandbox_args": { "sandbox_id": "sbx-1" } }),
+            "/api/user-requests",
+            &json!({ "prompt": "hi", "sandbox_args": { "sandbox_id": "sbx-1" } }),
         ),
     )
     .await;
@@ -302,7 +311,13 @@ async fn detail_cancelled_is_not_clobbered_by_agent_terminal() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(json_of(&body)["status"], json!("cancelled"));
     assert_eq!(
-        store.run_meta().get(&id).await.expect("get").expect("row").status,
+        store
+            .run_meta()
+            .get(&id)
+            .await
+            .expect("get")
+            .expect("row")
+            .status,
         BackendRunStatus::Cancelled
     );
 }
@@ -348,7 +363,10 @@ async fn events_route_replays_persisted_milestones() {
     // Full replay, in sequence order.
     let (status, body) = send(
         &app,
-        get(&format!("/api/user-requests/{}/events?after_seq=0", id.as_str())),
+        get(&format!(
+            "/api/user-requests/{}/events?after_seq=0",
+            id.as_str()
+        )),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -361,7 +379,10 @@ async fn events_route_replays_persisted_milestones() {
     // `after_seq` filters out already-seen records.
     let (status, body) = send(
         &app,
-        get(&format!("/api/user-requests/{}/events?after_seq=1", id.as_str())),
+        get(&format!(
+            "/api/user-requests/{}/events?after_seq=1",
+            id.as_str()
+        )),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -378,18 +399,18 @@ async fn events_route_replays_persisted_milestones() {
 #[tokio::test]
 async fn agent_run_messages_route_returns_raw_jsonl_with_next_offset() {
     let (store, _dir) = test_store().await;
-    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
-    let node = seed_agent_artifact(artifact_dir.path(), &agent_run_id);
+    let node = seed_agent_message_record(message_records_dir.path(), &agent_run_id);
     let full_len = std::fs::metadata(node.join("messages.jsonl"))
         .expect("messages metadata")
         .len();
-    let app = router_with_artifacts(
+    let app = router_with_message_records(
         &store,
         Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_reads(None, vec![], None),
-        AgentMessageRecords::new(artifact_dir.path()),
+        AgentMessageRecords::new(message_records_dir.path()),
     );
 
     let (status, body) = send(
@@ -434,15 +455,15 @@ async fn agent_run_messages_route_returns_raw_jsonl_with_next_offset() {
 #[tokio::test]
 async fn agent_run_events_route_replays_node_local_events() {
     let (store, _dir) = test_store().await;
-    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
-    seed_agent_artifact(artifact_dir.path(), &agent_run_id);
-    let app = router_with_artifacts(
+    seed_agent_message_record(message_records_dir.path(), &agent_run_id);
+    let app = router_with_message_records(
         &store,
         Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_reads(None, vec![], None),
-        AgentMessageRecords::new(artifact_dir.path()),
+        AgentMessageRecords::new(message_records_dir.path()),
     );
 
     let (status, body) = send(
@@ -463,17 +484,17 @@ async fn agent_run_events_route_replays_node_local_events() {
 }
 
 #[tokio::test]
-async fn agent_run_sse_replays_from_last_event_id_without_websocket() {
+async fn agent_run_sse_replays_from_last_event_id() {
     let (store, _dir) = test_store().await;
-    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
-    seed_agent_artifact(artifact_dir.path(), &agent_run_id);
-    let app = router_with_artifacts(
+    seed_agent_message_record(message_records_dir.path(), &agent_run_id);
+    let app = router_with_message_records(
         &store,
         Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_reads(None, vec![], None),
-        AgentMessageRecords::new(artifact_dir.path()),
+        AgentMessageRecords::new(message_records_dir.path()),
     );
 
     let request = Request::builder()
@@ -489,8 +510,14 @@ async fn agent_run_sse_replays_from_last_event_id_without_websocket() {
         .expect("body");
     let text = String::from_utf8(bytes.to_vec()).expect("utf8");
 
-    assert!(!text.contains("messages_initialized"), "replayed last event: {text}");
-    assert!(text.contains("node_finished"), "missed terminal event: {text}");
+    assert!(
+        !text.contains("messages_initialized"),
+        "replayed last event: {text}"
+    );
+    assert!(
+        text.contains("node_finished"),
+        "missed terminal event: {text}"
+    );
     assert!(text.contains("id: 3"), "missing node-local SSE id: {text}");
 }
 
@@ -516,7 +543,10 @@ async fn sandbox_list_is_sanitized() {
     assert!(text.contains("sbx-1"));
     // No daemon connection material or credentials in the serialized view (AC4).
     for denied in ["host", "port", "auth", "token", "daemon"] {
-        assert!(!text.contains(denied), "sandbox response leaked {denied:?}: {text}");
+        assert!(
+            !text.contains(denied),
+            "sandbox response leaked {denied:?}: {text}"
+        );
     }
 }
 
@@ -539,7 +569,10 @@ async fn sandbox_detail_returns_sanitized_view() {
     let text = String::from_utf8(body).expect("utf8");
     assert!(text.contains("sbx-1"));
     for denied in ["host", "port", "auth", "token", "daemon"] {
-        assert!(!text.contains(denied), "sandbox detail leaked {denied:?}: {text}");
+        assert!(
+            !text.contains(denied),
+            "sandbox detail leaked {denied:?}: {text}"
+        );
     }
 }
 
@@ -612,7 +645,10 @@ async fn internal_error_is_not_leaked() {
     let (status, body) = send(&app, delete("/api/sandboxes/sbx-1")).await;
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     let text = String::from_utf8(body).expect("utf8");
-    assert!(!text.contains("daemon-secret-xyz"), "leaked internal detail: {text}");
+    assert!(
+        !text.contains("daemon-secret-xyz"),
+        "leaked internal detail: {text}"
+    );
 }
 
 // --- stats -----------------------------------------------------------------
@@ -720,21 +756,21 @@ async fn transcript_returns_messages() {
 #[tokio::test]
 async fn transcript_prefers_agent_run_messages_jsonl() {
     let (store, _dir) = test_store().await;
-    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
     let task_id: TaskId = "task-1".parse().expect("task id");
     let task = make_task(&task_id, &RequestId::new_v4());
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
-    seed_agent_artifact(artifact_dir.path(), &agent_run_id);
+    seed_agent_message_record(message_records_dir.path(), &agent_run_id);
     let mut stale = serde_json::Map::new();
     stale.insert("role".to_owned(), json!("assistant"));
     let mut run = make_agent_run(&task_id, vec![stale]);
     run.id = agent_run_id;
-    let app = router_with_artifacts(
+    let app = router_with_message_records(
         &store,
         Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_reads(None, vec![task], Some(run)),
-        AgentMessageRecords::new(artifact_dir.path()),
+        AgentMessageRecords::new(message_records_dir.path()),
     );
 
     let (status, body) = send(
@@ -800,9 +836,17 @@ async fn openapi_pins_paths_and_schemas() {
         "/api/sandboxes",
         "/api/sandboxes/{sandbox_id}",
     ] {
-        assert!(doc["paths"].get(path).is_some(), "openapi missing path {path}");
+        assert!(
+            doc["paths"].get(path).is_some(),
+            "openapi missing path {path}"
+        );
     }
-    for schema in ["CreateUserRequest", "UserRequestDetail", "SandboxView", "PerformanceStats"] {
+    for schema in [
+        "CreateUserRequest",
+        "UserRequestDetail",
+        "SandboxView",
+        "PerformanceStats",
+    ] {
         assert!(
             doc["components"]["schemas"].get(schema).is_some(),
             "openapi missing schema {schema}"

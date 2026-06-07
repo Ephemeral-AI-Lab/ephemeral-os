@@ -1,5 +1,5 @@
 //! `eos-backend-api` — the axum router, request/task/sandbox/stats handlers,
-//! SSE / `WebSocket` milestone streaming, and the `OpenAPI` document.
+//! SSE milestone streaming, and the `OpenAPI` document.
 //!
 //! The crate exposes one composition surface: [`AppState`] (assembled by the
 //! backend main from the runtime capabilities and store handles) and

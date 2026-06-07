@@ -75,7 +75,7 @@ pub async fn transcript(
     let run = state.reads.agent_runs.get_for_task(&task_id).await?;
     let (agent_run_id, messages) = match run {
         Some(run) => {
-            let messages = match state.artifacts.read_messages(&run.id, 0).await {
+            let messages = match state.message_records.read_messages(&run.id, 0).await {
                 Ok(bytes) => parse_jsonl_messages(&bytes.bytes)?,
                 Err(MessageRecordError::NotFound(_)) => run
                     .message_history
@@ -98,14 +98,14 @@ pub async fn transcript(
 
 fn parse_jsonl_messages(bytes: &[u8]) -> Result<Vec<serde_json::Value>, ApiError> {
     let text = std::str::from_utf8(bytes).map_err(|err| {
-        tracing::error!(error = %err, "agent transcript artifact was not utf8");
+        tracing::error!(error = %err, "agent transcript message record was not utf8");
         ApiError::Internal
     })?;
     text.lines()
         .filter(|line| !line.trim().is_empty())
         .map(|line| {
             serde_json::from_str(line).map_err(|err| {
-                tracing::error!(error = %err, "agent transcript artifact row was invalid json");
+                tracing::error!(error = %err, "agent transcript message record row was invalid json");
                 ApiError::Internal
             })
         })

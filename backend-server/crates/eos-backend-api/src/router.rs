@@ -117,7 +117,7 @@ pub struct AppState {
     pub(crate) event_log: EventLogRepo,
     pub(crate) stats: StatsReader,
     pub(crate) reads: AgentCoreReads,
-    pub(crate) artifacts: AgentMessageRecords,
+    pub(crate) message_records: AgentMessageRecords,
 }
 
 impl std::fmt::Debug for AppState {
@@ -139,7 +139,7 @@ impl AppState {
         event_log: EventLogRepo,
         stats: StatsReader,
         reads: AgentCoreReads,
-        artifacts: AgentMessageRecords,
+        message_records: AgentMessageRecords,
     ) -> Self {
         Self {
             runs,
@@ -149,7 +149,7 @@ impl AppState {
             event_log,
             stats,
             reads,
-            artifacts,
+            message_records,
         }
     }
 }
@@ -200,10 +200,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/stats/correctness", get(handlers::stats::correctness))
         .route("/api/stats/agent-runs", get(handlers::stats::agent_runs))
         .route("/api/stats/events", get(handlers::stats::events))
-        .route(
-            "/api/sandboxes",
-            get(handlers::sandboxes::list),
-        )
+        .route("/api/sandboxes", get(handlers::sandboxes::list))
         .route(
             "/api/sandboxes/{sandbox_id}",
             get(handlers::sandboxes::detail).delete(handlers::sandboxes::delete),

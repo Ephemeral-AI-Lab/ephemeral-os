@@ -19,8 +19,10 @@ fn baseline() -> PathBuf {
 
 /// Write a uniquely-named temp YAML override and return its path.
 fn temp_yaml(name: &str, content: &str) -> PathBuf {
-    let path =
-        std::env::temp_dir().join(format!("eos_backend_config_{}_{name}.yml", std::process::id()));
+    let path = std::env::temp_dir().join(format!(
+        "eos_backend_config_{}_{name}.yml",
+        std::process::id()
+    ));
     std::fs::write(&path, content).unwrap();
     path
 }
@@ -35,7 +37,11 @@ fn loads_committed_baseline() {
     assert!(!config.obs.include_sandbox_audit);
     assert!(config.obs.event_queue_capacity >= 1);
     assert!(!config.agent_core.database_url.is_empty());
-    assert!(!config.agent_core.artifact_root.as_os_str().is_empty());
+    assert!(!config
+        .agent_core
+        .message_records_root
+        .as_os_str()
+        .is_empty());
 }
 
 #[test]
@@ -46,7 +52,11 @@ fn override_merges_over_baseline() {
 
     assert_eq!(config.sandbox.max_owned_sandboxes, 4, "override wins");
     assert!(config.sandbox.destroy_on_finish, "baseline field survives");
-    assert_eq!(config.bind.port(), 8080, "untouched baseline field survives");
+    assert_eq!(
+        config.bind.port(),
+        8080,
+        "untouched baseline field survives"
+    );
 }
 
 #[test]
@@ -90,14 +100,17 @@ fn rejects_empty_agent_core_database_url() {
 }
 
 #[test]
-fn rejects_empty_agent_core_artifact_root() {
-    let over = temp_yaml("empty_artifacts", "agent_core:\n  artifact_root: \"\"\n");
+fn rejects_empty_agent_core_message_records_root() {
+    let over = temp_yaml(
+        "empty_message_records",
+        "agent_core:\n  message_records_root: \"\"\n",
+    );
     let result = load_from_paths(&[baseline(), over.clone()]);
     let _ = std::fs::remove_file(&over);
     assert!(matches!(
         result,
         Err(ConfigError::Empty {
-            field: "agent_core.artifact_root"
+            field: "agent_core.message_records_root"
         })
     ));
 }

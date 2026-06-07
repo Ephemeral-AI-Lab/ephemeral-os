@@ -246,7 +246,7 @@ pub async fn run_request(
                     command_session_supervisor: Some(command_session_port),
                     notifier: notifier.clone(),
                     persist_agent_run: true,
-                    artifact_kind: AgentRunRecordKind::Root,
+                    record_kind: AgentRunRecordKind::Root,
                 },
                 on_event.as_ref(),
             )

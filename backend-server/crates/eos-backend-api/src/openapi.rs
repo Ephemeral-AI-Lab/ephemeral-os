@@ -103,8 +103,8 @@ fn paths() -> Value {
         },
         "/api/user-requests/{request_id}/stream": {
             "get": {
-                "summary": "SSE or WebSocket milestone stream with replay from last_seq",
-                "responses": { "200": { "description": "event stream" } },
+                "summary": "SSE-only milestone stream with replay from last_seq",
+                "responses": { "200": { "description": "server-sent event stream" } },
             },
         },
         "/api/user-requests/{request_id}/tasks": {

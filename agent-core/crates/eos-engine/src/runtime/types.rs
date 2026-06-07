@@ -63,8 +63,8 @@ pub struct EngineRunHandles {
     pub tool_registry_extender: Option<ToolRegistryExtender>,
     /// Agent-core observability sink.
     pub audit: Arc<dyn AuditSink>,
-    /// Optional file-backed agent-node artifact service.
-    pub artifacts: Option<AgentMessageRecords>,
+    /// Optional file-backed agent-node message-record service.
+    pub message_records: Option<AgentMessageRecords>,
     /// Request-visible workspace root used as the engine/provider cwd.
     pub workspace_root: String,
 }
@@ -109,8 +109,8 @@ pub struct AgentRunInput {
     pub notifier: NotificationService,
     /// Whether to record an `agent_run` row (create + finish).
     pub persist_agent_run: bool,
-    /// Artifact node kind and parent/location facts for this run.
-    pub artifact_kind: AgentRunRecordKind,
+    /// Message-record node kind and parent/location facts for this run.
+    pub record_kind: AgentRunRecordKind,
 }
 
 impl std::fmt::Debug for AgentRunInput {
@@ -131,7 +131,7 @@ impl std::fmt::Debug for AgentRunInput {
                 &self.command_session_supervisor.is_some(),
             )
             .field("persist_agent_run", &self.persist_agent_run)
-            .field("artifact_kind", &self.artifact_kind)
+            .field("record_kind", &self.record_kind)
             .finish_non_exhaustive()
     }
 }

@@ -250,7 +250,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             command_session_supervisor: None,
             notifier: child_notifier,
             persist_agent_run: false,
-            artifact_kind: AgentRunRecordKind::Subagent {
+            record_kind: AgentRunRecordKind::Subagent {
                 parent_agent_run_id: caller_agent_run_id.clone(),
             },
         };

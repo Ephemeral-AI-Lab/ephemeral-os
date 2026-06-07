@@ -154,6 +154,7 @@ fn ctx(registry: ToolRegistry) -> QueryContext {
         terminal_result: None,
         event_source: None,
         prompt_report: None,
+        message_record: None,
         notification_rules: Vec::new(),
         notification_fired: BTreeSet::new(),
         notifier: crate::NotificationService::new(),

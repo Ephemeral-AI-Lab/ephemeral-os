@@ -104,8 +104,10 @@ async fn append_transcript_message(
     messages: &mut Vec<Message>,
     message: Message,
 ) -> Result<(), EngineError> {
-    if let Some(artifact) = &ctx.artifact {
-        artifact.append_messages(std::slice::from_ref(&message)).await?;
+    if let Some(message_record) = &ctx.message_record {
+        message_record
+            .append_messages(std::slice::from_ref(&message))
+            .await?;
     }
     messages.push(message);
     Ok(())

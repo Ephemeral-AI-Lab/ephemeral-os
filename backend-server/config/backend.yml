@@ -13,8 +13,8 @@ agent_core:
   config_dir: "../agent-core/config"
   # Deployable agent-core database url the backend supplies.
   database_url: "sqlite:///./.ephemeralos/ephemeralos.db"
-  # Root for agent-core-owned agent-node messages/events artifacts.
-  artifact_root: "./.ephemeralos/agent-artifacts"
+  # Root for agent-core-owned agent-node message records.
+  message_records_root: "./.ephemeralos/agent-message-records"
 
 sandbox:
   default_snapshot: null

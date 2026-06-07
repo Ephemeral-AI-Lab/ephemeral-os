@@ -29,14 +29,10 @@ pub async fn create(
     State(state): State<AppState>,
     ValidatedJson(request): ValidatedJson<CreateUserRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let request_id = state
-        .runs
-        .launch(request)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = %err, "run launch failed");
-            ApiError::Internal
-        })?;
+    let request_id = state.runs.launch(request).await.map_err(|err| {
+        tracing::error!(error = %err, "run launch failed");
+        ApiError::Internal
+    })?;
     Ok((
         StatusCode::ACCEPTED,
         Json(CreateUserRequestResponse { request_id }),
@@ -106,14 +102,12 @@ async fn reconcile(
     agent_status: Option<RequestStatus>,
 ) -> Result<RunMeta, ApiError> {
     let terminal = match (meta.status, agent_status) {
-        (
-            BackendRunStatus::Accepted | BackendRunStatus::Running,
-            Some(RequestStatus::Done),
-        ) => BackendRunStatus::Done,
-        (
-            BackendRunStatus::Accepted | BackendRunStatus::Running,
-            Some(RequestStatus::Failed),
-        ) => BackendRunStatus::Failed,
+        (BackendRunStatus::Accepted | BackendRunStatus::Running, Some(RequestStatus::Done)) => {
+            BackendRunStatus::Done
+        }
+        (BackendRunStatus::Accepted | BackendRunStatus::Running, Some(RequestStatus::Failed)) => {
+            BackendRunStatus::Failed
+        }
         _ => return Ok(meta),
     };
     match state
@@ -143,9 +137,7 @@ pub async fn cancel(
     }
     match state.runs.cancel(&request_id, DEFAULT_CANCEL_REASON) {
         CancelOutcome::Requested => Ok(StatusCode::ACCEPTED),
-        CancelOutcome::NotFound => {
-            Err(ApiError::Conflict("run already finished".to_owned()))
-        }
+        CancelOutcome::NotFound => Err(ApiError::Conflict("run already finished".to_owned())),
     }
 }
 

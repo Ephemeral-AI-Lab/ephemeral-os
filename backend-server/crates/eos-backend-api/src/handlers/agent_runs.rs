@@ -1,4 +1,4 @@
-//! Agent-run node artifact routes.
+//! Agent-run node message-record routes.
 
 use std::collections::VecDeque;
 use std::convert::Infallible;
@@ -46,7 +46,7 @@ pub async fn messages(
 ) -> Result<Response<Body>, ApiError> {
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
     let bytes = state
-        .artifacts
+        .message_records
         .read_messages(&agent_run_id, query.after_byte.unwrap_or(0))
         .await?;
     Response::builder()
@@ -68,7 +68,7 @@ pub async fn events(
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
     Ok(Json(
         state
-            .artifacts
+            .message_records
             .read_events(&agent_run_id, query.after_seq.unwrap_or(0))
             .await?,
     ))
@@ -83,9 +83,12 @@ pub async fn stream(
 ) -> Result<impl IntoResponse, ApiError> {
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
     let last_seq = last_event_id(&headers).or(query.last_seq).unwrap_or(0);
-    let initial = state.artifacts.read_events(&agent_run_id, last_seq).await?;
+    let initial = state
+        .message_records
+        .read_events(&agent_run_id, last_seq)
+        .await?;
     let tail = TailState::new(
-        state.artifacts,
+        state.message_records,
         agent_run_id,
         last_seq,
         VecDeque::from(initial),
@@ -104,7 +107,7 @@ pub async fn stream(
             }
             tokio::time::sleep(Duration::from_millis(250)).await;
             match tail
-                .artifacts
+                .message_records
                 .read_events(&tail.agent_run_id, tail.next_seq)
                 .await
             {
@@ -112,7 +115,7 @@ pub async fn stream(
                     tail.pending = VecDeque::from(events);
                 }
                 Err(err) => {
-                    tracing::error!(error = %err, "agent-run SSE artifact tail failed");
+                    tracing::error!(error = %err, "agent-run SSE message-record tail failed");
                     return None;
                 }
             }
@@ -123,7 +126,7 @@ pub async fn stream(
 
 #[derive(Debug)]
 struct TailState {
-    artifacts: AgentMessageRecords,
+    message_records: AgentMessageRecords,
     agent_run_id: AgentRunId,
     next_seq: u64,
     pending: VecDeque<NodeEvent>,
@@ -132,13 +135,13 @@ struct TailState {
 
 impl TailState {
     fn new(
-        artifacts: AgentMessageRecords,
+        message_records: AgentMessageRecords,
         agent_run_id: AgentRunId,
         last_seq: u64,
         pending: VecDeque<NodeEvent>,
     ) -> Self {
         Self {
-            artifacts,
+            message_records,
             agent_run_id,
             next_seq: last_seq,
             pending,

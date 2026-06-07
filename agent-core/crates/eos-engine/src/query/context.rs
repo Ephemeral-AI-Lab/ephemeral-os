@@ -80,8 +80,8 @@ pub struct QueryContext {
     pub event_source: Option<Arc<dyn EventSource>>,
     /// Optional prompt-report recorder.
     pub prompt_report: Option<PromptReportRecorder>,
-    /// Optional file-backed node artifact handle for this agent run.
-    pub artifact: Option<AgentRunRecordHandle>,
+    /// Optional file-backed message-record handle for this agent run.
+    pub message_record: Option<AgentRunRecordHandle>,
     /// Declarative notification rules.
     pub notification_rules: Vec<Arc<dyn NotificationRule>>,
     /// Fire-once notification names already emitted.

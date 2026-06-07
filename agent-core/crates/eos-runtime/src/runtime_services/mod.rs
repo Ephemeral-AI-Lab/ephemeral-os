@@ -1,11 +1,11 @@
 //! Runtime service composition surface.
 
 mod agent_core_registry;
-mod artifacts;
 mod audit;
 mod builder;
 mod db_store;
 mod engine;
+mod message_records;
 mod sandbox;
 mod state_reader;
 
@@ -17,11 +17,11 @@ use eos_tools::{RootSubmissionService, SandboxToolService, SkillToolService};
 use crate::plugin_tools::register_plugin_tools;
 
 pub(crate) use agent_core_registry::AgentCoreRegistryService;
-pub(crate) use artifacts::ArtifactService;
 pub(crate) use audit::AuditService;
 pub use builder::RuntimeServicesBuilder;
 pub(crate) use db_store::DbStoreService;
 pub(crate) use engine::EngineService;
+pub(crate) use message_records::MessageRecordService;
 pub(crate) use sandbox::SandboxService;
 pub use state_reader::StateReader;
 
@@ -41,7 +41,7 @@ pub struct RuntimeServices {
     pub(crate) engine: EngineService,
     pub(crate) sandbox: SandboxService,
     pub(crate) audit: AuditService,
-    pub(crate) artifacts: ArtifactService,
+    pub(crate) message_records: MessageRecordService,
 }
 
 impl RuntimeServices {
@@ -62,10 +62,10 @@ impl RuntimeServices {
         )
     }
 
-    /// File-backed agent-node artifact reader/writer, when configured.
+    /// File-backed agent-node message record reader/writer, when configured.
     #[must_use]
-    pub fn artifacts(&self) -> Option<AgentMessageRecords> {
-        self.artifacts.artifacts.clone()
+    pub fn message_records(&self) -> Option<AgentMessageRecords> {
+        self.message_records.message_records.clone()
     }
 
     /// Bundle the explicit run handles `eos_engine::run_agent` needs.
@@ -88,7 +88,7 @@ impl RuntimeServices {
                 register_plugin_tools(registry, &plugin_sandbox_service);
             })),
             audit: self.audit.sink.clone(),
-            artifacts: self.artifacts.artifacts.clone(),
+            message_records: self.message_records.message_records.clone(),
             workspace_root: workspace_root.to_owned(),
         }
     }

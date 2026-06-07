@@ -5,9 +5,7 @@
 use axum::extract::{Query, State};
 use axum::Json;
 
-use eos_backend_types::{
-    AgentRunStat, CorrectnessStats, ObsEvent, PageResult, PerformanceStats,
-};
+use eos_backend_types::{AgentRunStat, CorrectnessStats, ObsEvent, PageResult, PerformanceStats};
 
 use super::Pagination;
 use crate::error::ApiError;

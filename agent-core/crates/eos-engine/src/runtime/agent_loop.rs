@@ -31,7 +31,7 @@ pub async fn run_agent(
         command_session_supervisor,
         notifier,
         persist_agent_run,
-        artifact_kind,
+        record_kind,
     } = input;
 
     let persistence_requested = create_agent_run_if_requested(
@@ -74,22 +74,22 @@ pub async fn run_agent(
             };
         }
     };
-    if let Some(artifacts) = &handles.artifacts {
+    if let Some(message_records) = &handles.message_records {
         match prepared.ctx.tool_metadata.request_id.as_ref() {
-            Some(request_id) => match artifacts
+            Some(request_id) => match message_records
                 .start_agent_run(AgentRunRecordStart {
                     request_id,
                     task_id: prepared.ctx.task_id.as_ref(),
                     agent_run_id: &agent_run_id,
                     agent_name: &prepared.ctx.agent_name,
-                    kind: &artifact_kind,
+                    kind: &record_kind,
                     system_prompt: &prepared.ctx.system_prompt,
                     initial_messages: &initial_messages,
                 })
                 .await
             {
                 Ok(handle) => {
-                    prepared.ctx.artifact = Some(handle);
+                    prepared.ctx.message_record = Some(handle);
                 }
                 Err(err) => {
                     let summary = err.to_string();
@@ -109,7 +109,7 @@ pub async fn run_agent(
             None => {
                 tracing::warn!(
                     agent_run_id = agent_run_id.as_str(),
-                    "artifact writer skipped run without request_id"
+                    "message-record writer skipped run without request_id"
                 );
             }
         }
@@ -145,8 +145,8 @@ pub async fn run_agent(
         error.as_deref(),
     );
     publish_os_resource_sampled(handles, &prepared.ctx);
-    if let Some(artifact) = &prepared.ctx.artifact {
-        if let Err(err) = artifact
+    if let Some(message_record) = &prepared.ctx.message_record {
+        if let Err(err) = message_record
             .finish(if error.is_some() {
                 NodeFinishStatus::Failed
             } else {
@@ -154,7 +154,7 @@ pub async fn run_agent(
             })
             .await
         {
-            tracing::warn!(error = %err, "agent-run artifact finish failed");
+            tracing::warn!(error = %err, "agent-run message-record finish failed");
         }
     }
     finish_agent_run_if_requested(
