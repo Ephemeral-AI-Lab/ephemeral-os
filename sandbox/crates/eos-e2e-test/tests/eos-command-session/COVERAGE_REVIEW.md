@@ -1,11 +1,42 @@
-# eos-command-session — Test Coverage Review (draft, no implementation)
+# eos-command-session — Test Coverage Review
 
 Scope: `sandbox/crates/eos-e2e-test/tests/eos-command-session`. This is a review of
 `exec_command` / `write_stdin` coverage plus the four behaviors asked about
 (natural return, killed-via-`write_stdin`, killed-by-other-process, long-lived
-output-emitting-but-running). It only **drafts** tests and checklist items; it
-adds no test code and does not touch the generated `readme.md` / `readme.json` /
-`index.html` bundle.
+output-emitting-but-running). The §4 drafts below were turned into real tests;
+the generated `readme.md` / `readme.json` / `index.html` bundle is left untouched
+(regenerate it from the test files separately).
+
+---
+
+## 0. Status — headline gaps implemented & validated
+
+Nine tests were added across three modules. All compile, pass `clippy`, and
+**pass live** against the Docker `linux/amd64` `sweevo-dask__dask-10042` image.
+
+| Gap | New test | Module | Live |
+|---|---|---|---|
+| A | `external_signal_kill_is_structured` | lifecycle | ✅ |
+| A | `self_kill_reports_signal_exit` | lifecycle | ✅ |
+| A+C | `external_kill_of_foreground_keeps_group_running` | lifecycle | ✅ |
+| E | `write_stdin_to_completed_session_is_structured` | lifecycle | ✅ |
+| B | `live_background_emitter_keeps_session_running` | ephemeral | ✅ |
+| B | `running_stderr_only_emitter_is_visible` | ephemeral | ✅ |
+| C | `setsid_descendant_escapes_and_leaks_in_ephemeral` | ephemeral | ✅ |
+| C | `nonsetsid_detach_vectors_stay_tracked` | ephemeral | ✅ |
+| C | `setsid_descendant_reaped_on_isolated_exit` | isolated | ✅ |
+
+Empirically confirmed by the live run: (1) external/self signal kill surfaces a
+signal-coded `exit_code` and finalizes cleanly; (2) killing only the foreground
+while a same-pgid peer survives keeps the session `running`; (3) the
+**ephemeral path leaks** an escaped `setsid` descendant past lease release while
+the **isolated path reaps** it via its cgroup — and cgroup delegation *is*
+available in the live container (the flagged risk did not materialize).
+
+Still drafted-only (not yet implemented), all secondary: `eos-command-session-sigint-interrupt`
+(needs PTY-raw confirmation first), `eos-command-session-stdin-backpressure`,
+`eos-command-session-uncollected-completion-gc`, and the matrix
+`signal` / `background` families.
 
 ---
 

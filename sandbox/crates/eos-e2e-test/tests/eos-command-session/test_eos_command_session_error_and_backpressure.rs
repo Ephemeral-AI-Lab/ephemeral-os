@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    wait_for_command_session_transcript_recycled, wait_for_session_count,
 };
 
 #[test]
@@ -128,6 +128,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         );
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
+        wait_for_command_session_transcript_recycled(&lease, &session_id)?;
         Ok(())
     })();
 
@@ -262,7 +263,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
         }
         let cancelled = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 200}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 200}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
@@ -270,6 +271,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
         );
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
+        wait_for_command_session_transcript_recycled(&lease, &session_id)?;
         Ok(())
     })();
 

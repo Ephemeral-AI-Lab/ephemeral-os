@@ -6,7 +6,10 @@ use eos_e2e_test::unique_suffix;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::support::{as_i64, as_str, live_pool_or_skip, wait_for_active_leases};
+use crate::support::{
+    as_i64, as_str, live_pool_or_skip, wait_for_active_leases,
+    wait_for_command_session_transcript_recycled,
+};
 
 fn command_line_marker_count(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<i64> {
     let script = format!(
@@ -108,7 +111,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
 
     let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": session_id, "max_output_tokens": 2000}),
+        json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,
@@ -123,6 +126,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         0,
         "cancelled command should release its layer lease: {released}"
     );
+    wait_for_command_session_transcript_recycled(&lease, &session_id)?;
     Ok(())
 }
 
@@ -159,12 +163,13 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
 
     let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+        json!({"command_session_id": &session_id, "max_output_tokens": 1000}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,
         "cancelled" | "ok" | "error"
     ));
     wait_for_command_line_marker_count(&lease, &marker, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &session_id)?;
     Ok(())
 }

@@ -14,7 +14,10 @@ use eos_e2e_test::{unique_suffix, NodeLease};
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::support::{array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_session_count};
+use crate::support::{
+    array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
+    wait_for_command_session_transcript_recycled, wait_for_session_count,
+};
 
 #[test]
 fn exec_simple() -> Result<()> {
@@ -111,7 +114,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
         }
         std::thread::sleep(Duration::from_millis(100));
     };
-    assert_eq!(completion["command_session_id"], json!(id));
+    assert_eq!(completion["command_session_id"], json!(&id));
     assert_eq!(
         completion
             .get("result")
@@ -121,6 +124,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
         "completion must report ok once all subprocesses exited: {completion}"
     );
     wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -161,6 +165,7 @@ fn write_stdin_terminate_kills_whole_session() -> Result<()> {
         "terminate must drive the session to a terminal status: {terminated}"
     );
     wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -198,6 +203,7 @@ fn cancel(lease: &NodeLease<'_>, id: &str) -> Result<()> {
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id, "max_output_tokens": 1000}),
     )?;
+    wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(())
 }
 
@@ -241,4 +247,236 @@ fn wait_for_marker_count(lease: &NodeLease<'_>, marker: &str, expected: i64) -> 
         }
         std::thread::sleep(Duration::from_millis(50));
     }
+}
+
+/// Signal every container process whose argv carries `marker`, from a process
+/// outside the session (a container `python3` exec), excluding the scanner's own
+/// pid. Used to clean up an intentionally-leaked escaped descendant.
+fn kill_marker(lease: &NodeLease<'_>, marker: &str, signal: i32) -> Result<()> {
+    let script = format!(
+        r#"import os, pathlib
+marker = {marker:?}
+for proc in pathlib.Path("/proc").iterdir():
+    if not proc.name.isdigit() or int(proc.name) == os.getpid():
+        continue
+    try:
+        cmdline = proc.joinpath("cmdline").read_bytes().replace(b"\0", b" ").decode("utf-8", "ignore")
+    except OSError:
+        continue
+    if marker in cmdline:
+        try:
+            os.kill(int(proc.name), {signal})
+        except OSError:
+            pass
+"#
+    );
+    lease.container().exec(&["python3", "-c", &script])?;
+    Ok(())
+}
+
+#[test]
+fn live_background_emitter_keeps_session_running() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // The foreground exits after backgrounding a same-pgid child that KEEPS
+    // emitting. The session must stay running, and cursor polls must surface NEW
+    // output progressively without replaying already-consumed output.
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'echo fg-start; (for i in $(seq 1 12); do echo tick-$i; sleep 0.3; done) & echo fg-done'",
+            "yield_time_ms": 800,
+            "timeout_seconds": 60,
+            "max_output_tokens": 4000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
+    assert!(
+        stdout(&exec).contains("fg-done"),
+        "foreground must finish before yield: {exec}"
+    );
+    let id = as_str(&exec, "command_session_id")?.to_owned();
+
+    let mut seen_max = 0;
+    let deadline = Instant::now() + Duration::from_secs(8);
+    while seen_max < 6 && Instant::now() < deadline {
+        let poll = lease.call_ok(
+            ops::API_V1_WRITE_STDIN,
+            json!({
+                "command_session_id": id,
+                "chars": "",
+                "yield_time_ms": 400,
+                "max_output_tokens": 4000
+            }),
+        )?;
+        let out = stdout(&poll);
+        assert!(
+            !out.contains("fg-done"),
+            "cursor poll must not replay already-consumed foreground output: {poll}"
+        );
+        for tick in 1..=12 {
+            if out.contains(&format!("tick-{tick}")) {
+                seen_max = seen_max.max(tick);
+            }
+        }
+    }
+    assert!(
+        seen_max >= 6,
+        "cursor polls should surface progressive background output; reached tick {seen_max}"
+    );
+
+    let cdeadline = Instant::now() + Duration::from_secs(8);
+    let completion = loop {
+        let collected = lease.call_ok(
+            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            json!({ "command_session_ids": [id.clone()] }),
+        )?;
+        if let Some(completion) = array(&collected, "completions")?.first() {
+            break completion.clone();
+        }
+        if Instant::now() >= cdeadline {
+            cancel(&lease, &id)?;
+            bail!("live background emitter session never completed");
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+    assert_eq!(completion["command_session_id"], json!(&id), "{completion}");
+    wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    Ok(())
+}
+
+#[test]
+fn running_stderr_only_emitter_is_visible() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // "Returns a stderr but remains running": a never-exiting process that writes
+    // ONLY to stderr. The PTY merges stderr into stdout, so the text must be
+    // visible in output.stdout while status == running, and the structured stderr
+    // field stays empty even for a non-exiting session.
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "python3 -u -c 'import sys,time; print(\"err-only-line\", file=sys.stderr, flush=True); time.sleep(60)'",
+            "yield_time_ms": 1000,
+            "timeout_seconds": 120,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(
+        as_str(&exec, "status")?,
+        "running",
+        "a stderr-only emitter must stay running: {exec}"
+    );
+    assert!(
+        stdout(&exec).contains("err-only-line"),
+        "merged PTY must surface stderr in output.stdout: {exec}"
+    );
+    let structured_stderr = exec
+        .get("output")
+        .and_then(|output| output.get("stderr"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    assert!(
+        structured_stderr.is_empty(),
+        "merged PTY keeps the structured stderr field empty: {exec}"
+    );
+    let id = as_str(&exec, "command_session_id")?.to_owned();
+    cancel(&lease, &id)?;
+    wait_for_session_count(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let marker = format!("eos_e2e_escape_{}", unique_suffix().replace('-', "_"));
+    // A `setsid` child gets a NEW process group, so the pgid scope-wait cannot see
+    // it: the session COMPLETES immediately (unlike a same-pgid nohup/`&` child).
+    // The ephemeral path reaps by pgid only (no PID-ns, no cgroup backstop), so the
+    // descendant LEAKS past session completion and lease release. This pins that
+    // contract; the isolated counterpart proves the cgroup-backed mode reaps it. A
+    // self-healing `sleep 30` keeps CI from accumulating ghosts, and a future
+    // teardown backstop would flip the post-release marker assertion to 0.
+    let completed = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!(
+                "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & echo escaped-ready'"
+            ),
+            "yield_time_ms": 1500,
+            "timeout_seconds": 60,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(
+        as_str(&completed, "status")?,
+        "ok",
+        "a setsid child escapes the pgid, so the session completes: {completed}"
+    );
+    assert!(
+        completed.get("command_session_id").is_none(),
+        "a completed escaped-child command must not leave a session handle: {completed}"
+    );
+    assert!(stdout(&completed).contains("escaped-ready"), "{completed}");
+    wait_for_session_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    // The escaped descendant is still alive AFTER the lease released: ephemeral mode
+    // reaps by pgid only and never killpg'd this escaped group.
+    assert!(
+        marker_count(&lease, &marker)? >= 1,
+        "ephemeral mode leaks the escaped setsid descendant past lease release"
+    );
+    kill_marker(&lease, &marker, 9)?;
+    wait_for_marker_count(&lease, &marker, 0)?;
+    Ok(())
+}
+
+#[test]
+fn nonsetsid_detach_vectors_stay_tracked() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // "Other cases": disown and subshell-background do NOT change the process
+    // group, so — unlike setsid — they stay tracked and keep the session running.
+    // pgid membership, not the detach idiom, is the tracking boundary.
+    for (label, cmd) in [
+        ("disown", "bash -lc 'sleep 30 & disown; echo disowned'"),
+        ("subshell", "bash -lc '( sleep 30 & ); echo subshelled'"),
+    ] {
+        let exec = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "cmd": cmd,
+                "yield_time_ms": 800,
+                "timeout_seconds": 60,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        assert_eq!(
+            as_str(&exec, "status")?,
+            "running",
+            "{label}: a same-pgid background child must keep the session running: {exec}"
+        );
+        let id = as_str(&exec, "command_session_id")?.to_owned();
+        let collected = lease.call_ok(
+            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            json!({ "command_session_ids": [id.clone()] }),
+        )?;
+        assert!(
+            array(&collected, "completions")?.is_empty(),
+            "{label}: session must not finalize while the same-pgid child lives: {collected}"
+        );
+        cancel(&lease, &id)?;
+        wait_for_session_count(&lease, 0)?;
+    }
+    Ok(())
 }

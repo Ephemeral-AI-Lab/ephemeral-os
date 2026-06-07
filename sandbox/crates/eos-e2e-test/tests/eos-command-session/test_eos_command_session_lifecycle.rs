@@ -7,8 +7,9 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    array, as_i64, as_str, command_session_transcript_logs, command_session_transcript_path,
+    live_pool_or_skip, stdout, wait_for_active_leases,
+    wait_for_command_session_transcript_recycled, wait_for_container_path, wait_for_session_count,
 };
 
 fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
@@ -30,10 +31,12 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
 }
 
 fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
-    lease.call(
+    let cancelled = lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id, "max_output_tokens": 1000}),
-    )
+    )?;
+    wait_for_command_session_transcript_recycled(lease, id)?;
+    Ok(cancelled)
 }
 
 fn process_marker() -> String {
@@ -190,6 +193,82 @@ fn collect_completed_drains() -> Result<()> {
         array(&redelivered, "completions")?.is_empty(),
         "collect_completed should remove delivered completions: {redelivered}"
     );
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    Ok(())
+}
+
+#[test]
+fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let before = command_session_transcript_logs(&lease)?;
+    let marker = format!(
+        "finite-transcript-{}",
+        eos_e2e_test::unique_suffix().replace('-', "_")
+    );
+    let completed = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("printf '{marker}\\n'"),
+            "yield_time_ms": 3000,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(
+        as_str(&completed, "status")?,
+        "ok",
+        "finite command should complete inside the initial yield: {completed}"
+    );
+    assert!(
+        completed.get("command_session_id").is_none(),
+        "finite command should not expose a background session handle: {completed}"
+    );
+    assert!(
+        stdout(&completed).contains(&marker),
+        "finite command should return stdout in the initial response: {completed}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    let after = command_session_transcript_logs(&lease)?;
+    assert_eq!(
+        after, before,
+        "finite command may create an internal transcript, but it must recycle it before returning"
+    );
+    Ok(())
+}
+
+#[test]
+fn completed_session_removes_transcript_file() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'echo transcript-start; sleep 1; echo transcript-end'",
+            "yield_time_ms": 100,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&started, "status")?, "running", "{started}");
+    let id = as_str(&started, "command_session_id")?.to_owned();
+    let transcript_path = command_session_transcript_path(&id);
+    wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
+
+    let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
+    let result = completion.get("result").context("completion result")?;
+    assert!(
+        stdout(result).contains("transcript-end"),
+        "completion should carry the final stdout: {completion}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_container_path(&lease, &transcript_path, false, Duration::from_secs(3))?;
+    wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
 
@@ -274,10 +353,7 @@ fn output_token_cap() -> Result<()> {
         stdout(&exec).len()
     );
     let id = as_str(&exec, "command_session_id")?;
-    lease.call(
-        ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": id}),
-    )?;
+    cancel_session(&lease, id)?;
     Ok(())
 }
 
@@ -339,6 +415,7 @@ fn write_stdin_terminate_reaps_marker_process() -> Result<()> {
         "terminate should return a terminal status: {terminated}"
     );
     wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
     wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(3))?;
     Ok(())
@@ -510,4 +587,257 @@ fn wait_for_marker_count(
         }
         thread::sleep(Duration::from_millis(50));
     }
+}
+
+/// Send `signal` to every container process whose argv carries `marker`, from a
+/// process fully outside the command session (a container `python3` exec). This
+/// is the "killed by another process" path: termination that did NOT come from
+/// the `cancel`/`write_stdin terminate` API. The scanner excludes its own pid so
+/// it never signals itself (its argv carries `marker` too).
+fn kill_marker(lease: &NodeLease<'_>, marker: &str, signal: i32) -> Result<()> {
+    let script = format!(
+        r#"import os, pathlib
+marker = {marker:?}
+for proc in pathlib.Path("/proc").iterdir():
+    if not proc.name.isdigit() or int(proc.name) == os.getpid():
+        continue
+    try:
+        cmdline = proc.joinpath("cmdline").read_bytes().replace(b"\0", b" ").decode("utf-8", "ignore")
+    except OSError:
+        continue
+    if marker in cmdline:
+        try:
+            os.kill(int(proc.name), {signal})
+        except OSError:
+            pass
+"#
+    );
+    lease.container().exec(&["python3", "-c", &script])?;
+    Ok(())
+}
+
+/// Poll `collect_completed` until the session parks a terminal completion. A
+/// fire-and-forget session (no live poller) finalizes through the reaper, so the
+/// completion arrives asynchronously and must be polled for.
+fn collect_completion(lease: &NodeLease<'_>, id: &str, within: Duration) -> Result<Value> {
+    let deadline = Instant::now() + within;
+    loop {
+        let collected = lease.call_ok(
+            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            json!({ "command_session_ids": [id] }),
+        )?;
+        if let Some(completion) = array(&collected, "completions")?.first() {
+            return Ok(completion.clone());
+        }
+        if Instant::now() >= deadline {
+            bail!("session {id} never parked a completion within {within:?}");
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+/// A process that died by signal surfaces a signal-coded exit: `runner.rs`
+/// encodes it as a negative code (`-signal`), and a wrapping shell re-encodes the
+/// same death as `128 + signal`. Either form distinguishes a kill from a clean or
+/// ordinary nonzero exit.
+fn signal_coded_exit(exit_code: i64) -> bool {
+    !(0..128).contains(&exit_code)
+}
+
+#[test]
+fn external_signal_kill_is_structured() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let marker = process_marker();
+    // A separate container process SIGKILLs the foreground out from under the
+    // session — no cancel/terminate API call is involved. The runner must reap the
+    // signal death, finalize the session, park exactly one completion, and release
+    // the lease.
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("bash -lc 'echo kill-ready; exec -a {marker} sleep 60'"),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 120,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&started, "status")?, "running", "{started}");
+    assert!(stdout(&started).contains("kill-ready"), "{started}");
+    let id = as_str(&started, "command_session_id")?.to_owned();
+    wait_for_marker_at_least(&lease, &marker, 1)?;
+
+    kill_marker(&lease, &marker, 9)?;
+
+    let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
+    let result = completion.get("result").context("completion result")?;
+    assert_ne!(
+        as_str(result, "status")?,
+        "ok",
+        "an externally killed session must not report ok: {completion}"
+    );
+    assert!(
+        signal_coded_exit(as_i64(result, "exit_code")?),
+        "external SIGKILL should surface a signal-coded exit_code: {completion}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_active_leases(&lease, 0)?;
+    wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(3))?;
+    Ok(())
+}
+
+#[test]
+fn self_kill_reports_signal_exit() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // The command kills its own process-group leader; termination is driven by the
+    // process itself, not by the cancel API, but must still surface a signal-coded
+    // terminal exit. Fast self-kill usually completes within the yield window, so
+    // read the structured envelope with `call` rather than `call_ok`.
+    let exec = lease.call(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'echo bye; kill -9 $$'",
+            "yield_time_ms": 2000,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    if as_str(&exec, "status")? == "running" {
+        let id = as_str(&exec, "command_session_id")?.to_owned();
+        let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
+        let result = completion.get("result").context("completion result")?;
+        assert_ne!(as_str(result, "status")?, "ok", "{completion}");
+        assert!(
+            signal_coded_exit(as_i64(result, "exit_code")?),
+            "self-kill should surface a signal-coded exit_code: {completion}"
+        );
+        wait_for_command_session_transcript_recycled(&lease, &id)?;
+    } else {
+        assert_ne!(
+            as_str(&exec, "status")?,
+            "ok",
+            "a self-killed command must not report ok: {exec}"
+        );
+        assert!(
+            signal_coded_exit(as_i64(&exec, "exit_code")?),
+            "self-kill should surface a signal-coded exit_code: {exec}"
+        );
+    }
+    wait_for_session_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let fg = process_marker();
+    let peer = format!("{}_peer", process_marker());
+    // A foreground plus a same-pgid background peer. Killing ONLY the foreground by
+    // external signal must NOT finalize the session: the pgid scope-wait keeps it
+    // running until the surviving peer also exits. This is the intersection of
+    // "killed by other process" and "remains running".
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!(
+                "bash -lc 'bash -c \"exec -a {peer} sleep 60\" & echo group-ready; exec -a {fg} sleep 60'"
+            ),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 120,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&started, "status")?, "running", "{started}");
+    assert!(stdout(&started).contains("group-ready"), "{started}");
+    let id = as_str(&started, "command_session_id")?.to_owned();
+    wait_for_marker_at_least(&lease, &fg, 1)?;
+    wait_for_marker_at_least(&lease, &peer, 1)?;
+
+    kill_marker(&lease, &fg, 9)?;
+    wait_for_marker_count(&lease, &fg, 0, Duration::from_secs(3))?;
+
+    // Peer still alive keeps the pgid non-empty, so the session stays running and
+    // does not finalize.
+    let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+    assert_eq!(
+        as_i64(&count, "count")?,
+        1,
+        "a surviving same-pgid peer must keep the session running: {count}"
+    );
+    let still = lease.call_ok(
+        ops::API_V1_COMMAND_COLLECT_COMPLETED,
+        json!({ "command_session_ids": [id.clone()] }),
+    )?;
+    assert!(
+        array(&still, "completions")?.is_empty(),
+        "session must not finalize while the peer lives: {still}"
+    );
+
+    // The peer now exits too, so the scope-wait empties and the session finalizes.
+    kill_marker(&lease, &peer, 9)?;
+    wait_for_marker_count(&lease, &peer, 0, Duration::from_secs(3))?;
+    let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
+    assert_eq!(completion["command_session_id"], json!(id), "{completion}");
+    wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn write_stdin_to_completed_session_is_structured() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // A session that finishes on its own and is left uncollected. A late
+    // write_stdin against the finished id must return a structured terminal
+    // envelope (not a hang or a running zombie), distinct from the not-found error
+    // returned for an id that never existed.
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'echo quick; sleep 1'",
+            "yield_time_ms": 100,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    let id = as_str(&started, "command_session_id")?.to_owned();
+    // Count returning to zero means the session left the live registry (finished);
+    // its completion is parked but uncollected.
+    wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+
+    let late = lease.call(
+        ops::API_V1_WRITE_STDIN,
+        json!({
+            "command_session_id": id,
+            "chars": "late\n",
+            "yield_time_ms": 200,
+            "max_output_tokens": 200
+        }),
+    )?;
+    assert!(
+        matches!(as_str(&late, "status")?, "ok" | "error" | "cancelled"),
+        "write_stdin to a finished session must return a structured terminal status: {late}"
+    );
+
+    // Drain the parked completion so a recycled container starts clean.
+    lease.call_ok(
+        ops::API_V1_COMMAND_COLLECT_COMPLETED,
+        json!({ "command_session_ids": [id] }),
+    )?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
 }

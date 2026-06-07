@@ -86,6 +86,91 @@ pub(crate) fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Re
     }
 }
 
+pub(crate) fn container_path_exists(lease: &NodeLease<'_>, path: &str) -> Result<bool> {
+    let script = format!(
+        r#"import pathlib
+print("true" if pathlib.Path({path:?}).exists() else "false")
+"#
+    );
+    match lease.container().exec(&["python3", "-c", &script])?.trim() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        output => bail!("unexpected path-exists probe output for {path}: {output:?}"),
+    }
+}
+
+pub(crate) fn wait_for_container_path(
+    lease: &NodeLease<'_>,
+    path: &str,
+    expected_exists: bool,
+    timeout: Duration,
+) -> Result<()> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        let exists = container_path_exists(lease, path)?;
+        if exists == expected_exists {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            bail!("container path {path} existence did not reach {expected_exists}; last {exists}");
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+}
+
+pub(crate) fn command_session_transcript_path(session_id: &str) -> String {
+    format!("/eos/scratch/command-sessions/{session_id}/transcript.log")
+}
+
+pub(crate) fn isolated_command_session_transcript_path(
+    workspace_handle_id: &str,
+    session_id: &str,
+) -> String {
+    format!(
+        "/eos/scratch/isolated/{workspace_handle_id}/command-sessions/{session_id}/transcript.log"
+    )
+}
+
+pub(crate) fn command_session_transcript_logs(lease: &NodeLease<'_>) -> Result<Vec<String>> {
+    let script = r#"import json
+import pathlib
+
+paths = []
+for root in [pathlib.Path("/eos/scratch/command-sessions"), pathlib.Path("/eos/scratch/isolated")]:
+    if root.exists():
+        paths.extend(str(path) for path in root.rglob("transcript.log"))
+print(json.dumps(sorted(paths)))
+"#;
+    let output = lease.container().exec(&["python3", "-c", script])?;
+    serde_json::from_str(output.trim())
+        .with_context(|| format!("parse command-session transcript log paths from {output:?}"))
+}
+
+pub(crate) fn wait_for_command_session_transcript_recycled(
+    lease: &NodeLease<'_>,
+    session_id: &str,
+) -> Result<()> {
+    wait_for_container_path(
+        lease,
+        &command_session_transcript_path(session_id),
+        false,
+        Duration::from_secs(3),
+    )
+}
+
+pub(crate) fn wait_for_isolated_command_session_transcript_recycled(
+    lease: &NodeLease<'_>,
+    workspace_handle_id: &str,
+    session_id: &str,
+) -> Result<()> {
+    wait_for_container_path(
+        lease,
+        &isolated_command_session_transcript_path(workspace_handle_id, session_id),
+        false,
+        Duration::from_secs(3),
+    )
+}
+
 /// Seed a multi-file base into the lowerdir layer stack and return the total
 /// bytes written. The daemon caps one `write_file` payload at 2 MiB, so a large
 /// workspace is built from many sub-cap files. Used by O(1)-disk tests that

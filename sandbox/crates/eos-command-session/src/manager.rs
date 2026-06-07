@@ -129,6 +129,7 @@ impl CommandSessionManager {
                 output,
                 output_path: prepared.output_path,
                 final_path: prepared.final_path,
+                transcript_path: prepared.transcript_path,
                 output_drain_grace_ms: self.config.output_drain_grace_ms,
             },
         ));

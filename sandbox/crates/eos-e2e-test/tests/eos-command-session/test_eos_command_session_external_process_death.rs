@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    wait_for_command_session_transcript_recycled, wait_for_session_count,
 };
 
 struct MarkerSession {
@@ -41,6 +41,7 @@ fn external_sigterm_child_finalizes_via_collect_completed() -> Result<()> {
         );
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
+        wait_for_command_session_transcript_recycled(&lease, &session.id)?;
         Ok(())
     })();
 
@@ -70,6 +71,7 @@ fn external_sigkill_process_group_is_observed_by_write_stdin() -> Result<()> {
         );
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
+        wait_for_command_session_transcript_recycled(&lease, &session.id)?;
         Ok(())
     })();
 
@@ -437,8 +439,10 @@ fn wait_for_marker_count(
 }
 
 fn cancel_session(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
-    lease.call(
+    let cancelled = lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id, "max_output_tokens": 1000}),
-    )
+    )?;
+    wait_for_command_session_transcript_recycled(lease, id)?;
+    Ok(cancelled)
 }

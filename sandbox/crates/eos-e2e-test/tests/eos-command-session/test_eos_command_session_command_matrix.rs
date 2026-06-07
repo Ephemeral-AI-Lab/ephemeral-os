@@ -8,8 +8,8 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    array, as_i64, as_str, command_session_transcript_logs, live_pool_or_skip, stdout,
+    wait_for_active_leases, wait_for_command_session_transcript_recycled, wait_for_session_count,
 };
 
 struct CommandFamily {
@@ -80,6 +80,7 @@ fn run_command_family(family_name: &str) -> Result<()> {
 
     let started = Instant::now();
     let mut executed = 0;
+    let before_transcripts = command_session_transcript_logs(&lease)?;
     ensure!(
         family.variants.len() >= 2,
         "command family {} should have multiple variants",
@@ -123,6 +124,11 @@ fn run_command_family(family_name: &str) -> Result<()> {
     );
     wait_for_session_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
+    let after_transcripts = command_session_transcript_logs(&lease)?;
+    ensure!(
+        after_transcripts == before_transcripts,
+        "foreground command family should recycle transient transcripts; before={before_transcripts:?} after={after_transcripts:?}"
+    );
     Ok(())
 }
 
@@ -224,11 +230,12 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
 
         let cancel = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
         )?;
         ensure_terminalish_status(&cancel)?;
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
+        wait_for_command_session_transcript_recycled(&lease, &session_id)?;
         Ok(())
     })();
 
@@ -260,6 +267,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
             "command-load/level-{level}/{}",
             unique_suffix().replace('-', "_")
         );
+        let before_transcripts = command_session_transcript_logs(&lease)?;
         let barrier = Arc::new(Barrier::new(level));
         let handles: Vec<_> = (0..level)
             .map(|index| {
@@ -316,6 +324,11 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
             as_i64(&metrics, "active_leases")? == 0,
             "parallel command level {level} should not leak leases: {metrics}"
         );
+        let after_transcripts = command_session_transcript_logs(&lease)?;
+        ensure!(
+            after_transcripts == before_transcripts,
+            "parallel foreground command level {level} should recycle transient transcripts; before={before_transcripts:?} after={after_transcripts:?}"
+        );
     }
     wait_for_session_count(&lease, 0)?;
     Ok(())
@@ -335,6 +348,7 @@ fn parallel_prompt_sessions_ladder_stays_isolated_and_bounded() -> Result<()> {
     let timeout_s = workload_timeout_s(&pool);
 
     for level in levels {
+        let before_transcripts = command_session_transcript_logs(&lease)?;
         let barrier = Arc::new(Barrier::new(level));
         let handles: Vec<_> = (0..level)
             .map(|index| {
@@ -451,6 +465,11 @@ time.sleep(60)'"
         ensure!(
             as_i64(&metrics, "active_leases")? == 0,
             "parallel prompt level {level} should not leak leases: {metrics}"
+        );
+        let after_transcripts = command_session_transcript_logs(&lease)?;
+        ensure!(
+            after_transcripts == before_transcripts,
+            "parallel prompt level {level} should recycle command-session transcripts; before={before_transcripts:?} after={after_transcripts:?}"
         );
     }
     Ok(())

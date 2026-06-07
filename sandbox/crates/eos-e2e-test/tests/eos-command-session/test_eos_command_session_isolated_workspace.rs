@@ -1,13 +1,14 @@
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, Context, Result};
 use eos_e2e_test::NodeLease;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    array, as_bool, as_str, isolated_command_session_transcript_path, live_pool_or_skip,
+    reset_isolated_workspaces, stdout, wait_for_active_leases, wait_for_container_path,
+    wait_for_isolated_command_session_transcript_recycled, wait_for_session_count,
 };
 
 #[test]
@@ -18,7 +19,8 @@ fn iws_same_port_discard() -> Result<()> {
     let lease = pool.acquire()?;
     let server_cmd =
         "mkdir -p /eos/scratch/e2e && python3 -m http.server 39001 >/eos/scratch/e2e/eos-e2e-http.log 2>&1";
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let first_enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let first_handle_id = as_str(&first_enter, "workspace_handle_id")?.to_owned();
     let first = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
@@ -36,11 +38,13 @@ fn iws_same_port_discard() -> Result<()> {
     let first_id = as_str(&first, "command_session_id")?.to_owned();
     lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": first_id}),
+        json!({"command_session_id": &first_id}),
     )?;
+    wait_for_isolated_command_session_transcript_recycled(&lease, &first_handle_id, &first_id)?;
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}))?;
 
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let second_enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let second_handle_id = as_str(&second_enter, "workspace_handle_id")?.to_owned();
     let second = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
@@ -63,6 +67,7 @@ fn iws_same_port_discard() -> Result<()> {
             ops::API_V1_COMMAND_CANCEL,
             json!({"command_session_id": id}),
         )?;
+        wait_for_isolated_command_session_transcript_recycled(&lease, &second_handle_id, id)?;
     }
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}))?;
     Ok(())
@@ -89,7 +94,8 @@ print(\"iws-wrote:\" + payload, flush=True); \
 time.sleep(60)'"
     );
 
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let handle_id = as_str(&enter, "workspace_handle_id")?.to_owned();
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
@@ -104,6 +110,8 @@ time.sleep(60)'"
         "isolated prompt command should start and expose prompt: {started}"
     );
     let session_id = as_str(&started, "command_session_id")?.to_owned();
+    let transcript_path = isolated_command_session_transcript_path(&handle_id, &session_id);
+    wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
 
     let body = (|| -> Result<()> {
         let answered = lease.call_ok(
@@ -177,6 +185,7 @@ time.sleep(60)'"
             "isolated command cancel should return terminal-ish status: {cancelled}"
         );
         wait_for_session_count(&lease, 0)?;
+        wait_for_isolated_command_session_transcript_recycled(&lease, &handle_id, &session_id)?;
         Ok(())
     })();
 
@@ -231,4 +240,103 @@ fn poll_stdin_cursor_until_stdout_contains(
         last = Some(poll);
     }
     bail!("stdin cursor did not surface {needle:?} before deadline; last poll: {last:?}");
+}
+
+#[test]
+fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
+    let marker = format!(
+        "eos_e2e_iws_escape_{}",
+        eos_e2e_test::unique_suffix().replace('-', "_")
+    );
+    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    // The same escaped-`setsid` descendant that LEAKS in ephemeral mode is reaped
+    // here: isolated workspaces run commands under a cgroup, and exit's cgroup kill
+    // reaps even a pgid-escaped descendant. This is the contained counterpart that
+    // proves the ephemeral-vs-isolated asymmetry. (Requires cgroup delegation in
+    // the live container; without it the descendant would survive and this fails,
+    // which is itself the finding.)
+    let body = (|| -> Result<()> {
+        let completed = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "cmd": format!(
+                    "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & echo iws-escaped-ready'"
+                ),
+                "yield_time_ms": 1500,
+                "timeout_seconds": 60,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        ensure!(
+            as_str(&completed, "status")? == "ok",
+            "isolated escaped-child command should complete: {completed}"
+        );
+        ensure!(
+            marker_count(&lease, &marker)? >= 1,
+            "escaped descendant should be alive before isolated exit"
+        );
+        wait_for_session_count(&lease, 0)?;
+        Ok(())
+    })();
+
+    // Always exit isolated mode so a tripped assertion cannot leak an open
+    // workspace past the cap; exit's cgroup kill is also what reaps the escapee.
+    let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
+    body?;
+    exit?;
+    // The isolated cgroup must reap the escaped descendant on exit.
+    wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(6))?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+/// Count container processes whose argv carries `marker`, scanned from the host
+/// PID namespace where a reparented escapee remains visible; excludes the
+/// scanner's own pid (its argv carries `marker` too).
+fn marker_count(lease: &NodeLease<'_>, marker: &str) -> Result<i64> {
+    let script = format!(
+        r#"import os, pathlib
+marker = {marker:?}
+count = 0
+for proc in pathlib.Path("/proc").iterdir():
+    if not proc.name.isdigit() or int(proc.name) == os.getpid():
+        continue
+    try:
+        cmdline = proc.joinpath("cmdline").read_bytes().replace(b"\0", b" ").decode("utf-8", "ignore")
+    except OSError:
+        continue
+    if marker in cmdline:
+        count += 1
+print(count)
+"#
+    );
+    let output = lease.container().exec(&["python3", "-c", &script])?;
+    output
+        .trim()
+        .parse::<i64>()
+        .with_context(|| format!("parse marker count from {output:?}"))
+}
+
+fn wait_for_marker_count(
+    lease: &NodeLease<'_>,
+    marker: &str,
+    expected: i64,
+    timeout: Duration,
+) -> Result<()> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        let count = marker_count(lease, marker)?;
+        if count == expected {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            bail!("marker {marker} count did not reach {expected}; last {count}");
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
 }

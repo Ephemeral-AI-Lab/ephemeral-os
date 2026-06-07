@@ -11,10 +11,10 @@ use serde_json::Value;
 use crate::process::{
     CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, ProcessReap,
 };
-#[cfg(any(not(target_os = "linux"), test))]
-use crate::CommandSessionConfig;
 #[cfg(target_os = "linux")]
 use crate::wait::CommandSessionWaitTarget;
+#[cfg(any(not(target_os = "linux"), test))]
+use crate::CommandSessionConfig;
 use crate::{
     CommandResponse, CommandSessionError, CommandSessionOutput, CommandSessionOutputCursor,
     DynCommandWorkspacePolicy,
@@ -34,6 +34,8 @@ pub(crate) struct CommandSession {
     output_path: PathBuf,
     #[cfg(target_os = "linux")]
     final_path: PathBuf,
+    #[cfg(target_os = "linux")]
+    transcript_path: PathBuf,
     #[cfg(target_os = "linux")]
     cancelled: Mutex<bool>,
     #[cfg(target_os = "linux")]
@@ -58,6 +60,7 @@ pub(crate) struct RunningCommandSessionParts {
     pub output: Arc<CommandSessionOutput>,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
+    pub transcript_path: PathBuf,
     pub output_drain_grace_ms: u64,
 }
 
@@ -112,6 +115,8 @@ impl CommandSession {
             #[cfg(target_os = "linux")]
             final_path: inactive.final_path,
             #[cfg(target_os = "linux")]
+            transcript_path: inactive.transcript_path,
+            #[cfg(target_os = "linux")]
             cancelled: Mutex::new(false),
             #[cfg(target_os = "linux")]
             interrupted: Mutex::new(false),
@@ -141,6 +146,7 @@ impl CommandSession {
             process: running.process,
             output_path: running.output_path,
             final_path: running.final_path,
+            transcript_path: running.transcript_path,
             cancelled: Mutex::new(false),
             interrupted: Mutex::new(false),
             output_drain_grace_ms: running.output_drain_grace_ms,
@@ -309,10 +315,20 @@ impl CommandSession {
         );
         if let Ok(response) = response.as_ref() {
             if let Err(error) = write_final_response(&self.final_path, response) {
+                self.remove_transcript_file();
                 return Some(Err(error));
             }
         }
+        self.remove_transcript_file();
         Some(response)
+    }
+
+    #[cfg(target_os = "linux")]
+    fn remove_transcript_file(&self) {
+        if self.transcript_path.as_os_str().is_empty() {
+            return;
+        }
+        let _ = std::fs::remove_file(&self.transcript_path);
     }
 }
 
@@ -372,6 +388,7 @@ fn inactive_process_parts(
         output,
         output_path: PathBuf::new(),
         final_path: PathBuf::new(),
+        transcript_path: PathBuf::new(),
         output_drain_grace_ms,
     }
 }
@@ -422,5 +439,93 @@ mod tests {
         assert_eq!(session.caller_id(), "caller");
         assert_eq!(session.command(), "echo ok");
         assert!(session.is_expired(session.started_at() + Duration::from_millis(2)));
+    }
+
+    #[cfg(target_os = "linux")]
+    struct FinalizingPolicy;
+
+    #[cfg(target_os = "linux")]
+    impl eos_workspace_api::CommandWorkspacePolicy for FinalizingPolicy {
+        fn prepare_command_workspace(
+            &self,
+            _request: eos_workspace_api::PrepareCommandRequest,
+        ) -> Result<eos_workspace_api::PreparedCommandWorkspace, eos_workspace_api::WorkspaceApiError>
+        {
+            unreachable!("finalization test does not prepare")
+        }
+
+        fn finalize_command_workspace(
+            &self,
+            request: eos_workspace_api::FinalizeCommandRequest,
+        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
+        {
+            Ok(eos_workspace_api::WorkspaceCommandOutcome {
+                mode: eos_workspace_api::WorkspaceMode::default(),
+                success: request.command_succeeded(),
+                status: request.status,
+                exit_code: request.exit_code,
+                stdout: request.stdout,
+                stderr: request.stderr,
+                command_session_id: request.command_session_id,
+                changed_paths: Vec::new(),
+                changed_path_kinds: Default::default(),
+                mutation_source: "test".to_owned(),
+                conflict: None,
+                conflict_reason: None,
+                timings: Default::default(),
+                metadata: serde_json::Value::Null,
+            })
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn process_finalization_removes_transcript_file() -> Result<(), Box<dyn std::error::Error>> {
+        let root = std::env::temp_dir().join(format!(
+            "eos-command-session-transcript-cleanup-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root)?;
+        let transcript_path = root.join("transcript.log");
+        let final_path = root.join("final.json");
+        std::fs::write(&transcript_path, b"captured output")?;
+
+        let config = CommandSessionConfig::default();
+        let output = Arc::new(CommandSessionOutput::new(&config));
+        let writer = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/null")?;
+        let session = CommandSession::new_running(
+            CommandSessionSpec {
+                id: "cmd_1".to_owned(),
+                caller_id: "caller".to_owned(),
+                command: "echo ok".to_owned(),
+                timeout_seconds: None,
+            },
+            Box::new(FinalizingPolicy),
+            RunningCommandSessionParts {
+                process: crate::process::CommandSessionProcess::inactive(writer),
+                output,
+                output_path: root.join("runner-result.json"),
+                final_path: final_path.clone(),
+                transcript_path: transcript_path.clone(),
+                output_drain_grace_ms: 0,
+            },
+        );
+
+        let result = session
+            .try_finalize_process()
+            .expect("inactive process finalizes")?;
+
+        assert_eq!(result.command_session_id.as_deref(), Some("cmd_1"));
+        assert!(final_path.exists());
+        assert!(!transcript_path.exists());
+
+        let _ = std::fs::remove_dir_all(root);
+        Ok(())
     }
 }

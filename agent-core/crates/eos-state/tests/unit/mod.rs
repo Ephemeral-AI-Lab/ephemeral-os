@@ -211,3 +211,65 @@ fn model_registration_no_class_path_dispatch() {
         "migration-only field used in a dispatch branch (forbidden, GC-eos-state-04): {offenders:?}"
     );
 }
+
+// Value-object validators: the reject paths. Only the Ok paths were exercised
+// downstream (eos-db builds budgets/goals from valid input); each case below
+// pairs a valid construction with the blank / out-of-range inputs the validator
+// must reject, so the test fails if a guard is dropped or construction breaks.
+#[test]
+fn plan_value_validators_reject_blank_and_out_of_range() {
+    // PlanNodeId: nonblank accepted; blank/whitespace rejected (incl. TryFrom).
+    assert_eq!(PlanNodeId::new("n1").expect("nonblank node id").as_str(), "n1");
+    assert!(PlanNodeId::new("").is_err());
+    assert!(PlanNodeId::new("   ").is_err());
+    assert!(PlanNodeId::try_from("  ").is_err());
+    assert!(PlanNodeId::try_from(String::new()).is_err());
+
+    // DeferredGoal: nonblank accepted; blank/whitespace rejected.
+    assert_eq!(
+        DeferredGoal::new("later").expect("nonblank goal").as_str(),
+        "later"
+    );
+    assert!(DeferredGoal::new("").is_err());
+    assert!(DeferredGoal::new("  ").is_err());
+
+    // AttemptBudget: positive accepted; zero / negative / u32-overflow rejected.
+    assert_eq!(AttemptBudget::try_from_u32(5).expect("positive").get(), 5);
+    assert!(AttemptBudget::try_from_u32(0).is_err());
+    assert_eq!(AttemptBudget::try_from_i64(7).expect("positive").get(), 7);
+    assert!(AttemptBudget::try_from_i64(0).is_err());
+    assert!(AttemptBudget::try_from_i64(-1).is_err());
+    assert!(AttemptBudget::try_from_i64(i64::from(u32::MAX) + 1).is_err());
+}
+
+// Data-carrying outcome enums (struct variants) round-trip through serde. The
+// simple enums are pinned by `serde_wire_values_match_rust`; these two carry a
+// payload (`Cancelled { reason }`, `Continue { deferred_goal }`) and were not.
+#[test]
+fn data_carrying_outcome_enums_serde_roundtrip() {
+    for outcome in [
+        WorkflowOutcome::Succeeded,
+        WorkflowOutcome::Failed,
+        WorkflowOutcome::Cancelled {
+            reason: "stopped".to_owned(),
+        },
+    ] {
+        let encoded = serde_json::to_string(&outcome).expect("encode");
+        let decoded: WorkflowOutcome = serde_json::from_str(&encoded).expect("decode");
+        assert_eq!(decoded, outcome, "WorkflowOutcome via {encoded}");
+    }
+    for outcome in [
+        IterationOutcome::Complete,
+        IterationOutcome::Failed,
+        IterationOutcome::Continue {
+            deferred_goal: DeferredGoal::new("next").expect("goal"),
+        },
+        IterationOutcome::Cancelled {
+            reason: "stopped".to_owned(),
+        },
+    ] {
+        let encoded = serde_json::to_string(&outcome).expect("encode");
+        let decoded: IterationOutcome = serde_json::from_str(&encoded).expect("decode");
+        assert_eq!(decoded, outcome, "IterationOutcome via {encoded}");
+    }
+}

@@ -395,4 +395,102 @@ mod tests {
         ];
         assert!(dag_resolution(&cycle).is_err());
     }
+
+    // ---- authoring-time plan-shape validation (`validate_plan_shape`) --------
+    //
+    // The cycle test above exercises `dag_resolution` (the persisted-state
+    // scheduler). `validate_plan_shape` is the distinct authoring-time gate that
+    // rejects a malformed planner submission before any task row is written; its
+    // reject branches (and `assert_acyclic`) were untested. Each case isolates
+    // one rejection and pairs it with the accepted baseline, so the test fails if
+    // a guard is dropped (malformed -> Ok) or the baseline breaks (valid -> Err).
+
+    fn pnode(id: &str) -> PlanNodeId {
+        PlanNodeId::new(id).expect("plan node id")
+    }
+
+    fn gen(id: &str, needs: &[&str]) -> eos_tools::PlanTask {
+        eos_tools::PlanTask {
+            id: pnode(id),
+            agent_name: "coder".to_owned(),
+            needs: needs.iter().map(|n| pnode(n)).collect(),
+        }
+    }
+
+    fn red(id: &str, needs: &[&str]) -> eos_tools::PlanReducer {
+        eos_tools::PlanReducer {
+            id: pnode(id),
+            needs: needs.iter().map(|n| pnode(n)).collect(),
+            prompt: "reduce".to_owned(),
+        }
+    }
+
+    fn shape_plan(tasks: Vec<eos_tools::PlanTask>, reducers: Vec<eos_tools::PlanReducer>) -> PlannerPlan {
+        let task_specs = tasks
+            .iter()
+            .map(|task| (task.id.clone(), "spec".to_owned()))
+            .collect();
+        PlannerPlan {
+            attempt_id: eos_types::AttemptId::new_v4(),
+            planner_task_id: tid("planner"),
+            disposition: eos_state::PlanDisposition::Complete,
+            tasks,
+            task_specs,
+            reducers,
+        }
+    }
+
+    #[test]
+    fn validate_plan_shape_accepts_valid_and_rejects_each_malformation() {
+        // Baseline: one generator feeding one reducer — a well-formed DAG.
+        validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![red("r1", &["g1"])]))
+            .expect("a well-formed plan validates");
+
+        // No reducer.
+        assert!(validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![])).is_err());
+        // Duplicate id across the generator/reducer union.
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &[]), gen("g1", &[])],
+            vec![red("r1", &["g1"])],
+        ))
+        .is_err());
+        // A generator may not depend on a reducer.
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &["r1"])],
+            vec![red("r1", &["g1"])],
+        ))
+        .is_err());
+        // A generator with an unknown need.
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &["ghost"])],
+            vec![red("r1", &["g1"])],
+        ))
+        .is_err());
+        // A reducer with no needs.
+        assert!(validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![red("r1", &[])])).is_err());
+        // A reducer that depends on another reducer.
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &[])],
+            vec![red("r1", &["g1"]), red("r2", &["r1"])],
+        ))
+        .is_err());
+        // A reducer with an unknown need (alongside a valid one).
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &[])],
+            vec![red("r1", &["g1", "ghost"])],
+        ))
+        .is_err());
+        // A dangling generator no downstream task needs.
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &[]), gen("g2", &[])],
+            vec![red("r1", &["g1"])],
+        ))
+        .is_err());
+        // A generator dependency cycle (reaches `assert_acyclic`).
+        assert!(validate_plan_shape(&shape_plan(
+            vec![gen("g1", &["g2"]), gen("g2", &["g1"])],
+            vec![red("r1", &["g1"])],
+        ))
+        .is_err());
+    }
 }
