@@ -14,10 +14,9 @@ use eos_agent_def::{AgentDefinition, AgentName};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_engine::{
     run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundTeardownPort,
-    CommandService, EngineCancelPort, ForegroundExecutorFactory, WorkflowService,
+    CommandService, EngineCancelPort, ForegroundExecutorFactory,
 };
 use eos_llm_client::Message;
-use eos_ports::WorkflowControlPort;
 use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_tools::{
     AgentRunServicePort, AttemptSubmissionPort, CancelPort, CommandSessionPort,
@@ -27,7 +26,7 @@ use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
 use eos_workflow::{
     AgentEntryComposer, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
     AttemptSubmissionAdapter, ContextEngine, ContextEngineDeps, OpenIterationCoordinatorRegistry,
-    WorkflowControlAdapter, WorkflowLifecycleConfig, WorkflowStarter,
+    WorkflowLifecycleConfig, WorkflowServiceAdapter, WorkflowStarter,
 };
 use serde_json::json;
 
@@ -165,7 +164,7 @@ pub async fn run_request(
     let starter = WorkflowStarter::new(attempt_deps);
     // The recursive cancellation port (spec §7.2/§12). It must wrap the SAME
     // `agent_run_registry` the runner inserts live runs into, or `cancel_task`
-    // would find no live run and only flip DB state. It reads the workflow-control
+    // would find no live run and only flip DB state. It reads the workflow service
     // cell late (set below) so workflow cancellation can recurse back through it.
     let cancel_port: Arc<dyn CancelPort> = Arc::new(EngineCancelPort::new(
         agent_run_registry.clone(),
@@ -178,7 +177,7 @@ pub async fn run_request(
     let _cancel_guard = services
         .cancel_registry
         .register(request_id.clone(), cancel_port.clone());
-    let workflow_control: Arc<dyn WorkflowControlPort> = Arc::new(WorkflowControlAdapter::new(
+    let workflow_service: Arc<dyn WorkflowServicePort> = Arc::new(WorkflowServiceAdapter::new(
         starter,
         services.db.workflow_store.clone(),
         services.db.iteration_store.clone(),
@@ -188,8 +187,6 @@ pub async fn run_request(
     ));
     // Late-bind the workflow service into the workflow-agent runner and each
     // per-run workflow-session poller.
-    let workflow_service: Arc<dyn WorkflowServicePort> =
-        Arc::new(WorkflowService::new(workflow_control.clone()));
     let _ = workflow_service_cell.set(workflow_service.clone());
 
     // Root task: `root-{request_id}` (Option A), running, no workflow.

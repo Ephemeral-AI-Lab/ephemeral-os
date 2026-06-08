@@ -196,7 +196,7 @@ async fn delegate_workflow_registers_background_session() {
 }
 
 #[tokio::test]
-async fn workflow_controls_reject_empty_ids() {
+async fn workflow_tools_reject_empty_ids() {
     let ctx = metadata();
 
     for input in [

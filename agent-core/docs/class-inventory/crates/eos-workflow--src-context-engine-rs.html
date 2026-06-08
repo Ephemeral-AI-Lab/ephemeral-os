@@ -24,7 +24,7 @@
   <div><b>20</b><span>modules</span></div>
   <div><b>137</b><span>items</span></div>
   <div><b>131</b><span>fields</span></div>
-  <div><b>140</b><span>methods</span></div>
+  <div><b>142</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -296,7 +296,7 @@
                             &quot;sequence&quot;.to_owned(),
                             attempt.attempt_sequence_no.to_string(),
                         ),
-                        (&quot;status&quot;.to_owned(), attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>().<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>().to_owned()),
+                        (&quot;status&quot;.to_owned(), attempt.status().<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>().to_owned()),
                     ])
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-with-children-70">with_children</a>(outcomes.iter().map(render_task_outcome).collect()),
             );
@@ -675,7 +675,7 @@
                             &quot;sequence&quot;.to_owned(),
                             attempt.attempt_sequence_no.to_string(),
                         ),
-                        (&quot;status&quot;.to_owned(), attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>().<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>().to_owned()),
+                        (&quot;status&quot;.to_owned(), attempt.status().<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>().to_owned()),
                     ])
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-with-children-70">with_children</a>(outcomes.iter().map(render_task_outcome).collect()),
             );

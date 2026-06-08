@@ -3,14 +3,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_ports::WorkflowControlPort;
+use eos_ports::{
+    AttemptSubmissionPort, CancelPort, OutstandingWorkflow, PlannerPlan, Sealed,
+    StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus, SubmissionAck, TerminalWorkflow,
+    WorkflowServicePort,
+};
 use eos_state::{
     AttemptClosure, GeneratorSubmission, IterationStatus, ReducerSubmission, TaskStore, WorkflowId,
     WorkflowStatus,
 };
-use eos_tools::{
-    AttemptSubmissionPort, CancelPort, OutstandingWorkflow, PlannerPlan, SubmissionAck, ToolError,
-};
+use eos_tools::ToolError;
 use eos_types::{AgentRunId, WorkflowSessionId};
 use parking_lot::Mutex;
 
@@ -46,7 +48,7 @@ impl AttemptSubmissionAdapter {
     }
 }
 
-impl eos_tools::ports::Sealed for AttemptSubmissionAdapter {}
+impl Sealed for AttemptSubmissionAdapter {}
 
 #[async_trait]
 impl AttemptSubmissionPort for AttemptSubmissionAdapter {
@@ -97,9 +99,9 @@ fn submission_ack(result: crate::Result<()>) -> Result<SubmissionAck, ToolError>
     }
 }
 
-/// Adapter from `eos-tools` workflow-control ports to delegated workflow state.
+/// Adapter from the workflow service port to delegated workflow state.
 #[derive(Clone)]
-pub struct WorkflowControlAdapter {
+pub struct WorkflowServiceAdapter {
     starter: WorkflowStarter,
     workflow_store: Arc<dyn eos_state::WorkflowStore>,
     iteration_store: Arc<dyn eos_state::IterationStore>,
@@ -111,15 +113,15 @@ pub struct WorkflowControlAdapter {
     cancel_port: Arc<dyn CancelPort>,
 }
 
-impl std::fmt::Debug for WorkflowControlAdapter {
+impl std::fmt::Debug for WorkflowServiceAdapter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WorkflowControlAdapter")
+        f.debug_struct("WorkflowServiceAdapter")
             .finish_non_exhaustive()
     }
 }
 
-impl WorkflowControlAdapter {
-    /// Create a workflow-control adapter.
+impl WorkflowServiceAdapter {
+    /// Create a workflow service adapter.
     #[must_use]
     pub fn new(
         starter: WorkflowStarter,
@@ -141,59 +143,36 @@ impl WorkflowControlAdapter {
     }
 }
 
-impl eos_tools::ports::Sealed for WorkflowControlAdapter {}
+impl Sealed for WorkflowServiceAdapter {}
 
 #[async_trait]
-impl WorkflowControlPort for WorkflowControlAdapter {
-    async fn start(
+impl WorkflowServicePort for WorkflowServiceAdapter {
+    async fn start_workflow(
         &self,
-        parent_task_id: &eos_state::TaskId,
-        _agent_run_id: &AgentRunId,
-        workflow_goal: &str,
-    ) -> Result<eos_tools::StartedWorkflowSession, ToolError> {
+        request: StartWorkflowRequest,
+    ) -> Result<StartedWorkflow, ToolError> {
         let started = self
             .starter
-            .start(workflow_goal, parent_task_id)
+            .start(&request.workflow_goal, &request.parent_task_id)
             .await
-            .map_err(workflow_control_error)?;
+            .map_err(workflow_service_error)?;
         let workflow_task_id = self.handles.handle_for_workflow(&started.workflow_id)?;
-        Ok(eos_tools::StartedWorkflowSession {
+        Ok(StartedWorkflow {
             workflow_task_id,
             workflow_id: started.workflow_id,
         })
     }
 
-    async fn status(
+    async fn check_workflow_status(
         &self,
         workflow_id: &WorkflowId,
         workflow_task_id: Option<&WorkflowSessionId>,
     ) -> Result<String, ToolError> {
-        if let Some(handle) = workflow_task_id {
-            let Some(handle_workflow_id) = self.handles.workflow_id_for_handle(handle) else {
-                return Ok(format!("Workflow handle {handle} was not found."));
-            };
-            if &handle_workflow_id != workflow_id {
-                return Ok(format!(
-                    "Workflow handle {handle} does not refer to workflow {workflow_id}."
-                ));
-            }
-        }
-        let Some(workflow) = self.workflow_store.get(workflow_id).await? else {
-            return Ok(format!("Workflow {workflow_id} was not found."));
-        };
-        let handle = self.handles.handle_for_workflow(&workflow.id)?;
-        let mut text = format!(
-            "Workflow {} ({}) is {:?}. Goal: {}",
-            workflow.id, handle, workflow.status, workflow.workflow_goal
-        );
-        if let Some(outcomes) = &workflow.outcomes {
-            text.push_str("\nOutcomes:\n");
-            text.push_str(outcomes);
-        }
-        Ok(text)
+        self.workflow_status_text(workflow_id, workflow_task_id)
+            .await
     }
 
-    async fn cancel(
+    async fn cancel_workflow_session(
         &self,
         workflow_task_id: &WorkflowSessionId,
         reason: &str,
@@ -214,7 +193,34 @@ impl WorkflowControlPort for WorkflowControlAdapter {
         Ok(format!("Workflow {workflow_id} cancelled: {reason}"))
     }
 
-    async fn find_outstanding(
+    async fn poll_terminal_workflow(
+        &self,
+        workflow_id: &WorkflowId,
+        workflow_task_id: &WorkflowSessionId,
+    ) -> Result<Option<TerminalWorkflow>, ToolError> {
+        let Some(handle_workflow_id) = self.handles.workflow_id_for_handle(workflow_task_id) else {
+            return Ok(None);
+        };
+        if &handle_workflow_id != workflow_id {
+            return Ok(None);
+        }
+        let Some(workflow) = self.workflow_store.get(&handle_workflow_id).await? else {
+            return Ok(None);
+        };
+        let status = match workflow.status {
+            WorkflowStatus::Open => return Ok(None),
+            WorkflowStatus::Succeeded => SubagentSessionStatus::Completed,
+            WorkflowStatus::Failed => SubagentSessionStatus::Failed,
+            WorkflowStatus::Cancelled => SubagentSessionStatus::Cancelled,
+        };
+        Ok(Some(TerminalWorkflow {
+            workflow_id: workflow.id,
+            workflow_task_id: workflow_task_id.clone(),
+            status,
+        }))
+    }
+
+    async fn find_outstanding_workflows(
         &self,
         parent_task_id: &eos_state::TaskId,
         _agent_run_id: &AgentRunId,
@@ -260,7 +266,37 @@ impl WorkflowControlPort for WorkflowControlAdapter {
     }
 }
 
-impl WorkflowControlAdapter {
+impl WorkflowServiceAdapter {
+    async fn workflow_status_text(
+        &self,
+        workflow_id: &WorkflowId,
+        workflow_task_id: Option<&WorkflowSessionId>,
+    ) -> Result<String, ToolError> {
+        if let Some(handle) = workflow_task_id {
+            let Some(handle_workflow_id) = self.handles.workflow_id_for_handle(handle) else {
+                return Ok(format!("Workflow handle {handle} was not found."));
+            };
+            if &handle_workflow_id != workflow_id {
+                return Ok(format!(
+                    "Workflow handle {handle} does not refer to workflow {workflow_id}."
+                ));
+            }
+        }
+        let Some(workflow) = self.workflow_store.get(workflow_id).await? else {
+            return Ok(format!("Workflow {workflow_id} was not found."));
+        };
+        let handle = self.handles.handle_for_workflow(&workflow.id)?;
+        let mut text = format!(
+            "Workflow {} ({}) is {:?}. Goal: {}",
+            workflow.id, handle, workflow.status, workflow.workflow_goal
+        );
+        if let Some(outcomes) = &workflow.outcomes {
+            text.push_str("\nOutcomes:\n");
+            text.push_str(outcomes);
+        }
+        Ok(text)
+    }
+
     /// Decompose workflow cancellation through `cancel_iteration` -> `cancel_attempt`
     /// -> `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*
     /// attempts (the idempotency guards), so a re-entrant cancel (a child workflow
@@ -355,7 +391,7 @@ impl WorkflowControlAdapter {
     }
 }
 
-fn workflow_control_error(err: WorkflowError) -> ToolError {
+fn workflow_service_error(err: WorkflowError) -> ToolError {
     match err {
         WorkflowError::Store(err) => ToolError::Store(err),
         WorkflowError::Tool(err) => err,
@@ -406,7 +442,7 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
-    use eos_ports::WorkflowControlPort as _;
+    use eos_ports::WorkflowServicePort as _;
     use eos_state::{AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus};
     use eos_types::JsonObject;
     use serde_json::json;
@@ -455,12 +491,12 @@ mod tests {
         }
     }
 
-    // The workflow-control adapter mints `wf_<n>` handles (not workflow ids),
+    // The workflow service adapter mints `wf_<n>` handles (not workflow ids),
     // rejects a fabricated handle, and `cancel` decomposes through the delegated
     // tree (workflow + iteration + attempt CANCELLED, active tasks CANCELLED with a
     // `cancelled` marker, latched before close) without mutating the parent.
     #[tokio::test]
-    async fn workflow_control_uses_runtime_handles_and_cancels_child_state() {
+    async fn workflow_service_uses_runtime_handles_and_cancels_child_state() {
         let stores = Arc::new(MemoryStores::default());
         let runner = Arc::new(QueueRunner::default());
         let deps = stores.deps(runner);
@@ -469,7 +505,7 @@ mod tests {
         let cancel_port: Arc<dyn CancelPort> = Arc::new(TestCancelPort {
             task_store: stores.clone(),
         });
-        let adapter = WorkflowControlAdapter::new(
+        let adapter = WorkflowServiceAdapter::new(
             WorkflowStarter::new(deps),
             stores.clone(),
             stores.clone(),
@@ -480,7 +516,11 @@ mod tests {
 
         let agent_run_id: AgentRunId = "agent-run-1".parse().expect("agent run id");
         let started = adapter
-            .start(&parent.id, &agent_run_id, "delegated goal")
+            .start_workflow(StartWorkflowRequest {
+                parent_task_id: parent.id.clone(),
+                agent_run_id,
+                workflow_goal: "delegated goal".to_owned(),
+            })
             .await
             .unwrap();
         assert_eq!(started.workflow_task_id.as_str(), "wf_1");
@@ -489,13 +529,13 @@ mod tests {
                 .parse()
                 .unwrap();
         assert!(adapter
-            .status(&started.workflow_id, Some(&derived_handle))
+            .check_workflow_status(&started.workflow_id, Some(&derived_handle))
             .await
             .unwrap()
             .contains("was not found"));
 
         adapter
-            .cancel(&started.workflow_task_id, "stop now")
+            .cancel_workflow_session(&started.workflow_task_id, "stop now")
             .await
             .unwrap();
 

@@ -24,7 +24,7 @@
   <div><b>20</b><span>modules</span></div>
   <div><b>137</b><span>items</span></div>
   <div><b>131</b><span>fields</span></div>
-  <div><b>140</b><span>methods</span></div>
+  <div><b>142</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -524,7 +524,7 @@
         wait_for_workflow_status(&amp;stores, &amp;started.workflow_id, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Failed</span>).<span class="rs-kw">await</span>;
 
         <span class="rs-kw">let</span> attempt = stores.attempt(&amp;started.attempt_id).unwrap();
-        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> generator_id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;started.attempt_id, &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-366">node</a>(&quot;g1&quot;)).unwrap();
         <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;generator_id).unwrap();
@@ -574,7 +574,7 @@
         wait_for_workflow_status(&amp;stores, &amp;started.workflow_id, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Failed</span>).<span class="rs-kw">await</span>;
 
         <span class="rs-kw">let</span> attempt = stores.attempt(&amp;started.attempt_id).unwrap();
-        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> planner_task = stores
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
@@ -631,7 +631,7 @@
             runner.max_in_flight()
         );
         assert_eq!(
-            stores.attempt(&amp;started.attempt_id).unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(),
+            stores.attempt(&amp;started.attempt_id).unwrap().status(),
             <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>
         );
 
@@ -714,7 +714,7 @@
             <span class="rs-type">Some</span>(&amp;json!(&quot;agent_launch_failed&quot;))
         );
         assert_eq!(
-            stores.attempt(&amp;started.attempt_id).unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(),
+            stores.attempt(&amp;started.attempt_id).unwrap().status(),
             <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>
         );
         assert_eq!(
@@ -1171,7 +1171,7 @@
         wait_for_workflow_status(&amp;stores, &amp;started.workflow_id, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Failed</span>).<span class="rs-kw">await</span>;
 
         <span class="rs-kw">let</span> attempt = stores.attempt(&amp;started.attempt_id).unwrap();
-        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> generator_id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;started.attempt_id, &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-366">node</a>(&quot;g1&quot;)).unwrap();
         <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;generator_id).unwrap();
@@ -1210,7 +1210,7 @@
         wait_for_workflow_status(&amp;stores, &amp;started.workflow_id, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Failed</span>).<span class="rs-kw">await</span>;
 
         <span class="rs-kw">let</span> attempt = stores.attempt(&amp;started.attempt_id).unwrap();
-        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> planner_task = stores
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
@@ -1258,7 +1258,7 @@
             runner.max_in_flight()
         );
         assert_eq!(
-            stores.attempt(&amp;started.attempt_id).unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(),
+            stores.attempt(&amp;started.attempt_id).unwrap().status(),
             <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>
         );
 
@@ -1330,7 +1330,7 @@
             <span class="rs-type">Some</span>(&amp;json!(&quot;agent_launch_failed&quot;))
         );
         assert_eq!(
-            stores.attempt(&amp;started.attempt_id).unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(),
+            stores.attempt(&amp;started.attempt_id).unwrap().status(),
             <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>
         );
         assert_eq!(

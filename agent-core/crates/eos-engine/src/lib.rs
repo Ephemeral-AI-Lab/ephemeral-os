@@ -29,6 +29,6 @@ pub use runtime::{
     EventCallback, EventSourceFactory, ForegroundExecutor, ForegroundExecutorFactory,
     ForegroundResourceId, ToolRegistryExtender,
 };
-pub use services::{AgentRunService, CommandService, WorkflowService};
+pub use services::{AgentRunService, CommandService};
 pub use support::EngineError;
 pub use telemetry::{stamp_identity, AssistantMessageComplete, PromptReportRecorder, StreamEvent};

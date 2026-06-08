@@ -9,7 +9,7 @@ pub use eos_ports::{
     CancelableResource, CancelledSubagent, CommandServicePort, CommandSessionPort,
     NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed,
     StartSubagentRunOutcome, StartSubagentRunRequest, StartWorkflowRequest, StartedSubagentRun,
-    StartedWorkflow, StartedWorkflowSession, SubagentLaunchRejection, SubagentProgress,
-    SubagentSessionPort, SubagentSessionStatus, SubmissionAck, SystemNotification,
-    TerminalAgentRun, TerminalWorkflow, WorkflowServicePort, WorkflowSessionPort,
+    StartedWorkflow, SubagentLaunchRejection, SubagentProgress, SubagentSessionPort,
+    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalAgentRun, TerminalWorkflow,
+    WorkflowServicePort, WorkflowSessionPort,
 };

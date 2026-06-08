@@ -42,9 +42,9 @@ pub use ports::{
     CancelableResource, CancelledSubagent, CommandServicePort, CommandSessionPort,
     NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan,
     StartSubagentRunOutcome, StartSubagentRunRequest, StartWorkflowRequest, StartedSubagentRun,
-    StartedWorkflow, StartedWorkflowSession, SubagentLaunchRejection, SubagentProgress,
-    SubagentSessionPort, SubagentSessionStatus, SubmissionAck, SystemNotification,
-    TerminalAgentRun, TerminalWorkflow, WorkflowServicePort, WorkflowSessionPort,
+    StartedWorkflow, SubagentLaunchRejection, SubagentProgress, SubagentSessionPort,
+    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalAgentRun, TerminalWorkflow,
+    WorkflowServicePort, WorkflowSessionPort,
 };
 pub use registry::config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use registry::tool_registry::ToolRegistry;
