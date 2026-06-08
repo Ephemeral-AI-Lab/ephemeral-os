@@ -24824,7 +24824,7 @@
               "kind": "fn",
               "name": "build_agent_loop_launcher",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) fn build_agent_loop_launcher (services : RuntimeServices , attempt_submission : Option < AttemptSubmissionService > , workflow_service : Arc < OnceLock < Arc < dyn WorkflowApi > > > , event_callback : Option < EventCallback > ,) -> (Arc < dyn AgentLoopLauncher > , AgentRunApiCell)",
+              "signature": "pub(crate) fn build_agent_loop_launcher (services : & RuntimeServices , attempt_submission : Option < AttemptSubmissionService > , workflow_service : Arc < OnceLock < Arc < dyn WorkflowApi > > > , event_callback : Option < EventCallback > ,) -> (Arc < dyn AgentLoopLauncher > , AgentRunApiCell)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -37084,7 +37084,7 @@
               ],
               "file": "crates/eos-tools/src/tools/mod.rs",
               "module": "tools",
-              "line": 36
+              "line": 38
             },
             {
               "kind": "fn",
@@ -37100,7 +37100,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/mod.rs",
               "module": "tools",
-              "line": 50
+              "line": 52
             },
             {
               "kind": "fn",
@@ -37118,7 +37118,7 @@
               ],
               "file": "crates/eos-tools/src/tools/mod.rs",
               "module": "tools",
-              "line": 66
+              "line": 68
             },
             {
               "kind": "fn",
@@ -37137,7 +37137,7 @@
               ],
               "file": "crates/eos-tools/src/tools/mod.rs",
               "module": "tools",
-              "line": 86
+              "line": 88
             },
             {
               "kind": "fn",
@@ -37155,7 +37155,7 @@
               ],
               "file": "crates/eos-tools/src/tools/mod.rs",
               "module": "tools",
-              "line": 133
+              "line": 135
             }
           ]
         },

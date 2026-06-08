@@ -1,6 +1,6 @@
 # Agent-Core Workspace Architecture Rules - Index
 
-Status: Phase 00 accepted; implementation phases draft
+Status: Phase 01 implemented; later implementation phases draft
 Date: 2026-06-09
 Owner: agent-core workspace
 
@@ -16,6 +16,8 @@ The cleanup is intentionally aggressive:
 - reserve `api` for external contract language, not crate/module names,
 - reserve `service` for owner-crate surfaces consumed by sibling crates,
 - remove `composition` and `deps` as folder/type vocabulary,
+- remove vague bucket folders such as `common`, `helpers`, `shared`, and
+  `utils`,
 - fold request runtime wiring into `eos-agent-core`,
 - fold generic config, agent definitions, and audit wiring into their real
   owners,
@@ -78,9 +80,40 @@ A file, module, trait, or type may be named service only if:
 1. it is part of the owning crate's public or intentionally exported surface, and
 2. at least one different workspace crate imports or calls it.
 
-If both are not true, use runtime, handles, context, state, records, registry,
-printer, sink, client, or a domain-specific name.
+If both are not true, rename it to the canonical replacement that matches the
+ownership semantics: runtime, handles, context, client, or records.
 ```
+
+Canonical service replacements:
+
+| Private use | Replacement |
+| --- | --- |
+| local object graph or executable wiring | `Runtime` |
+| owned long-lived resources | `Handles` |
+| per-call immutable facts | `Context` |
+| outbound external provider | `Client` |
+| persisted record surface | `Records` |
+
+The guard's automatic service failure message suggests only these five words.
+Other domain names, such as `registry.rs` or `printer.rs`, remain valid only
+when a phase spec assigns that module ownership directly; they are not generic
+fallbacks for private `Service` names.
+
+## Structure Guardrails
+
+| Area | Rule |
+| --- | --- |
+| crate roots | keep `lib.rs`, `main.rs`, and root `mod.rs` under 200 nonblank lines |
+| test placement | keep test modules under each crate's `tests/` tree, not `src/**/tests.rs` or `src/**/tests/` |
+| module shape | do not use both `foo.rs` and `foo/mod.rs` for the same module |
+| `mod.rs` routing | final target crates avoid nested `mod.rs` routing |
+| vague folders | final target crates do not use `common`, `helpers`, `shared`, or `utils` |
+| architecture folders | final target crates do not use exact folder names `api`, `services`, `ports`, `composition`, `deps`, or `runtime_services` |
+| public surface | crate roots export narrow `pub use` surfaces instead of broad `pub mod` trees |
+| budget report | `module_budget.rs` reports module count, max source-folder depth, and root file LOC, but remains advisory |
+
+Folder bans are exact-name checks. They do not ban owner-specific names such as
+`tool_api` when a phase spec keeps that contract.
 
 ## Target Crate Map
 
@@ -290,7 +323,7 @@ agent-core/
 | Phase | Status | Exit artifact |
 | --- | --- | --- |
 | 0. Architecture lock | Accepted | final 10-crate map and vocabulary are approved |
-| 1. Workspace guardrails | Not started | `cargo test -p workspace-guard` enforces naming and budget rules |
+| 1. Workspace guardrails | Implemented | `cargo test -p workspace-guard` enforces staged naming, layout, DAG, public-surface, and budget rules |
 | 2. Crate map and DAG | Not started | target crate list builds with expected internal edges |
 | 3. `eos-tool` | Not started | no `eos-tool-ports`; tool modules collapsed |
 | 3B. Execution lineage/materialization | Not started | DB lineage supports task/run/workflow/message-record materialization |
@@ -310,10 +343,15 @@ agent-core/
 - `api` is not used as a crate or module name unless Phase 0 explicitly allows
   an external transport adapter.
 - Every `*Service`, `service.rs`, or `services.rs` has at least one sibling-crate
-  behavior consumer, or it is renamed. `eos-tool` uses `ToolRuntime` in
-  `registry.rs`, not `services.rs` or `handles.rs`.
+  behavior consumer, or it is renamed to the canonical replacement that matches
+  its ownership: `Runtime`, `Handles`, `Context`, `Client`, or `Records`.
+  `eos-tool` uses `ToolRuntime` in `registry.rs`, not `services.rs` or
+  `handles.rs`.
 - `composition`, `deps`, and `runtime_services` are not used as module or type
   names.
+- Final target crates do not use vague bucket folders, exact
+  architecture-smell folders, duplicate `foo.rs` plus `foo/mod.rs` module
+  shapes, nested `mod.rs` mazes, or source-local test modules.
 - `eos-engine` contains no concrete model-facing tool family modules.
 - `eos-tool` owns tool model, registry, hooks, concrete tool behavior, and
   skills.

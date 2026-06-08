@@ -62,14 +62,14 @@
     <h3>register</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a> (registry : &amp; mut eos_tool_ports :: ToolRegistry , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a> , agent_run_service : Option &lt; Arc &lt; dyn AgentRunApi &gt; &gt; , subagent_sessions : Option &lt; SubagentToolService &gt; ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a> (registry : &amp; mut eos_tool_ports :: ToolRegistry , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a> , agent_run_service : Option &lt; Arc &lt; dyn AgentRunApi &gt; &gt; , subagent_sessions : Option &lt; SubagentToolService &gt; ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> eos_tool_ports::<span class="rs-type">ToolRegistry</span>,
     config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>,
+    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>,
     agent_run_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;&gt;,
     subagent_sessions: <span class="rs-type">Option</span>&lt;<span class="rs-type">SubagentToolService</span>&gt;,
 ) {
@@ -104,12 +104,12 @@
 
 <span class="rs-kw">use</span> eos_agent_ports::<span class="rs-type">AgentRunApi</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>, <span class="rs-type">SubagentToolService</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>, <span class="rs-type">SubagentToolService</span>};
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> eos_tool_ports::<span class="rs-type">ToolRegistry</span>,
     config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>,
+    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>,
     agent_run_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;&gt;,
     subagent_sessions: <span class="rs-type">Option</span>&lt;<span class="rs-type">SubagentToolService</span>&gt;,
 ) {

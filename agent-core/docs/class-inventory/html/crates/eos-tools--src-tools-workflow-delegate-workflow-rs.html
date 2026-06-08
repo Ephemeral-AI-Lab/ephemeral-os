@@ -175,7 +175,7 @@
     workflow_sessions: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkflowToolService</span>&gt;,
 ) {
     <span class="rs-kw">let</span> delegate = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-29">DelegateWorkflow</a>);
-    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a>(
+    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a>(
         registry,
         <span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-29">DelegateWorkflow</a>,
         delegate,
@@ -215,12 +215,12 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::spec::text_spec;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::execution::parse_input;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<span class="rs-type">WorkflowToolService</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ExecutionMetadata</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolError</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolExecutor</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolName</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolRegistry</span>;
+<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">WorkflowToolService</span>;
 <span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">OutputShape</span>, <span class="rs-type">ToolResult</span>};
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
@@ -321,7 +321,7 @@
     workflow_sessions: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkflowToolService</span>&gt;,
 ) {
     <span class="rs-kw">let</span> delegate = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-29">DelegateWorkflow</a>);
-    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a>(
+    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a>(
         registry,
         <span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-29">DelegateWorkflow</a>,
         delegate,

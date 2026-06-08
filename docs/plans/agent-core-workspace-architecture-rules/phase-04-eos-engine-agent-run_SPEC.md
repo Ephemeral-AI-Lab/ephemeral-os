@@ -204,7 +204,7 @@ Names to avoid:
 NotificationService       # engine-internal queue, rename if private
 BackgroundTeardownService # engine-internal finalizer, rename if private
 MessageRecordService      # engine-internal records, unless sibling-consumed
-EventPrinterService       # printer/sink, not service unless sibling-consumed
+EventPrinterService       # event printer type, not service unless sibling-consumed
 ```
 
 ## Execution Invariants

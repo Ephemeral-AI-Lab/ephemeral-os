@@ -8,7 +8,7 @@ Owner: agent-core verification
 
 This phase proves the refactor is complete. It removes leftover compatibility
 shims, checks workspace behavior, verifies naming guardrails, and confirms the
-module budget reduction.
+layout, public-surface, and module budget reduction.
 
 No new architecture should be introduced in this phase. If a new boundary is
 needed, the relevant earlier phase spec must be updated first.
@@ -172,7 +172,14 @@ agent-core/
   allowlisted target locations.
 - `composition`, `deps`, and `runtime_services` do not appear as target module
   or type names.
+- Final target crates do not use vague bucket folders (`common`, `helpers`,
+  `shared`, `utils`), exact architecture-smell folders (`api`, `services`,
+  `ports`, `composition`, `deps`, `runtime_services`), duplicate `foo.rs` plus
+  `foo/mod.rs` module shapes, nested `mod.rs` mazes, or source-local test
+  modules.
 - Class inventory reports at most 170 modules (150 is an aspiration, not a floor).
+- The module budget report includes total/per-crate modules, max source-folder
+  depth, and root file nonblank LOC.
 - No consolidation creates a file over ~600 LOC of non-mechanical
   implementation; the `eos-workflow/attempt/` tree is kept split, not merged into
   a single ~1900 LOC `attempts.rs`.

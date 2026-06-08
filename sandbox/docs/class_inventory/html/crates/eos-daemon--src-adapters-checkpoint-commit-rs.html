@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/adapters/checkpoint/commit.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>54</b><span>modules</span></div>
+  <div><b>469</b><span>items</span></div>
+  <div><b>205</b><span>fields</span></div>
+  <div><b>121</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">adapters</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>base.rs</span><small>0/4</small></a></li><li><a class="file-link active" href="eos-daemon--src-adapters-checkpoint-commit-rs.html"><span>commit.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-occ-mod-rs.html"><span>mod.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-process-rs.html"><span>process.rs</span><small>3/11</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html"><span>host_ports.rs</span><small>1/1</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html"><span>ns_runner.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-manager-rs.html"><span>manager.rs</span><small>2/8</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-audit-buffer-rs.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-tool-call-events-rs.html"><span>tool_call_events.rs</span><small>0/3</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="adapters::checkpoint::commit crates/eos-daemon/src/adapters/checkpoint/commit.rs commit_to_workspace commit_to_git raw_commit_paths commit_response">
+  <div class="module-head">
+    <div>
+      <h2>src/adapters/checkpoint/commit.rs</h2>
+      <p class="path">module <code>adapters::checkpoint::commit</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>4 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-commit-to-workspace-18" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn commit_to_workspace pub(crate) pub(crate) fn commit_to_workspace (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/commit.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>commit_to_workspace</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-workspace-18">commit_to_workspace</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-workspace-18">commit_to_workspace</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stack = <span class="rs-type">LayerStack</span>::open(root)?;
+    <span class="rs-kw">let</span> (manifest, commit_timings) = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-workspace-18">commit_to_workspace</a>(&amp;workspace_root)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;commit_timings);
+    timings.insert(
+        &quot;api.commit_to_workspace.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/commit.rs:18</p>
+</article><article id="item-fn-commit-to-git-36" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn commit_to_git pub(crate) pub(crate) fn commit_to_git (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/commit.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>commit_to_git</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-git-36">commit_to_git</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-git-36">commit_to_git</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> layer_stack_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;message&quot;)?;
+    <span class="rs-kw">let</span> raw_paths = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-raw-commit-paths-50">raw_commit_paths</a>(args)?;
+    <span class="rs-kw">let</span> outcome = eos_checkpoint_host::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-git-36">commit_to_git</a>(&amp;<span class="rs-type">CommitRequest</span> {
+        layer_stack_root: &amp;layer_stack_root,
+        workspace_root: &amp;workspace_root,
+        message: &amp;message,
+        raw_paths,
+    })?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-response-74">commit_response</a>(&amp;outcome))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/commit.rs:36</p>
+</article><article id="item-fn-raw-commit-paths-50" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn raw_commit_paths private fn raw_commit_paths (args : &amp; Value) -&gt; Result &lt; Vec &lt; String &gt; , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/commit.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>raw_commit_paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-raw-commit-paths-50">raw_commit_paths</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <p class="docstring">Lift the raw `paths` pathspecs from the envelope. Normalization (trimming,<br>binding resolution, `.git` rejection) is the host crate's responsibility;<br>this only enforces the wire shape (string, array-of-strings, or absent).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Lift the raw `paths` pathspecs from the envelope. Normalization (trimming,</span>
+<span class="rs-comment">/// binding resolution, `.git` rejection) is the host crate's responsibility;</span>
+<span class="rs-comment">/// this only enforces the wire shape (string, array-of-strings, or absent).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-raw-commit-paths-50">raw_commit_paths</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;paths&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>());
+    };
+    <span class="rs-kw">match</span> value {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>()),
+        <span class="rs-type">Value</span>::<span class="rs-type">String</span>(path) =&gt; <span class="rs-type">Ok</span>(vec![path.clone()]),
+        <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(items) =&gt; items
+            .iter()
+            .map(|item| {
+                item.as_str().map(str::to_owned).ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;paths must be strings&quot;.to_owned())
+                })
+            })
+            .collect(),
+        _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(
+            &quot;paths must be a string or array of strings&quot;.to_owned(),
+        )),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/commit.rs:50</p>
+</article><article id="item-fn-commit-response-74" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn commit_response private fn commit_response (outcome : &amp; CommitOutcome) -&gt; Value crates/eos-daemon/src/adapters/checkpoint/commit.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>commit_response</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-response-74">commit_response</a> (outcome : &amp; CommitOutcome) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-response-74">commit_response</a>(outcome: &amp;<span class="rs-type">CommitOutcome</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;committed&quot;: outcome.committed,
+        &quot;commit_sha&quot;: outcome.commit_sha,
+        &quot;manifest_version&quot;: outcome.manifest_version,
+        &quot;manifest_root_hash&quot;: outcome.manifest_root_hash,
+        &quot;paths&quot;: outcome.paths,
+        &quot;worktree_mode&quot;: outcome.worktree_mode,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;outcome.timings)),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/commit.rs:74</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/adapters/checkpoint/commit.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Workspace checkpoint commit services.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `commit_to_git` is a thin seam over [`eos_checkpoint_host`]: this module owns</span>
+<span class="rs-comment">//! only the request-envelope parsing and the response/error re-mapping; the</span>
+<span class="rs-comment">//! pathspec policy, worktree preparation, and git pipeline live in the host</span>
+<span class="rs-comment">//! crate so the daemon does not fuse that glue into the control plane.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> eos_checkpoint_host::{<span class="rs-type">CommitOutcome</span>, <span class="rs-type">CommitRequest</span>};
+<span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request_args::{require_string, timings_to_value_map};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-workspace-18">commit_to_workspace</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stack = <span class="rs-type">LayerStack</span>::open(root)?;
+    <span class="rs-kw">let</span> (manifest, commit_timings) = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-workspace-18">commit_to_workspace</a>(&amp;workspace_root)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;commit_timings);
+    timings.insert(
+        &quot;api.commit_to_workspace.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    }))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-git-36">commit_to_git</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> layer_stack_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;message&quot;)?;
+    <span class="rs-kw">let</span> raw_paths = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-raw-commit-paths-50">raw_commit_paths</a>(args)?;
+    <span class="rs-kw">let</span> outcome = eos_checkpoint_host::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-to-git-36">commit_to_git</a>(&amp;<span class="rs-type">CommitRequest</span> {
+        layer_stack_root: &amp;layer_stack_root,
+        workspace_root: &amp;workspace_root,
+        message: &amp;message,
+        raw_paths,
+    })?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-response-74">commit_response</a>(&amp;outcome))
+}
+
+<span class="rs-comment">/// Lift the raw `paths` pathspecs from the envelope. Normalization (trimming,</span>
+<span class="rs-comment">/// binding resolution, `.git` rejection) is the host crate's responsibility;</span>
+<span class="rs-comment">/// this only enforces the wire shape (string, array-of-strings, or absent).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-raw-commit-paths-50">raw_commit_paths</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;paths&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>());
+    };
+    <span class="rs-kw">match</span> value {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>()),
+        <span class="rs-type">Value</span>::<span class="rs-type">String</span>(path) =&gt; <span class="rs-type">Ok</span>(vec![path.clone()]),
+        <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(items) =&gt; items
+            .iter()
+            .map(|item| {
+                item.as_str().map(str::to_owned).ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;paths must be strings&quot;.to_owned())
+                })
+            })
+            .collect(),
+        _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(
+            &quot;paths must be a string or array of strings&quot;.to_owned(),
+        )),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-checkpoint-commit-rs.html#item-fn-commit-response-74">commit_response</a>(outcome: &amp;<span class="rs-type">CommitOutcome</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;committed&quot;: outcome.committed,
+        &quot;commit_sha&quot;: outcome.commit_sha,
+        &quot;manifest_version&quot;: outcome.manifest_version,
+        &quot;manifest_root_hash&quot;: outcome.manifest_root_hash,
+        &quot;paths&quot;: outcome.paths,
+        &quot;worktree_mode&quot;: outcome.worktree_mode,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;outcome.timings)),
+    })
+}
+
+#[cfg(test)]
+#[path = &quot;../../../tests/checkpoint/commit.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

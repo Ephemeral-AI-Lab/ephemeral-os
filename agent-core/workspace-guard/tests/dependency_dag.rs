@@ -1,12 +1,14 @@
-// Guards the agent-core internal dependency topology. A stray internal edge
-// fails this test, which catches both unused edges and inverted layering.
+// Guards the agent-core internal dependency topology. During the destructive
+// workspace migration this accepts the current legacy graph until the final
+// ten-crate map is present, then switches to the locked target graph.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::process::Command;
+
+use workspace_guard::Workspace;
 
 type Edges = BTreeMap<String, BTreeSet<String>>;
 
-fn expected_edges() -> Edges {
+fn legacy_edges() -> Edges {
     let rows: &[(&str, &[&str])] = &[
         ("eos-types", &[]),
         ("eos-config", &[]),
@@ -59,10 +61,12 @@ fn expected_edges() -> Edges {
                 "eos-llm-client",
                 "eos-tool-ports",
                 "eos-sandbox-port",
-                "eos-audit",
             ],
         ),
-        ("eos-workflow", &["eos-types", "eos-tools", "eos-agent-def"]),
+        (
+            "eos-workflow",
+            &["eos-types", "eos-tools", "eos-tool-ports", "eos-agent-def"],
+        ),
         ("eos-plugin-catalog", &["eos-types", "eos-sandbox-port"]),
         (
             "eos-runtime",
@@ -96,7 +100,7 @@ fn expected_edges() -> Edges {
                 "eos-engine",
                 "eos-llm-client",
                 "eos-sandbox-port",
-                "eos-tools",
+                "eos-tool-ports",
             ],
         ),
     ];
@@ -110,53 +114,88 @@ fn expected_edges() -> Edges {
         .collect()
 }
 
-fn actual_edges() -> Edges {
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
-    let output = Command::new(cargo)
-        .args(["metadata", "--format-version=1", "--no-deps"])
-        .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
-        .expect("run `cargo metadata`");
-    assert!(output.status.success(), "`cargo metadata` exited non-zero");
+fn target_edges() -> Edges {
+    let rows: &[(&str, &[&str])] = &[
+        ("eos-types", &[]),
+        ("eos-db", &["eos-types"]),
+        ("eos-llm-client", &["eos-types"]),
+        ("eos-sandbox-port", &["eos-types"]),
+        ("eos-tool", &["eos-types", "eos-sandbox-port"]),
+        (
+            "eos-engine",
+            &[
+                "eos-types",
+                "eos-tool",
+                "eos-llm-client",
+                "eos-sandbox-port",
+            ],
+        ),
+        ("eos-workflow", &["eos-types"]),
+        ("eos-agent-run", &["eos-types", "eos-engine"]),
+        (
+            "eos-agent-core",
+            &[
+                "eos-db",
+                "eos-engine",
+                "eos-workflow",
+                "eos-agent-run",
+                "eos-tool",
+                "eos-sandbox-port",
+                "eos-types",
+                "eos-llm-client",
+            ],
+        ),
+        (
+            "eos-testkit",
+            &[
+                "eos-agent-core",
+                "eos-agent-run",
+                "eos-engine",
+                "eos-tool",
+                "eos-workflow",
+                "eos-types",
+                "eos-db",
+                "eos-llm-client",
+                "eos-sandbox-port",
+            ],
+        ),
+    ];
+    rows.iter()
+        .map(|(name, deps)| {
+            (
+                (*name).to_owned(),
+                deps.iter().map(|dep| (*dep).to_owned()).collect(),
+            )
+        })
+        .collect()
+}
 
-    let meta: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("parse cargo metadata json");
-    let packages = meta["packages"].as_array().expect("packages array");
-    let eos_packages: BTreeSet<&str> = packages
-        .iter()
-        .filter_map(|package| package["name"].as_str())
-        .filter(|name| name.starts_with("eos-"))
-        .collect();
-
-    let mut edges = Edges::new();
-    for package in packages {
-        let name = package["name"].as_str().expect("package name");
-        if !eos_packages.contains(name) {
-            continue;
-        }
-
-        let deps = package["dependencies"]
-            .as_array()
-            .expect("dependencies array")
-            .iter()
-            .filter(|dep| dep["kind"].as_str() != Some("dev"))
-            .filter_map(|dep| dep["name"].as_str())
-            .filter(|dep_name| eos_packages.contains(dep_name))
-            .map(ToOwned::to_owned)
-            .collect();
-        edges.insert(name.to_owned(), deps);
+fn expected_edges(workspace: &Workspace) -> Edges {
+    if workspace.is_final_crate_map() {
+        target_edges()
+    } else {
+        legacy_edges()
     }
-    edges
 }
 
 #[test]
 fn internal_edges_match_expected_set() {
-    assert_eq!(actual_edges(), expected_edges());
+    let workspace = Workspace::load();
+    assert_eq!(
+        workspace.internal_dependency_edges(),
+        expected_edges(&workspace),
+        "dependency_dag rule violated: normal internal dependency edges do not match the {} graph",
+        if workspace.is_final_crate_map() {
+            "target"
+        } else {
+            "staged legacy"
+        }
+    );
 }
 
 #[test]
 fn internal_dependency_graph_is_acyclic() {
-    let edges = actual_edges();
+    let edges = Workspace::load().internal_dependency_edges();
     let mut indegree: BTreeMap<&str, usize> = edges.keys().map(|name| (name.as_str(), 0)).collect();
     for deps in edges.values() {
         for dep in deps {

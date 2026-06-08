@@ -199,7 +199,7 @@ runtime_services
 | Fold `eos-agent-def` into `eos-agent-core/src/agents.rs` | Not started |
 | Fold `eos-config` into owner-local config structs | Not started |
 | Fold `eos-audit` into `eos-agent-core/src/runtime/audit.rs` | Not started |
-| Rename runtime-local `*Service` types to handles/catalog/sink names | Not started |
+| Rename runtime-local `*Service` types to canonical `Runtime` / `Handles` / `Context` / `Client` / `Records` names | Not started |
 | Move external DTOs into `eos-agent-core` or `eos-types` | Not started |
 | Keep workflow services sibling-facing only | Not started |
 | Remove non-passive logic from `eos-types` | Not started |

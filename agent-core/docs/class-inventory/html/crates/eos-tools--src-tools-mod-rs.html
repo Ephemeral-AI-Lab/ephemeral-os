@@ -56,25 +56,25 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CallerScope-36" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CallerScope pub pub struct CallerScope crates/eos-tools/src/tools/mod.rs dispatchable_subagents Vec &lt; String &gt; skill_slug Option &lt; String &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CallerScope-38" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CallerScope pub pub struct CallerScope crates/eos-tools/src/tools/mod.rs dispatchable_subagents Vec &lt; String &gt; skill_slug Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CallerScope</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a></code>
   <p class="docstring">The per-caller scope a tool registry is built for: the caller's<br>dispatchable-subagent allow-list (which patches the `run_subagent` input<br>schema's `agent_name` enum) and the bound agent's own skill slug (which scopes<br>`load_skill_reference` to that one skill).</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>dispatchable_subagents</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill_slug</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-tools/src/tools/mod.rs:36</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-default-registry-66" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry pub pub fn build_default_registry (config : &amp; ToolConfigSet , caller : &amp; CallerScope) -&gt; ToolRegistry crates/eos-tools/src/tools/mod.rs  ">
+  <p class="source">crates/eos-tools/src/tools/mod.rs:38</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-default-registry-68" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry pub pub fn build_default_registry (config : &amp; ToolConfigSet , caller : &amp; CallerScope) -&gt; ToolRegistry crates/eos-tools/src/tools/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_default_registry</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-66">build_default_registry</a> (config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>) -&gt; ToolRegistry</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-68">build_default_registry</a> (config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>) -&gt; ToolRegistry</code>
   <p class="docstring">Build the default tool registry for one caller scope from the externalized tool<br>config. Insertion order is stable because it backs the schema snapshot and is<br>the agent-spawn default before `restrict`/`remove`.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -83,8 +83,8 @@
 <span class="rs-comment">/// config. Insertion order is stable because it backs the schema snapshot and is</span>
 <span class="rs-comment">/// the agent-spawn default before `restrict`/`remove`.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-66">build_default_registry</a>(config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>, caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>) -&gt; <span class="rs-type">ToolRegistry</span> {
-    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-86">build_default_registry_with_services</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-68">build_default_registry</a>(config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>, caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>) -&gt; <span class="rs-type">ToolRegistry</span> {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-88">build_default_registry_with_services</a>(
         config,
         caller,
         <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-187">InertSandboxTransport</a>)),
@@ -101,14 +101,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/mod.rs:66</p>
-</article><article id="item-fn-build-default-registry-with-services-86" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry_with_services pub pub fn build_default_registry_with_services (config : &amp; ToolConfigSet , caller : &amp; CallerScope , sandbox_service : SandboxToolService , root_submission : Option &lt; RootSubmissionService &gt; , attempt_submission : Option &lt; AttemptSubmissionService &gt; , agent_run_service : Option &lt; Arc &lt; dyn AgentRunApi &gt; &gt; , subagent_sessions : Option &lt; SubagentToolService &gt; , workflow_service : Option &lt; Arc &lt; dyn eos_types :: WorkflowApi &gt; &gt; , workflow_sessions : Option &lt; WorkflowToolService &gt; , command_sessions : Option &lt; CommandSessionToolService &gt; , skill_service : SkillToolService ,) -&gt; ToolRegistry crates/eos-tools/src/tools/mod.rs  ">
+  <p class="source">crates/eos-tools/src/tools/mod.rs:68</p>
+</article><article id="item-fn-build-default-registry-with-services-88" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry_with_services pub pub fn build_default_registry_with_services (config : &amp; ToolConfigSet , caller : &amp; CallerScope , sandbox_service : SandboxToolService , root_submission : Option &lt; RootSubmissionService &gt; , attempt_submission : Option &lt; AttemptSubmissionService &gt; , agent_run_service : Option &lt; Arc &lt; dyn AgentRunApi &gt; &gt; , subagent_sessions : Option &lt; SubagentToolService &gt; , workflow_service : Option &lt; Arc &lt; dyn eos_types :: WorkflowApi &gt; &gt; , workflow_sessions : Option &lt; WorkflowToolService &gt; , command_sessions : Option &lt; CommandSessionToolService &gt; , skill_service : SkillToolService ,) -&gt; ToolRegistry crates/eos-tools/src/tools/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_default_registry_with_services</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-86">build_default_registry_with_services</a> (config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a> , sandbox_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a> , root_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-22">RootSubmissionService</a> &gt; , attempt_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a> &gt; , agent_run_service : Option &lt; Arc &lt; dyn AgentRunApi &gt; &gt; , subagent_sessions : Option &lt; SubagentToolService &gt; , workflow_service : Option &lt; Arc &lt; dyn eos_types :: WorkflowApi &gt; &gt; , workflow_sessions : Option &lt; WorkflowToolService &gt; , command_sessions : Option &lt; CommandSessionToolService &gt; , skill_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-167">SkillToolService</a> ,) -&gt; ToolRegistry</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-88">build_default_registry_with_services</a> (config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a> , sandbox_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a> , root_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-22">RootSubmissionService</a> &gt; , attempt_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a> &gt; , agent_run_service : Option &lt; Arc &lt; dyn AgentRunApi &gt; &gt; , subagent_sessions : Option &lt; SubagentToolService &gt; , workflow_service : Option &lt; Arc &lt; dyn eos_types :: WorkflowApi &gt; &gt; , workflow_sessions : Option &lt; WorkflowToolService &gt; , command_sessions : Option &lt; CommandSessionToolService &gt; , skill_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-167">SkillToolService</a> ,) -&gt; ToolRegistry</code>
   <p class="docstring">Build the default tool registry for one caller scope with locally wired<br>services. Runtime uses this entry point; tests that only need static registry<br>policy can use [`build_default_registry`].</p>
   <div class="tags"><span>allow: clippy::too_many_arguments</span><span>must_use</span></div>
   <details class="function-source">
@@ -118,9 +118,9 @@
 <span class="rs-comment">/// policy can use [`build_default_registry`].</span>
 #[allow(clippy::too_many_arguments)]
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-86">build_default_registry_with_services</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-88">build_default_registry_with_services</a>(
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>,
+    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>,
     sandbox_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a>,
     root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-22">RootSubmissionService</a>&gt;,
     attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>&gt;,
@@ -162,21 +162,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/mod.rs:86</p>
-</article><article id="item-fn-register-tool-50" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register_tool pub(crate) pub(crate) fn register_tool (registry : &amp; mut ToolRegistry , name : ToolName , config : &amp; ToolConfig , spec : ToolSpec , output : OutputShape , executor : Arc &lt; dyn ToolExecutor &gt; ,) crates/eos-tools/src/tools/mod.rs  ">
+  <p class="source">crates/eos-tools/src/tools/mod.rs:88</p>
+</article><article id="item-fn-register-tool-52" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register_tool pub(crate) pub(crate) fn register_tool (registry : &amp; mut ToolRegistry , name : ToolName , config : &amp; ToolConfig , spec : ToolSpec , output : OutputShape , executor : Arc &lt; dyn ToolExecutor &gt; ,) crates/eos-tools/src/tools/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>register_tool</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a> (registry : &amp; mut ToolRegistry , name : ToolName , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> , spec : ToolSpec , output : OutputShape , executor : Arc &lt; dyn ToolExecutor &gt; ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a> (registry : &amp; mut ToolRegistry , name : ToolName , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> , spec : ToolSpec , output : OutputShape , executor : Arc &lt; dyn ToolExecutor &gt; ,)</code>
   <p class="docstring">Register one tool, stamping its intent / terminal flag / hooks from the loaded<br>[`ToolConfig`] so each registration site is a single line.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Register one tool, stamping its intent / terminal flag / hooks from the loaded</span>
 <span class="rs-comment">/// [`ToolConfig`] so each registration site is a single line.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-type">ToolRegistry</span>,
     name: <span class="rs-type">ToolName</span>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a>,
@@ -192,26 +192,26 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/mod.rs:50</p>
-</article><article id="item-fn-repo-tools-config-133" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn repo_tools_config pub(crate) pub(crate) fn repo_tools_config () -&gt; ToolConfigSet crates/eos-tools/src/tools/mod.rs  ">
+  <p class="source">crates/eos-tools/src/tools/mod.rs:52</p>
+</article><article id="item-fn-repo-tools-config-135" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn repo_tools_config pub(crate) pub(crate) fn repo_tools_config () -&gt; ToolConfigSet crates/eos-tools/src/tools/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>repo_tools_config</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-repo-tools-config-133">repo_tools_config</a> () -&gt; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a></code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-repo-tools-config-135">repo_tools_config</a> () -&gt; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a></code>
   <div class="tags"><span>cfg: test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(test)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-repo-tools-config-133">repo_tools_config</a>() -&gt; <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-repo-tools-config-135">repo_tools_config</a>() -&gt; <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
     <span class="rs-kw">let</span> root = std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;);
     <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(&amp;root).expect(&quot;repo .eos-agents/tools loads and validates&quot;)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/mod.rs:133</p>
+  <p class="source">crates/eos-tools/src/tools/mod.rs:135</p>
 </article></div>
 </section></div>
 </main>
@@ -250,9 +250,11 @@
 
 <span class="rs-kw">use</span> services::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-187">InertSandboxTransport</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> services::{
-    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>, <span class="rs-type">CommandSessionToolService</span>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-126">CommandToolService</a>, <span class="rs-type">HookServices</span>,
-    <span class="rs-type">IsolatedWorkspaceToolService</span>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-22">RootSubmissionService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-167">SkillToolService</a>,
-    <span class="rs-type">SubagentToolService</span>, <span class="rs-type">WorkflowToolService</span>,
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-126">CommandToolService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-22">RootSubmissionService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a>,
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-167">SkillToolService</a>,
+};
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools) <span class="rs-kw">use</span> services::{
+    <span class="rs-type">CommandSessionToolService</span>, <span class="rs-type">HookServices</span>, <span class="rs-type">SubagentToolService</span>, <span class="rs-type">WorkflowToolService</span>,
 };
 
 <span class="rs-comment">/// The per-caller scope a tool registry is built for: the caller's</span>
@@ -260,7 +262,7 @@
 <span class="rs-comment">/// schema's `agent_name` enum) and the bound agent's own skill slug (which scopes</span>
 <span class="rs-comment">/// `load_skill_reference` to that one skill).</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a> {
     <span class="rs-comment">/// The subagent profile names this caller may dispatch.</span>
     <span class="rs-kw">pub</span> dispatchable_subagents: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     <span class="rs-comment">/// The bound agent's own skill folder slug, if it declares one. Scopes</span>
@@ -271,7 +273,7 @@
 
 <span class="rs-comment">/// Register one tool, stamping its intent / terminal flag / hooks from the loaded</span>
 <span class="rs-comment">/// [`ToolConfig`] so each registration site is a single line.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-type">ToolRegistry</span>,
     name: <span class="rs-type">ToolName</span>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a>,
@@ -289,8 +291,8 @@
 <span class="rs-comment">/// config. Insertion order is stable because it backs the schema snapshot and is</span>
 <span class="rs-comment">/// the agent-spawn default before `restrict`/`remove`.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-66">build_default_registry</a>(config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>, caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>) -&gt; <span class="rs-type">ToolRegistry</span> {
-    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-86">build_default_registry_with_services</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-68">build_default_registry</a>(config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>, caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>) -&gt; <span class="rs-type">ToolRegistry</span> {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-88">build_default_registry_with_services</a>(
         config,
         caller,
         <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-187">InertSandboxTransport</a>)),
@@ -310,9 +312,9 @@
 <span class="rs-comment">/// policy can use [`build_default_registry`].</span>
 #[allow(clippy::too_many_arguments)]
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-86">build_default_registry_with_services</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-88">build_default_registry_with_services</a>(
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-36">CallerScope</a>,
+    caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-38">CallerScope</a>,
     sandbox_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-68">SandboxToolService</a>,
     root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-22">RootSubmissionService</a>&gt;,
     attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>&gt;,
@@ -353,7 +355,7 @@
 }
 
 #[cfg(test)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-repo-tools-config-133">repo_tools_config</a>() -&gt; <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-repo-tools-config-135">repo_tools_config</a>() -&gt; <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
     <span class="rs-kw">let</span> root = std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;);
     <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(&amp;root).expect(&quot;repo .eos-agents/tools loads and validates&quot;)
 }

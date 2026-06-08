@@ -390,13 +390,13 @@
   <div class="tags"></div>
 
   <p class="source">crates/eos-runtime/src/runtime_services/agent_loop.rs:26</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-agent-loop-launcher-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_agent_loop_launcher pub(crate) pub(crate) fn build_agent_loop_launcher (services : RuntimeServices , attempt_submission : Option &lt; AttemptSubmissionService &gt; , workflow_service : Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowApi &gt; &gt; &gt; , event_callback : Option &lt; EventCallback &gt; ,) -&gt; (Arc &lt; dyn AgentLoopLauncher &gt; , AgentRunApiCell) crates/eos-runtime/src/runtime_services/agent_loop.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-agent-loop-launcher-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_agent_loop_launcher pub(crate) pub(crate) fn build_agent_loop_launcher (services : &amp; RuntimeServices , attempt_submission : Option &lt; AttemptSubmissionService &gt; , workflow_service : Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowApi &gt; &gt; &gt; , event_callback : Option &lt; EventCallback &gt; ,) -&gt; (Arc &lt; dyn AgentLoopLauncher &gt; , AgentRunApiCell) crates/eos-runtime/src/runtime_services/agent_loop.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_agent_loop_launcher</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a> (services : <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a> , attempt_submission : Option &lt; AttemptSubmissionService &gt; , workflow_service : Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowApi &gt; &gt; &gt; , event_callback : Option &lt; EventCallback &gt; ,) -&gt; (Arc &lt; dyn AgentLoopLauncher &gt; , <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a> (services : &amp; <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a> , attempt_submission : Option &lt; AttemptSubmissionService &gt; , workflow_service : Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowApi &gt; &gt; &gt; , event_callback : Option &lt; EventCallback &gt; ,) -&gt; (Arc &lt; dyn AgentLoopLauncher &gt; , <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>)</code>
   <p class="docstring">Build a production agent-loop launcher plus the cell that must be filled with<br>the lifecycle service after it is constructed.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -404,7 +404,7 @@
   <pre><code><span class="rs-comment">/// Build a production agent-loop launcher plus the cell that must be filled with</span>
 <span class="rs-comment">/// the lifecycle service after it is constructed.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a>(
-    services: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>,
+    services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>,
     attempt_submission: <span class="rs-type">Option</span>&lt;<span class="rs-type">AttemptSubmissionService</span>&gt;,
     workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt;,
     event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-type">EventCallback</span>&gt;,
@@ -485,7 +485,7 @@
 <span class="rs-comment">/// Build a production agent-loop launcher plus the cell that must be filled with</span>
 <span class="rs-comment">/// the lifecycle service after it is constructed.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a>(
-    services: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>,
+    services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>,
     attempt_submission: <span class="rs-type">Option</span>&lt;<span class="rs-type">AttemptSubmissionService</span>&gt;,
     workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt;,
     event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-type">EventCallback</span>&gt;,

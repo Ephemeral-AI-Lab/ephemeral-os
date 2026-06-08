@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/adapters/plugins/dispatch.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>54</b><span>modules</span></div>
+  <div><b>469</b><span>items</span></div>
+  <div><b>205</b><span>fields</span></div>
+  <div><b>121</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">adapters</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>base.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-checkpoint-commit-rs.html"><span>commit.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-occ-mod-rs.html"><span>mod.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link active" href="eos-daemon--src-adapters-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-process-rs.html"><span>process.rs</span><small>3/11</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html"><span>host_ports.rs</span><small>1/1</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html"><span>ns_runner.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-manager-rs.html"><span>manager.rs</span><small>2/8</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-audit-buffer-rs.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-tool-call-events-rs.html"><span>tool_call_events.rs</span><small>0/3</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="adapters::plugins::dispatch crates/eos-daemon/src/adapters/plugins/dispatch.rs dispatch_registered_op route_for_op dispatch_registered_route dispatch_deferred_route">
+  <div class="module-head">
+    <div>
+      <h2>src/adapters/plugins/dispatch.rs</h2>
+      <p class="path">module <code>adapters::plugins::dispatch</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>4 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-dispatch-registered-op-14" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_registered_op pub(super) pub(super) fn dispatch_registered_op (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Option &lt; Result &lt; Value , DaemonError &gt; &gt; crates/eos-daemon/src/adapters/plugins/dispatch.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dispatch_registered_op</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-14">dispatch_registered_op</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-14">dispatch_registered_op</a>(
+    op: &amp;str,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
+    <span class="rs-kw">if</span> !op.starts_with(&quot;plugin.&quot;) {
+        <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+    }
+    <span class="rs-comment">// Single caller-family gate for the whole registered-op dispatch chain; the</span>
+    <span class="rs-comment">// private `dispatch_registered_route`/`dispatch_deferred_route` helpers below</span>
+    <span class="rs-comment">// are only reachable from here and trust the already-validated args.</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-295">ensure_plugin_family_allowed</a>(args) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err));
+    }
+    <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-37">route_for_op</a>(op) {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(route)) =&gt; route,
+        <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)),
+    };
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-45">dispatch_registered_route</a>(&amp;route, invocation_id, args))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/plugins/dispatch.rs:14</p>
+</article><article id="item-fn-route-for-op-37" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn route_for_op pub(super) pub(super) fn route_for_op (op : &amp; str) -&gt; Result &lt; Option &lt; PluginOperationRoute &gt; , DaemonError &gt; crates/eos-daemon/src/adapters/plugins/dispatch.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>route_for_op</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-37">route_for_op</a> (op : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-37">route_for_op</a>(op: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-87">lock_state</a>()?;
+    <span class="rs-type">Ok</span>(state
+        .loaded
+        .values()
+        .find_map(|loaded| loaded.operation_routes.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(op).cloned()))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/plugins/dispatch.rs:37</p>
+</article><article id="item-fn-dispatch-registered-route-45" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_registered_route private fn dispatch_registered_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/plugins/dispatch.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dispatch_registered_route</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-45">dispatch_registered_route</a> (route : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-45">dispatch_registered_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; route.service_id.is_some() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a>(route, invocation_id, args)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
+        }
+    }
+    <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span> &amp;&amp; route.auto_workspace_overlay {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-dispatch-oneshot-overlay-route-45">dispatch_oneshot_overlay_route</a>(route, invocation_id, args)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
+        }
+    }
+    <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>
+        &amp;&amp; !route.auto_workspace_overlay
+        &amp;&amp; route.service_id.is_some()
+    {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a>(route, invocation_id, args)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
+        }
+    }
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-71">dispatch_deferred_route</a>(route)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/plugins/dispatch.rs:45</p>
+</article><article id="item-fn-dispatch-deferred-route-71" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_deferred_route private fn dispatch_deferred_route (route : &amp; PluginOperationRoute) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/plugins/dispatch.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dispatch_deferred_route</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-71">dispatch_deferred_route</a> (route : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-71">dispatch_deferred_route</a>(route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;status&quot;: &quot;deferred&quot;,
+        &quot;op&quot;: route.public_op,
+        &quot;plugin&quot;: route.plugin_id,
+        &quot;op_name&quot;: route.op_name,
+        &quot;intent&quot;: route.intent,
+        &quot;auto_workspace_overlay&quot;: route.auto_workspace_overlay,
+        &quot;service_id&quot;: route.service_id,
+        &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#method-dispatch-mode-45">dispatch_mode</a>(),
+        &quot;error&quot;: {
+            &quot;kind&quot;: &quot;plugin_dispatch_deferred&quot;,
+            &quot;message&quot;: &quot;plugin service is not connected <span class="rs-kw">for</span> this route&quot;,
+            &quot;details&quot;: {
+                &quot;op&quot;: route.public_op,
+                &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#method-dispatch-mode-45">dispatch_mode</a>(),
+            },
+        },
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/plugins/dispatch.rs:71</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/adapters/plugins/dispatch.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Registered plugin op routing.</span>
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+    connected::{dispatch_connected_read_only_route, dispatch_connected_self_managed_route},
+    ensure_plugin_family_allowed,
+    overlay::dispatch_oneshot_overlay_route,
+    state::{lock_state, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>},
+};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{dispatcher::<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>, error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-14">dispatch_registered_op</a>(
+    op: &amp;str,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
+    <span class="rs-kw">if</span> !op.starts_with(&quot;plugin.&quot;) {
+        <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+    }
+    <span class="rs-comment">// Single caller-family gate for the whole registered-op dispatch chain; the</span>
+    <span class="rs-comment">// private `dispatch_registered_route`/`dispatch_deferred_route` helpers below</span>
+    <span class="rs-comment">// are only reachable from here and trust the already-validated args.</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-295">ensure_plugin_family_allowed</a>(args) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err));
+    }
+    <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-37">route_for_op</a>(op) {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(route)) =&gt; route,
+        <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)),
+    };
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-45">dispatch_registered_route</a>(&amp;route, invocation_id, args))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-37">route_for_op</a>(op: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-87">lock_state</a>()?;
+    <span class="rs-type">Ok</span>(state
+        .loaded
+        .values()
+        .find_map(|loaded| loaded.operation_routes.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(op).cloned()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-45">dispatch_registered_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; route.service_id.is_some() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a>(route, invocation_id, args)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
+        }
+    }
+    <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span> &amp;&amp; route.auto_workspace_overlay {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-dispatch-oneshot-overlay-route-45">dispatch_oneshot_overlay_route</a>(route, invocation_id, args)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
+        }
+    }
+    <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>
+        &amp;&amp; !route.auto_workspace_overlay
+        &amp;&amp; route.service_id.is_some()
+    {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a>(route, invocation_id, args)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
+        }
+    }
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-71">dispatch_deferred_route</a>(route)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-71">dispatch_deferred_route</a>(route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;status&quot;: &quot;deferred&quot;,
+        &quot;op&quot;: route.public_op,
+        &quot;plugin&quot;: route.plugin_id,
+        &quot;op_name&quot;: route.op_name,
+        &quot;intent&quot;: route.intent,
+        &quot;auto_workspace_overlay&quot;: route.auto_workspace_overlay,
+        &quot;service_id&quot;: route.service_id,
+        &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#method-dispatch-mode-45">dispatch_mode</a>(),
+        &quot;error&quot;: {
+            &quot;kind&quot;: &quot;plugin_dispatch_deferred&quot;,
+            &quot;message&quot;: &quot;plugin service is not connected <span class="rs-kw">for</span> this route&quot;,
+            &quot;details&quot;: {
+                &quot;op&quot;: route.public_op,
+                &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#method-dispatch-mode-45">dispatch_mode</a>(),
+            },
+        },
+    }))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

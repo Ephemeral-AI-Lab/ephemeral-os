@@ -104,7 +104,7 @@
         }
 
         <span class="rs-kw">let</span> (loop_launcher, agent_run_api_cell) = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a>(
-            <span class="rs-self">self</span>.services.clone(),
+            &amp;<span class="rs-self">self</span>.services,
             <span class="rs-type">Some</span>(<span class="rs-type">AttemptSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
                 <span class="rs-self">self</span>.attempt_submission.clone(),
             )),
@@ -291,7 +291,7 @@
         }
 
         <span class="rs-kw">let</span> (loop_launcher, agent_run_api_cell) = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a>(
-            <span class="rs-self">self</span>.services.clone(),
+            &amp;<span class="rs-self">self</span>.services,
             <span class="rs-type">Some</span>(<span class="rs-type">AttemptSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
                 <span class="rs-self">self</span>.attempt_submission.clone(),
             )),

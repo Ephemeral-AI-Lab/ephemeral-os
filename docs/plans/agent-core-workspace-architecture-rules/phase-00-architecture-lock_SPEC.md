@@ -18,6 +18,9 @@ the target crate map, retired crate list, vocabulary rules, service rule,
 module budget, or parallel work lanes must reopen Phase 0 before implementation
 continues.
 
+Amendment record: service replacement vocabulary and Rust folder-structure
+guardrails tightened by user instruction on 2026-06-09.
+
 ## Locked Decisions
 
 | Decision | Target |
@@ -30,7 +33,9 @@ continues.
 | removed audit crate | audit sink lives in `eos-agent-core/src/runtime/audit.rs` |
 | only allowed port crate | `eos-sandbox-port` |
 | service meaning | sibling-crate consumed callable surface |
-| runtime wiring vocabulary | `runtime`, `handles`, `catalog`, `sink`; no standalone handle file unless it earns its size |
+| service replacement vocabulary | `runtime`, `handles`, `context`, `client`, `records` |
+| runtime wiring vocabulary | `runtime` and `handles`; no standalone handle file unless it earns its size |
+| folder structure guardrails | thin roots, source tests under `tests/`, no vague buckets, no duplicate module shape |
 | forbidden vocabulary | `composition`, `deps`, `runtime_services` |
 | final crate count | 10 |
 | final module count | 150-170 |
@@ -166,6 +171,8 @@ Owns outbound provider clients. It uses `client.rs`, `providers.rs`, and
 | `api` | restricted | external contract language only; not the facade crate name |
 | `router` | banned in agent-core | HTTP/path routing belongs in backend-server |
 | `service` | restricted | only sibling-crate consumed callable surfaces |
+| `context` | allowed | per-call immutable facts |
+| `records` | allowed | persisted record surfaces |
 | `runtime` | allowed | private request-running wiring inside `eos-agent-core` |
 | `handles` | allowed | grouped concrete resource handles; avoid extra handle modules by default |
 | `catalog` | restricted | loaded/static definitions with lifecycle, not default tool specs |
@@ -200,6 +207,8 @@ move.
 | Approve retired crate list | Approved |
 | Approve vocabulary rules | Approved |
 | Approve service sibling-use rule | Approved |
+| Approve canonical service replacement vocabulary | Approved |
+| Approve Rust folder-structure guardrails | Approved |
 | Approve module budget | Approved |
 | Approve parallel work lanes | Approved |
 | Approve verification ladder | Approved |
@@ -212,6 +221,10 @@ move.
 - `composition`, `deps`, and `runtime_services` are rejected vocabulary.
 - The final crate map contains exactly 10 crates.
 - Every target `services.rs` has a named sibling-crate behavior consumer.
+- Private `Service` names are replaced only with the canonical vocabulary:
+  `Runtime`, `Handles`, `Context`, `Client`, or `Records`.
+- Final target crates keep thin roots, keep source tests under crate `tests/`,
+  avoid vague bucket folders, and do not mix `foo.rs` with `foo/mod.rs`.
 - `eos-tool` does not use `services.rs` or `handles.rs`; it uses `ToolRuntime`
   in `registry.rs`.
 - No standalone `eos-config`, `eos-agent-def`, or `eos-audit` crate exists in

@@ -300,7 +300,7 @@
     <span class="rs-type">DaemonOp</span>, <span class="rs-type">SandboxCommandApi</span>, <span class="rs-type">SandboxCommandService</span>, <span class="rs-type">SandboxPortError</span>, <span class="rs-type">SandboxTransport</span>,
 };
 <span class="rs-kw">use</span> eos_skills::<span class="rs-type">SkillRegistry</span>;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_tool_ports::services::{
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools) <span class="rs-kw">use</span> eos_tool_ports::services::{
     <span class="rs-type">CommandSessionToolService</span>, <span class="rs-type">HookServices</span>, <span class="rs-type">IsolatedWorkspaceToolService</span>, <span class="rs-type">SubagentToolService</span>,
     <span class="rs-type">WorkflowToolService</span>,
 };

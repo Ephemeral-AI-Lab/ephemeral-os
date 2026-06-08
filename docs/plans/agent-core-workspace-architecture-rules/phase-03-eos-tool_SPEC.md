@@ -31,6 +31,8 @@ final dependency DAG. Those are Phase 02 / integration responsibilities. Phase
 - tool executor trait,
 - hook declarations and config tokens,
 - default registry construction,
+- externalized tool config loading and validation (`config.rs`), keyed by
+  `ToolName::ALL` and the `TerminalTool` catalog,
 - concrete model-callable tool behavior,
 - skill registry and skill package loading,
 - `ToolRuntime`, the small executable dependency bundle passed into registry
@@ -72,6 +74,7 @@ agent-core/crates/eos-tool/
 │   ├── error.rs
 │   ├── model.rs
 │   ├── registry.rs
+│   ├── config.rs
 │   ├── hooks.rs
 │   ├── tools.rs
 │   ├── tools/
@@ -81,7 +84,13 @@ agent-core/crates/eos-tool/
 │   │   ├── workflow.rs
 │   │   ├── subagent.rs
 │   │   ├── advisor.rs
-│   │   ├── submission.rs
+│   │   ├── submission/
+│   │   │   ├── mod.rs
+│   │   │   ├── planner.rs
+│   │   │   ├── root.rs
+│   │   │   ├── generator.rs
+│   │   │   ├── reducer.rs
+│   │   │   └── advisor.rs
 │   │   ├── skills.rs
 │   │   └── terminal.rs
 └── tests/
@@ -105,10 +114,27 @@ No first-target `catalog.rs`, `executor.rs`, `runtime.rs`, `resources.rs`,
 splits are only acceptable later if implementation proves that one file has
 become materially harder to understand.
 
+Two splits are pre-authorized in the first target because the alternative is a
+single file over the repo's 800-1000 LOC review-smell line, not because of
+speculative growth:
+
+- `config.rs` owns the externalized tool-config loader/validator
+  (`ToolConfigSet::load_from_dir` plus the `ToolSpec` schema helpers, ~620 LOC).
+  Folding it into `registry.rs` would push `registry.rs` to ~950 LOC mixing the
+  registry data structure, the executor trait, `ToolRuntime`, default
+  construction, *and* markdown loading. `config.rs` is a cohesive loader with its
+  own error enum — a justified split, not a forbidden `catalog.rs`.
+- `tools/submission/` stays a subfolder. The submission family is six distinct
+  terminal-submission DTO families (planner, root, generator, reducer, advisor,
+  and shared `lib`); flattened it is ~960 LOC of executor logic in one file,
+  which the family-split rule below already covers.
+
 Family files under `tools/` are the first target. A family may gain a
 same-named private subfolder only when the flat file starts mixing multiple
 distinct DTO families, executor bodies, shared rendering paths, and registration
-logic in a way that is less clear than the split.
+logic in a way that is less clear than the split. `tools/submission/` is the one
+family that qualifies on the first day and is authorized above; all other
+families start flat.
 
 ## Module Collapse Plan
 
@@ -124,10 +150,12 @@ logic in a way that is less clear than the split.
 | `tools/isolated_workspace/*.rs` | `registry.rs` default entry plus `tools/isolated_workspace.rs` handler |
 | `tools/workflow/*.rs` | `registry.rs` default entry plus `tools/workflow.rs` handler |
 | `tools/subagent/*.rs` | `registry.rs` default entry plus `tools/subagent.rs` handler |
-| `tools/submission/**/*.rs` | `registry.rs` default entry plus `tools/submission.rs` handler |
+| `tools/submission/<family>/*.rs` | `registry.rs` default entry plus `tools/submission/<family>.rs` handler (subfolder kept) |
 | `tools/skills/*.rs` | `registry.rs` default entry plus `tools/skills.rs` handler |
 | `tools/ask_helper/*.rs` | `registry.rs` default entry plus `tools/advisor.rs` handler |
 | `tools/terminal.rs` | `tools/terminal.rs` |
+| `registry/config.rs` (markdown tool-config loader) | `config.rs` |
+| `registry/spec.rs` (`ToolSpec` schema helpers) | `config.rs` |
 
 ## `eos-tool-ports` Ownership Split
 
@@ -157,13 +185,20 @@ The first target uses `ToolRuntime` in `registry.rs`; it does not create
 Allowed `ToolRuntime` fields:
 
 | Resource | Built by | Used by |
-| --- | --- |
+| --- | --- | --- |
 | sandbox resource | `eos-agent-core` | `tools/sandbox.rs`, `tools/isolated_workspace.rs` |
 | command-session resource | `eos-engine` | `tools/command.rs` |
-| workflow resource | `eos-agent-core` | `tools/workflow.rs` |
-| subagent resource | `eos-agent-core` | `tools/subagent.rs` |
-| submission resource | `eos-agent-core`, `eos-agent-run` if needed | `tools/submission.rs` |
+| workflow resource (workflow API + workflow-session registration) | `eos-agent-core` | `tools/workflow.rs` |
+| subagent resource (subagent sessions + `AgentRunApi`) | `eos-agent-core` | `tools/subagent.rs` |
+| agent-run resource (`AgentRunApi`) | `eos-agent-core` | `tools/advisor.rs` (`ask_advisor` spawns the advisor agent) |
+| submission resource (root + attempt submission) | `eos-agent-core`, `eos-agent-run` if needed | `tools/submission/` |
 | skill resource | `eos-agent-core` | `tools/skills.rs` |
+| hook-resource bundle (sandbox + workflow + subagent subset) | `eos-agent-core` | stamped onto each `RegisteredTool`'s hook field |
+
+The `agent-run` and `subagent` resources both carry `AgentRunApi`; the table
+states it explicitly so an implementer wiring `ask_advisor` does not discover a
+missing dependency. The `hook-resource bundle` is a strict subset of the rows
+above (see the hook rule below).
 
 Each field is an injected handle whose **trait is defined in `eos-tool`** and
 whose **concrete impl is built at the `eos-agent-core` composition root**, then
@@ -181,9 +216,17 @@ acyclic:
   `eos-tool`-defined trait in `ToolRuntime`; they never gain a crate dependency
   on `eos-workflow` or `eos-agent-run`.
 
-Hook policy facts are not runtime resources. Hook declarations live in
-`hooks.rs`; hook execution uses `ExecutionMetadata`, `RegisteredTool.hooks`, and
-engine-owned hook runtime state.
+Hook *declarations* live in `hooks.rs`. Hook *execution* — the pipeline and
+`HookOutcome` — lives in `eos-engine`. But the stateful pre-hooks
+(`RequireNoBackgroundSessions`, `DisallowNestedPlannerDeferral`) read runtime
+resources at hook time: sandbox transport, workflow API, and subagent sessions,
+held today by `RegisteredTool`'s hook-resource field. Those resources are a
+subset of `ToolRuntime`'s fields and must be folded into `ToolRuntime`, then
+stamped onto each `RegisteredTool` by the registry. They are **not**
+engine-owned: `eos-engine` has no edge to `eos-workflow`, so it cannot build the
+workflow API itself — the same acyclic constraint that governs `ToolRuntime`.
+Only the pure policy/pattern state (the destructive-git/shell regexes, the
+isolated-mode check) is engine-private; the injected handles are not.
 
 Rejected `Service` names:
 
@@ -191,7 +234,8 @@ Rejected `Service` names:
 | --- | --- |
 | private tool executor resource group | `ToolRuntime` |
 | static registry config holder | `ToolRegistry` default entries |
-| hook-only private state | engine-private hook policy state |
+| hook-only injected resources | `ToolRuntime` hook-resource bundle |
+| hook-only policy/pattern state | engine-private hook policy state |
 | test-only helper | test fixture name |
 
 ## Public Surface
@@ -199,16 +243,25 @@ Rejected `Service` names:
 Target `lib.rs` exports only:
 
 ```rust
+pub use config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use error::ToolError;
 pub use hooks::Hook;
 pub use model::{ExecutionMetadata, OutputShape, ToolIntent, ToolKey, ToolName, ToolResult};
 pub use registry::{
     build_default_registry, CallerScope, RegisteredTool, ToolExecutor, ToolRegistry, ToolRuntime,
 };
+pub use tools::terminal::{render_tool_instruction, TerminalTool, ToolInstructions};
 ```
 
 The exact names may change during implementation, but the surface must stay
 small and owner-accurate. `HookOutcome` is not public `eos-tool` API.
+
+`ToolConfigSet`/`ToolConfig`/`ToolConfigError` and the `terminal` descriptors are
+restored here because `eos-agent-core` and the request runtime consume them
+today; dropping them silently narrows load-bearing API. The previous 11-argument
+`build_default_registry_with_services` entry point is **replaced** by
+`build_default_registry(config, caller, runtime)` taking one `ToolRuntime` — that
+collapse is the purpose of `ToolRuntime`, not an incidental rename.
 
 ## Progress Tracker
 
@@ -219,8 +272,10 @@ small and owner-accurate. `HookOutcome` is not public `eos-tool` API.
 | Route non-tool `eos-tool-ports` contracts to owner crates or owner-neutral contract modules | Not started |
 | Fold registry, executor trait, and default tool registration into `registry.rs` | Not started |
 | Move hook declarations into `eos-tool/hooks.rs` and keep hook execution in `eos-engine` | Not started |
+| Move the markdown tool-config loader and `ToolSpec` schema helpers into `config.rs` | Not started |
 | Move concrete tool behavior into `tools/` family modules | Not started |
-| Define `ToolRuntime` in `registry.rs` | Not started |
+| Keep `tools/submission/` as a per-family subfolder | Not started |
+| Define `ToolRuntime` in `registry.rs`, including the agent-run and hook-resource fields | Not started |
 | Collapse sandbox file/edit tools into `tools/sandbox.rs` | Not started |
 | Collapse shell/session tools into `tools/command.rs` | Not started |
 | Collapse isolated-workspace tools into `tools/isolated_workspace.rs` | Not started |
@@ -234,14 +289,25 @@ small and owner-accurate. `HookOutcome` is not public `eos-tool` API.
 
 - `eos-tool` has `tools.rs` and family-level `tools/` modules.
 - `eos-tool` has `hooks.rs`.
+- `eos-tool` has `config.rs` owning the externalized tool-config loader and the
+  `ToolSpec` schema helpers; `registry.rs` does not absorb the loader.
 - `eos-tool` has no first-target `catalog.rs`, `executor.rs`, `runtime.rs`,
   `resources.rs`, `handles.rs`, `services.rs`, `services/`, or `hooks/` folder.
+- `tools/submission/` is a per-family subfolder (planner, root, generator,
+  reducer, advisor, shared `lib`); it is not flattened into one
+  `tools/submission.rs`.
 - `eos-tool` has no one-file-per-tool-command module tree.
 - `eos-tool` exports no `*Service` types.
 - Private resource groups are fields on `ToolRuntime`, not `Service`.
 - `HookOutcome` is not exported from `eos-tool`.
-- Hook execution remains in `eos-engine` unless Phase 04 is amended to move the
-  full single-tool execution pipeline.
+- Hook *declarations* live in `eos-tool/hooks.rs`; hook *execution* (the pipeline
+  and `HookOutcome`) lives in `eos-engine/tool_call`. Phase 04 confirms this
+  split (its `tool_call.rs` owns "execution glue" and it states `eos-engine` does
+  not own hook *contracts*); the two specs must use "hook contracts/declarations"
+  for `eos-tool` and "hook execution" for `eos-engine` consistently.
+- The stateful pre-hooks' injected resources (sandbox/workflow/subagent) are
+  carried by `ToolRuntime` and stamped onto `RegisteredTool`, not built by
+  `eos-engine`.
 - `tools/command.rs` owns `exec_command`, `write_stdin`, and
   `read_command_progress`.
 - `tools/isolated_workspace.rs` owns `enter_isolated_workspace` and
@@ -255,5 +321,8 @@ small and owner-accurate. `HookOutcome` is not public `eos-tool` API.
 - `cargo test -p eos-tool` passes.
 - `cargo check -p eos-engine --all-targets` and
   `cargo check -p eos-agent-core --all-targets` pass after import updates.
-- `eos-tool` final module count is at or below 16 unless a documented family
-  split prevents a materially worse large file.
+- `eos-tool` final module count is at or below 22, counted net of the two
+  documented justified splits (`config.rs`, `tools/submission/`). The prior `16`
+  target assumed no splits; it is raised, not relaxed — the discipline is "no
+  empty-justification splits," not an arbitrary cap that forces an 800-1000 LOC
+  file the repo treats as a review smell.

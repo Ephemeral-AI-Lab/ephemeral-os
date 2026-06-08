@@ -170,7 +170,7 @@
     attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>&gt;,
 ) {
     <span class="rs-kw">let</span> planner = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>);
-    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a>(
+    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a>(
         registry,
         <span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
         planner,
@@ -373,13 +373,13 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::spec::text_spec;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::execution::parse_input;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>;
-<span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">PlanReducer</span>, <span class="rs-type">PlanTask</span>, <span class="rs-type">PlannerPlan</span>};
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ExecutionMetadata</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolError</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolExecutor</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolName</span>;
 <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolRegistry</span>;
 <span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">OutputShape</span>, <span class="rs-type">ToolResult</span>};
+<span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">PlanReducer</span>, <span class="rs-type">PlanTask</span>, <span class="rs-type">PlannerPlan</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::lib::{is_blank, meta_obj, submission_ack_result};
 
@@ -598,7 +598,7 @@
     attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-47">AttemptSubmissionService</a>&gt;,
 ) {
     <span class="rs-kw">let</span> planner = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>);
-    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-50">register_tool</a>(
+    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-52">register_tool</a>(
         registry,
         <span class="rs-type">ToolName</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
         planner,

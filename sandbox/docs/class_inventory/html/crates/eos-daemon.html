@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eos-daemon · src/audit/buffer.rs</title>
+  <title>eos-daemon · src/adapters/checkpoint/base.rs</title>
   <link rel="stylesheet" href="../assets/inventory.css">
 </head>
 <body>
@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>53</b><span>modules</span></div>
-  <div><b>472</b><span>items</span></div>
+  <div><b>54</b><span>modules</span></div>
+  <div><b>469</b><span>items</span></div>
   <div><b>205</b><span>fields</span></div>
-  <div><b>120</b><span>methods</span></div>
+  <div><b>121</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,1011 +41,249 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link active" href="eos-daemon.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-base-rs.html"><span>base.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-occ-mod-rs.html"><span>mod.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-process-rs.html"><span>process.rs</span><small>3/11</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-host-ports-rs.html"><span>host_ports.rs</span><small>1/1</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>2/11</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-manager-rs.html"><span>manager.rs</span><small>2/8</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-tool-call-events-rs.html"><span>tool_call_events.rs</span><small>0/3</small></a></li></ul></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="audit::buffer crates/eos-daemon/src/audit/buffer.rs BufferedEvent LaneCounters AuditBuffer RingState impl AuditBuffer impl Default for AuditBuffer safe_emit global_audit_buffer default_boot_epoch_id encoded_size u128_to_i64_saturating usize_to_u64_saturating lane_index lane_name enforce_caps_locked evict_one_locked retained_events retained_bytes pressure_locked u64_to_f64_lossy buffer_block snapshot_block pull_preserves_negative_cursor_when_no_events_match pull_filters_after_seq_with_checked_cursor_conversion integer_size_helpers_saturate_at_wire_limits">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">adapters</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link active" href="eos-daemon.html"><span>base.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-checkpoint-commit-rs.html"><span>commit.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-occ-mod-rs.html"><span>mod.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-process-rs.html"><span>process.rs</span><small>3/11</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html"><span>host_ports.rs</span><small>1/1</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html"><span>ns_runner.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-manager-rs.html"><span>manager.rs</span><small>2/8</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-audit-buffer-rs.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-tool-call-events-rs.html"><span>tool_call_events.rs</span><small>0/3</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="adapters::checkpoint::base crates/eos-daemon/src/adapters/checkpoint/base.rs layer_metrics build_workspace_base ensure_workspace_base workspace_binding">
   <div class="module-head">
     <div>
-      <h2>src/audit/buffer.rs</h2>
-      <p class="path">module <code>audit::buffer</code></p>
+      <h2>src/adapters/checkpoint/base.rs</h2>
+      <p class="path">module <code>adapters::checkpoint::base</code></p>
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>4 types</span>
-      <span>2 impls</span>
-      <span>19 fns</span>
-      <span>7 methods</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>4 fns</span>
+      <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AuditBuffer-57" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AuditBuffer pub(crate) pub(crate) struct AuditBuffer crates/eos-daemon/src/audit/buffer.rs inner Mutex &lt; RingState &gt; boot_epoch_id i64 pressure_threshold f64 ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-layer-metrics-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_metrics pub(crate) pub(crate) fn layer_metrics (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/base.rs  ">
   <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>AuditBuffer</h3>
+    <span class="kind">fn</span>
+    <h3>layer_metrics</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a></code>
-  <p class="docstring">Bounded in-memory audit ring with lane-priority eviction.<br>The ring caps on BOTH event count and byte size; when either ceiling is<br>exceeded it evicts in [`Lane::EVICTION_ORDER`] (sample first, critical last)<br>so critical-lane events survive sample-lane pressure. A rising cross of the<br>pressure threshold is edge-triggered and (in the full port) re-emits a<br>`daemon.audit_buffer_pressure` critical event OUTSIDE the lock.</p>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-layer-metrics-17">layer_metrics</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Mutex &lt; <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a> &gt;</code></td></tr><tr><td>private</td><td>boot_epoch_id</td><td><code>i64</code></td></tr><tr><td>private</td><td>pressure_threshold</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-89"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> () -&gt; Self</code><p class="docstring">Build a ring with the default caps (`50_000` events / 8 MiB) and a fresh<br>boot epoch id.</p><details class="function-source">
+  <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Build a ring with the default caps (`50_000` events / 8 MiB) and a fresh</span>
-    <span class="rs-comment">/// boot epoch id.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(<span class="rs-type">DEFAULT_MAX_EVENTS</span>, <span class="rs-type">DEFAULT_MAX_BYTES</span>, <span class="rs-type">None</span>)
-    }
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-layer-metrics-17">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone())?;
+    <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
+    <span class="rs-kw">let</span> metrics = stack.storage_metrics()?;
+    <span class="rs-kw">let</span> binding = read_workspace_binding(&amp;root)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;manifest_depth&quot;: manifest.depth(),
+        &quot;active_leases&quot;: stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#method-active-lease-count-70">active_lease_count</a>(),
+        &quot;leased_layers&quot;: stack.leased_layers().len(),
+        &quot;layer_dirs&quot;: metrics.layer_dirs,
+        &quot;referenced_layers&quot;: manifest.layers.len(),
+        &quot;orphan_layer_count&quot;: 0,
+        &quot;missing_layer_count&quot;: 0,
+        &quot;orphan_layer_ids&quot;: [],
+        &quot;missing_layer_ids&quot;: [],
+        &quot;staging_dirs&quot;: metrics.staging_dirs,
+        &quot;storage_bytes&quot;: metrics.storage_bytes,
+        &quot;workspace_bound&quot;: binding.is_some(),
+        &quot;workspace_root&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.workspace_root.as_str()),
+        &quot;base_root_hash&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.base_root_hash.as_str()),
+        &quot;occ_runtime_service_cache&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-cache-snapshot-221">occ_service_cache_snapshot</a>(),
+    }))
+}
 </code></pre>
-</details></td></tr><tr id="method-with-caps-96"><td>constructor</td><td>with_caps</td><td><code>fn <a class="symbol-link" href="eos-daemon.html#method-with-caps-96">with_caps</a> (max_events : u64 , max_bytes : u64 , boot_epoch_id : Option &lt; i64 &gt;) -&gt; Self</code><p class="docstring">Build a ring with explicit caps and an optional fixed boot epoch id.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Build a ring with explicit caps and an optional fixed boot epoch id.</span>
-    #[must_use]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(max_events: u64, max_bytes: u64, boot_epoch_id: <span class="rs-type">Option</span>&lt;i64&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            inner: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a> {
-                max_events,
-                max_bytes,
-                next_seq: 0,
-                lost_before_seq: 0,
-                dropped_total: 0,
-                all: <span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
-                lanes: [<span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(), <span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(), <span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()],
-                counters: [<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-LaneCounters-46">LaneCounters</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(); 3],
-                pressure_above: <span class="rs-kw">false</span>,
-            }),
-            boot_epoch_id: boot_epoch_id.unwrap_or_else(default_boot_epoch_id),
-            pressure_threshold: <span class="rs-type">DEFAULT_PRESSURE_THRESHOLD</span>,
-        }
-    }
-</code></pre>
-</details></td></tr><tr id="method-lock-state-116"><td>method</td><td>lock_state</td><td><code>fn <a class="symbol-link" href="eos-daemon.html#method-lock-state-116">lock_state</a> (&amp; self) -&gt; MutexGuard &lt; &#x27;_ , <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a> &gt;</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>&gt; {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span>.inner.lock() {
-            <span class="rs-type">Ok</span>(guard) =&gt; guard,
-            <span class="rs-type">Err</span>(poisoned) =&gt; poisoned.into_inner(),
-        }
-    }
-</code></pre>
-</details></td></tr><tr id="method-append-123"><td>method</td><td>append</td><td><code>fn <a class="symbol-link" href="eos-daemon.html#method-append-123">append</a> (&amp; self , event : Value , lane : Lane) -&gt; u64</code><p class="docstring">Append `event` on `lane`, returning the assigned sequence number.<br>Injects `seq`/`lane` into the payload, enforces the caps (evicting in<br>lane priority), and on a rising pressure cross re-emits the<br>`daemon.audit_buffer_pressure` event OUTSIDE the lock.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Append `event` on `lane`, returning the assigned sequence number.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Injects `seq`/`lane` into the payload, enforces the caps (evicting in</span>
-    <span class="rs-comment">/// lane priority), and on a rising pressure cross re-emits the</span>
-    <span class="rs-comment">/// `daemon.audit_buffer_pressure` event OUTSIDE the lock.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(&amp;<span class="rs-self">self</span>, event: <span class="rs-type">Value</span>, lane: <span class="rs-type">Lane</span>) -&gt; u64 {
-        <span class="rs-kw">let</span> encoded_bytes = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-encoded-size-239">encoded_size</a>(&amp;event);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
-        <span class="rs-kw">let</span> seq = state.next_seq;
-        state.next_seq += 1;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = event;
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<span class="rs-kw">ref</span> <span class="rs-kw">mut</span> obj) = payload {
-            obj.insert(&quot;seq&quot;.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">Number</span>(seq.into()));
-            obj.insert(
-                &quot;lane&quot;.to_owned(),
-                serde_json::to_value(lane).unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;normal&quot;.to_owned())),
-            );
-        }
-        <span class="rs-kw">let</span> buffered = <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a> {
-            seq,
-            lane,
-            encoded_bytes,
-            payload,
-        };
-        <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane);
-        state.counters[index].events += 1;
-        state.counters[index].bytes += encoded_bytes;
-        state.lanes[index].push_back(buffered.clone());
-        state.all.push_back(buffered);
-        <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-enforce-caps-locked-270">enforce_caps_locked</a>(&amp;<span class="rs-kw">mut</span> state);
-        <span class="rs-kw">let</span> pressure = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a>(&amp;state);
-        state.pressure_above = pressure &gt;= <span class="rs-self">self</span>.pressure_threshold;
-        seq
-    }
-</code></pre>
-</details></td></tr><tr id="method-pull-158"><td>method</td><td>pull</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon.html#method-pull-158">pull</a> (&amp; self , after_seq : i64 , limit : usize) -&gt; Value</code><p class="docstring">Pull events strictly after `after_seq` (up to `limit`), with the buffer +<br>snapshot blocks and the cursor. Backs `api.audit.pull`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Pull events strictly after `after_seq` (up to `limit`), with the buffer +</span>
-    <span class="rs-comment">/// snapshot blocks and the cursor. Backs `api.audit.pull`.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(&amp;<span class="rs-self">self</span>, after_seq: i64, limit: usize) -&gt; <span class="rs-type">Value</span> {
-        <span class="rs-kw">let</span> limit = limit.max(1);
-        <span class="rs-kw">let</span> requested_after_seq = after_seq;
-        <span class="rs-kw">let</span> after_seq = u64::try_from(after_seq).ok();
-        <span class="rs-kw">let</span> (events, cursor_after, lost_before_seq, buffer, snapshot) = {
-            <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
-            <span class="rs-kw">let</span> events: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = state
-                .all
-                .iter()
-                .filter(|event| after_seq.is_none_or(|after_seq| event.seq &gt; after_seq))
-                .take(limit)
-                .map(|event| event.payload.clone())
-                .collect();
-            <span class="rs-kw">let</span> cursor_after = events
-                .last()
-                .and_then(|event| event.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-85">get</a>(&quot;seq&quot;))
-                .and_then(<span class="rs-type">Value</span>::as_i64)
-                .unwrap_or(requested_after_seq);
-            (
-                events,
-                cursor_after,
-                state.lost_before_seq,
-                <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a>(&amp;state),
-                <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a>(&amp;state, <span class="rs-self">self</span>.boot_epoch_id),
-            )
-        };
-        serde_json::json!({
-            &quot;schema&quot;: <span class="rs-type">SCHEMA_VERSION</span>,
-            &quot;cursor&quot;: {
-                &quot;after_seq&quot;: cursor_after,
-                &quot;lost_before_seq&quot;: lost_before_seq,
-            },
-            &quot;buffer&quot;: buffer,
-            &quot;snapshot&quot;: snapshot,
-            &quot;events&quot;: events,
-        })
-    }
-</code></pre>
-</details></td></tr><tr id="method-snapshot-198"><td>method</td><td>snapshot</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon.html#method-snapshot-198">snapshot</a> (&amp; self) -&gt; Value</code><p class="docstring">Buffer + snapshot blocks with no events. Backs `api.audit.snapshot`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Buffer + snapshot blocks with no events. Backs `api.audit.snapshot`.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-snapshot-198">snapshot</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
-        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
-        serde_json::json!({
-            &quot;schema&quot;: <span class="rs-type">SCHEMA_VERSION</span>,
-            &quot;buffer&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a>(&amp;state),
-            &quot;snapshot&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a>(&amp;state, <span class="rs-self">self</span>.boot_epoch_id),
-        })
-    }
-</code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a></code></summary><table><tbody><tr id="method-default-210"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-daemon.html#method-default-210">default</a> () -&gt; Self</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()
-    }
-</code></pre>
-</details></td></tr></tbody></table></details></div>
+</details>
 
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:57</p>
-</article><article id="item-struct-BufferedEvent-32" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BufferedEvent private struct BufferedEvent crates/eos-daemon/src/audit/buffer.rs seq u64 lane Lane encoded_bytes u64 payload Value ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>BufferedEvent</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a></code>
-  <p class="docstring">A single buffered event: its monotonic sequence, lane, encoded size, and the<br>payload (already stamped with `seq`/`lane`).</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>lane</td><td><code>Lane</code></td></tr><tr><td>private</td><td>encoded_bytes</td><td><code>u64</code></td></tr><tr><td>private</td><td>payload</td><td><code>Value</code></td></tr></tbody></table>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:32</p>
-</article><article id="item-struct-LaneCounters-46" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LaneCounters private struct LaneCounters crates/eos-daemon/src/audit/buffer.rs events u64 bytes u64 dropped u64 ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>LaneCounters</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-daemon.html#item-struct-LaneCounters-46">LaneCounters</a></code>
-  <p class="docstring">Per-lane retained-event/byte/dropped counters.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>events</td><td><code>u64</code></td></tr><tr><td>private</td><td>bytes</td><td><code>u64</code></td></tr><tr><td>private</td><td>dropped</td><td><code>u64</code></td></tr></tbody></table>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:46</p>
-</article><article id="item-struct-RingState-70" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RingState private struct RingState crates/eos-daemon/src/audit/buffer.rs max_events u64 max_bytes u64 next_seq u64 lost_before_seq u64 dropped_total u64 all VecDeque &lt; BufferedEvent &gt; lanes [VecDeque &lt; BufferedEvent &gt; ; 3] counters [LaneCounters ; 3] pressure_above bool ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>RingState</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a></code>
-  <p class="docstring">The mutex-guarded ring state. Held synchronously only; never across `.await`.</p>
-  <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>max_events</td><td><code>u64</code></td></tr><tr><td>private</td><td>max_bytes</td><td><code>u64</code></td></tr><tr><td>private</td><td>next_seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>lost_before_seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>dropped_total</td><td><code>u64</code></td></tr><tr><td>private</td><td>all</td><td><code>VecDeque &lt; <a class="symbol-link" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a> &gt;</code></td></tr><tr><td>private</td><td>lanes</td><td><code>[VecDeque &lt; <a class="symbol-link" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a> &gt; ; 3]</code></td></tr><tr><td>private</td><td>counters</td><td><code>[<a class="symbol-link" href="eos-daemon.html#item-struct-LaneCounters-46">LaneCounters</a> ; 3]</code></td></tr><tr><td>private</td><td>pressure_above</td><td><code>bool</code></td></tr></tbody></table>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:70</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-safe-emit-215" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_emit pub(crate) pub(crate) fn safe_emit (event : Value , lane : Lane) crates/eos-daemon/src/audit/buffer.rs  ">
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/base.rs:17</p>
+</article><article id="item-fn-build-workspace-base-44" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_workspace_base pub(crate) pub(crate) fn build_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>safe_emit</h3>
+    <h3>build_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-safe-emit-215">safe_emit</a> (event : Value , lane : Lane)</code>
-  <p class="docstring">Append `event` to the daemon ring on `lane`, swallowing any error.<br>Audit emits never break the hot path; subsystems use this single bridge so<br>the try/swallow discipline lives in one place. IMPURE: it reaches the<br>process-wide buffer singleton (the future port resolves the singleton; the<br>pure schema constructors stay in [`eos_protocol::audit`]).</p>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-build-workspace-base-44">build_workspace_base</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Append `event` to the daemon ring on `lane`, swallowing any error.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Audit emits never break the hot path; subsystems use this single bridge so</span>
-<span class="rs-comment">/// the try/swallow discipline lives in one place. IMPURE: it reaches the</span>
-<span class="rs-comment">/// process-wide buffer singleton (the future port resolves the singleton; the</span>
-<span class="rs-comment">/// pure schema constructors stay in [`eos_protocol::audit`]).</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-safe-emit-215">safe_emit</a>(event: <span class="rs-type">Value</span>, lane: <span class="rs-type">Lane</span>) {
-    <span class="rs-kw">let</span> _ = catch_unwind(<span class="rs-type">AssertUnwindSafe</span>(|| {
-        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-global-audit-buffer-227">global_audit_buffer</a>().<a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(event, lane);
-    }));
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-build-workspace-base-44">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> reset = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;reset&quot;).and_then(<span class="rs-type">Value</span>::as_bool).unwrap_or(<span class="rs-kw">false</span>);
+    <span class="rs-kw">if</span> reset {
+        <span class="rs-kw">crate</span>::adapters::plugins::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-341">stop_services_for_layer_stack_root</a>(&amp;root.to_string_lossy())?;
+    }
+    <span class="rs-kw">let</span> built = build_layer_stack_workspace_base(&amp;root, &amp;workspace_root, reset)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;built.timings);
+    timings.insert(
+        &quot;api.workspace_base.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;built.binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    }))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:215</p>
-</article><article id="item-fn-global-audit-buffer-227" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn global_audit_buffer pub(crate) pub(crate) fn global_audit_buffer () -&gt; &amp; 'static AuditBuffer crates/eos-daemon/src/audit/buffer.rs  ">
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/base.rs:44</p>
+</article><article id="item-fn-ensure-workspace-base-67" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_workspace_base pub(crate) pub(crate) fn ensure_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>global_audit_buffer</h3>
+    <h3>ensure_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-global-audit-buffer-227">global_audit_buffer</a> () -&gt; &amp; &#x27;static <a class="symbol-link" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a></code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-ensure-workspace-base-67">ensure_workspace_base</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-global-audit-buffer-227">global_audit_buffer</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a> {
-    <span class="rs-kw">static</span> <span class="rs-type">BUFFER</span>: <span class="rs-type">OnceLock</span>&lt;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
-    <span class="rs-type">BUFFER</span>.get_or_init(<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>::new)
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-ensure-workspace-base-67">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> (binding, created) = ensure_layer_stack_workspace_base(&amp;root, &amp;workspace_root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-kw">let</span> timings = json!({
+        &quot;api.workspace_base.total_s&quot;: total_start.elapsed().as_secs_f64(),
+    });
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: created,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: timings,
+    }))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:227</p>
-</article><article id="item-fn-default-boot-epoch-id-232" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_boot_epoch_id private fn default_boot_epoch_id () -&gt; i64 crates/eos-daemon/src/audit/buffer.rs  ">
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/base.rs:67</p>
+</article><article id="item-fn-workspace-binding-84" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_binding pub(crate) pub(crate) fn workspace_binding (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>default_boot_epoch_id</h3>
-    <span class="visibility">private</span>
+    <h3>workspace_binding</h3>
+    <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-default-boot-epoch-id-232">default_boot_epoch_id</a> () -&gt; i64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-workspace-binding-84">workspace_binding</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-default-boot-epoch-id-232">default_boot_epoch_id</a>() -&gt; i64 {
-    <span class="rs-type">SystemTime</span>::now()
-        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
-        .map(|duration| <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a>(duration.as_nanos()))
-        .unwrap_or_default()
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-workspace-binding-84">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+    }))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:232</p>
-</article><article id="item-fn-encoded-size-239" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encoded_size private fn encoded_size (value : &amp; Value) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>encoded_size</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-encoded-size-239">encoded_size</a> (value : &amp; Value) -&gt; u64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-encoded-size-239">encoded_size</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; u64 {
-    serde_json::to_vec(value).map_or_else(
-        |_| <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(format!(&quot;{value:?}&quot;).len()),
-        |bytes| <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(bytes.len()),
-    )
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:239</p>
-</article><article id="item-fn-u128-to-i64-saturating-246" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u128_to_i64_saturating private fn u128_to_i64_saturating (value : u128) -&gt; i64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>u128_to_i64_saturating</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a> (value : u128) -&gt; i64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a>(value: u128) -&gt; i64 {
-    i64::try_from(value).unwrap_or(i64::<span class="rs-type">MAX</span>)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:246</p>
-</article><article id="item-fn-usize-to-u64-saturating-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_u64_saturating private fn usize_to_u64_saturating (value : usize) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>usize_to_u64_saturating</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a> (value : usize) -&gt; u64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(value: usize) -&gt; u64 {
-    u64::try_from(value).unwrap_or(u64::<span class="rs-type">MAX</span>)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:250</p>
-</article><article id="item-fn-lane-index-254" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lane_index private const fn lane_index (lane : Lane) -&gt; usize crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>lane_index</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a> (lane : Lane) -&gt; usize</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane: <span class="rs-type">Lane</span>) -&gt; usize {
-    <span class="rs-kw">match</span> lane {
-        <span class="rs-type">Lane</span>::<span class="rs-type">Critical</span> =&gt; 0,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span> =&gt; 1,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Sample</span> =&gt; 2,
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:254</p>
-</article><article id="item-fn-lane-name-262" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lane_name private const fn lane_name (lane : Lane) -&gt; &amp; 'static str crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>lane_name</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-daemon.html#item-fn-lane-name-262">lane_name</a> (lane : Lane) -&gt; &amp; &#x27;static str</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-name-262">lane_name</a>(lane: <span class="rs-type">Lane</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
-    <span class="rs-kw">match</span> lane {
-        <span class="rs-type">Lane</span>::<span class="rs-type">Critical</span> =&gt; &quot;critical&quot;,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span> =&gt; &quot;normal&quot;,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Sample</span> =&gt; &quot;sample&quot;,
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:262</p>
-</article><article id="item-fn-enforce-caps-locked-270" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enforce_caps_locked private fn enforce_caps_locked (state : &amp; mut RingState) crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>enforce_caps_locked</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-enforce-caps-locked-270">enforce_caps_locked</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a>)</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-enforce-caps-locked-270">enforce_caps_locked</a>(state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) {
-    <span class="rs-kw">while</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state) &gt; state.max_events || <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state) &gt; state.max_bytes {
-        <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-evict-one-locked-278">evict_one_locked</a>(state) {
-            <span class="rs-kw">break</span>;
-        }
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:270</p>
-</article><article id="item-fn-evict-one-locked-278" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn evict_one_locked private fn evict_one_locked (state : &amp; mut RingState) -&gt; bool crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>evict_one_locked</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-evict-one-locked-278">evict_one_locked</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; bool</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-evict-one-locked-278">evict_one_locked</a>(state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; bool {
-    <span class="rs-kw">for</span> lane <span class="rs-kw">in</span> <span class="rs-type">Lane</span>::<span class="rs-type">EVICTION_ORDER</span> {
-        <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane);
-        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(victim) = state.lanes[index].pop_front() <span class="rs-kw">else</span> {
-            <span class="rs-kw">continue</span>;
-        };
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(position) = state.all.iter().position(|event| event.seq == victim.seq) {
-            state.all.remove(position);
-        }
-        state.counters[index].events = state.counters[index].events.saturating_sub(1);
-        state.counters[index].bytes = state.counters[index]
-            .bytes
-            .saturating_sub(victim.encoded_bytes);
-        state.counters[index].dropped += 1;
-        state.dropped_total += 1;
-        state.lost_before_seq = state.lost_before_seq.max(victim.seq + 1);
-        <span class="rs-kw">return</span> <span class="rs-kw">true</span>;
-    }
-    <span class="rs-kw">false</span>
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:278</p>
-</article><article id="item-fn-retained-events-299" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retained_events private fn retained_events (state : &amp; RingState) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>retained_events</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a> (state : &amp; <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; u64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; u64 {
-    state.counters.iter().map(|counter| counter.events).sum()
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:299</p>
-</article><article id="item-fn-retained-bytes-303" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retained_bytes private fn retained_bytes (state : &amp; RingState) -&gt; u64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>retained_bytes</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a> (state : &amp; <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; u64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; u64 {
-    state.counters.iter().map(|counter| counter.bytes).sum()
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:303</p>
-</article><article id="item-fn-pressure-locked-307" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pressure_locked private fn pressure_locked (state : &amp; RingState) -&gt; f64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>pressure_locked</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a> (state : &amp; <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; f64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; f64 {
-    (<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state)) / <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(state.max_events))
-        .max(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state)) / <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(state.max_bytes))
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:307</p>
-</article><article id="item-fn-u64-to-f64-lossy-312" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_lossy private fn u64_to_f64_lossy (value : u64) -&gt; f64 crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>u64_to_f64_lossy</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a> (value : u64) -&gt; f64</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(value: u64) -&gt; f64 {
-    <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
-    <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    f64::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(low))
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:312</p>
-</article><article id="item-fn-buffer-block-319" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn buffer_block private fn buffer_block (state : &amp; RingState) -&gt; Value crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>buffer_block</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a> (state : &amp; <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; Value</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; <span class="rs-type">Value</span> {
-    <span class="rs-kw">let</span> dropped_by_lane = <span class="rs-type">Lane</span>::<span class="rs-type">STORAGE_ORDER</span>
-        .into_iter()
-        .map(|lane| {
-            (
-                <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-name-262">lane_name</a>(lane).to_owned(),
-                <span class="rs-type">Value</span>::<span class="rs-type">Number</span>(state.counters[<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane)].dropped.into()),
-            )
-        })
-        .collect();
-    serde_json::json!({
-        &quot;retained_events&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state),
-        &quot;retained_bytes&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state),
-        &quot;max_events&quot;: state.max_events,
-        &quot;max_bytes&quot;: state.max_bytes,
-        &quot;pressure&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a>(state),
-        &quot;dropped_event_count&quot;: state.dropped_total,
-        &quot;dropped_event_count_by_lane&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(dropped_by_lane),
-        &quot;lost_before_seq&quot;: state.lost_before_seq,
-    })
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:319</p>
-</article><article id="item-fn-snapshot-block-341" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn snapshot_block private fn snapshot_block (state : &amp; RingState , boot_epoch_id : i64) -&gt; Value crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>snapshot_block</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a> (state : &amp; <a class="symbol-link" href="eos-daemon.html#item-struct-RingState-70">RingState</a> , boot_epoch_id : i64) -&gt; Value</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>, boot_epoch_id: i64) -&gt; <span class="rs-type">Value</span> {
-    serde_json::json!({
-        &quot;daemon&quot;: {
-            &quot;boot_epoch_id&quot;: boot_epoch_id,
-            &quot;next_seq&quot;: state.next_seq,
-        }
-    })
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:341</p>
-</article><article id="item-fn-pull-preserves-negative-cursor-when-no-events-match-356" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pull_preserves_negative_cursor_when_no_events_match private fn pull_preserves_negative_cursor_when_no_events_match () crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>pull_preserves_negative_cursor_when_no_events_match</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-pull-preserves-negative-cursor-when-no-events-match-356">pull_preserves_negative_cursor_when_no_events_match</a> ()</code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pull-preserves-negative-cursor-when-no-events-match-356">pull_preserves_negative_cursor_when_no_events_match</a>() {
-        <span class="rs-kw">let</span> buffer = <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(10, 1024, <span class="rs-type">Some</span>(1));
-
-        <span class="rs-kw">let</span> pulled = buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(-3, 10);
-
-        assert_eq!(pulled[&quot;cursor&quot;][&quot;after_seq&quot;], json!(-3));
-        assert_eq!(pulled[&quot;events&quot;], json!([]));
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:356</p>
-</article><article id="item-fn-pull-filters-after-seq-with-checked-cursor-conversion-366" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pull_filters_after_seq_with_checked_cursor_conversion private fn pull_filters_after_seq_with_checked_cursor_conversion () crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>pull_filters_after_seq_with_checked_cursor_conversion</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-pull-filters-after-seq-with-checked-cursor-conversion-366">pull_filters_after_seq_with_checked_cursor_conversion</a> ()</code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pull-filters-after-seq-with-checked-cursor-conversion-366">pull_filters_after_seq_with_checked_cursor_conversion</a>() {
-        <span class="rs-kw">let</span> buffer = <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(10, 1024, <span class="rs-type">Some</span>(1));
-        assert_eq!(buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(json!({&quot;event&quot;: &quot;first&quot;}), <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span>), 0);
-        assert_eq!(buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(json!({&quot;event&quot;: &quot;second&quot;}), <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span>), 1);
-
-        <span class="rs-kw">let</span> all = buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(-1, 10);
-        <span class="rs-kw">let</span> after_zero = buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(0, 10);
-
-        assert_eq!(all[&quot;events&quot;].as_array().map_or(0, <span class="rs-type">Vec</span>::len), 2);
-        assert_eq!(after_zero[&quot;events&quot;].as_array().map_or(0, <span class="rs-type">Vec</span>::len), 1);
-        assert_eq!(after_zero[&quot;events&quot;][0][&quot;seq&quot;], json!(1));
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:366</p>
-</article><article id="item-fn-integer-size-helpers-saturate-at-wire-limits-380" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn integer_size_helpers_saturate_at_wire_limits private fn integer_size_helpers_saturate_at_wire_limits () crates/eos-daemon/src/audit/buffer.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>integer_size_helpers_saturate_at_wire_limits</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-integer-size-helpers-saturate-at-wire-limits-380">integer_size_helpers_saturate_at_wire_limits</a> ()</code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-integer-size-helpers-saturate-at-wire-limits-380">integer_size_helpers_saturate_at_wire_limits</a>() {
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a>(i64::<span class="rs-type">MAX</span> <span class="rs-kw">as</span> u128 + 1), i64::<span class="rs-type">MAX</span>);
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(7), 7);
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/audit/buffer.rs:380</p>
+  <p class="source">crates/eos-daemon/src/adapters/checkpoint/base.rs:84</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-daemon/src/audit/buffer.rs</p>
+    <p class="path">crates/eos-daemon/src/adapters/checkpoint/base.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Daemon-side audit RING BUFFER + the impure emit bridges.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! The pure audit *schema* (the `*Section` types, [`Lane`], [`SCHEMA_VERSION`],</span>
-<span class="rs-comment">//! the cap/pressure constants, and `build_event`) already lives in</span>
-<span class="rs-comment">//! [`eos_protocol::audit`] — this module does NOT redefine it. What lives HERE</span>
-<span class="rs-comment">//! is the daemon-owned, IMPURE machinery the severing left behind:</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! * [`AuditBuffer`] — the bounded in-memory ring with lane-priority eviction</span>
-<span class="rs-comment">//!   (`sample -&gt; normal -&gt; critical`), edge-triggered 0.8 pressure detection,</span>
-<span class="rs-comment">//!   monotonic `seq`/`lane` injection, and the `pull` / `snapshot` views the</span>
-<span class="rs-comment">//!   `api.audit.{pull,snapshot}` ops read. The daemon never writes audit to</span>
-<span class="rs-comment">//!   disk; consumers pull from this ring.</span>
-<span class="rs-comment">//! * [`safe_emit`] — the impure bridge that appends to this ring while</span>
-<span class="rs-comment">//!   swallowing errors so audit emission never breaks the hot path.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! Concurrency: a single mutex guards all ring state. The daemon dispatcher is</span>
-<span class="rs-comment">//! single-threaded async plus boot-time emitters that may fire before the loop</span>
-<span class="rs-comment">//! starts; a plain lock is correct for both — and the lock is NEVER held across</span>
-<span class="rs-comment">//! an `.await` (the ring ops are synchronous).</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Workspace checkpoint base, binding, and LayerStack metric services.</span>
 
-<span class="rs-kw">use</span> std::collections::<span class="rs-type">VecDeque</span>;
-<span class="rs-kw">use</span> std::panic::{catch_unwind, <span class="rs-type">AssertUnwindSafe</span>};
-<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">OnceLock</span>};
-<span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
 
-<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
-
-<span class="rs-kw">use</span> eos_protocol::audit::{
-    <span class="rs-type">Lane</span>, <span class="rs-type">DEFAULT_MAX_BYTES</span>, <span class="rs-type">DEFAULT_MAX_EVENTS</span>, <span class="rs-type">DEFAULT_PRESSURE_THRESHOLD</span>, <span class="rs-type">SCHEMA_VERSION</span>,
+<span class="rs-kw">use</span> eos_layerstack::{
+    build_workspace_base <span class="rs-kw">as</span> build_layer_stack_workspace_base,
+    ensure_workspace_base <span class="rs-kw">as</span> ensure_layer_stack_workspace_base, read_workspace_binding,
+    require_workspace_binding, <span class="rs-type">LayerStack</span>,
 };
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
-<span class="rs-comment">/// A single buffered event: its monotonic sequence, lane, encoded size, and the</span>
-<span class="rs-comment">/// payload (already stamped with `seq`/`lane`).</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a> {
-    <span class="rs-comment">/// Monotonic per-buffer sequence number.</span>
-    seq: u64,
-    <span class="rs-comment">/// Lane this event was appended on.</span>
-    lane: <span class="rs-type">Lane</span>,
-    <span class="rs-comment">/// Byte size of the JSON-encoded payload (drives the byte cap).</span>
-    encoded_bytes: u64,
-    <span class="rs-comment">/// The event payload, with `seq`/`lane` injected.</span>
-    payload: <span class="rs-type">Value</span>,
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request_args::{binding_to_value, require_string, timings_to_value_map};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::occ::occ_service_cache_snapshot;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-layer-metrics-17">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone())?;
+    <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
+    <span class="rs-kw">let</span> metrics = stack.storage_metrics()?;
+    <span class="rs-kw">let</span> binding = read_workspace_binding(&amp;root)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;manifest_depth&quot;: manifest.depth(),
+        &quot;active_leases&quot;: stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#method-active-lease-count-70">active_lease_count</a>(),
+        &quot;leased_layers&quot;: stack.leased_layers().len(),
+        &quot;layer_dirs&quot;: metrics.layer_dirs,
+        &quot;referenced_layers&quot;: manifest.layers.len(),
+        &quot;orphan_layer_count&quot;: 0,
+        &quot;missing_layer_count&quot;: 0,
+        &quot;orphan_layer_ids&quot;: [],
+        &quot;missing_layer_ids&quot;: [],
+        &quot;staging_dirs&quot;: metrics.staging_dirs,
+        &quot;storage_bytes&quot;: metrics.storage_bytes,
+        &quot;workspace_bound&quot;: binding.is_some(),
+        &quot;workspace_root&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.workspace_root.as_str()),
+        &quot;base_root_hash&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.base_root_hash.as_str()),
+        &quot;occ_runtime_service_cache&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-cache-snapshot-221">occ_service_cache_snapshot</a>(),
+    }))
 }
 
-<span class="rs-comment">/// Per-lane retained-event/byte/dropped counters.</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-LaneCounters-46">LaneCounters</a> {
-    <span class="rs-comment">/// Retained events in this lane.</span>
-    events: u64,
-    <span class="rs-comment">/// Retained bytes in this lane.</span>
-    bytes: u64,
-    <span class="rs-comment">/// Events evicted from this lane under pressure.</span>
-    dropped: u64,
-}
-
-<span class="rs-comment">/// Bounded in-memory audit ring with lane-priority eviction.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// The ring caps on BOTH event count and byte size; when either ceiling is</span>
-<span class="rs-comment">/// exceeded it evicts in [`Lane::EVICTION_ORDER`] (sample first, critical last)</span>
-<span class="rs-comment">/// so critical-lane events survive sample-lane pressure. A rising cross of the</span>
-<span class="rs-comment">/// pressure threshold is edge-triggered and (in the full port) re-emits a</span>
-<span class="rs-comment">/// `daemon.audit_buffer_pressure` critical event OUTSIDE the lock.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a> {
-    inner: <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>&gt;,
-    boot_epoch_id: i64,
-    pressure_threshold: f64,
-}
-
-<span class="rs-comment">/// The mutex-guarded ring state. Held synchronously only; never across `.await`.</span>
-#[derive(<span class="rs-type">Debug</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a> {
-    max_events: u64,
-    max_bytes: u64,
-    next_seq: u64,
-    lost_before_seq: u64,
-    dropped_total: u64,
-    <span class="rs-comment">/// All retained events in append order (the `pull` scan order).</span>
-    all: <span class="rs-type">VecDeque</span>&lt;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a>&gt;,
-    <span class="rs-comment">/// Per-lane FIFO queues (the eviction victims).</span>
-    lanes: [<span class="rs-type">VecDeque</span>&lt;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a>&gt;; 3],
-    counters: [<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-LaneCounters-46">LaneCounters</a>; 3],
-    <span class="rs-comment">/// Whether the last observed pressure was already above threshold</span>
-    <span class="rs-comment">/// (edge-trigger latch).</span>
-    pressure_above: bool,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a> {
-    <span class="rs-comment">/// Build a ring with the default caps (`50_000` events / 8 MiB) and a fresh</span>
-    <span class="rs-comment">/// boot epoch id.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(<span class="rs-type">DEFAULT_MAX_EVENTS</span>, <span class="rs-type">DEFAULT_MAX_BYTES</span>, <span class="rs-type">None</span>)
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-build-workspace-base-44">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> reset = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;reset&quot;).and_then(<span class="rs-type">Value</span>::as_bool).unwrap_or(<span class="rs-kw">false</span>);
+    <span class="rs-kw">if</span> reset {
+        <span class="rs-kw">crate</span>::adapters::plugins::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-341">stop_services_for_layer_stack_root</a>(&amp;root.to_string_lossy())?;
     }
-
-    <span class="rs-comment">/// Build a ring with explicit caps and an optional fixed boot epoch id.</span>
-    #[must_use]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(max_events: u64, max_bytes: u64, boot_epoch_id: <span class="rs-type">Option</span>&lt;i64&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            inner: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a> {
-                max_events,
-                max_bytes,
-                next_seq: 0,
-                lost_before_seq: 0,
-                dropped_total: 0,
-                all: <span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
-                lanes: [<span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(), <span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(), <span class="rs-type">VecDeque</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()],
-                counters: [<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-LaneCounters-46">LaneCounters</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(); 3],
-                pressure_above: <span class="rs-kw">false</span>,
-            }),
-            boot_epoch_id: boot_epoch_id.unwrap_or_else(default_boot_epoch_id),
-            pressure_threshold: <span class="rs-type">DEFAULT_PRESSURE_THRESHOLD</span>,
-        }
-    }
-
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>&gt; {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span>.inner.lock() {
-            <span class="rs-type">Ok</span>(guard) =&gt; guard,
-            <span class="rs-type">Err</span>(poisoned) =&gt; poisoned.into_inner(),
-        }
-    }
-
-    <span class="rs-comment">/// Append `event` on `lane`, returning the assigned sequence number.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Injects `seq`/`lane` into the payload, enforces the caps (evicting in</span>
-    <span class="rs-comment">/// lane priority), and on a rising pressure cross re-emits the</span>
-    <span class="rs-comment">/// `daemon.audit_buffer_pressure` event OUTSIDE the lock.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(&amp;<span class="rs-self">self</span>, event: <span class="rs-type">Value</span>, lane: <span class="rs-type">Lane</span>) -&gt; u64 {
-        <span class="rs-kw">let</span> encoded_bytes = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-encoded-size-239">encoded_size</a>(&amp;event);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
-        <span class="rs-kw">let</span> seq = state.next_seq;
-        state.next_seq += 1;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = event;
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<span class="rs-kw">ref</span> <span class="rs-kw">mut</span> obj) = payload {
-            obj.insert(&quot;seq&quot;.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">Number</span>(seq.into()));
-            obj.insert(
-                &quot;lane&quot;.to_owned(),
-                serde_json::to_value(lane).unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;normal&quot;.to_owned())),
-            );
-        }
-        <span class="rs-kw">let</span> buffered = <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-BufferedEvent-32">BufferedEvent</a> {
-            seq,
-            lane,
-            encoded_bytes,
-            payload,
-        };
-        <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane);
-        state.counters[index].events += 1;
-        state.counters[index].bytes += encoded_bytes;
-        state.lanes[index].push_back(buffered.clone());
-        state.all.push_back(buffered);
-        <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-enforce-caps-locked-270">enforce_caps_locked</a>(&amp;<span class="rs-kw">mut</span> state);
-        <span class="rs-kw">let</span> pressure = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a>(&amp;state);
-        state.pressure_above = pressure &gt;= <span class="rs-self">self</span>.pressure_threshold;
-        seq
-    }
-
-    <span class="rs-comment">/// Pull events strictly after `after_seq` (up to `limit`), with the buffer +</span>
-    <span class="rs-comment">/// snapshot blocks and the cursor. Backs `api.audit.pull`.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(&amp;<span class="rs-self">self</span>, after_seq: i64, limit: usize) -&gt; <span class="rs-type">Value</span> {
-        <span class="rs-kw">let</span> limit = limit.max(1);
-        <span class="rs-kw">let</span> requested_after_seq = after_seq;
-        <span class="rs-kw">let</span> after_seq = u64::try_from(after_seq).ok();
-        <span class="rs-kw">let</span> (events, cursor_after, lost_before_seq, buffer, snapshot) = {
-            <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
-            <span class="rs-kw">let</span> events: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = state
-                .all
-                .iter()
-                .filter(|event| after_seq.is_none_or(|after_seq| event.seq &gt; after_seq))
-                .take(limit)
-                .map(|event| event.payload.clone())
-                .collect();
-            <span class="rs-kw">let</span> cursor_after = events
-                .last()
-                .and_then(|event| event.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-85">get</a>(&quot;seq&quot;))
-                .and_then(<span class="rs-type">Value</span>::as_i64)
-                .unwrap_or(requested_after_seq);
-            (
-                events,
-                cursor_after,
-                state.lost_before_seq,
-                <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a>(&amp;state),
-                <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a>(&amp;state, <span class="rs-self">self</span>.boot_epoch_id),
-            )
-        };
-        serde_json::json!({
-            &quot;schema&quot;: <span class="rs-type">SCHEMA_VERSION</span>,
-            &quot;cursor&quot;: {
-                &quot;after_seq&quot;: cursor_after,
-                &quot;lost_before_seq&quot;: lost_before_seq,
-            },
-            &quot;buffer&quot;: buffer,
-            &quot;snapshot&quot;: snapshot,
-            &quot;events&quot;: events,
-        })
-    }
-
-    <span class="rs-comment">/// Buffer + snapshot blocks with no events. Backs `api.audit.snapshot`.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-snapshot-198">snapshot</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
-        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
-        serde_json::json!({
-            &quot;schema&quot;: <span class="rs-type">SCHEMA_VERSION</span>,
-            &quot;buffer&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a>(&amp;state),
-            &quot;snapshot&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a>(&amp;state, <span class="rs-self">self</span>.boot_epoch_id),
-        })
-    }
+    <span class="rs-kw">let</span> built = build_layer_stack_workspace_base(&amp;root, &amp;workspace_root, reset)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;built.timings);
+    timings.insert(
+        &quot;api.workspace_base.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;built.binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    }))
 }
 
-<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()
-    }
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-ensure-workspace-base-67">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> (binding, created) = ensure_layer_stack_workspace_base(&amp;root, &amp;workspace_root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-kw">let</span> timings = json!({
+        &quot;api.workspace_base.total_s&quot;: total_start.elapsed().as_secs_f64(),
+    });
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: created,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: timings,
+    }))
 }
 
-<span class="rs-comment">/// Append `event` to the daemon ring on `lane`, swallowing any error.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Audit emits never break the hot path; subsystems use this single bridge so</span>
-<span class="rs-comment">/// the try/swallow discipline lives in one place. IMPURE: it reaches the</span>
-<span class="rs-comment">/// process-wide buffer singleton (the future port resolves the singleton; the</span>
-<span class="rs-comment">/// pure schema constructors stay in [`eos_protocol::audit`]).</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-safe-emit-215">safe_emit</a>(event: <span class="rs-type">Value</span>, lane: <span class="rs-type">Lane</span>) {
-    <span class="rs-kw">let</span> _ = catch_unwind(<span class="rs-type">AssertUnwindSafe</span>(|| {
-        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-global-audit-buffer-227">global_audit_buffer</a>().<a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(event, lane);
-    }));
-}
-
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-global-audit-buffer-227">global_audit_buffer</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a> {
-    <span class="rs-kw">static</span> <span class="rs-type">BUFFER</span>: <span class="rs-type">OnceLock</span>&lt;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
-    <span class="rs-type">BUFFER</span>.get_or_init(<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>::new)
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-default-boot-epoch-id-232">default_boot_epoch_id</a>() -&gt; i64 {
-    <span class="rs-type">SystemTime</span>::now()
-        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
-        .map(|duration| <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a>(duration.as_nanos()))
-        .unwrap_or_default()
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-encoded-size-239">encoded_size</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; u64 {
-    serde_json::to_vec(value).map_or_else(
-        |_| <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(format!(&quot;{value:?}&quot;).len()),
-        |bytes| <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(bytes.len()),
-    )
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a>(value: u128) -&gt; i64 {
-    i64::try_from(value).unwrap_or(i64::<span class="rs-type">MAX</span>)
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(value: usize) -&gt; u64 {
-    u64::try_from(value).unwrap_or(u64::<span class="rs-type">MAX</span>)
-}
-
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane: <span class="rs-type">Lane</span>) -&gt; usize {
-    <span class="rs-kw">match</span> lane {
-        <span class="rs-type">Lane</span>::<span class="rs-type">Critical</span> =&gt; 0,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span> =&gt; 1,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Sample</span> =&gt; 2,
-    }
-}
-
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-name-262">lane_name</a>(lane: <span class="rs-type">Lane</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
-    <span class="rs-kw">match</span> lane {
-        <span class="rs-type">Lane</span>::<span class="rs-type">Critical</span> =&gt; &quot;critical&quot;,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span> =&gt; &quot;normal&quot;,
-        <span class="rs-type">Lane</span>::<span class="rs-type">Sample</span> =&gt; &quot;sample&quot;,
-    }
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-enforce-caps-locked-270">enforce_caps_locked</a>(state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) {
-    <span class="rs-kw">while</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state) &gt; state.max_events || <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state) &gt; state.max_bytes {
-        <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-evict-one-locked-278">evict_one_locked</a>(state) {
-            <span class="rs-kw">break</span>;
-        }
-    }
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-evict-one-locked-278">evict_one_locked</a>(state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; bool {
-    <span class="rs-kw">for</span> lane <span class="rs-kw">in</span> <span class="rs-type">Lane</span>::<span class="rs-type">EVICTION_ORDER</span> {
-        <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane);
-        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(victim) = state.lanes[index].pop_front() <span class="rs-kw">else</span> {
-            <span class="rs-kw">continue</span>;
-        };
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(position) = state.all.iter().position(|event| event.seq == victim.seq) {
-            state.all.remove(position);
-        }
-        state.counters[index].events = state.counters[index].events.saturating_sub(1);
-        state.counters[index].bytes = state.counters[index]
-            .bytes
-            .saturating_sub(victim.encoded_bytes);
-        state.counters[index].dropped += 1;
-        state.dropped_total += 1;
-        state.lost_before_seq = state.lost_before_seq.max(victim.seq + 1);
-        <span class="rs-kw">return</span> <span class="rs-kw">true</span>;
-    }
-    <span class="rs-kw">false</span>
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; u64 {
-    state.counters.iter().map(|counter| counter.events).sum()
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; u64 {
-    state.counters.iter().map(|counter| counter.bytes).sum()
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; f64 {
-    (<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state)) / <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(state.max_events))
-        .max(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state)) / <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(state.max_bytes))
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u64-to-f64-lossy-312">u64_to_f64_lossy</a>(value: u64) -&gt; f64 {
-    <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
-    <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    f64::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(low))
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-buffer-block-319">buffer_block</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>) -&gt; <span class="rs-type">Value</span> {
-    <span class="rs-kw">let</span> dropped_by_lane = <span class="rs-type">Lane</span>::<span class="rs-type">STORAGE_ORDER</span>
-        .into_iter()
-        .map(|lane| {
-            (
-                <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-name-262">lane_name</a>(lane).to_owned(),
-                <span class="rs-type">Value</span>::<span class="rs-type">Number</span>(state.counters[<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-lane-index-254">lane_index</a>(lane)].dropped.into()),
-            )
-        })
-        .collect();
-    serde_json::json!({
-        &quot;retained_events&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-events-299">retained_events</a>(state),
-        &quot;retained_bytes&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-retained-bytes-303">retained_bytes</a>(state),
-        &quot;max_events&quot;: state.max_events,
-        &quot;max_bytes&quot;: state.max_bytes,
-        &quot;pressure&quot;: <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pressure-locked-307">pressure_locked</a>(state),
-        &quot;dropped_event_count&quot;: state.dropped_total,
-        &quot;dropped_event_count_by_lane&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(dropped_by_lane),
-        &quot;lost_before_seq&quot;: state.lost_before_seq,
-    })
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-snapshot-block-341">snapshot_block</a>(state: &amp;<a class="symbol-link rs-type" href="eos-daemon.html#item-struct-RingState-70">RingState</a>, boot_epoch_id: i64) -&gt; <span class="rs-type">Value</span> {
-    serde_json::json!({
-        &quot;daemon&quot;: {
-            &quot;boot_epoch_id&quot;: boot_epoch_id,
-            &quot;next_seq&quot;: state.next_seq,
-        }
-    })
-}
-
-#[cfg(test)]
-<span class="rs-kw">mod</span> tests {
-    <span class="rs-kw">use</span> serde_json::json;
-
-    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pull-preserves-negative-cursor-when-no-events-match-356">pull_preserves_negative_cursor_when_no_events_match</a>() {
-        <span class="rs-kw">let</span> buffer = <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(10, 1024, <span class="rs-type">Some</span>(1));
-
-        <span class="rs-kw">let</span> pulled = buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(-3, 10);
-
-        assert_eq!(pulled[&quot;cursor&quot;][&quot;after_seq&quot;], json!(-3));
-        assert_eq!(pulled[&quot;events&quot;], json!([]));
-    }
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-pull-filters-after-seq-with-checked-cursor-conversion-366">pull_filters_after_seq_with_checked_cursor_conversion</a>() {
-        <span class="rs-kw">let</span> buffer = <a class="symbol-link rs-type" href="eos-daemon.html#item-struct-AuditBuffer-57">AuditBuffer</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-with-caps-96">with_caps</a>(10, 1024, <span class="rs-type">Some</span>(1));
-        assert_eq!(buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(json!({&quot;event&quot;: &quot;first&quot;}), <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span>), 0);
-        assert_eq!(buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-append-123">append</a>(json!({&quot;event&quot;: &quot;second&quot;}), <span class="rs-type">Lane</span>::<span class="rs-type">Normal</span>), 1);
-
-        <span class="rs-kw">let</span> all = buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(-1, 10);
-        <span class="rs-kw">let</span> after_zero = buffer.<a class="symbol-link rs-fn" href="eos-daemon.html#method-pull-158">pull</a>(0, 10);
-
-        assert_eq!(all[&quot;events&quot;].as_array().map_or(0, <span class="rs-type">Vec</span>::len), 2);
-        assert_eq!(after_zero[&quot;events&quot;].as_array().map_or(0, <span class="rs-type">Vec</span>::len), 1);
-        assert_eq!(after_zero[&quot;events&quot;][0][&quot;seq&quot;], json!(1));
-    }
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-integer-size-helpers-saturate-at-wire-limits-380">integer_size_helpers_saturate_at_wire_limits</a>() {
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-u128-to-i64-saturating-246">u128_to_i64_saturating</a>(i64::<span class="rs-type">MAX</span> <span class="rs-kw">as</span> u128 + 1), i64::<span class="rs-type">MAX</span>);
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-usize-to-u64-saturating-250">usize_to_u64_saturating</a>(7), 7);
-    }
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-workspace-binding-84">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-ensure-args-rs.html#item-fn-require-string-346">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+    }))
 }
 </code></pre>
 </section>
