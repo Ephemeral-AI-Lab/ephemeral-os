@@ -73,7 +73,7 @@
 <span class="rs-comment">//! engine and workflow crates depend on (DIP). For a top-level request it mints</span>
 <span class="rs-comment">//! the root [`Task`](eos_types::Task) — its id derived from the caller-injected</span>
 <span class="rs-comment">//! `request_id` — and task-triggers the root agent through</span>
-<span class="rs-comment">//! [`AgentRunApi`](eos_agent_run::AgentRunApi), returning the root's outcome</span>
+<span class="rs-comment">//! [`AgentRunApi`](eos_agent_runner::AgentRunApi), returning the root's outcome</span>
 <span class="rs-comment">//! ([`run_request`] → [`RequestOutcome`]); there is no root workflow and no</span>
 <span class="rs-comment">//! request handle. It provisions one sandbox binding per request and wires the</span>
 <span class="rs-comment">//! per-request delegated-workflow runtime</span>
@@ -101,7 +101,7 @@
 <span class="rs-kw">mod</span> tests;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> cancel::{cancel_agent_core_user_request, <a class="symbol-link rs-type" href="eos-runtime--src-cancel-rs.html#item-struct-CancelReport-16">CancelReport</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> entry::{run_request, <a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-36">RequestOutcome</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> entry::{run_request, <a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> request_input::<a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> runtime_services::{
     <span class="rs-type">EventCallback</span>, <span class="rs-type">EventSourceFactory</span>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-36">RuntimeServices</a>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a>,

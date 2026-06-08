@@ -145,14 +145,6 @@ define_id!(
     mint
 );
 define_id!(
-    /// Identifier for an engine background workflow-handle session — the
-    /// agent-facing `wf_<counter>` handle for one delegated workflow (distinct
-    /// from `WorkflowId`, which it tracks). The model-facing tool param keeps
-    /// the name `workflow_task_id` for tool-contract parity.
-    WorkflowSessionId,
-    mint
-);
-define_id!(
     /// Identifier for a sandbox command-session tool handle.
     CommandSessionId,
     mint
@@ -218,7 +210,6 @@ mod tests {
     roundtrip_suite!(sandbox_id, SandboxId);
     roundtrip_suite!(tool_use_id, ToolUseId);
     roundtrip_suite!(invocation_id, InvocationId);
-    roundtrip_suite!(workflow_session_id, WorkflowSessionId);
     roundtrip_suite!(command_session_id, CommandSessionId);
 
     // AC-types-02: transparent serde, no key duplication (GC-types-01).
@@ -296,7 +287,6 @@ mod tests {
         assert_string_schema!(SandboxId);
         assert_string_schema!(ToolUseId);
         assert_string_schema!(InvocationId);
-        assert_string_schema!(WorkflowSessionId);
         assert_string_schema!(CommandSessionId);
     }
 }

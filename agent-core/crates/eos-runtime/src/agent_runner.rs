@@ -18,8 +18,7 @@ use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use eos_agent_def::AgentRole;
-use eos_agent_message_records::{AgentRunRecordKind, WorkflowTaskRole};
-use eos_agent_run::{AgentRunApi, SpawnAgentRequest};
+use eos_agent_runner::{AgentRunApi, AgentRunRecordKind, SpawnAgentRequest, WorkflowTaskRole};
 use eos_engine::{
     AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
 };

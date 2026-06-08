@@ -6,7 +6,7 @@
 //! It denies a planner terminal that carries a nonblank
 //! `deferred_goal_for_next_iteration` when the submitting workflow's delegation
 //! depth exceeds the configured `max_depth`. Depth is inferred from the workflow
-//! context at hook execution via `WorkflowServicePort::workflow_depth`. A
+//! context at hook execution via `WorkflowApi::workflow_depth`. A
 //! too-deep planner cannot extend its iteration chain, bounding nesting.
 
 use eos_types::JsonObject;
@@ -70,10 +70,7 @@ mod tests {
             unreachable!("depth hook never starts workflows")
         }
 
-        async fn check_workflow_status(
-            &self,
-            _: &WorkflowId,
-        ) -> Result<String, WorkflowApiError> {
+        async fn check_workflow_status(&self, _: &WorkflowId) -> Result<String, WorkflowApiError> {
             unreachable!("depth hook never reads status")
         }
 

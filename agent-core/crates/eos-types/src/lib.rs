@@ -23,7 +23,7 @@ mod workflow_api;
 pub use error::CoreError;
 pub use ids::{
     AgentRunId, AttemptId, CommandSessionId, InvocationId, IterationId, RequestId, SandboxId,
-    TaskId, ToolUseId, WorkflowId, WorkflowSessionId,
+    TaskId, ToolUseId, WorkflowId,
 };
 pub use json::JsonObject;
 pub use ports::{

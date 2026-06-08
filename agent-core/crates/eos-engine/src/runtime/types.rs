@@ -3,8 +3,7 @@
 use std::sync::Arc;
 
 use eos_agent_def::{AgentDefinition, AgentRegistry};
-use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
-use eos_agent_run::AgentRunApi;
+use eos_agent_runner::{AgentMessageRecords, AgentRunApi, AgentRunRecordKind};
 use eos_audit::AuditSink;
 use eos_llm_client::{LlmClient, Message};
 use eos_tools::{

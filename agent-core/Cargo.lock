@@ -449,7 +449,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-agent-run"
+name = "eos-agent-runner"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -504,8 +504,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "eos-agent-def",
- "eos-agent-message-records",
- "eos-agent-run",
+ "eos-agent-runner",
  "eos-audit",
  "eos-llm-client",
  "eos-sandbox-port",
@@ -568,8 +567,7 @@ dependencies = [
  "async-trait",
  "console-subscriber",
  "eos-agent-def",
- "eos-agent-message-records",
- "eos-agent-run",
+ "eos-agent-runner",
  "eos-audit",
  "eos-config",
  "eos-db",
@@ -638,8 +636,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
- "eos-agent-message-records",
- "eos-agent-run",
+ "eos-agent-runner",
  "eos-config",
  "eos-llm-client",
  "eos-sandbox-port",

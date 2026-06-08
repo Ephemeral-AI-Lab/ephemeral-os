@@ -8,8 +8,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_def::AgentName;
-use eos_agent_message_records::AgentRunRecordKind;
-use eos_agent_run::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
+use eos_agent_runner::{
+    AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunRecordKind, SpawnAgentRequest,
+};
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};

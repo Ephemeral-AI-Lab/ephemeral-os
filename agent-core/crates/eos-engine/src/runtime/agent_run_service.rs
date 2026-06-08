@@ -3,9 +3,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_def::AgentType;
-use eos_agent_message_records::AgentRunRecordKind;
-use eos_agent_run::{
-    AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus,
+use eos_agent_runner::{
+    AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunRecordKind, AgentRunStatus,
     SpawnAgentRequest as RuntimeSpawnAgentRequest,
 };
 use eos_llm_client::Message;

@@ -19,7 +19,7 @@ fn expected_edges() -> Edges {
             &["eos-llm-client", "eos-types"],
         ),
         (
-            "eos-agent-run",
+            "eos-agent-runner",
             &[
                 "eos-types",
                 "eos-agent-def",
@@ -39,14 +39,14 @@ fn expected_edges() -> Edges {
                 "eos-skills",
                 "eos-llm-client",
                 "eos-config",
-                "eos-agent-run",
+                "eos-agent-runner",
             ],
         ),
         (
             "eos-engine",
             &[
                 "eos-types",
-                "eos-agent-run",
+                "eos-agent-runner",
                 "eos-agent-message-records",
                 "eos-llm-client",
                 "eos-tools",
@@ -64,7 +64,7 @@ fn expected_edges() -> Edges {
                 "eos-engine",
                 "eos-workflow",
                 "eos-plugin-catalog",
-                "eos-agent-run",
+                "eos-agent-runner",
                 "eos-agent-message-records",
                 "eos-skills",
                 "eos-config",

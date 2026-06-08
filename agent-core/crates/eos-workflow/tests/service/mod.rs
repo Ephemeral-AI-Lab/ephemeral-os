@@ -19,7 +19,11 @@ struct TestCancelPort {
 
 #[async_trait]
 impl CancelPort for TestCancelPort {
-    async fn cancel_task(&self, task_id: &eos_types::TaskId, reason: &str) -> Result<(), ToolError> {
+    async fn cancel_task(
+        &self,
+        task_id: &eos_types::TaskId,
+        reason: &str,
+    ) -> Result<(), ToolError> {
         if let Some(task) = self.task_store.get(task_id).await? {
             if matches!(task.status, TaskStatus::Pending | TaskStatus::Running) {
                 let mut terminal = JsonObject::new();

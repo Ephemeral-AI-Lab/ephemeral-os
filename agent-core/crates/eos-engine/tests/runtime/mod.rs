@@ -7,8 +7,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
-use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
-use eos_agent_run::AgentRunApi;
+use eos_agent_runner::{AgentMessageRecords, AgentRunApi, AgentRunRecordKind};
 use eos_audit::NoopAuditSink;
 use eos_engine::{
     build_agent_tool_registry, run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry,

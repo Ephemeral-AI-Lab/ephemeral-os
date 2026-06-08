@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 
-use eos_agent_message_records::{AgentRunRecordStart, NodeFinishStatus};
+use eos_agent_runner::{AgentRunRecordStart, NodeFinishStatus};
 use futures::StreamExt;
 
 use crate::query::run_query;

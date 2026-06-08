@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_message_records::AgentRunRecordHandle;
+use eos_agent_runner::AgentRunRecordHandle;
 use eos_audit::AuditSink;
 use eos_llm_client::LlmRequest;
 use eos_tools::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};

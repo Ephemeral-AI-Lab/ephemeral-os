@@ -931,7 +931,7 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> async_trait::async_trait;
-<span class="rs-kw">use</span> eos_agent_run::{<span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>};
+<span class="rs-kw">use</span> eos_agent_runner::{<span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>};
 <span class="rs-kw">use</span> eos_tool_core::{<span class="rs-type">Sealed</span>, <span class="rs-type">SubagentSessionPort</span>};
 #[cfg(test)]
 <span class="rs-kw">use</span> eos_state::<span class="rs-type">AgentRun</span>;
@@ -1445,7 +1445,7 @@
     <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
     <span class="rs-kw">use</span> async_trait::async_trait;
-    <span class="rs-kw">use</span> eos_agent_run::{<span class="rs-type">AgentRunError</span>, <span class="rs-type">SpawnAgentRequest</span>};
+    <span class="rs-kw">use</span> eos_agent_runner::{<span class="rs-type">AgentRunError</span>, <span class="rs-type">SpawnAgentRequest</span>};
     <span class="rs-kw">use</span> eos_state::{<span class="rs-type">AgentRun</span>, <span class="rs-type">UtcDateTime</span>};
 
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::session_managers::<a class="symbol-link rs-type" href="eos-engine--src-background-session-managers-mod-rs.html#item-trait-BackgroundSessionManager-46">BackgroundSessionManager</a>;

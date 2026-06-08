@@ -73,18 +73,15 @@
             unreachable!(&quot;depth hook never starts workflows&quot;)
         }
 </code></pre>
-</details></td></tr><tr id="method-check-workflow-status-73"><td>method</td><td>check_workflow_status</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-check-workflow-status-73">check_workflow_status</a> (&amp; self , _ : &amp; WorkflowId ,) -&gt; Result &lt; String , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-check-workflow-status-73"><td>method</td><td>check_workflow_status</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-check-workflow-status-73">check_workflow_status</a> (&amp; self , _ : &amp; WorkflowId) -&gt; Result &lt; String , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-check-workflow-status-73">check_workflow_status</a>(
-            &amp;<span class="rs-self">self</span>,
-            _: &amp;<span class="rs-type">WorkflowId</span>,
-        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-check-workflow-status-73">check_workflow_status</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
             unreachable!(&quot;depth hook never reads status&quot;)
         }
 </code></pre>
-</details></td></tr><tr id="method-cancel-workflow-80"><td>method</td><td>cancel_workflow</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-workflow-80">cancel_workflow</a> (&amp; self , _ : &amp; WorkflowId , _ : &amp; str ,) -&gt; Result &lt; String , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-workflow-77"><td>method</td><td>cancel_workflow</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-workflow-77">cancel_workflow</a> (&amp; self , _ : &amp; WorkflowId , _ : &amp; str ,) -&gt; Result &lt; String , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-workflow-80">cancel_workflow</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-workflow-77">cancel_workflow</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">WorkflowId</span>,
             _: &amp;str,
@@ -92,18 +89,18 @@
             unreachable!(&quot;depth hook never cancels workflows&quot;)
         }
 </code></pre>
-</details></td></tr><tr id="method-poll-terminal-workflow-88"><td>method</td><td>poll_terminal_workflow</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-poll-terminal-workflow-88">poll_terminal_workflow</a> (&amp; self , _ : &amp; WorkflowId ,) -&gt; Result &lt; Option &lt; TerminalWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-poll-terminal-workflow-85"><td>method</td><td>poll_terminal_workflow</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-poll-terminal-workflow-85">poll_terminal_workflow</a> (&amp; self , _ : &amp; WorkflowId ,) -&gt; Result &lt; Option &lt; TerminalWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-poll-terminal-workflow-88">poll_terminal_workflow</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-poll-terminal-workflow-85">poll_terminal_workflow</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">WorkflowId</span>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">TerminalWorkflow</span>&gt;, <span class="rs-type">WorkflowApiError</span>&gt; {
             unreachable!(&quot;depth hook never polls workflows&quot;)
         }
 </code></pre>
-</details></td></tr><tr id="method-find-outstanding-workflows-95"><td>method</td><td>find_outstanding_workflows</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-95">find_outstanding_workflows</a> (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId ,) -&gt; Result &lt; Vec &lt; OutstandingWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-find-outstanding-workflows-92"><td>method</td><td>find_outstanding_workflows</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-92">find_outstanding_workflows</a> (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId ,) -&gt; Result &lt; Vec &lt; OutstandingWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-95">find_outstanding_workflows</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-92">find_outstanding_workflows</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">TaskId</span>,
             _: &amp;<span class="rs-type">AgentRunId</span>,
@@ -111,9 +108,9 @@
             unreachable!(&quot;depth hook never checks outstanding workflows&quot;)
         }
 </code></pre>
-</details></td></tr><tr id="method-workflow-depth-103"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-103">workflow_depth</a> (&amp; self , _ : &amp; WorkflowId) -&gt; Result &lt; u32 , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-workflow-depth-100"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-100">workflow_depth</a> (&amp; self , _ : &amp; WorkflowId) -&gt; Result &lt; u32 , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-103">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-100">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.0)
         }
 </code></pre>
@@ -147,7 +144,7 @@
     <span class="rs-kw">let</span> (<span class="rs-type">Some</span>(workflow_id), <span class="rs-type">Some</span>(service)) = (&amp;ctx.workflow_id, &amp;services.workflow_service) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>());
     };
-    <span class="rs-kw">if</span> service.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-103">workflow_depth</a>(workflow_id).<span class="rs-kw">await</span>? &gt; max_depth {
+    <span class="rs-kw">if</span> service.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-100">workflow_depth</a>(workflow_id).<span class="rs-kw">await</span>? &gt; max_depth {
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
             <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">NESTED_PLANNER_DEFERRAL_MESSAGE</span>, &quot;nested_planner_deferral&quot;)
                 .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;nested_workflow&quot;),
@@ -160,18 +157,18 @@
 </details>
 
   <p class="source">crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs:22</p>
-</article><article id="item-fn-denies-deferred-goal-when-depth-exceeds-max-108" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn denies_deferred_goal_when_depth_exceeds_max private async fn denies_deferred_goal_when_depth_exceeds_max () crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs  ">
+</article><article id="item-fn-denies-deferred-goal-when-depth-exceeds-max-105" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn denies_deferred_goal_when_depth_exceeds_max private async fn denies_deferred_goal_when_depth_exceeds_max () crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>denies_deferred_goal_when_depth_exceeds_max</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-denies-deferred-goal-when-depth-exceeds-max-108">denies_deferred_goal_when_depth_exceeds_max</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-denies-deferred-goal-when-depth-exceeds-max-105">denies_deferred_goal_when_depth_exceeds_max</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-denies-deferred-goal-when-depth-exceeds-max-108">denies_deferred_goal_when_depth_exceeds_max</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-denies-deferred-goal-when-depth-exceeds-max-105">denies_deferred_goal_when_depth_exceeds_max</a>() {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
         input.insert(
             &quot;deferred_goal_for_next_iteration&quot;.to_owned(),
@@ -198,19 +195,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs:108</p>
-</article><article id="item-fn-allows-deferred-goal-at-max-depth-134" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn allows_deferred_goal_at_max_depth private async fn allows_deferred_goal_at_max_depth () crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs  ">
+  <p class="source">crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs:105</p>
+</article><article id="item-fn-allows-deferred-goal-at-max-depth-131" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn allows_deferred_goal_at_max_depth private async fn allows_deferred_goal_at_max_depth () crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>allows_deferred_goal_at_max_depth</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-allows-deferred-goal-at-max-depth-134">allows_deferred_goal_at_max_depth</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-allows-deferred-goal-at-max-depth-131">allows_deferred_goal_at_max_depth</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-allows-deferred-goal-at-max-depth-134">allows_deferred_goal_at_max_depth</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-allows-deferred-goal-at-max-depth-131">allows_deferred_goal_at_max_depth</a>() {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
         input.insert(
             &quot;deferred_goal_for_next_iteration&quot;.to_owned(),
@@ -230,7 +227,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs:134</p>
+  <p class="source">crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs:131</p>
 </article></div>
 </section></div>
 </main>
@@ -247,7 +244,7 @@
 <span class="rs-comment">//! It denies a planner terminal that carries a nonblank</span>
 <span class="rs-comment">//! `deferred_goal_for_next_iteration` when the submitting workflow's delegation</span>
 <span class="rs-comment">//! depth exceeds the configured `max_depth`. Depth is inferred from the workflow</span>
-<span class="rs-comment">//! context at hook execution via `WorkflowServicePort::workflow_depth`. A</span>
+<span class="rs-comment">//! context at hook execution via `WorkflowApi::workflow_depth`. A</span>
 <span class="rs-comment">//! too-deep planner cannot extend its iteration chain, bounding nesting.</span>
 
 <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
@@ -276,7 +273,7 @@
     <span class="rs-kw">let</span> (<span class="rs-type">Some</span>(workflow_id), <span class="rs-type">Some</span>(service)) = (&amp;ctx.workflow_id, &amp;services.workflow_service) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>());
     };
-    <span class="rs-kw">if</span> service.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-103">workflow_depth</a>(workflow_id).<span class="rs-kw">await</span>? &gt; max_depth {
+    <span class="rs-kw">if</span> service.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-100">workflow_depth</a>(workflow_id).<span class="rs-kw">await</span>? &gt; max_depth {
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
             <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">NESTED_PLANNER_DEFERRAL_MESSAGE</span>, &quot;nested_planner_deferral&quot;)
                 .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;nested_workflow&quot;),
@@ -311,14 +308,11 @@
             unreachable!(&quot;depth hook never starts workflows&quot;)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-check-workflow-status-73">check_workflow_status</a>(
-            &amp;<span class="rs-self">self</span>,
-            _: &amp;<span class="rs-type">WorkflowId</span>,
-        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-check-workflow-status-73">check_workflow_status</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
             unreachable!(&quot;depth hook never reads status&quot;)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-workflow-80">cancel_workflow</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-workflow-77">cancel_workflow</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">WorkflowId</span>,
             _: &amp;str,
@@ -326,14 +320,14 @@
             unreachable!(&quot;depth hook never cancels workflows&quot;)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-poll-terminal-workflow-88">poll_terminal_workflow</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-poll-terminal-workflow-85">poll_terminal_workflow</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">WorkflowId</span>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">TerminalWorkflow</span>&gt;, <span class="rs-type">WorkflowApiError</span>&gt; {
             unreachable!(&quot;depth hook never polls workflows&quot;)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-95">find_outstanding_workflows</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-92">find_outstanding_workflows</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">TaskId</span>,
             _: &amp;<span class="rs-type">AgentRunId</span>,
@@ -341,13 +335,13 @@
             unreachable!(&quot;depth hook never checks outstanding workflows&quot;)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-103">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-100">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.0)
         }
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-denies-deferred-goal-when-depth-exceeds-max-108">denies_deferred_goal_when_depth_exceeds_max</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-denies-deferred-goal-when-depth-exceeds-max-105">denies_deferred_goal_when_depth_exceeds_max</a>() {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
         input.insert(
             &quot;deferred_goal_for_next_iteration&quot;.to_owned(),
@@ -373,7 +367,7 @@
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-allows-deferred-goal-at-max-depth-134">allows_deferred_goal_at_max_depth</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-allows-deferred-goal-at-max-depth-131">allows_deferred_goal_at_max_depth</a>() {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
         input.insert(
             &quot;deferred_goal_for_next_iteration&quot;.to_owned(),

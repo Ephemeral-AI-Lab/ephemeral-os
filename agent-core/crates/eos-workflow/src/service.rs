@@ -10,8 +10,8 @@ use async_trait::async_trait;
 use eos_tools::CancelPort;
 use eos_types::{
     AgentRunId, AttemptClosure, IterationStatus, OutstandingWorkflow, StartWorkflowRequest,
-    StartedWorkflow, TaskId, TaskStore, TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowId,
-    WorkflowStatus, WorkflowTerminalStatus,
+    StartedWorkflow, TaskId, TaskStore, TerminalWorkflow, WorkflowApi, WorkflowApiError,
+    WorkflowId, WorkflowStatus, WorkflowTerminalStatus,
 };
 
 use crate::{WorkflowError, WorkflowStarter};

@@ -25,7 +25,7 @@
   <div><b>41</b><span>modules</span></div>
   <div><b>303</b><span>items</span></div>
   <div><b>295</b><span>fields</span></div>
-  <div><b>224</b><span>methods</span></div>
+  <div><b>221</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -201,7 +201,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-154">AgentRunControl</a></code>
   <p class="docstring">The live object for one agent run (spec §6.3).<br>The run's command-session completion monitor is owned by<br>`BackgroundSessionRuntime`, so dropping this control (the last service clone)<br>drops the runtime and aborts the monitors (RAII) — no separate guard is held<br>here.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>cancellation</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a></code></td></tr><tr><td>private</td><td>foreground</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code></td></tr><tr><td>private</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code></td></tr><tr><td>private</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a></code></td></tr><tr><td>private</td><td>finalization</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-97">AgentRunFinalization</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-agent-run-id-199"><td>method</td><td>agent_run_id</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-136">agent_run_id</a> (&amp; self) -&gt; &amp; AgentRunId</code><p class="docstring">The agent-run id this control owns.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>cancellation</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a></code></td></tr><tr><td>private</td><td>foreground</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code></td></tr><tr><td>private</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code></td></tr><tr><td>private</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a></code></td></tr><tr><td>private</td><td>finalization</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-97">AgentRunFinalization</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-agent-run-id-199"><td>method</td><td>agent_run_id</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-136">agent_run_id</a> (&amp; self) -&gt; &amp; AgentRunId</code><p class="docstring">The agent-run id this control owns.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The agent-run id this control owns.</span>
     #[must_use]
@@ -225,11 +225,11 @@
         <span class="rs-self">self</span>.cancellation.clone()
     }
 </code></pre>
-</details></td></tr><tr id="method-background-217"><td>method</td><td>background</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-background-217">background</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a></code><p class="docstring">A clone of the run's background session service.</p><details class="function-source">
+</details></td></tr><tr id="method-background-217"><td>method</td><td>background</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-background-217">background</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a></code><p class="docstring">A clone of the run's background session service.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// A clone of the run's background session service.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-217">background</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-217">background</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a> {
         <span class="rs-self">self</span>.background.clone()
     }
 </code></pre>
@@ -302,7 +302,7 @@
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-244">AgentRunControlParts</a></code>
   <p class="docstring">The already-built parts an [`AgentRunControl`] is assembled from.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub(super)</td><td>task_id</td><td><code>Option &lt; TaskId &gt;</code></td></tr><tr><td>pub(super)</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>pub(super)</td><td>foreground</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code></td></tr><tr><td>pub(super)</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code></td></tr><tr><td>pub(super)</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a></code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub(super)</td><td>task_id</td><td><code>Option &lt; TaskId &gt;</code></td></tr><tr><td>pub(super)</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>pub(super)</td><td>foreground</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code></td></tr><tr><td>pub(super)</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code></td></tr><tr><td>pub(super)</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a></code></td></tr></tbody></table>
 
   <p class="source">crates/eos-engine/src/runtime/control.rs:244</p>
 </article><article id="item-struct-AgentRunCancellationState-31" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunCancellationState private struct AgentRunCancellationState crates/eos-engine/src/runtime/control.rs cancelled std :: sync :: atomic :: AtomicBool reason Mutex &lt; Option &lt; String &gt; &gt; notify Notify ">
@@ -339,7 +339,7 @@
 <span class="rs-kw">use</span> tokio::sync::<span class="rs-type">Notify</span>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::foreground::<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>;
 
@@ -488,7 +488,7 @@
     cancellation: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a>,
     foreground: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>&gt;,
     notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>,
-    background: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a>,
+    background: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a>,
     finalization: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-97">AgentRunFinalization</a>,
 }
 
@@ -542,7 +542,7 @@
 
     <span class="rs-comment">/// A clone of the run's background session service.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-217">background</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-217">background</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a> {
         <span class="rs-self">self</span>.background.clone()
     }
 
@@ -574,7 +574,7 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) foreground: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>&gt;,
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>,
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) background: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-176">BackgroundManagers</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) background: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-struct-BackgroundManagers-169">BackgroundManagers</a>,
 }
 </code></pre>
 </section>

@@ -56,18 +56,18 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-id-serde-transparent-single-key-225" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn id_serde_transparent_single_key private fn id_serde_transparent_single_key () crates/eos-types/src/ids.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-id-serde-transparent-single-key-216" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn id_serde_transparent_single_key private fn id_serde_transparent_single_key () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>id_serde_transparent_single_key</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-225">id_serde_transparent_single_key</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-216">id_serde_transparent_single_key</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-225">id_serde_transparent_single_key</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-216">id_serde_transparent_single_key</a>() {
         <span class="rs-kw">let</span> id: <span class="rs-type">TaskId</span> = &quot;t1&quot;.parse().unwrap();
         assert_eq!(serde_json::to_value(&amp;id).unwrap(), serde_json::json!(&quot;t1&quot;));
         <span class="rs-kw">let</span> back: <span class="rs-type">TaskId</span> = serde_json::from_value(serde_json::json!(&quot;t1&quot;)).unwrap();
@@ -88,19 +88,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/ids.rs:225</p>
-</article><article id="item-fn-try-from-and-parse-agree-245" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_and_parse_agree private fn try_from_and_parse_agree () crates/eos-types/src/ids.rs  ">
+  <p class="source">crates/eos-types/src/ids.rs:216</p>
+</article><article id="item-fn-try-from-and-parse-agree-236" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_and_parse_agree private fn try_from_and_parse_agree () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>try_from_and_parse_agree</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-245">try_from_and_parse_agree</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-236">try_from_and_parse_agree</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-245">try_from_and_parse_agree</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-236">try_from_and_parse_agree</a>() {
         <span class="rs-kw">let</span> a: <span class="rs-type">TaskId</span> = &quot;x&quot;.parse().unwrap();
         <span class="rs-kw">let</span> b = <span class="rs-type">TaskId</span>::<a class="symbol-link rs-fn" href="eos-types--src-state-workflow-plan-rs.html#method-try-from-52">try_from</a>(&quot;x&quot;).unwrap();
         <span class="rs-kw">let</span> c = <span class="rs-type">TaskId</span>::<a class="symbol-link rs-fn" href="eos-types--src-state-workflow-plan-rs.html#method-try-from-52">try_from</a>(<span class="rs-type">String</span>::from(&quot;x&quot;)).unwrap();
@@ -112,19 +112,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/ids.rs:245</p>
-</article><article id="item-fn-try-from-error-type-is-core-error-256" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_error_type_is_core_error private fn try_from_error_type_is_core_error () crates/eos-types/src/ids.rs  ">
+  <p class="source">crates/eos-types/src/ids.rs:236</p>
+</article><article id="item-fn-try-from-error-type-is-core-error-247" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_error_type_is_core_error private fn try_from_error_type_is_core_error () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>try_from_error_type_is_core_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-256">try_from_error_type_is_core_error</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-247">try_from_error_type_is_core_error</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-256">try_from_error_type_is_core_error</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-247">try_from_error_type_is_core_error</a>() {
         <span class="rs-comment">// The named contract is `TryFrom&lt;_, Error = CoreError&gt;` — assert the</span>
         <span class="rs-comment">// associated error type, not the std blanket `Infallible`.</span>
         <span class="rs-kw">fn</span> assert_core_error&lt;<span class="rs-type">T</span>&gt;()
@@ -137,19 +137,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/ids.rs:256</p>
-</article><article id="item-fn-new-v4-is-a-dashed-uuid-268" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_v4_is_a_dashed_uuid private fn new_v4_is_a_dashed_uuid () crates/eos-types/src/ids.rs  ">
+  <p class="source">crates/eos-types/src/ids.rs:247</p>
+</article><article id="item-fn-new-v4-is-a-dashed-uuid-259" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_v4_is_a_dashed_uuid private fn new_v4_is_a_dashed_uuid () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>new_v4_is_a_dashed_uuid</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-268">new_v4_is_a_dashed_uuid</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-259">new_v4_is_a_dashed_uuid</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-268">new_v4_is_a_dashed_uuid</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-259">new_v4_is_a_dashed_uuid</a>() {
         <span class="rs-kw">let</span> id = <span class="rs-type">RequestId</span>::new_v4();
         <span class="rs-comment">// 8-4-4-4-12 dashed form, parses back as a uuid.</span>
         assert!(uuid::<span class="rs-type">Uuid</span>::parse_str(id.<a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-as-str-42">as_str</a>()).is_ok());
@@ -158,19 +158,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/ids.rs:268</p>
-</article><article id="item-fn-json-schema-ids-are-strings-277" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_schema_ids_are_strings private fn json_schema_ids_are_strings () crates/eos-types/src/ids.rs  ">
+  <p class="source">crates/eos-types/src/ids.rs:259</p>
+</article><article id="item-fn-json-schema-ids-are-strings-268" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_schema_ids_are_strings private fn json_schema_ids_are_strings () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>json_schema_ids_are_strings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-277">json_schema_ids_are_strings</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-268">json_schema_ids_are_strings</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-277">json_schema_ids_are_strings</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-268">json_schema_ids_are_strings</a>() {
         macro_rules! assert_string_schema {
             ($ty:ty) =&gt; {{
                 <span class="rs-kw">let</span> schema = serde_json::to_value(schemars::schema_for!($ty)).unwrap();
@@ -191,13 +191,12 @@
         assert_string_schema!(<span class="rs-type">SandboxId</span>);
         assert_string_schema!(<span class="rs-type">ToolUseId</span>);
         assert_string_schema!(<span class="rs-type">InvocationId</span>);
-        assert_string_schema!(<span class="rs-type">WorkflowSessionId</span>);
         assert_string_schema!(<span class="rs-type">CommandSessionId</span>);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/ids.rs:277</p>
+  <p class="source">crates/eos-types/src/ids.rs:268</p>
 </article></div>
 </section></div>
 </main>
@@ -353,14 +352,6 @@ define_id!(
     mint
 );
 define_id!(
-    <span class="rs-comment">/// Identifier for an engine background workflow-handle session — the</span>
-    <span class="rs-comment">/// agent-facing `wf_&lt;counter&gt;` handle for one delegated workflow (distinct</span>
-    <span class="rs-comment">/// from `WorkflowId`, which it tracks). The model-facing tool param keeps</span>
-    <span class="rs-comment">/// the name `workflow_task_id` for tool-contract parity.</span>
-    <span class="rs-type">WorkflowSessionId</span>,
-    mint
-);
-define_id!(
     <span class="rs-comment">/// Identifier for a sandbox command-session tool handle.</span>
     <span class="rs-type">CommandSessionId</span>,
     mint
@@ -426,12 +417,11 @@ define_id!(
     roundtrip_suite!(sandbox_id, <span class="rs-type">SandboxId</span>);
     roundtrip_suite!(tool_use_id, <span class="rs-type">ToolUseId</span>);
     roundtrip_suite!(invocation_id, <span class="rs-type">InvocationId</span>);
-    roundtrip_suite!(workflow_session_id, <span class="rs-type">WorkflowSessionId</span>);
     roundtrip_suite!(command_session_id, <span class="rs-type">CommandSessionId</span>);
 
     <span class="rs-comment">// AC-types-02: transparent serde, no key duplication (GC-types-01).</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-225">id_serde_transparent_single_key</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-216">id_serde_transparent_single_key</a>() {
         <span class="rs-kw">let</span> id: <span class="rs-type">TaskId</span> = &quot;t1&quot;.parse().unwrap();
         assert_eq!(serde_json::to_value(&amp;id).unwrap(), serde_json::json!(&quot;t1&quot;));
         <span class="rs-kw">let</span> back: <span class="rs-type">TaskId</span> = serde_json::from_value(serde_json::json!(&quot;t1&quot;)).unwrap();
@@ -451,7 +441,7 @@ define_id!(
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-245">try_from_and_parse_agree</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-236">try_from_and_parse_agree</a>() {
         <span class="rs-kw">let</span> a: <span class="rs-type">TaskId</span> = &quot;x&quot;.parse().unwrap();
         <span class="rs-kw">let</span> b = <span class="rs-type">TaskId</span>::<a class="symbol-link rs-fn" href="eos-types--src-state-workflow-plan-rs.html#method-try-from-52">try_from</a>(&quot;x&quot;).unwrap();
         <span class="rs-kw">let</span> c = <span class="rs-type">TaskId</span>::<a class="symbol-link rs-fn" href="eos-types--src-state-workflow-plan-rs.html#method-try-from-52">try_from</a>(<span class="rs-type">String</span>::from(&quot;x&quot;)).unwrap();
@@ -462,7 +452,7 @@ define_id!(
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-256">try_from_error_type_is_core_error</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-247">try_from_error_type_is_core_error</a>() {
         <span class="rs-comment">// The named contract is `TryFrom&lt;_, Error = CoreError&gt;` — assert the</span>
         <span class="rs-comment">// associated error type, not the std blanket `Infallible`.</span>
         <span class="rs-kw">fn</span> assert_core_error&lt;<span class="rs-type">T</span>&gt;()
@@ -474,7 +464,7 @@ define_id!(
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-268">new_v4_is_a_dashed_uuid</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-259">new_v4_is_a_dashed_uuid</a>() {
         <span class="rs-kw">let</span> id = <span class="rs-type">RequestId</span>::new_v4();
         <span class="rs-comment">// 8-4-4-4-12 dashed form, parses back as a uuid.</span>
         assert!(uuid::<span class="rs-type">Uuid</span>::parse_str(id.<a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-as-str-42">as_str</a>()).is_ok());
@@ -483,7 +473,7 @@ define_id!(
 
     <span class="rs-comment">// AC-types-06 (ids portion): every id schemas as a JSON `string`.</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-277">json_schema_ids_are_strings</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-268">json_schema_ids_are_strings</a>() {
         macro_rules! assert_string_schema {
             ($ty:ty) =&gt; {{
                 <span class="rs-kw">let</span> schema = serde_json::to_value(schemars::schema_for!($ty)).unwrap();
@@ -504,7 +494,6 @@ define_id!(
         assert_string_schema!(<span class="rs-type">SandboxId</span>);
         assert_string_schema!(<span class="rs-type">ToolUseId</span>);
         assert_string_schema!(<span class="rs-type">InvocationId</span>);
-        assert_string_schema!(<span class="rs-type">WorkflowSessionId</span>);
         assert_string_schema!(<span class="rs-type">CommandSessionId</span>);
     }
 }

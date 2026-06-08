@@ -1,5 +1,5 @@
 [package]
-name = "eos-agent-run"
+name = "eos-agent-runner"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

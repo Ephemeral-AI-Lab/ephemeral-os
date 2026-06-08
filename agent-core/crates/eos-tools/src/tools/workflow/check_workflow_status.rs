@@ -29,9 +29,7 @@ pub(in crate::tools::workflow) struct CheckWorkflowStatus {
 }
 
 impl CheckWorkflowStatus {
-    pub(in crate::tools::workflow) fn new(
-        workflow_service: Option<Arc<dyn WorkflowApi>>,
-    ) -> Self {
+    pub(in crate::tools::workflow) fn new(workflow_service: Option<Arc<dyn WorkflowApi>>) -> Self {
         Self { workflow_service }
     }
 }

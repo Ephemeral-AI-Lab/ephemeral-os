@@ -25,7 +25,7 @@
   <div><b>41</b><span>modules</span></div>
   <div><b>303</b><span>items</span></div>
   <div><b>295</b><span>fields</span></div>
-  <div><b>224</b><span>methods</span></div>
+  <div><b>221</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -162,12 +162,12 @@
     <h3>publish_agent_run_completed</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-agent-run-completed-13">publish_agent_run_completed</a> (handles : &amp; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> , ctx : &amp; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> , duration_ms : f64 , error : Option &lt; &amp; str &gt; ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-agent-run-completed-13">publish_agent_run_completed</a> (handles : &amp; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> , ctx : &amp; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> , duration_ms : f64 , error : Option &lt; &amp; str &gt; ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-agent-run-completed-13">publish_agent_run_completed</a>(
-    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>,
+    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>,
     ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>,
     duration_ms: f64,
     error: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
@@ -200,11 +200,11 @@
     <h3>publish_os_resource_sampled</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-os-resource-sampled-38">publish_os_resource_sampled</a> (handles : &amp; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> , ctx : &amp; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-os-resource-sampled-38">publish_os_resource_sampled</a> (handles : &amp; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> , ctx : &amp; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-os-resource-sampled-38">publish_os_resource_sampled</a>(handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>, ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>) {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-os-resource-sampled-38">publish_os_resource_sampled</a>(handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>, ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>) {
     <span class="rs-kw">if</span> !handles.audit.enabled() {
         <span class="rs-kw">return</span>;
     }
@@ -229,12 +229,12 @@
     <h3>publish_audit_event</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-audit-event-54">publish_audit_event</a> (handles : &amp; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> , ctx : &amp; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> , event_type : &amp; str , payload : JsonObject ,)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-audit-event-54">publish_audit_event</a> (handles : &amp; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> , ctx : &amp; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> , event_type : &amp; str , payload : JsonObject ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-audit-event-54">publish_audit_event</a>(
-    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>,
+    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>,
     ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>,
     event_type: &amp;str,
     payload: <span class="rs-type">JsonObject</span>,
@@ -318,13 +318,13 @@
     <h3>handles</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-handles-205">handles</a> (audit : Arc &lt; dyn AuditSink &gt;) -&gt; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-handles-205">handles</a> (audit : Arc &lt; dyn AuditSink &gt;) -&gt; <a class="symbol-link" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-handles-205">handles</a>(audit: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AuditSink</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-handles-205">handles</a>(audit: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AuditSink</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> {
         <span class="rs-kw">let</span> transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-108">new</a>(<span class="rs-type">FakeTransport</span>);
-        <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> {
+        <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> {
             agent_run_store: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-108">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-struct-NoopAgentRunStore-157">NoopAgentRunStore</a>),
             llm_client: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-108">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-struct-NoopLlmClient-147">NoopLlmClient</a>),
             event_source_factory: <span class="rs-type">None</span>,
@@ -448,12 +448,12 @@
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::query::{<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-enum-QueryExitReason-36">QueryExitReason</a>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::resource_sample::capture_process_resource_sample;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-agent-run-completed-13">publish_agent_run_completed</a>(
-    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>,
+    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>,
     ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>,
     duration_ms: f64,
     error: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
@@ -477,7 +477,7 @@
     <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-audit-event-54">publish_audit_event</a>(handles, ctx, <span class="rs-type">AGENT_RUN_COMPLETED</span>, payload);
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-os-resource-sampled-38">publish_os_resource_sampled</a>(handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>, ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>) {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-os-resource-sampled-38">publish_os_resource_sampled</a>(handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>, ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>) {
     <span class="rs-kw">if</span> !handles.audit.enabled() {
         <span class="rs-kw">return</span>;
     }
@@ -494,7 +494,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-publish-audit-event-54">publish_audit_event</a>(
-    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a>,
+    handles: &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a>,
     ctx: &amp;<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>,
     event_type: &amp;str,
     payload: <span class="rs-type">JsonObject</span>,
@@ -644,9 +644,9 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-handles-205">handles</a>(audit: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AuditSink</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-fn-handles-205">handles</a>(audit: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AuditSink</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> {
         <span class="rs-kw">let</span> transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-108">new</a>(<span class="rs-type">FakeTransport</span>);
-        <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-43">EngineRunHandles</a> {
+        <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-EngineRunHandles-42">EngineRunHandles</a> {
             agent_run_store: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-108">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-struct-NoopAgentRunStore-157">NoopAgentRunStore</a>),
             llm_client: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-108">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-telemetry-agent-run-audit-rs.html#item-struct-NoopLlmClient-147">NoopLlmClient</a>),
             event_source_factory: <span class="rs-type">None</span>,

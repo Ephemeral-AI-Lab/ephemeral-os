@@ -5,7 +5,7 @@
 //! Terminal tools and `exit_isolated_workspace` settle in-process subagent
 //! records before checking the remaining session families. `enter_isolated_workspace`
 //! remains inspect-only. Workflows stay owned by persisted workflow state via
-//! `WorkflowServicePort::find_outstanding_workflows`, and command sessions stay
+//! `WorkflowApi::find_outstanding_workflows`, and command sessions stay
 //! owned by the sandbox daemon via `api.v1.command_session_count`.
 
 use eos_types::JsonObject;
@@ -254,10 +254,7 @@ mod tests {
             unreachable!("deny short-circuits before start")
         }
 
-        async fn check_workflow_status(
-            &self,
-            _: &WorkflowId,
-        ) -> Result<String, WorkflowApiError> {
+        async fn check_workflow_status(&self, _: &WorkflowId) -> Result<String, WorkflowApiError> {
             unreachable!()
         }
 
@@ -350,7 +347,7 @@ mod tests {
     }
 
     // The workflow dimension: a terminal is denied while a delegated workflow is
-    // still outstanding, gated on the authoritative WorkflowServicePort rather
+    // still outstanding, gated on the authoritative WorkflowApi rather
     // than a background session entry.
     #[tokio::test]
     async fn outstanding_workflow_denies_terminal() {

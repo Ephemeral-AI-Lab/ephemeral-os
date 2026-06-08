@@ -11,8 +11,7 @@ use std::sync::{Arc, OnceLock};
 
 use anyhow::{Context, Result};
 use eos_agent_def::AgentName;
-use eos_agent_message_records::AgentRunRecordKind;
-use eos_agent_run::{AgentRunApi, SpawnAgentRequest};
+use eos_agent_runner::{AgentRunApi, AgentRunRecordKind, SpawnAgentRequest};
 use eos_engine::{
     AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
     EngineCancelPort, ForegroundExecutorFactory,

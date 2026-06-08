@@ -9,7 +9,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_agent_run::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
+use eos_agent_runner::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 use eos_sandbox_port::SandboxCommandApi;
 use eos_tools::{
     BackgroundSessionCounts, CommandSessionToolService, SubagentToolService, WorkflowToolService,
@@ -164,13 +164,6 @@ impl BackgroundSessionRuntime {
             command_sessions,
         }
     }
-
-    pub(super) async fn cancel(&self, reason: &str) -> BackgroundSessionCounts {
-        self.subagent_session_manager.cancel(reason).await;
-        self.workflow_session_manager.cancel(reason).await;
-        self.command_session_manager.cancel(reason).await;
-        self.count().await
-    }
 }
 
 /// Cloneable aggregate for one agent run's background session runtime.
@@ -213,14 +206,6 @@ impl BackgroundManagers {
     #[must_use]
     pub fn agent_run_id(&self) -> &AgentRunId {
         self.runtime.agent_run_id()
-    }
-
-    pub async fn running_background_tasks(&self) -> BackgroundSessionCounts {
-        self.runtime.count().await
-    }
-
-    pub async fn cancel(&self, reason: &str) -> BackgroundSessionCounts {
-        self.runtime.cancel(reason).await
     }
 
     pub async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {

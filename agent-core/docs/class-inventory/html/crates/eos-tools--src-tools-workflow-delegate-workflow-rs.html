@@ -102,7 +102,7 @@
             .ok_or(<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;workflow_sessions&quot;))?;
 
         <span class="rs-kw">let</span> outstanding = service
-            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-95">find_outstanding_workflows</a>(task_id, agent_run_id)
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-92">find_outstanding_workflows</a>(task_id, agent_run_id)
             .<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = outstanding.first() {
             <span class="rs-kw">let</span> payload = json!({
@@ -271,7 +271,7 @@
             .ok_or(<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;workflow_sessions&quot;))?;
 
         <span class="rs-kw">let</span> outstanding = service
-            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-95">find_outstanding_workflows</a>(task_id, agent_run_id)
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-workflows-92">find_outstanding_workflows</a>(task_id, agent_run_id)
             .<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = outstanding.first() {
             <span class="rs-kw">let</span> payload = json!({

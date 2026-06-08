@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use eos_agent_def::{load_agents_tree, AgentRegistry, AgentRegistryBuilder};
-use eos_agent_message_records::AgentMessageRecords;
+use eos_agent_runner::AgentMessageRecords;
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
 use eos_config::{
     DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, ProviderKind,

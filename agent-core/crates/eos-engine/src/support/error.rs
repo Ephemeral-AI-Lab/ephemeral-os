@@ -22,7 +22,7 @@ pub enum EngineError {
 
     /// Agent-node message-record error.
     #[error("message record error: {0}")]
-    MessageRecord(#[from] eos_agent_message_records::MessageRecordError),
+    MessageRecord(#[from] eos_agent_runner::MessageRecordError),
 
     /// Prompt-report file I/O error.
     #[error("prompt report io error: {0}")]

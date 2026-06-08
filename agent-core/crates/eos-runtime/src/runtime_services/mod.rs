@@ -12,7 +12,7 @@ mod state_reader;
 
 use std::sync::Arc;
 
-use eos_agent_message_records::AgentMessageRecords;
+use eos_agent_runner::AgentMessageRecords;
 use eos_tools::{RootSubmissionService, SandboxToolService, SkillToolService};
 
 use crate::plugin_tools::register_plugin_tools;

@@ -1,6 +1,6 @@
 //! Runtime-owned agent message-record service handle.
 
-use eos_agent_message_records::AgentMessageRecords;
+use eos_agent_runner::AgentMessageRecords;
 
 /// Optional file-backed agent-node message records.
 #[derive(Clone, Debug, Default)]
