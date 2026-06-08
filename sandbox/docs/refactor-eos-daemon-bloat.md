@@ -140,9 +140,18 @@ Ordered preconditions (each is a real seam, not a rename):
 (it must compile with **no `eos-occ` dependency**); then `cargo test -p eos-daemon`
 for the cancel-never-publishes and command-lifecycle behavior.
 
-### Tier 3 — internal organization (this is what actually answers "bloated"; no cross-crate move)
+### Tier 3 — ✅ DONE: internal organization (verified: workspace-wide `check`/`clippy -D warnings` on darwin + linux-musl, all tests green)
 This tier is the right one if the concern is size/navigability rather than misplaced
 logic. None of it changes the dependency DAG.
+
+> Shipped: (1) `response_timings` converters now delegate to `eos-workspace-api`'s
+> uncapped ones (regression test added); (2) the six `services/*` sub-modules were
+> renamed to `adapters/*` with a module doc stating they are seams, not
+> reimplementations; (3) the oversized files were split along real boundaries —
+> `plugins/process.rs` 738→582 (tests → `tests/plugin_process/`), `transport/server.rs`
+> 542→~455 (`framing.rs` + `tool_call_events.rs`), `isolated/runtime.rs` 508→341
+> (`ns_runner.rs`). The cohesive `process.rs`/`runtime.rs` state machines were NOT
+> force-split into field-spraying submodules.
 
 - **Rename the `services/*` shadowing that creates the false "reimplementation"
   impression.** Six sub-modules — `services/{checkpoint,occ,overlay,plugins,workspace,

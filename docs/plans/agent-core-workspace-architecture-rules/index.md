@@ -212,6 +212,20 @@ agent-core/
 │   │       ├── registry.rs
 │   │       ├── executor.rs
 │   │       ├── hooks.rs
+│   │       ├── hooks/
+│   │       │   ├── background_sessions.rs
+│   │       │   ├── workflow_depth.rs
+│   │       │   └── sandbox_policy.rs
+│   │       ├── tools.rs
+│   │       ├── tools/
+│   │       │   ├── sandbox.rs
+│   │       │   ├── command.rs
+│   │       │   ├── workflow.rs
+│   │       │   ├── subagent.rs
+│   │       │   ├── submission.rs
+│   │       │   ├── skills.rs
+│   │       │   ├── advisor.rs
+│   │       │   └── terminal.rs
 │   │       ├── services.rs
 │   │       └── services/
 │   │           ├── registry.rs

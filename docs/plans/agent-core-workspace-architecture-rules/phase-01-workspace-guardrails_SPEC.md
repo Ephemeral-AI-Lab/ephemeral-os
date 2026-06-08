@@ -144,7 +144,7 @@ Initial budget gates:
 | total modules after phase 4 | <= 215 |
 | final total modules | <= 200 |
 | `eos-agent-core` final modules | <= 24 |
-| `eos-tool` final modules | <= 25 |
+| `eos-tool` final modules | <= 32 |
 | `eos-engine` final modules | <= 27 |
 | `eos-workflow` final modules | <= 16 |
 | `eos-types` final modules | <= 14 |

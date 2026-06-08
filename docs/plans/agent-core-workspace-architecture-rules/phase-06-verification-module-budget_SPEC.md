@@ -64,7 +64,7 @@ cargo machete
 | `eos-agent-core` | new plus `eos-runtime` fold | <= 24 |
 | `eos-agent-run` | 6 from runner baseline | <= 10 |
 | `eos-engine` | 33 | <= 25 |
-| `eos-tool` | 66 combined tools/tool-ports baseline | <= 25 |
+| `eos-tool` | 66 combined tools/tool-ports baseline | <= 32 |
 | `eos-workflow` | 23 | <= 14 |
 | `eos-types` | 28 | <= 14 |
 | `eos-config` | 12 | <= 10 |

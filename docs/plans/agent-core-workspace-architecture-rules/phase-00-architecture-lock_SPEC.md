@@ -102,6 +102,45 @@ printing, background accounting, and sibling-facing engine services.
 Owns the tool framework, concrete model-callable tools, hooks, registry, skill
 loading, and sibling-facing tool services.
 
+Target source shape:
+
+```text
+eos-tool/src/
+├── lib.rs
+├── error.rs
+├── model.rs
+├── catalog.rs
+├── registry.rs
+├── executor.rs
+├── hooks.rs
+├── hooks/
+│   ├── background_sessions.rs
+│   ├── workflow_depth.rs
+│   └── sandbox_policy.rs
+├── tools.rs
+├── tools/
+│   ├── sandbox.rs
+│   ├── command.rs
+│   ├── workflow.rs
+│   ├── subagent.rs
+│   ├── submission.rs
+│   ├── skills.rs
+│   ├── advisor.rs
+│   └── terminal.rs
+├── services.rs
+└── services/
+    ├── registry.rs
+    ├── sandbox.rs
+    ├── command_sessions.rs
+    ├── workflow.rs
+    ├── subagent.rs
+    ├── submission.rs
+    └── skills.rs
+```
+
+`tools/` is concrete model-callable behavior. `hooks/` is tool pre/post policy.
+`services/` is only sibling-consumed handles.
+
 ### eos-workflow
 
 Owns workflow lifecycle and sibling-facing workflow services.

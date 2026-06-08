@@ -49,6 +49,20 @@ agent-core/crates/eos-tool/
 │   ├── registry.rs
 │   ├── executor.rs
 │   ├── hooks.rs
+│   ├── hooks/
+│   │   ├── background_sessions.rs
+│   │   ├── workflow_depth.rs
+│   │   └── sandbox_policy.rs
+│   ├── tools.rs
+│   ├── tools/
+│   │   ├── sandbox.rs
+│   │   ├── command.rs
+│   │   ├── workflow.rs
+│   │   ├── subagent.rs
+│   │   ├── submission.rs
+│   │   ├── skills.rs
+│   │   ├── advisor.rs
+│   │   └── terminal.rs
 │   ├── services.rs
 │   └── services/
 │       ├── registry.rs
@@ -69,22 +83,28 @@ agent-core/crates/eos-tool/
 
 No `builtins.rs` or `builtins/` folder is required in the first target. The
 built-in tool set is closed and should be represented through `catalog.rs` plus
-family handlers in `services/`.
+family handlers in `tools/`.
+
+`services/` is not where concrete tools live. It contains only sibling-consumed
+handle types such as sandbox, workflow, command-session, submission, and skill
+handles.
 
 ## Module Collapse Plan
 
 | Current pattern | Target |
 | --- | --- |
-| `tools/sandbox/exec_command.rs` | `catalog.rs` entry plus `services/sandbox.rs` handler |
-| `tools/sandbox/read_file.rs` | `catalog.rs` entry plus `services/sandbox.rs` handler |
-| `tools/sandbox/write_file.rs` | `catalog.rs` entry plus `services/sandbox.rs` handler |
-| `tools/sandbox/edit_file.rs` | `catalog.rs` entry plus `services/sandbox.rs` handler |
-| `tools/sandbox/multi_edit.rs` | `catalog.rs` entry plus `services/sandbox.rs` handler |
-| `tools/sandbox/write_stdin.rs` | `catalog.rs` entry plus `services/command_sessions.rs` handler |
-| `tools/workflow/*.rs` | `catalog.rs` entry plus `services/workflow.rs` handler |
-| `tools/subagent/*.rs` | `catalog.rs` entry plus `services/subagent.rs` handler |
-| `tools/submission/**/*.rs` | `catalog.rs` entry plus `services/submission.rs` handler |
-| `tools/skills/*.rs` | `catalog.rs` entry plus `services/skills.rs` handler |
+| `tools/sandbox/exec_command.rs` | `catalog.rs` entry plus `tools/command.rs` handler |
+| `tools/sandbox/read_file.rs` | `catalog.rs` entry plus `tools/sandbox.rs` handler |
+| `tools/sandbox/write_file.rs` | `catalog.rs` entry plus `tools/sandbox.rs` handler |
+| `tools/sandbox/edit_file.rs` | `catalog.rs` entry plus `tools/sandbox.rs` handler |
+| `tools/sandbox/multi_edit.rs` | `catalog.rs` entry plus `tools/sandbox.rs` handler |
+| `tools/sandbox/write_stdin.rs` | `catalog.rs` entry plus `tools/command.rs` handler |
+| `tools/workflow/*.rs` | `catalog.rs` entry plus `tools/workflow.rs` handler |
+| `tools/subagent/*.rs` | `catalog.rs` entry plus `tools/subagent.rs` handler |
+| `tools/submission/**/*.rs` | `catalog.rs` entry plus `tools/submission.rs` handler |
+| `tools/skills/*.rs` | `catalog.rs` entry plus `tools/skills.rs` handler |
+| `tools/ask_helper/*.rs` | `catalog.rs` entry plus `tools/advisor.rs` handler |
+| `tools/terminal.rs` | `tools/terminal.rs` |
 
 ## Service Rules
 
@@ -139,16 +159,20 @@ small and owner-accurate.
 | Fold `eos-tool-ports` model types | Not started |
 | Fold registry and executor contracts | Not started |
 | Move hooks into `eos-tool` | Not started |
+| Split hook policy into `hooks/` family modules | Not started |
+| Move concrete tool behavior into `tools/` family modules | Not started |
 | Promote sibling-facing services to `services.rs` | Not started |
 | Collapse sandbox command files | Not started |
 | Collapse workflow/subagent/submission files | Not started |
 | Collapse skill tool files | Not started |
-| Remove obsolete `tools/` deep tree | Not started |
+| Remove obsolete one-file-per-tool deep tree | Not started |
 | Update engine/api imports | Not started |
 
 ## Acceptance Criteria
 
 - No `eos-tool-ports` crate remains.
+- `eos-tool` has `tools.rs` and family-level `tools/` modules.
+- `eos-tool` has `hooks.rs` and focused `hooks/` policy modules.
 - `eos-tool` has no one-file-per-tool-command module tree.
 - Every `Service` exported by `eos-tool` has at least one sibling-crate consumer.
 - Private resource groups are named `Handles`, not `Service`.
@@ -157,4 +181,4 @@ small and owner-accurate.
 - `cargo test -p eos-tool` passes.
 - `cargo check -p eos-engine --all-targets` and
   `cargo check -p eos-agent-core --all-targets` pass after import updates.
-- `eos-tool` final module count is at or below 25.
+- `eos-tool` final module count is at or below 32.
