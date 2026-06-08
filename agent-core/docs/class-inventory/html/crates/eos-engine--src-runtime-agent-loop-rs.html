@@ -225,7 +225,7 @@
     <span class="rs-kw">if</span> won {
         prepared
             .background_teardown_finalizer
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-finalize-408">finalize</a>(&amp;prepared.ctx, error.as_deref())
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-finalize-405">finalize</a>(&amp;prepared.ctx, error.as_deref())
             .<span class="rs-kw">await</span>;
         <a class="symbol-link rs-fn" href="eos-engine--src-runtime-persistence-rs.html#item-fn-finish-agent-run-if-requested-29">finish_agent_run_if_requested</a>(
             handles,
@@ -241,7 +241,7 @@
     } <span class="rs-kw">else</span> {
         <span class="rs-comment">// A concurrent `cancel_agent_run` claimed the entry and owns the row +</span>
         <span class="rs-comment">// child teardown; disarm our finalizer so it does not run a second one.</span>
-        prepared.background_teardown_finalizer.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-disarm-418">disarm</a>();
+        prepared.background_teardown_finalizer.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-disarm-415">disarm</a>();
     }
 
     <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-AgentRunResult-181">AgentRunResult</a> {
@@ -433,7 +433,7 @@
     <span class="rs-kw">if</span> won {
         prepared
             .background_teardown_finalizer
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-finalize-408">finalize</a>(&amp;prepared.ctx, error.as_deref())
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-finalize-405">finalize</a>(&amp;prepared.ctx, error.as_deref())
             .<span class="rs-kw">await</span>;
         <a class="symbol-link rs-fn" href="eos-engine--src-runtime-persistence-rs.html#item-fn-finish-agent-run-if-requested-29">finish_agent_run_if_requested</a>(
             handles,
@@ -449,7 +449,7 @@
     } <span class="rs-kw">else</span> {
         <span class="rs-comment">// A concurrent `cancel_agent_run` claimed the entry and owns the row +</span>
         <span class="rs-comment">// child teardown; disarm our finalizer so it does not run a second one.</span>
-        prepared.background_teardown_finalizer.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-disarm-418">disarm</a>();
+        prepared.background_teardown_finalizer.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-disarm-415">disarm</a>();
     }
 
     <a class="symbol-link rs-type" href="eos-engine--src-runtime-types-rs.html#item-struct-AgentRunResult-181">AgentRunResult</a> {

@@ -156,9 +156,9 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-102">CommandToolService</a></code>
   <p class="docstring">Command-session tool dependencies.</p>
   <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>command_service</td><td><code>Arc &lt; dyn SandboxCommandApi &gt;</code></td></tr><tr><td>pub(crate)</td><td>command_sessions</td><td><code>Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandSessionToolService-143">CommandSessionToolService</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-110"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (transport : Arc &lt; dyn SandboxTransport &gt; , command_sessions : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandSessionToolService-143">CommandSessionToolService</a> &gt; ,) -&gt; Self</code><p class="docstring">Build command tool services from the legacy sandbox transport.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>command_service</td><td><code>Arc &lt; dyn SandboxCommandApi &gt;</code></td></tr><tr><td>pub(crate)</td><td>command_sessions</td><td><code>Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandSessionToolService-143">CommandSessionToolService</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-110"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (transport : Arc &lt; dyn SandboxTransport &gt; , command_sessions : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandSessionToolService-143">CommandSessionToolService</a> &gt; ,) -&gt; Self</code><p class="docstring">Build command tool services from the daemon sandbox transport.</p><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Build command tool services from the legacy sandbox transport.</span>
+  <pre><code>    <span class="rs-comment">/// Build command tool services from the daemon sandbox transport.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
         transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,
@@ -679,7 +679,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-102">CommandToolService</a> {
-    <span class="rs-comment">/// Build command tool services from the legacy sandbox transport.</span>
+    <span class="rs-comment">/// Build command tool services from the daemon sandbox transport.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
         transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,

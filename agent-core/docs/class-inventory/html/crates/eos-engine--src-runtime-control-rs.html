@@ -329,8 +329,8 @@
 <span class="rs-comment">//! Each root, workflow-agent, and subagent run owns exactly one</span>
 <span class="rs-comment">//! `AgentRunControl`. It is the object-oriented owner of the run-local</span>
 <span class="rs-comment">//! cancellation state, foreground executor, notification service, background</span>
-<span class="rs-comment">//! session service, and finalization handles. It replaces `BackgroundSessionFinalizer`'s</span>
-<span class="rs-comment">//! `Drop`-based cleanup as the cleanup owner; teardown is awaited.</span>
+<span class="rs-comment">//! session service, and finalization handles. Normal teardown is awaited by the</span>
+<span class="rs-comment">//! run finalizer; `Drop` cleanup remains only as a last-ditch backstop.</span>
 
 <span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>};
 

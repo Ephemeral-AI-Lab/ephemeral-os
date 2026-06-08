@@ -458,7 +458,6 @@ dependencies = [
  "eos-llm-client",
  "eos-types",
  "thiserror",
- "tokio",
 ]
 
 [[package]]

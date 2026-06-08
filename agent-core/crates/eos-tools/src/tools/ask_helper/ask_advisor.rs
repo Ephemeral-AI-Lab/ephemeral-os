@@ -100,7 +100,7 @@ impl ToolExecutor for AskAdvisor {
             .await
         {
             Ok(agent_run_id) => agent_run_id,
-            Err(err) => return Ok(advisor_spawn_error(err)),
+            Err(err) => return Ok(advisor_spawn_error(&err)),
         };
 
         let advisor_result = match agent_run_service
@@ -119,7 +119,7 @@ impl ToolExecutor for AskAdvisor {
     }
 }
 
-fn advisor_spawn_error(err: AgentRunError) -> ToolResult {
+fn advisor_spawn_error(err: &AgentRunError) -> ToolResult {
     match err {
         AgentRunError::AgentNotRegistered(_) => {
             ToolResult::error("ask_advisor: agent definition 'advisor' not registered.")

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eos-agent-run · src/active_runs.rs</title>
+  <title>eos-agent-run · src/error.rs</title>
   <link rel="stylesheet" href="../assets/inventory.css">
 </head>
 <body>
@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>6</b><span>modules</span></div>
-  <div><b>8</b><span>items</span></div>
-  <div><b>29</b><span>fields</span></div>
-  <div><b>9</b><span>methods</span></div>
+  <div><b>5</b><span>modules</span></div>
+  <div><b>5</b><span>items</span></div>
+  <div><b>26</b><span>fields</span></div>
+  <div><b>4</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,201 +41,80 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-agent-run.html"><span>active_runs.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-request-rs.html"><span>request.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="active_runs crates/eos-agent-run/src/active_runs.rs ActiveAgentRuns ActiveAgentRun impl ActiveAgentRuns">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-agent-run.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-request-rs.html"><span>request.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-agent-run/src/error.rs AgentRunError">
   <div class="module-head">
     <div>
-      <h2>src/active_runs.rs</h2>
-      <p class="path">module <code>active_runs</code></p>
+      <h2>src/error.rs</h2>
+      <p class="path">module <code>error</code></p>
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>2 types</span>
-      <span>1 impls</span>
+      <span>1 types</span>
+      <span>0 impls</span>
       <span>0 fns</span>
-      <span>5 methods</span>
+      <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ActiveAgentRuns-12" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ActiveAgentRuns pub pub struct ActiveAgentRuns crates/eos-agent-run/src/active_runs.rs runs Arc &lt; Mutex &lt; HashMap &lt; AgentRunId , ActiveAgentRun &gt; &gt; &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-AgentRunError-5" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentRunError pub pub enum AgentRunError crates/eos-agent-run/src/error.rs  ">
   <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>ActiveAgentRuns</h3>
+    <span class="kind">enum</span>
+    <h3>AgentRunError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-run.html#item-struct-ActiveAgentRuns-12">ActiveAgentRuns</a></code>
-  <p class="docstring">Live process-local registry of spawned agent runs.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>runs</td><td><code>Arc &lt; Mutex &lt; HashMap &lt; AgentRunId , <a class="symbol-link" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a> &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-insert-28"><td>method</td><td>insert</td><td><code>pub async fn <a class="symbol-link" href="eos-agent-run.html#method-insert-28">insert</a> (&amp; self , agent_run_id : AgentRunId , run : <a class="symbol-link" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a>)</code><p class="docstring">Insert one active run.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Insert one active run.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-28">insert</a>(&amp;<span class="rs-self">self</span>, agent_run_id: <span class="rs-type">AgentRunId</span>, run: <a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a>) {
-        <span class="rs-self">self</span>.runs.lock().<span class="rs-kw">await</span>.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-28">insert</a>(agent_run_id, run);
-    }
-</code></pre>
-</details></td></tr><tr id="method-remove-33"><td>method</td><td>remove</td><td><code>pub async fn <a class="symbol-link" href="eos-agent-run.html#method-remove-33">remove</a> (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Option &lt; <a class="symbol-link" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a> &gt;</code><p class="docstring">Remove an active run.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Remove an active run.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-remove-33">remove</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a>&gt; {
-        <span class="rs-self">self</span>.runs.lock().<span class="rs-kw">await</span>.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-remove-33">remove</a>(agent_run_id)
-    }
-</code></pre>
-</details></td></tr><tr id="method-current-outcome-38"><td>method</td><td>current_outcome</td><td><code>pub async fn <a class="symbol-link" href="eos-agent-run.html#method-current-outcome-38">current_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Option &lt; <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a> &gt;</code><p class="docstring">Return the currently published outcome for an active run, if any.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Return the currently published outcome for an active run, if any.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-current-outcome-38">current_outcome</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>&gt; {
-        <span class="rs-self">self</span>.runs
-            .lock()
-            .<span class="rs-kw">await</span>
-            .get(agent_run_id)
-            .and_then(|run| run.outcome_tx.borrow().clone())
-    }
-</code></pre>
-</details></td></tr><tr id="method-subscribe-47"><td>method</td><td>subscribe</td><td><code>pub async fn <a class="symbol-link" href="eos-agent-run.html#method-subscribe-47">subscribe</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; watch :: Receiver &lt; Option &lt; <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a> &gt; &gt; , <a class="symbol-link" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a> &gt;</code><p class="docstring">Subscribe to an active run's terminal outcome.<br># Errors<br>Returns [`AgentRunError::NotActiveInProcess`] when this process does not<br>own the run.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Subscribe to an active run's terminal outcome.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns [`AgentRunError::NotActiveInProcess`] when this process does not</span>
-    <span class="rs-comment">/// own the run.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-subscribe-47">subscribe</a>(
-        &amp;<span class="rs-self">self</span>,
-        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;watch::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt; {
-        <span class="rs-self">self</span>.runs
-            .lock()
-            .<span class="rs-kw">await</span>
-            .get(agent_run_id)
-            .map(|run| run.outcome_tx.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-subscribe-47">subscribe</a>())
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>::<span class="rs-type">NotActiveInProcess</span>(agent_run_id.clone()))
-    }
-</code></pre>
-</details></td></tr><tr id="method-wait-for-64"><td>method</td><td>wait_for</td><td><code>pub async fn <a class="symbol-link" href="eos-agent-run.html#method-wait-for-64">wait_for</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a> , <a class="symbol-link" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a> &gt;</code><p class="docstring">Wait on an active run's watch channel.<br># Errors<br>Returns when the run is missing from this process or its sender closes<br>before a terminal outcome is published.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Wait on an active run's watch channel.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns when the run is missing from this process or its sender closes</span>
-    <span class="rs-comment">/// before a terminal outcome is published.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-wait-for-64">wait_for</a>(
-        &amp;<span class="rs-self">self</span>,
-        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rx = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-subscribe-47">subscribe</a>(agent_run_id).<span class="rs-kw">await</span>?;
-        loop {
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = rx.borrow().clone() {
-                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(outcome);
-            }
-            rx.changed()
-                .<span class="rs-kw">await</span>
-                .map_err(|_| <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>::<span class="rs-type">CompletionChannelClosed</span>(agent_run_id.clone()))?;
-        }
-    }
-</code></pre>
-</details></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-run.html#item-enum-AgentRunError-5">AgentRunError</a></code>
+  <p class="docstring">Error returned by the agent-run lifecycle API.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>NotActiveInProcess</td><td><code>0: AgentRunId</code></td></tr><tr><td>AgentNotRegistered</td><td><code>0: String</code></td></tr><tr><td>WrongAgentType</td><td><code>agent_name: String, expected: &amp; &#x27;static str, actual: &amp; &#x27;static str</code></td></tr><tr><td>RecursiveSubagent</td><td><code></code></td></tr><tr><td>CompletionChannelClosed</td><td><code>0: AgentRunId</code></td></tr><tr><td>Internal</td><td><code>0: String</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-agent-run/src/active_runs.rs:12</p>
-</article><article id="item-struct-ActiveAgentRun-18" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ActiveAgentRun pub pub struct ActiveAgentRun crates/eos-agent-run/src/active_runs.rs abort_handle AbortHandle outcome_tx watch :: Sender &lt; Option &lt; AgentRunOutcome &gt; &gt; ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>ActiveAgentRun</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a></code>
-  <p class="docstring">One active agent run's process-local handles.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>abort_handle</td><td><code>AbortHandle</code></td></tr><tr><td>pub</td><td>outcome_tx</td><td><code>watch :: Sender &lt; Option &lt; <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a> &gt; &gt;</code></td></tr></tbody></table>
-
-  <p class="source">crates/eos-agent-run/src/active_runs.rs:18</p>
+  <p class="source">crates/eos-agent-run/src/error.rs:5</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-agent-run/src/active_runs.rs</p>
+    <p class="path">crates/eos-agent-run/src/error.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! In-process active agent-run registry.</span>
-
-<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
-<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+  <pre class="file-source"><code><span class="rs-comment">//! Agent-run lifecycle errors.</span>
 
 <span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
-<span class="rs-kw">use</span> tokio::sync::{watch, <span class="rs-type">Mutex</span>};
-<span class="rs-kw">use</span> tokio::task::<span class="rs-type">AbortHandle</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>};
+<span class="rs-comment">/// Error returned by the agent-run lifecycle API.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-run.html#item-enum-AgentRunError-5">AgentRunError</a> {
+    <span class="rs-comment">/// The requested agent run is not active in this process and has no durable</span>
+    <span class="rs-comment">/// terminal outcome available.</span>
+    #[error(&quot;agent run {0} is not active <span class="rs-kw">in</span> this process&quot;)]
+    <span class="rs-type">NotActiveInProcess</span>(<span class="rs-type">AgentRunId</span>),
 
-<span class="rs-comment">/// Live process-local registry of spawned agent runs.</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRuns-12">ActiveAgentRuns</a> {
-    runs: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">AgentRunId</span>, <a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a>&gt;&gt;&gt;,
-}
+    <span class="rs-comment">/// The requested agent name was not registered.</span>
+    #[error(&quot;agent {0:?} is not registered&quot;)]
+    <span class="rs-type">AgentNotRegistered</span>(<span class="rs-type">String</span>),
 
-<span class="rs-comment">/// One active agent run's process-local handles.</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a> {
-    <span class="rs-comment">/// Abort handle for the spawned task.</span>
-    <span class="rs-kw">pub</span> abort_handle: <span class="rs-type">AbortHandle</span>,
-    <span class="rs-comment">/// Completion signal. `Some` is terminal and is published exactly once.</span>
-    <span class="rs-kw">pub</span> outcome_tx: watch::<span class="rs-type">Sender</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>&gt;&gt;,
-}
+    <span class="rs-comment">/// The requested agent exists but is not launchable for this operation.</span>
+    #[error(&quot;agent {agent_name:?} is not a {expected} agent (actual: {actual})&quot;)]
+    <span class="rs-type">WrongAgentType</span> {
+        <span class="rs-comment">/// Requested agent name.</span>
+        agent_name: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// Expected type label.</span>
+        expected: &amp;&#x27;<span class="rs-kw">static</span> str,
+        <span class="rs-comment">/// Actual type label.</span>
+        actual: &amp;&#x27;<span class="rs-kw">static</span> str,
+    },
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRuns-12">ActiveAgentRuns</a> {
-    <span class="rs-comment">/// Insert one active run.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-28">insert</a>(&amp;<span class="rs-self">self</span>, agent_run_id: <span class="rs-type">AgentRunId</span>, run: <a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a>) {
-        <span class="rs-self">self</span>.runs.lock().<span class="rs-kw">await</span>.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-28">insert</a>(agent_run_id, run);
-    }
+    <span class="rs-comment">/// Recursive subagent launch is disallowed.</span>
+    #[error(&quot;subagents may not spawn further subagents&quot;)]
+    <span class="rs-type">RecursiveSubagent</span>,
 
-    <span class="rs-comment">/// Remove an active run.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-remove-33">remove</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run.html#item-struct-ActiveAgentRun-18">ActiveAgentRun</a>&gt; {
-        <span class="rs-self">self</span>.runs.lock().<span class="rs-kw">await</span>.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-remove-33">remove</a>(agent_run_id)
-    }
+    <span class="rs-comment">/// Waiting failed because the completion channel closed.</span>
+    #[error(&quot;agent run completion channel closed <span class="rs-kw">for</span> {0}&quot;)]
+    <span class="rs-type">CompletionChannelClosed</span>(<span class="rs-type">AgentRunId</span>),
 
-    <span class="rs-comment">/// Return the currently published outcome for an active run, if any.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-current-outcome-38">current_outcome</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>&gt; {
-        <span class="rs-self">self</span>.runs
-            .lock()
-            .<span class="rs-kw">await</span>
-            .get(agent_run_id)
-            .and_then(|run| run.outcome_tx.borrow().clone())
-    }
-
-    <span class="rs-comment">/// Subscribe to an active run's terminal outcome.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns [`AgentRunError::NotActiveInProcess`] when this process does not</span>
-    <span class="rs-comment">/// own the run.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-subscribe-47">subscribe</a>(
-        &amp;<span class="rs-self">self</span>,
-        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;watch::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt; {
-        <span class="rs-self">self</span>.runs
-            .lock()
-            .<span class="rs-kw">await</span>
-            .get(agent_run_id)
-            .map(|run| run.outcome_tx.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-subscribe-47">subscribe</a>())
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>::<span class="rs-type">NotActiveInProcess</span>(agent_run_id.clone()))
-    }
-
-    <span class="rs-comment">/// Wait on an active run's watch channel.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns when the run is missing from this process or its sender closes</span>
-    <span class="rs-comment">/// before a terminal outcome is published.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run.html#method-wait-for-64">wait_for</a>(
-        &amp;<span class="rs-self">self</span>,
-        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rx = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-subscribe-47">subscribe</a>(agent_run_id).<span class="rs-kw">await</span>?;
-        loop {
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = rx.borrow().clone() {
-                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(outcome);
-            }
-            rx.changed()
-                .<span class="rs-kw">await</span>
-                .map_err(|_| <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>::<span class="rs-type">CompletionChannelClosed</span>(agent_run_id.clone()))?;
-        }
-    }
+    <span class="rs-comment">/// A store, engine, or framework operation failed.</span>
+    #[error(&quot;agent run failed: {0}&quot;)]
+    <span class="rs-type">Internal</span>(<span class="rs-type">String</span>),
 }
 </code></pre>
 </section>

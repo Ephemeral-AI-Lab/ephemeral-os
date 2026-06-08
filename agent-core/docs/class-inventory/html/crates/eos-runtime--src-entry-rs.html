@@ -270,7 +270,7 @@
                 })
                 .<span class="rs-kw">await</span>
             {
-                <span class="rs-type">Ok</span>(agent_run_id) =&gt; <span class="rs-kw">match</span> agent_runs.wait_for_agent_outcomes(&amp;agent_run_id).<span class="rs-kw">await</span> {
+                <span class="rs-type">Ok</span>(agent_run_id) =&gt; <span class="rs-kw">match</span> agent_runs.wait_for_agent_outcome(&amp;agent_run_id).<span class="rs-kw">await</span> {
                     <span class="rs-type">Ok</span>(outcome) =&gt; {
                         <span class="rs-kw">let</span> has_submission = outcome.submission_payload.is_some();
                         outcome.error.unwrap_or_else(|| {
@@ -348,16 +348,16 @@
     <span class="visibility">private</span>
   </div>
   <code class="signature">async fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-297">fail_unfinished_root</a> (services : &amp; <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-36">RuntimeServices</a> , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,)</code>
-  <p class="docstring">Fail the root **iff** it is still running (idempotent compare-and-set) and<br>finish the request as `Failed`. Called unconditionally after the inline run; a<br>no-op once `submit_root_outcome` has closed the task. The root role is not in<br>`ExecutionRole`, so the summary rides in `terminal_tool_result` rather than a<br>typed outcome row (documented deviation; the typed outcome column is left<br>empty for root).</p>
+  <p class="docstring">Fail the root **iff** it is still running (idempotent compare-and-set) and<br>finish the request as `Failed`. Called unconditionally after the root agent<br>has completed or failed; a no-op once `submit_root_outcome` has closed the<br>task. The root role is not in `ExecutionRole`, so the summary rides in<br>`terminal_tool_result` rather than a typed outcome row (documented deviation;<br>the typed outcome column is left empty for root).</p>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Fail the root **iff** it is still running (idempotent compare-and-set) and</span>
-<span class="rs-comment">/// finish the request as `Failed`. Called unconditionally after the inline run; a</span>
-<span class="rs-comment">/// no-op once `submit_root_outcome` has closed the task. The root role is not in</span>
-<span class="rs-comment">/// `ExecutionRole`, so the summary rides in `terminal_tool_result` rather than a</span>
-<span class="rs-comment">/// typed outcome row (documented deviation; the typed outcome column is left</span>
-<span class="rs-comment">/// empty for root).</span>
+<span class="rs-comment">/// finish the request as `Failed`. Called unconditionally after the root agent</span>
+<span class="rs-comment">/// has completed or failed; a no-op once `submit_root_outcome` has closed the</span>
+<span class="rs-comment">/// task. The root role is not in `ExecutionRole`, so the summary rides in</span>
+<span class="rs-comment">/// `terminal_tool_result` rather than a typed outcome row (documented deviation;</span>
+<span class="rs-comment">/// the typed outcome column is left empty for root).</span>
 <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-297">fail_unfinished_root</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-36">RuntimeServices</a>,
     request_id: &amp;<span class="rs-type">RequestId</span>,
@@ -410,11 +410,11 @@
     <p class="path">crates/eos-runtime/src/entry.rs</p>
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Request run-to-completion: mint the root task, provision the sandbox, wire the</span>
-<span class="rs-comment">//! per-request delegated-workflow runtime, run the root agent **inline** through</span>
-<span class="rs-comment">//! the shared engine primitive, and return the root's terminal outcome.</span>
+<span class="rs-comment">//! per-request delegated-workflow runtime, start the root agent through</span>
+<span class="rs-comment">//! `AgentRunApi`, and return the root's terminal outcome.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! The root is a `Task(role=Root, workflow_id=None)` run directly through the</span>
-<span class="rs-comment">//! engine — never the workflow starter (GC-eos-runtime-01). Closure is a single</span>
+<span class="rs-comment">//! The root is a `Task(role=Root, workflow_id=None)` started through the</span>
+<span class="rs-comment">//! agent-run lifecycle — never the workflow starter (GC-eos-runtime-01). Closure is a single</span>
 <span class="rs-comment">//! framework-side guard (`fail_unfinished_root`); the happy-path writer is the</span>
 <span class="rs-comment">//! engine-stamped `submit_root_outcome`.</span>
 
@@ -662,7 +662,7 @@
                 })
                 .<span class="rs-kw">await</span>
             {
-                <span class="rs-type">Ok</span>(agent_run_id) =&gt; <span class="rs-kw">match</span> agent_runs.wait_for_agent_outcomes(&amp;agent_run_id).<span class="rs-kw">await</span> {
+                <span class="rs-type">Ok</span>(agent_run_id) =&gt; <span class="rs-kw">match</span> agent_runs.wait_for_agent_outcome(&amp;agent_run_id).<span class="rs-kw">await</span> {
                     <span class="rs-type">Ok</span>(outcome) =&gt; {
                         <span class="rs-kw">let</span> has_submission = outcome.submission_payload.is_some();
                         outcome.error.unwrap_or_else(|| {
@@ -706,11 +706,11 @@
 }
 
 <span class="rs-comment">/// Fail the root **iff** it is still running (idempotent compare-and-set) and</span>
-<span class="rs-comment">/// finish the request as `Failed`. Called unconditionally after the inline run; a</span>
-<span class="rs-comment">/// no-op once `submit_root_outcome` has closed the task. The root role is not in</span>
-<span class="rs-comment">/// `ExecutionRole`, so the summary rides in `terminal_tool_result` rather than a</span>
-<span class="rs-comment">/// typed outcome row (documented deviation; the typed outcome column is left</span>
-<span class="rs-comment">/// empty for root).</span>
+<span class="rs-comment">/// finish the request as `Failed`. Called unconditionally after the root agent</span>
+<span class="rs-comment">/// has completed or failed; a no-op once `submit_root_outcome` has closed the</span>
+<span class="rs-comment">/// task. The root role is not in `ExecutionRole`, so the summary rides in</span>
+<span class="rs-comment">/// `terminal_tool_result` rather than a typed outcome row (documented deviation;</span>
+<span class="rs-comment">/// the typed outcome column is left empty for root).</span>
 <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-297">fail_unfinished_root</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-36">RuntimeServices</a>,
     request_id: &amp;<span class="rs-type">RequestId</span>,

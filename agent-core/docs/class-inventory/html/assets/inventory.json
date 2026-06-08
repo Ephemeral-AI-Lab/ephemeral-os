@@ -2706,133 +2706,17 @@
       "name": "eos-agent-run",
       "path": "crates/eos-agent-run",
       "stats": {
-        "modules": 6,
-        "items": 8,
-        "structs": 4,
+        "modules": 5,
+        "items": 5,
+        "structs": 2,
         "enums": 2,
         "traits": 1,
         "functions": 0,
-        "impls": 1,
-        "fields": 29,
-        "methods": 9
+        "impls": 0,
+        "fields": 26,
+        "methods": 4
       },
       "modules": [
-        {
-          "path": "crates/eos-agent-run/src/active_runs.rs",
-          "module": "active_runs",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "ActiveAgentRuns",
-              "visibility": "pub",
-              "signature": "pub struct ActiveAgentRuns",
-              "fields": [
-                {
-                  "name": "runs",
-                  "visibility": "private",
-                  "ty": "Arc < Mutex < HashMap < AgentRunId , ActiveAgentRun > > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Live process-local registry of spawned agent runs.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Default"
-              ],
-              "file": "crates/eos-agent-run/src/active_runs.rs",
-              "module": "active_runs",
-              "line": 12
-            },
-            {
-              "kind": "struct",
-              "name": "ActiveAgentRun",
-              "visibility": "pub",
-              "signature": "pub struct ActiveAgentRun",
-              "fields": [
-                {
-                  "name": "abort_handle",
-                  "visibility": "pub",
-                  "ty": "AbortHandle"
-                },
-                {
-                  "name": "outcome_tx",
-                  "visibility": "pub",
-                  "ty": "watch :: Sender < Option < AgentRunOutcome > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One active agent run's process-local handles.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug"
-              ],
-              "file": "crates/eos-agent-run/src/active_runs.rs",
-              "module": "active_runs",
-              "line": 18
-            },
-            {
-              "kind": "impl",
-              "name": "impl ActiveAgentRuns",
-              "visibility": "private",
-              "signature": "impl ActiveAgentRuns",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "insert",
-                  "signature": "pub async fn insert (& self , agent_run_id : AgentRunId , run : ActiveAgentRun)",
-                  "kind": "method",
-                  "docs": "Insert one active run.",
-                  "line": 28
-                },
-                {
-                  "name": "remove",
-                  "signature": "pub async fn remove (& self , agent_run_id : & AgentRunId) -> Option < ActiveAgentRun >",
-                  "kind": "method",
-                  "docs": "Remove an active run.",
-                  "line": 33
-                },
-                {
-                  "name": "current_outcome",
-                  "signature": "pub async fn current_outcome (& self , agent_run_id : & AgentRunId) -> Option < AgentRunOutcome >",
-                  "kind": "method",
-                  "docs": "Return the currently published outcome for an active run, if any.",
-                  "line": 38
-                },
-                {
-                  "name": "subscribe",
-                  "signature": "pub async fn subscribe (& self , agent_run_id : & AgentRunId ,) -> Result < watch :: Receiver < Option < AgentRunOutcome > > , AgentRunError >",
-                  "kind": "method",
-                  "docs": "Subscribe to an active run's terminal outcome.\n\n# Errors\nReturns [`AgentRunError::NotActiveInProcess`] when this process does not\nown the run.",
-                  "line": 47
-                },
-                {
-                  "name": "wait_for",
-                  "signature": "pub async fn wait_for (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
-                  "kind": "method",
-                  "docs": "Wait on an active run's watch channel.\n\n# Errors\nReturns when the run is missing from this process or its sender closes\nbefore a terminal outcome is published.",
-                  "line": 64
-                }
-              ],
-              "impl_target": "ActiveAgentRuns",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-run/src/active_runs.rs",
-              "module": "active_runs",
-              "line": 27
-            }
-          ]
-        },
         {
           "path": "crates/eos-agent-run/src/error.rs",
           "module": "error",
@@ -3133,8 +3017,8 @@
                   "line": 11
                 },
                 {
-                  "name": "wait_for_agent_outcomes",
-                  "signature": "async fn wait_for_agent_outcomes (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
+                  "name": "wait_for_agent_outcome",
+                  "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "required",
                   "docs": "Wait for one agent run to publish a terminal outcome.",
                   "line": 14
@@ -11143,8 +11027,8 @@
                   "line": 325
                 },
                 {
-                  "name": "wait_for_agent_outcomes",
-                  "signature": "async fn wait_for_agent_outcomes (& self , agent_run_id : & eos_types :: AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
+                  "name": "wait_for_agent_outcome",
+                  "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & eos_types :: AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "method",
                   "docs": null,
                   "line": 332
@@ -11154,14 +11038,14 @@
                   "signature": "async fn poll_agent_run_outcome (& self , agent_run_id : & eos_types :: AgentRunId ,) -> Result < Option < AgentRunOutcome > , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 343
+                  "line": 340
                 },
                 {
                   "name": "cancel_agent_run",
                   "signature": "async fn cancel_agent_run (& self , agent_run_id : & eos_types :: AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 351
+                  "line": 348
                 }
               ],
               "impl_target": "BackgroundManagers",
@@ -11199,7 +11083,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 365
+              "line": 362
             },
             {
               "kind": "impl",
@@ -11214,14 +11098,14 @@
                   "signature": "pub fn new < Teardown , TeardownFuture > (teardown : Teardown) -> Self where Teardown : Fn (String) -> TeardownFuture + Send + Sync + 'static , TeardownFuture : Future < Output = BackgroundSessionCounts > + Send + 'static ,",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 371
+                  "line": 368
                 },
                 {
                   "name": "teardown",
                   "signature": "pub async fn teardown (& self , reason : & str) -> BackgroundSessionCounts",
                   "kind": "method",
                   "docs": null,
-                  "line": 382
+                  "line": 379
                 }
               ],
               "impl_target": "BackgroundTeardownService",
@@ -11232,7 +11116,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 370
+              "line": 367
             },
             {
               "kind": "impl",
@@ -11247,7 +11131,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 388
+                  "line": 385
                 }
               ],
               "impl_target": "BackgroundTeardownService",
@@ -11259,7 +11143,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 387
+              "line": 384
             },
             {
               "kind": "struct",
@@ -11286,7 +11170,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 394
+              "line": 391
             },
             {
               "kind": "impl",
@@ -11301,21 +11185,21 @@
                   "signature": "pub(crate) fn new (background : Option < BackgroundTeardownService >) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 401
+                  "line": 398
                 },
                 {
                   "name": "finalize",
                   "signature": "pub(crate) async fn finalize (& mut self , ctx : & QueryContext , error : Option < & str >)",
                   "kind": "method",
                   "docs": null,
-                  "line": 408
+                  "line": 405
                 },
                 {
                   "name": "disarm",
                   "signature": "pub(crate) fn disarm (& mut self)",
                   "kind": "method",
                   "docs": "Disarm without running cleanup: the caller has handed background teardown\nto another owner, so neither `finalize` nor the `Drop` backstop should fire\na second teardown.",
-                  "line": 418
+                  "line": 415
                 }
               ],
               "impl_target": "BackgroundSessionFinalizer",
@@ -11326,7 +11210,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 400
+              "line": 397
             },
             {
               "kind": "impl",
@@ -11341,7 +11225,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 427
+                  "line": 424
                 }
               ],
               "impl_target": "BackgroundSessionFinalizer",
@@ -11353,7 +11237,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 426
+              "line": 423
             },
             {
               "kind": "fn",
@@ -11369,7 +11253,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager",
-              "line": 447
+              "line": 444
             },
             {
               "kind": "fn",
@@ -11385,7 +11269,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager::finalizer_tests",
-              "line": 467
+              "line": 464
             },
             {
               "kind": "fn",
@@ -11404,7 +11288,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/mod.rs",
               "module": "background::background_session_manager::finalizer_tests",
-              "line": 482
+              "line": 479
             }
           ]
         },
@@ -12035,8 +11919,8 @@
                   "line": 471
                 },
                 {
-                  "name": "wait_for_agent_outcomes",
-                  "signature": "async fn wait_for_agent_outcomes (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
+                  "name": "wait_for_agent_outcome",
+                  "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "method",
                   "docs": null,
                   "line": 478
@@ -14666,7 +14550,7 @@
                 {
                   "name": "runs",
                   "visibility": "private",
-                  "ty": "Arc < Mutex < HashMap < AgentRunId , SubagentRunHandle > > >"
+                  "ty": "Arc < Mutex < HashMap < AgentRunId , AgentRunHandle > > >"
                 }
               ],
               "variants": [],
@@ -14684,9 +14568,9 @@
             },
             {
               "kind": "struct",
-              "name": "SubagentRunHandle",
+              "name": "AgentRunHandle",
               "visibility": "private",
-              "signature": "struct SubagentRunHandle",
+              "signature": "struct AgentRunHandle",
               "fields": [
                 {
                   "name": "control",
@@ -14859,8 +14743,8 @@
                   "line": 98
                 },
                 {
-                  "name": "wait_for_agent_outcomes",
-                  "signature": "async fn wait_for_agent_outcomes (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
+                  "name": "wait_for_agent_outcome",
+                  "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "method",
                   "docs": null,
                   "line": 196
@@ -24791,7 +24675,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Fail the root **iff** it is still running (idempotent compare-and-set) and\nfinish the request as `Failed`. Called unconditionally after the inline run; a\nno-op once `submit_root_outcome` has closed the task. The root role is not in\n`ExecutionRole`, so the summary rides in `terminal_tool_result` rather than a\ntyped outcome row (documented deviation; the typed outcome column is left\nempty for root).",
+              "docs": "Fail the root **iff** it is still running (idempotent compare-and-set) and\nfinish the request as `Failed`. Called unconditionally after the root agent\nhas completed or failed; a no-op once `submit_root_outcome` has closed the\ntask. The root role is not in `ExecutionRole`, so the summary rides in\n`terminal_tool_result` rather than a typed outcome row (documented deviation;\nthe typed outcome column is left empty for root).",
               "tags": [
                 "async"
               ],
@@ -36979,7 +36863,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Run a tool's ordered pre-hooks against `raw_input`/`ctx`. Returns\n`Some(in-band error result)` on the first Deny (the Rust\n`_build_hook_failure_result` shape, carrying the accumulated pass-trace), or\n`None` if every hook passes.\n\nShared by [`execute_tool_once`] and the engine's `ask_advisor` interception,\nwhich runs the gate hooks (e.g. `BlockInIsolatedMode`) but drives the advisor\n*execution* itself rather than calling the stub executor.\n\n# Errors\nPropagates a [`ToolError`] from a hook reading downstream state.",
+              "docs": "Run a tool's ordered pre-hooks against `raw_input`/`ctx`. Returns\n`Some(in-band error result)` on the first Deny (the Rust\n`_build_hook_failure_result` shape, carrying the accumulated pass-trace), or\n`None` if every hook passes.\n\n# Errors\nPropagates a [`ToolError`] from a hook reading downstream state.",
               "tags": [
                 "async"
               ],
@@ -37001,7 +36885,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution",
-              "line": 122
+              "line": 118
             },
             {
               "kind": "fn",
@@ -37017,7 +36901,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution",
-              "line": 152
+              "line": 148
             },
             {
               "kind": "fn",
@@ -37033,7 +36917,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution",
-              "line": 165
+              "line": 161
             },
             {
               "kind": "struct",
@@ -37060,7 +36944,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 199
+              "line": 195
             },
             {
               "kind": "struct",
@@ -37082,7 +36966,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 204
+              "line": 200
             },
             {
               "kind": "impl",
@@ -37097,7 +36981,7 @@
                   "signature": "async fn execute (& self , _input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 207
+                  "line": 203
                 }
               ],
               "impl_target": "Canned",
@@ -37110,7 +36994,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 205
+              "line": 201
             },
             {
               "kind": "struct",
@@ -37132,7 +37016,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 216
+              "line": 212
             },
             {
               "kind": "impl",
@@ -37147,7 +37031,7 @@
                   "signature": "async fn execute (& self , _input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 219
+                  "line": 215
                 }
               ],
               "impl_target": "Exploding",
@@ -37160,7 +37044,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 217
+              "line": 213
             },
             {
               "kind": "fn",
@@ -37176,7 +37060,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 229
+              "line": 225
             },
             {
               "kind": "fn",
@@ -37195,7 +37079,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 246
+              "line": 242
             },
             {
               "kind": "fn",
@@ -37214,7 +37098,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 274
+              "line": 270
             },
             {
               "kind": "fn",
@@ -37233,7 +37117,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 322
+              "line": 318
             },
             {
               "kind": "fn",
@@ -37252,7 +37136,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 377
+              "line": 373
             },
             {
               "kind": "fn",
@@ -37271,7 +37155,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 399
+              "line": 395
             },
             {
               "kind": "struct",
@@ -37298,7 +37182,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 449
+              "line": 445
             },
             {
               "kind": "struct",
@@ -37320,7 +37204,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 458
+              "line": 454
             },
             {
               "kind": "impl",
@@ -37335,7 +37219,7 @@
                   "signature": "async fn execute (& self , input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 461
+                  "line": 457
                 }
               ],
               "impl_target": "ParsesAndRecords",
@@ -37348,7 +37232,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 459
+              "line": 455
             },
             {
               "kind": "fn",
@@ -37367,7 +37251,7 @@
               ],
               "file": "crates/eos-tools/src/runtime/execution.rs",
               "module": "runtime::execution::tests",
-              "line": 478
+              "line": 474
             }
           ]
         },
@@ -40363,7 +40247,7 @@
                   "name": "new",
                   "signature": "pub fn new (transport : Arc < dyn SandboxTransport > , command_sessions : Option < CommandSessionToolService > ,) -> Self",
                   "kind": "constructor",
-                  "docs": "Build command tool services from the legacy sandbox transport.",
+                  "docs": "Build command tool services from the daemon sandbox transport.",
                   "line": 110
                 },
                 {

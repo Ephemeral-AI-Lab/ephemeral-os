@@ -82,10 +82,6 @@ pub async fn execute_tool_once(
 /// `_build_hook_failure_result` shape, carrying the accumulated pass-trace), or
 /// `None` if every hook passes.
 ///
-/// Shared by [`execute_tool_once`] and the engine's `ask_advisor` interception,
-/// which runs the gate hooks (e.g. `BlockInIsolatedMode`) but drives the advisor
-/// *execution* itself rather than calling the stub executor.
-///
 /// # Errors
 /// Propagates a [`ToolError`] from a hook reading downstream state.
 pub async fn run_pre_hooks(

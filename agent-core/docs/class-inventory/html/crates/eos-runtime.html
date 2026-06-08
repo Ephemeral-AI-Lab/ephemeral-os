@@ -141,7 +141,7 @@
             .<span class="rs-kw">await</span>
         {
             <span class="rs-type">Ok</span>(agent_run_id) =&gt; agent_runs
-                .wait_for_agent_outcomes(&amp;agent_run_id)
+                .wait_for_agent_outcome(&amp;agent_run_id)
                 .<span class="rs-kw">await</span>
                 .map_or_else(|err| <span class="rs-type">Some</span>(err.to_string()), |outcome| outcome.error),
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Some</span>(err.to_string()),
@@ -314,7 +314,7 @@
             .<span class="rs-kw">await</span>
         {
             <span class="rs-type">Ok</span>(agent_run_id) =&gt; agent_runs
-                .wait_for_agent_outcomes(&amp;agent_run_id)
+                .wait_for_agent_outcome(&amp;agent_run_id)
                 .<span class="rs-kw">await</span>
                 .map_or_else(|err| <span class="rs-type">Some</span>(err.to_string()), |outcome| outcome.error),
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Some</span>(err.to_string()),

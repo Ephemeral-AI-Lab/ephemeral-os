@@ -178,7 +178,7 @@
         };
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
             .agent_run_service
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(&amp;agent_run_id, reason)
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(&amp;agent_run_id, reason)
             .<span class="rs-kw">await</span>
         {
             tracing::warn!(
@@ -190,9 +190,9 @@
         <span class="rs-kw">true</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-148"><td>method</td><td>cancel_agent_run</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a> (&amp; self , child_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; bool</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-148"><td>method</td><td>cancel_agent_run</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a> (&amp; self , child_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; bool</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         child_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -226,7 +226,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> running {
             <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-343">poll_agent_run_outcome</a>(&amp;agent_run_id)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-340">poll_agent_run_outcome</a>(&amp;agent_run_id)
                 .<span class="rs-kw">await</span>
             {
                 <span class="rs-type">Ok</span>(terminal) =&gt; terminal,
@@ -287,7 +287,7 @@
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
     ) -&gt; bool {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
     }
 </code></pre>
 </details></td></tr><tr id="method-count-background-sessions-331"><td>method</td><td>count_background_sessions</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-count-background-sessions-331">count_background_sessions</a> (&amp; self) -&gt; usize</code><details class="function-source">
@@ -365,7 +365,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> actions {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(&amp;agent_run_id, reason)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(&amp;agent_run_id, reason)
                 .<span class="rs-kw">await</span>
             {
                 tracing::warn!(
@@ -443,27 +443,27 @@
             <span class="rs-type">Ok</span>(<span class="rs-type">AgentRunId</span>::new_v4())
         }
 </code></pre>
-</details></td></tr><tr id="method-wait-for-agent-outcomes-478"><td>method</td><td>wait_for_agent_outcomes</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcomes-332">wait_for_agent_outcomes</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; AgentRunOutcome , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-wait-for-agent-outcome-478"><td>method</td><td>wait_for_agent_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-332">wait_for_agent_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; AgentRunOutcome , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcomes-332">wait_for_agent_outcomes</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-332">wait_for_agent_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">NotActiveInProcess</span>(agent_run_id.clone()))
         }
 </code></pre>
-</details></td></tr><tr id="method-poll-agent-run-outcome-485"><td>method</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-343">poll_agent_run_outcome</a> (&amp; self , _agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-poll-agent-run-outcome-485"><td>method</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-340">poll_agent_run_outcome</a> (&amp; self , _agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-343">poll_agent_run_outcome</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-340">poll_agent_run_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt;, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
         }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-492"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a> (&amp; self , _agent_run_id : &amp; AgentRunId , _reason : &amp; str ,) -&gt; Result &lt; () , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-492"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a> (&amp; self , _agent_run_id : &amp; AgentRunId , _reason : &amp; str ,) -&gt; Result &lt; () , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
             _reason: &amp;str,
@@ -967,7 +967,7 @@
         };
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
             .agent_run_service
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(&amp;agent_run_id, reason)
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(&amp;agent_run_id, reason)
             .<span class="rs-kw">await</span>
         {
             tracing::warn!(
@@ -979,7 +979,7 @@
         <span class="rs-kw">true</span>
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         child_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -1009,7 +1009,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> running {
             <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-343">poll_agent_run_outcome</a>(&amp;agent_run_id)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-340">poll_agent_run_outcome</a>(&amp;agent_run_id)
                 .<span class="rs-kw">await</span>
             {
                 <span class="rs-type">Ok</span>(terminal) =&gt; terminal,
@@ -1126,7 +1126,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> actions {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(&amp;agent_run_id, reason)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(&amp;agent_run_id, reason)
                 .<span class="rs-kw">await</span>
             {
                 tracing::warn!(
@@ -1159,7 +1159,7 @@
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
     ) -&gt; bool {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-count-background-sessions-331">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
@@ -1309,21 +1309,21 @@
             <span class="rs-type">Ok</span>(<span class="rs-type">AgentRunId</span>::new_v4())
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcomes-332">wait_for_agent_outcomes</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-332">wait_for_agent_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">NotActiveInProcess</span>(agent_run_id.clone()))
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-343">poll_agent_run_outcome</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-340">poll_agent_run_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt;, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
             _reason: &amp;str,

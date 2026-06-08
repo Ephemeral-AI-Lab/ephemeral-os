@@ -19,7 +19,7 @@ pub(crate) fn register(
         registry,
         config,
         workflow_service.clone(),
-        workflow_sessions.clone(),
+        workflow_sessions,
     );
     check_workflow_status::register(registry, config, workflow_service.clone());
     cancel_workflow::register(registry, config, workflow_service);

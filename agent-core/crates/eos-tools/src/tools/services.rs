@@ -107,7 +107,7 @@ pub struct CommandToolService {
 }
 
 impl CommandToolService {
-    /// Build command tool services from the legacy sandbox transport.
+    /// Build command tool services from the daemon sandbox transport.
     #[must_use]
     pub fn new(
         transport: Arc<dyn SandboxTransport>,

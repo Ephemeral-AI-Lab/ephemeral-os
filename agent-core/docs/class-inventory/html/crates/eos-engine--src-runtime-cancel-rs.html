@@ -110,14 +110,14 @@
         }
         <span class="rs-comment">// Tear down the live run owning this task, if one is registered.</span>
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run_id) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-agent-run-for-task-92">agent_run_for_task</a>(task_id) {
-            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(&amp;run_id, reason).<span class="rs-kw">await</span>?;
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(&amp;run_id, reason).<span class="rs-kw">await</span>?;
         }
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-94"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-94"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -266,12 +266,12 @@
         }
         <span class="rs-comment">// Tear down the live run owning this task, if one is registered.</span>
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run_id) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-agent-run-for-task-92">agent_run_for_task</a>(task_id) {
-            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(&amp;run_id, reason).<span class="rs-kw">await</span>?;
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(&amp;run_id, reason).<span class="rs-kw">await</span>?;
         }
         <span class="rs-type">Ok</span>(())
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-351">cancel_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-348">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,

@@ -34,11 +34,11 @@ pub struct AgentRunService {
     attempt_submission: Option<AttemptSubmissionService>,
     workflow_service: Option<Arc<dyn WorkflowServicePort>>,
     event_callback: Option<EventCallback>,
-    runs: Arc<Mutex<HashMap<AgentRunId, SubagentRunHandle>>>,
+    runs: Arc<Mutex<HashMap<AgentRunId, AgentRunHandle>>>,
 }
 
 #[derive(Clone)]
-struct SubagentRunHandle {
+struct AgentRunHandle {
     control: Arc<crate::AgentRunControl>,
     abort: AbortHandle,
     outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
@@ -183,7 +183,7 @@ impl AgentRunApi for AgentRunService {
         });
         self.runs.lock().await.insert(
             agent_run_id.clone(),
-            SubagentRunHandle {
+            AgentRunHandle {
                 control,
                 abort: join.abort_handle(),
                 outcome_tx,
@@ -318,8 +318,8 @@ fn completion_from_agent_run(
         ));
     }
     let message = match &run.error {
-        Some(error) => format!("subagent crashed: {error}"),
-        None => "subagent exited without calling a terminal tool. Findings were not delivered."
+        Some(error) => format!("agent run failed: {error}"),
+        None => "agent run exited without calling a terminal tool. Findings were not delivered."
             .to_owned(),
     };
     Some((AgentRunStatus::Failed, None, Some(message)))
