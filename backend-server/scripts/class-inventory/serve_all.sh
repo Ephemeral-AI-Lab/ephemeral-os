@@ -52,7 +52,33 @@ need curl
 need python3
 
 server_ready() {
+  curl -fsS "${BASE_URL}/__class_inventory_health" 2>/dev/null | grep -q '"aggregate-class-inventory"'
+}
+
+stale_class_inventory_server_ready() {
   curl -fsS "${BASE_URL}/" 2>/dev/null | grep -q "Class Inventories"
+}
+
+stop_stale_server() {
+  if ! command -v lsof >/dev/null 2>&1; then
+    echo "server at $BASE_URL looks stale; stop it manually or choose another port" >&2
+    exit 1
+  fi
+  local pids
+  pids="$(lsof -ti "tcp:${PORT}" || true)"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+  echo "stopping stale aggregate class-inventory server on $BASE_URL"
+  kill $pids
+  for _ in {1..40}; do
+    if [[ -z "$(lsof -ti "tcp:${PORT}" || true)" ]]; then
+      return
+    fi
+    sleep 0.25
+  done
+  echo "stale aggregate class-inventory server did not stop; pids: $pids" >&2
+  exit 1
 }
 
 start_server() {
@@ -79,6 +105,9 @@ start_server() {
 if server_ready; then
   echo "reusing aggregate class-inventory server at $BASE_URL"
 else
+  if stale_class_inventory_server_ready; then
+    stop_stale_server
+  fi
   start_server
 fi
 

@@ -8,6 +8,7 @@
 </head>
 <body>
   <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
     <div class="header-row">
       <div>
         <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
@@ -82,7 +83,7 @@
             <span class="rs-kw">let</span> workflow_config = <a class="symbol-link rs-fn" href="eos-runtime--src-main-rs.html#item-fn-load-workflow-config-75">load_workflow_config</a>()?;
             <span class="rs-kw">let</span> input =
                 <a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-63">new</a>(request_id.clone(), prompt, workspace_root, workflow_config);
-            <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-65">run_request</a>(&amp;services, input, <span class="rs-type">None</span>).<span class="rs-kw">await</span>?;
+            <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-66">run_request</a>(&amp;services, input, <span class="rs-type">None</span>).<span class="rs-kw">await</span>?;
             tracing::info!(
                 request_id = %request_id,
                 status = ?outcome.status,
@@ -192,7 +193,7 @@
             <span class="rs-kw">let</span> workflow_config = <a class="symbol-link rs-fn" href="eos-runtime--src-main-rs.html#item-fn-load-workflow-config-75">load_workflow_config</a>()?;
             <span class="rs-kw">let</span> input =
                 <a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-63">new</a>(request_id.clone(), prompt, workspace_root, workflow_config);
-            <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-65">run_request</a>(&amp;services, input, <span class="rs-type">None</span>).<span class="rs-kw">await</span>?;
+            <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-66">run_request</a>(&amp;services, input, <span class="rs-type">None</span>).<span class="rs-kw">await</span>?;
             tracing::info!(
                 request_id = %request_id,
                 status = ?outcome.status,

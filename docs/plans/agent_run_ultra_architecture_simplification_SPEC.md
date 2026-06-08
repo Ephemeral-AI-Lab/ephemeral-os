@@ -74,6 +74,11 @@ agent-run lifecycle as its own domain capability.
   cancellation token, and concrete background managers for one running agent.
 - `eos-agent-run` owns agent lifecycle: create ids, create controls, spawn the
   engine loop, publish outcomes, wait for outcomes, and cancel runs.
+- All production agent starts enter through `AgentRunApi::spawn_agent`.
+  Root requests, workflow agents, subagents, and advisor agents must not call
+  `eos_engine::run_agent` directly. `eos_engine::run_agent` is the engine worker
+  invoked by `AgentRunService` after the run has an `AgentRunId`, durable record,
+  control, tool registry, active-run entry, and completion channel.
 - `eos-tools` owns model-facing tool implementations and rendering.
 - `eos-tool-core` owns neutral tool primitives required by both engine and tools.
 - `eos-workflow` owns workflow lifecycle and exposes its own workflow API.
@@ -1050,6 +1055,11 @@ runs, it is determined by whether the caller invokes
 determined by whether the tool registers the natural id with the concrete
 manager before returning.
 
+The production launch path has no bypass around `AgentRunService::spawn_agent`.
+Direct calls to `eos_engine::run_agent` are allowed only inside focused
+`eos-engine` tests, benchmarks, or temporary migration shims that are removed by
+the final phase.
+
 ## 10. Removal Plan
 
 | Remove | Replacement |
@@ -1217,6 +1227,9 @@ cargo test --workspace
 - `eos-engine/src/background` still contains concrete command, workflow, and
   subagent managers.
 - `spawn_agent` always returns `AgentRunId`.
+- Root, workflow, subagent, and advisor launch paths call
+  `AgentRunApi::spawn_agent`; production code outside `eos-agent-run` does not
+  call `eos_engine::run_agent` directly.
 - `wait_for_agent_outcomes` always returns `AgentRunOutcome`.
 - `wait_for_agent_outcomes` uses watch-based completion delivery and parks on
   `rx.changed().await`; it does not poll the store on an interval.

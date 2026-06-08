@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eos-sandbox-port · src/error.rs</title>
+  <title>eos-sandbox-port · src/command_service.rs</title>
   <link rel="stylesheet" href="../assets/inventory.css">
 </head>
 <body>
   <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
     <div class="header-row">
       <div>
         <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
@@ -21,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>22</b><span>modules</span></div>
-  <div><b>152</b><span>items</span></div>
-  <div><b>145</b><span>fields</span></div>
-  <div><b>35</b><span>methods</span></div>
+  <div><b>23</b><span>modules</span></div>
+  <div><b>157</b><span>items</span></div>
+  <div><b>146</b><span>fields</span></div>
+  <div><b>49</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -40,165 +41,351 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-sandbox-port.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-gateway-rs.html"><span>gateway.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">models</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port--src-models-command-rs.html"><span>command.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-common-rs.html"><span>common.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-file-rs.html"><span>file.rs</span><small>7/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-lifecycle-rs.html"><span>lifecycle.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-tool-call-rs.html"><span>tool_call.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-port--src-ops-rs.html"><span>ops.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-provision-rs.html"><span>provision.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-timeouts-rs.html"><span>timeouts.rs</span><small>0/2</small></a></li><li><span class="folder">tool_api</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port--src-tool-api-command-rs.html"><span>command.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-control-rs.html"><span>control.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-edit-rs.html"><span>edit.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-isolated-rs.html"><span>isolated.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-parse-rs.html"><span>parse.rs</span><small>1/40</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-plugin-rs.html"><span>plugin.rs</span><small>14/4</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-read-rs.html"><span>read.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-write-rs.html"><span>write.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-port--src-transport-rs.html"><span>transport.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-sandbox-port/src/error.rs SandboxPortError impl SandboxPortError">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-sandbox-port.html"><span>command_service.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-gateway-rs.html"><span>gateway.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">models</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port--src-models-command-rs.html"><span>command.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-common-rs.html"><span>common.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-file-rs.html"><span>file.rs</span><small>7/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-lifecycle-rs.html"><span>lifecycle.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-models-tool-call-rs.html"><span>tool_call.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-port--src-ops-rs.html"><span>ops.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-provision-rs.html"><span>provision.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-timeouts-rs.html"><span>timeouts.rs</span><small>0/2</small></a></li><li><span class="folder">tool_api</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-port--src-tool-api-command-rs.html"><span>command.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-control-rs.html"><span>control.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-edit-rs.html"><span>edit.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-isolated-rs.html"><span>isolated.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-parse-rs.html"><span>parse.rs</span><small>1/40</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-plugin-rs.html"><span>plugin.rs</span><small>14/4</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-read-rs.html"><span>read.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-sandbox-port--src-tool-api-write-rs.html"><span>write.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-port--src-transport-rs.html"><span>transport.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="command_service crates/eos-sandbox-port/src/command_service.rs SandboxCommandApi SandboxCommandService impl std :: fmt :: Debug for SandboxCommandService impl SandboxCommandService impl SandboxCommandApi for SandboxCommandService">
   <div class="module-head">
     <div>
-      <h2>src/error.rs</h2>
-      <p class="path">module <code>error</code></p>
+      <h2>src/command_service.rs</h2>
+      <p class="path">module <code>command_service</code></p>
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>1 types</span>
-      <span>1 impls</span>
+      <span>2 types</span>
+      <span>3 impls</span>
       <span>0 fns</span>
-      <span>4 methods</span>
+      <span>14 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-SandboxPortError-12" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum SandboxPortError pub pub enum SandboxPortError crates/eos-sandbox-port/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SandboxCommandService-63" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxCommandService pub pub struct SandboxCommandService crates/eos-sandbox-port/src/command_service.rs transport Arc &lt; dyn SandboxTransport &gt; ">
   <div class="item-head">
-    <span class="kind">enum</span>
-    <h3>SandboxPortError</h3>
+    <span class="kind">struct</span>
+    <h3>SandboxCommandService</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-sandbox-port.html#item-enum-SandboxPortError-12">SandboxPortError</a></code>
-  <p class="docstring">Errors raised when calling the sandbox daemon through a [`SandboxTransport`].<br>The enum is `#[non_exhaustive]` (errors grow), but its variants are<br>constructible from any crate via [`SandboxPortError::transport`] /<br>[`SandboxPortError::decode`] so the downstream daemon-client implementor<br>(`eos-sandbox-host`) can build them.<br>[`SandboxTransport`]: crate::SandboxTransport</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Transport</td><td><code>code: Option &lt; String &gt;, message: String</code></td></tr><tr><td>Decode</td><td><code>message: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-message-65"><td>method</td><td>message</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-port.html#method-message-65">message</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">The user-facing message carried by either variant.</p><details class="function-source">
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a></code>
+  <p class="docstring">Transport-backed [`SandboxCommandApi`].</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>transport</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-port--src-transport-rs.html#item-trait-SandboxTransport-16">SandboxTransport</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-77"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-port.html#method-new-77">new</a> (transport : Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-port--src-transport-rs.html#item-trait-SandboxTransport-16">SandboxTransport</a> &gt;) -&gt; Self</code><p class="docstring">Build the command service from the daemon transport.</p><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// The user-facing message carried by either variant.</span>
+  <pre><code>    <span class="rs-comment">/// Build the command service from the daemon transport.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-message-65">message</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Transport</span> { message, .. } | <span class="rs-self">Self</span>::<span class="rs-type">Decode</span> { message } =&gt; message,
-        }
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-new-77">new</a>(transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-port--src-transport-rs.html#item-trait-SandboxTransport-16">SandboxTransport</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { transport }
     }
 </code></pre>
-</details></td></tr><tr id="method-code-73"><td>method</td><td>code</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-port.html#method-code-73">code</a> (&amp; self) -&gt; Option &lt; &amp; str &gt;</code><p class="docstring">The daemon-resolved structured error code, present only on a transport<br>failure that carried one.</p><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a></code></summary><table><tbody><tr id="method-fmt-70"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-sandbox-port.html#method-fmt-70">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// The daemon-resolved structured error code, present only on a transport</span>
-    <span class="rs-comment">/// failure that carried one.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-code-73">code</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Transport</span> { code, .. } =&gt; code.as_deref(),
-            <span class="rs-self">Self</span>::<span class="rs-type">Decode</span> { .. } =&gt; <span class="rs-type">None</span>,
-        }
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-fmt-70">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a>&quot;)
+            .finish_non_exhaustive()
     }
 </code></pre>
-</details></td></tr><tr id="method-transport-47"><td>associated-fn</td><td>transport</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-port.html#method-transport-47">transport</a> (code : Option &lt; String &gt; , message : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Build a [`SandboxPortError::Transport`] from an optional daemon error code<br>and a user-facing message. Used by the daemon-client implementor.</p><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-sandbox-port.html#item-trait-SandboxCommandApi-15">SandboxCommandApi</a> for <a class="symbol-link" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a></code></summary><table><tbody><tr id="method-exec-command-86"><td>method</td><td>exec_command</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Build a [`SandboxPortError::Transport`] from an optional daemon error code</span>
-    <span class="rs-comment">/// and a user-facing message. Used by the daemon-client implementor.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-transport-47">transport</a>(code: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<span class="rs-type">Transport</span> {
-            code,
-            message: message.into(),
-        }
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-decode-57"><td>associated-fn</td><td>decode</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-port.html#method-decode-57">decode</a> (message : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Build a [`SandboxPortError::Decode`] from a mismatch description.</p><details class="function-source">
+</details></td></tr><tr id="method-write-stdin-94"><td>method</td><td>write_stdin</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-write-stdin-25">write_stdin</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Build a [`SandboxPortError::Decode`] from a mismatch description.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-decode-57">decode</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<span class="rs-type">Decode</span> {
-            message: message.into(),
-        }
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-write-stdin-25">write_stdin</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port--src-tool-api-command-rs.html#item-fn-exec-stdin-44">exec_stdin</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
     }
+</code></pre>
+</details></td></tr><tr id="method-read-command-progress-102"><td>method</td><td>read_command_progress</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-command-session-110"><td>method</td><td>cancel_command_session</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-collect-completed-commands-118"><td>method</td><td>collect_completed_commands</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-collect-completed-commands-46">collect_completed_commands</a> (&amp; self , sandbox_id : &amp; SandboxId , caller_id : &amp; AgentRunId , command_session_ids : &amp; [CommandSessionId] ,) -&gt; Result &lt; Vec &lt; JsonObject &gt; , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-collect-completed-commands-46">collect_completed_commands</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        command_session_ids: &amp;[<span class="rs-type">CommandSessionId</span>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">JsonObject</span>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <span class="rs-kw">let</span> ids = command_session_ids
+            .iter()
+            .map(|id| id.as_str().to_owned())
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        <a class="symbol-link rs-fn" href="eos-sandbox-port--src-tool-api-command-rs.html#item-fn-collect-command-completions-115">collect_command_completions</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, caller_id.as_str(), &amp;ids).<span class="rs-kw">await</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-commands-for-run-131"><td>method</td><td>cancel_commands_for_run</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-cancel-commands-for-run-54">cancel_commands_for_run</a> (&amp; self , sandbox_id : &amp; SandboxId , caller_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-commands-for-run-54">cancel_commands_for_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port--src-tool-api-command-rs.html#item-fn-cancel-workspace-runs-by-caller-id-152">cancel_workspace_runs_by_caller_id</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, caller_id.as_str())
+            .<span class="rs-kw">await</span>
+            .map(|_| ())
+            .map_err(|err| {
+                tracing::warn!(
+                    error = %err,
+                    sandbox_id = sandbox_id.as_str(),
+                    caller_id = caller_id.as_str(),
+                    reason,
+                    &quot;per-caller workspace-run cancellation failed&quot;
+                );
+                err
+            })
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-sandbox-port/src/command_service.rs:63</p>
+</article><article id="item-trait-SandboxCommandApi-15" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait SandboxCommandApi pub pub trait SandboxCommandApi crates/eos-sandbox-port/src/command_service.rs  exec_command async fn exec_command (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; ExecCommandRequest ,) -&gt; Result &lt; ExecCommandResult , SandboxPortError &gt; write_stdin async fn write_stdin (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; ExecStdinRequest ,) -&gt; Result &lt; ExecCommandResult , SandboxPortError &gt; read_command_progress async fn read_command_progress (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; ReadCommandProgressRequest ,) -&gt; Result &lt; ExecCommandResult , SandboxPortError &gt; cancel_command_session async fn cancel_command_session (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; CommandSessionCancelRequest ,) -&gt; Result &lt; ExecCommandResult , SandboxPortError &gt; collect_completed_commands async fn collect_completed_commands (&amp; self , sandbox_id : &amp; SandboxId , caller_id : &amp; AgentRunId , command_session_ids : &amp; [CommandSessionId] ,) -&gt; Result &lt; Vec &lt; JsonObject &gt; , SandboxPortError &gt; cancel_commands_for_run async fn cancel_commands_for_run (&amp; self , sandbox_id : &amp; SandboxId , caller_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , SandboxPortError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>SandboxCommandApi</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-sandbox-port.html#item-trait-SandboxCommandApi-15">SandboxCommandApi</a></code>
+  <p class="docstring">Sandbox command API used by tools and engine-local command-session managers.</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-exec-command-18"><td>required</td><td>exec_command</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><p class="docstring">Run or start a managed command session.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Run or start a managed command session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-write-stdin-25"><td>required</td><td>write_stdin</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-write-stdin-25">write_stdin</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><p class="docstring">Write stdin to an open command session.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Write stdin to an open command session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-write-stdin-25">write_stdin</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-read-command-progress-32"><td>required</td><td>read_command_progress</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><p class="docstring">Read command progress.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Read command progress.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-cancel-command-session-39"><td>required</td><td>cancel_command_session</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a> (&amp; self , sandbox_id : &amp; SandboxId , request : &amp; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a> , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><p class="docstring">Cancel one command session.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel one command session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-collect-completed-commands-46"><td>required</td><td>collect_completed_commands</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-collect-completed-commands-46">collect_completed_commands</a> (&amp; self , sandbox_id : &amp; SandboxId , caller_id : &amp; AgentRunId , command_session_ids : &amp; [CommandSessionId] ,) -&gt; Result &lt; Vec &lt; JsonObject &gt; , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><p class="docstring">Collect completed background command sessions for one caller.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Collect completed background command sessions for one caller.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-collect-completed-commands-46">collect_completed_commands</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        command_session_ids: &amp;[<span class="rs-type">CommandSessionId</span>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">JsonObject</span>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-cancel-commands-for-run-54"><td>required</td><td>cancel_commands_for_run</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-port.html#method-cancel-commands-for-run-54">cancel_commands_for_run</a> (&amp; self , sandbox_id : &amp; SandboxId , caller_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a> &gt;</code><p class="docstring">Cancel every command/workspace run owned by one caller.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel every command/workspace run owned by one caller.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-commands-for-run-54">cancel_commands_for_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-sandbox-port/src/error.rs:12</p>
+  <p class="source">crates/eos-sandbox-port/src/command_service.rs:15</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-sandbox-port/src/error.rs</p>
+    <p class="path">crates/eos-sandbox-port/src/command_service.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! The single library error enum for the host-facing sandbox protocol.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! Per spec-conventions §8 each crate owns exactly one `thiserror` enum and no</span>
-<span class="rs-comment">//! `Box&lt;dyn Error&gt;` crosses the public boundary. `SandboxPortError` has two</span>
-<span class="rs-comment">//! shapes: a `Transport` failure surfaced by a [`SandboxTransport`] implementor</span>
-<span class="rs-comment">//! (carrying the daemon-resolved error `code` and a user-facing `message`) and a</span>
-<span class="rs-comment">//! `Decode` failure when a daemon JSON envelope does not match the expected</span>
-<span class="rs-comment">//! result shape.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! [`SandboxTransport`]: crate::SandboxTransport</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Command-session service over the sandbox transport.</span>
 
-<span class="rs-comment">/// Errors raised when calling the sandbox daemon through a [`SandboxTransport`].</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// The enum is `#[non_exhaustive]` (errors grow), but its variants are</span>
-<span class="rs-comment">/// constructible from any crate via [`SandboxPortError::transport`] /</span>
-<span class="rs-comment">/// [`SandboxPortError::decode`] so the downstream daemon-client implementor</span>
-<span class="rs-comment">/// (`eos-sandbox-host`) can build them.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// [`SandboxTransport`]: crate::SandboxTransport</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, thiserror::<span class="rs-type">Error</span>)]
-#[non_exhaustive]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-enum-SandboxPortError-12">SandboxPortError</a> {
-    <span class="rs-comment">/// A sandbox RPC failed at the transport. `code` is the daemon-resolved</span>
-    <span class="rs-comment">/// structured error code (already normalized by the transport implementor;</span>
-    <span class="rs-comment">/// see the conflict classifier in `tool_api::parse`), `message` is the</span>
-    <span class="rs-comment">/// user-facing text. The conflict classifier inspects both.</span>
-    #[error(&quot;sandbox transport error: {message}&quot;)]
-    <span class="rs-type">Transport</span> {
-        <span class="rs-comment">/// Daemon-resolved structured error code, when the daemon supplied one.</span>
-        code: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-        <span class="rs-comment">/// User-facing error message (already stripped of the daemon</span>
-        <span class="rs-comment">/// `internal_error:` prefix is the caller's job — see</span>
-        <span class="rs-comment">/// `tool_api::parse::user_visible_error_message`).</span>
-        message: <span class="rs-type">String</span>,
-    },
-    <span class="rs-comment">/// A daemon JSON envelope failed to decode into the expected typed result</span>
-    <span class="rs-comment">/// (e.g. a numeric field carried a bool, which the strict-int decode</span>
-    <span class="rs-comment">/// rejects).</span>
-    #[error(&quot;daemon response decode error: {message}&quot;)]
-    <span class="rs-type">Decode</span> {
-        <span class="rs-comment">/// Description of the decode mismatch.</span>
-        message: <span class="rs-type">String</span>,
-    },
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">CommandSessionId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxId</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{
+    cancel_command_session, cancel_workspace_runs_by_caller_id, collect_command_completions,
+    exec_command, exec_stdin, read_command_progress, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a>,
+    <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a>,
+    <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-transport-rs.html#item-trait-SandboxTransport-16">SandboxTransport</a>,
+};
+
+<span class="rs-comment">/// Sandbox command API used by tools and engine-local command-session managers.</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-trait-SandboxCommandApi-15">SandboxCommandApi</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Run or start a managed command session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+
+    <span class="rs-comment">/// Write stdin to an open command session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-write-stdin-25">write_stdin</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+
+    <span class="rs-comment">/// Read command progress.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+
+    <span class="rs-comment">/// Cancel one command session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+
+    <span class="rs-comment">/// Collect completed background command sessions for one caller.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-collect-completed-commands-46">collect_completed_commands</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        command_session_ids: &amp;[<span class="rs-type">CommandSessionId</span>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">JsonObject</span>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
+
+    <span class="rs-comment">/// Cancel every command/workspace run owned by one caller.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-commands-for-run-54">cancel_commands_for_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt;;
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-enum-SandboxPortError-12">SandboxPortError</a> {
-    <span class="rs-comment">/// Build a [`SandboxPortError::Transport`] from an optional daemon error code</span>
-    <span class="rs-comment">/// and a user-facing message. Used by the daemon-client implementor.</span>
+<span class="rs-comment">/// Transport-backed [`SandboxCommandApi`].</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a> {
+    transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-port--src-transport-rs.html#item-trait-SandboxTransport-16">SandboxTransport</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-fmt-70">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a>&quot;)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a> {
+    <span class="rs-comment">/// Build the command service from the daemon transport.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-transport-47">transport</a>(code: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<span class="rs-type">Transport</span> {
-            code,
-            message: message.into(),
-        }
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-new-77">new</a>(transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-port--src-transport-rs.html#item-trait-SandboxTransport-16">SandboxTransport</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { transport }
+    }
+}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-trait-SandboxCommandApi-15">SandboxCommandApi</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandRequest-20">ExecCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-exec-command-18">exec_command</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
     }
 
-    <span class="rs-comment">/// Build a [`SandboxPortError::Decode`] from a mismatch description.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-decode-57">decode</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<span class="rs-type">Decode</span> {
-            message: message.into(),
-        }
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-write-stdin-25">write_stdin</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecStdinRequest-161">ExecStdinRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port--src-tool-api-command-rs.html#item-fn-exec-stdin-44">exec_stdin</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
     }
 
-    <span class="rs-comment">/// The user-facing message carried by either variant.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-message-65">message</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Transport</span> { message, .. } | <span class="rs-self">Self</span>::<span class="rs-type">Decode</span> { message } =&gt; message,
-        }
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ReadCommandProgressRequest-176">ReadCommandProgressRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-read-command-progress-32">read_command_progress</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
     }
 
-    <span class="rs-comment">/// The daemon-resolved structured error code, present only on a transport</span>
-    <span class="rs-comment">/// failure that carried one.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-code-73">code</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Transport</span> { code, .. } =&gt; code.as_deref(),
-            <span class="rs-self">Self</span>::<span class="rs-type">Decode</span> { .. } =&gt; <span class="rs-type">None</span>,
-        }
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-ExecCommandResult-36">ExecCommandResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-command-session-39">cancel_command_session</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, request).<span class="rs-kw">await</span>
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-collect-completed-commands-46">collect_completed_commands</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        command_session_ids: &amp;[<span class="rs-type">CommandSessionId</span>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">JsonObject</span>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <span class="rs-kw">let</span> ids = command_session_ids
+            .iter()
+            .map(|id| id.as_str().to_owned())
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        <a class="symbol-link rs-fn" href="eos-sandbox-port--src-tool-api-command-rs.html#item-fn-collect-command-completions-115">collect_command_completions</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, caller_id.as_str(), &amp;ids).<span class="rs-kw">await</span>
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-port.html#method-cancel-commands-for-run-54">cancel_commands_for_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        caller_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-sandbox-port--src-tool-api-command-rs.html#item-fn-cancel-workspace-runs-by-caller-id-152">cancel_workspace_runs_by_caller_id</a>(&amp;*<span class="rs-self">self</span>.transport, sandbox_id, caller_id.as_str())
+            .<span class="rs-kw">await</span>
+            .map(|_| ())
+            .map_err(|err| {
+                tracing::warn!(
+                    error = %err,
+                    sandbox_id = sandbox_id.as_str(),
+                    caller_id = caller_id.as_str(),
+                    reason,
+                    &quot;per-caller workspace-run cancellation failed&quot;
+                );
+                err
+            })
     }
 }
 </code></pre>

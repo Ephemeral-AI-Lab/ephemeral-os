@@ -1,0 +1,1588 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/services/workspace_run/manager.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>60</b><span>modules</span></div>
+  <div><b>596</b><span>items</span></div>
+  <div><b>261</b><span>fields</span></div>
+  <div><b>176</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-base-rs.html"><span>base.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>1/20</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-occ-mod-rs.html"><span>mod.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_router</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html"><span>ppc_router.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-process-rs.html"><span>process.rs</span><small>3/19</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>3/11</small></a></li></ul></li><li><a class="file-link active" href="eos-daemon--src-services-workspace-run-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-ephemeral-rs.html"><span>ephemeral.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html"><span>isolated.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-registry-rs.html"><span>registry.rs</span><small>7/3</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/7</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="services::workspace_run::manager crates/eos-daemon/src/services/workspace_run/manager.rs WorkspaceRunManager impl WorkspaceRunManager is_teardown_control contains_teardown_control impl Default for WorkspaceRunManager SweepReport ExpiringPolicy impl CommandWorkspacePolicy for ExpiringPolicy manager_registers_counts_and_sweeps_sessions ephemeral_request caller_may_hold_multiple_sessions_per_kind collected_completion_preserves_finalized_stdout">
+  <div class="module-head">
+    <div>
+      <h2>src/services/workspace_run/manager.rs</h2>
+      <p class="path">module <code>services::workspace_run::manager</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>3 impls</span>
+      <span>6 fns</span>
+      <span>28 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceRunManager-30" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceRunManager pub pub struct WorkspaceRunManager crates/eos-daemon/src/services/workspace_run/manager.rs config CommandSessionConfig registry Arc &lt; WorkspaceRunRegistry &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceRunManager</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>config</td><td><code>CommandSessionConfig</code></td></tr><tr><td>private</td><td>registry</td><td><code>Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-39"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> (config : CommandSessionConfig) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(config: <span class="rs-type">CommandSessionConfig</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            config,
+            registry: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-start-49"><td>method</td><td>start</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a> &lt; P &gt; (&amp; self , request : StartCommandSession , policy : P , kind : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt; where P : CommandWorkspacePolicy + &#x27;static ,</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> start&lt;<span class="rs-type">P</span>&gt;(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <span class="rs-type">P</span>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">P</span>: <span class="rs-type">CommandWorkspacePolicy</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-62">start_run</a>(request, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(policy), kind)
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-261"><td>method</td><td>cancel</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a> (&amp; self , request : CancelCommandSession ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">CancelCommandSession</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-linux-289">cancel_linux</a>(request)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-scaffold-275">cancel_scaffold</a>(request)
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-start-run-62"><td>method</td><td>start_run</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-62">start_run</a> (&amp; self , request : StartCommandSession , policy : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a> , kind : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-62">start_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-linux-106">start_run_linux</a>(request, policy, kind)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-scaffold-78">start_run_scaffold</a>(request, policy, kind)
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-start-run-scaffold-78"><td>method</td><td>start_run_scaffold</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-scaffold-78">start_run_scaffold</a> (&amp; self , request : StartCommandSession , policy : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a> , kind : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-scaffold-78">start_run_scaffold</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> request.cmd.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;cmd must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> id = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a>();
+        <span class="rs-kw">let</span> _prepared = policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a>(request.prepare_request(id.clone()))?;
+        <span class="rs-kw">let</span> caller_id = request.caller_id;
+        <span class="rs-kw">let</span> command = request.cmd;
+        policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html#method-command-session-started-26">command_session_started</a>(&amp;id, &amp;caller_id);
+        <span class="rs-kw">let</span> session = <span class="rs-type">CommandSession</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">CommandSessionSpec</span> {
+            id: id.clone(),
+            caller_id,
+            command,
+            timeout_seconds: request.timeout_seconds,
+        });
+        <span class="rs-self">self</span>.registry
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session, policy)), kind);
+        <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(id, <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()))
+    }
+</code></pre>
+</details></td></tr><tr id="method-start-run-linux-106"><td>method</td><td>start_run_linux</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-linux-106">start_run_linux</a> (&amp; self , request : StartCommandSession , policy : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a> , kind : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-linux-106">start_run_linux</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> request.cmd.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;cmd must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> id = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a>();
+        <span class="rs-kw">let</span> prepared = policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a>(request.prepare_request(id.clone()))?;
+        <span class="rs-kw">let</span> process = spawn_current_exe_ns_runner(
+            &amp;prepared.request_path,
+            &amp;prepared.run_request,
+            &amp;prepared.output_path,
+            prepared.transcript_path.clone(),
+            &amp;<span class="rs-self">self</span>.config.transcript_timestamp_timezone,
+        )?;
+        <span class="rs-kw">let</span> caller_id = request.caller_id;
+        <span class="rs-kw">let</span> command = request.cmd;
+        policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html#method-command-session-started-26">command_session_started</a>(&amp;id, &amp;caller_id);
+        <span class="rs-kw">let</span> session = <span class="rs-type">CommandSession</span>::new_running(
+            <span class="rs-type">CommandSessionSpec</span> {
+                id: id.clone(),
+                caller_id,
+                command,
+                timeout_seconds: request.timeout_seconds,
+            },
+            <span class="rs-type">RunningCommandSessionParts</span> {
+                process,
+                output_path: prepared.output_path,
+                final_path: prepared.final_path,
+                transcript_path: prepared.transcript_path,
+                output_drain_grace_ms: <span class="rs-self">self</span>.config.output_drain_grace_ms,
+            },
+        );
+        <span class="rs-kw">let</span> run = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session, policy));
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(<span class="rs-type">Arc</span>::clone(&amp;run), kind);
+        <span class="rs-kw">match</span> wait_for_yield(&amp;run.session, &amp;<span class="rs-self">self</span>.config, request.yield_time_ms, 0) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(id, stdout)),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-stdin-153"><td>method</td><td>write_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-153">write_stdin</a> (&amp; self , request : WriteStdin) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-153">write_stdin</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">WriteStdin</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-linux-194">write_stdin_linux</a>(request)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-scaffold-164">write_stdin_scaffold</a>(request)
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-stdin-scaffold-164"><td>method</td><td>write_stdin_scaffold</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-scaffold-164">write_stdin_scaffold</a> (&amp; self , request : WriteStdin ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-scaffold-164">write_stdin_scaffold</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">WriteStdin</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
+                command_session_id: request.command_session_id,
+            });
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;<span class="rs-type">Ctrl</span>-<span class="rs-type">C</span>/<span class="rs-type">Ctrl</span>-<span class="rs-type">D</span> must be sent alone to cancel command session&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-kw">if</span> request.chars.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;chars must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> _ = (run, request.yield_time_ms);
+        <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(
+            request.command_session_id,
+            <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+        ))
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-stdin-linux-194"><td>method</td><td>write_stdin_linux</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-linux-194">write_stdin_linux</a> (&amp; self , request : WriteStdin ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-linux-194">write_stdin_linux</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">WriteStdin</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
+                command_session_id: request.command_session_id,
+            });
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;<span class="rs-type">Ctrl</span>-<span class="rs-type">C</span>/<span class="rs-type">Ctrl</span>-<span class="rs-type">D</span> must be sent alone to cancel command session&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-kw">if</span> request.chars.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;chars must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> command_session_id = request.command_session_id.clone();
+        <span class="rs-kw">let</span> start_offset = run.session.transcript_len();
+        run.session.write_process_stdin(&amp;request.chars)?;
+        <span class="rs-kw">match</span> wait_for_yield(
+            &amp;run.session,
+            &amp;<span class="rs-self">self</span>.config,
+            request.yield_time_ms,
+            start_offset,
+        ) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; {
+                <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(command_session_id, stdout))
+            }
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-progress-233"><td>method</td><td>read_progress</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-read-progress-233">read_progress</a> (&amp; self , request : ReadCommandProgress ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-read-progress-233">read_progress</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">ReadCommandProgress</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> request.last_n_lines == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;last_n_lines must be &gt;= 1&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>
+                .registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-completed-result-249">completed_result</a>(&amp;request.command_session_id)
+                .map(|result| result.with_last_lines(request.last_n_lines))
+                .ok_or(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        #[cfg(target_os = &quot;linux&quot;)]
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.session.reap() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)
+                .with_last_lines(request.last_n_lines));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(
+            request.command_session_id,
+            run.session.read_recent_output(request.last_n_lines),
+        ))
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-scaffold-275"><td>method</td><td>cancel_scaffold</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-scaffold-275">cancel_scaffold</a> (&amp; self , request : CancelCommandSession ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-scaffold-275">cancel_scaffold</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">CancelCommandSession</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>
+                .registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;request.command_session_id)
+                .ok_or(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-cancelled-scaffold-467">finish_cancelled_scaffold</a>(run))
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-linux-289"><td>method</td><td>cancel_linux</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-linux-289">cancel_linux</a> (&amp; self , request : CancelCommandSession ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-linux-289">cancel_linux</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">CancelCommandSession</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>
+                .registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;request.command_session_id)
+                .ok_or(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-kw">let</span> start_offset = run.session.transcript_len();
+        run.session.cancel_process();
+        <span class="rs-kw">match</span> wait_for_yield(
+            &amp;run.session,
+            &amp;<span class="rs-self">self</span>.config,
+            <span class="rs-self">self</span>.config.cancel_wait_ms,
+            start_offset,
+        ) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::cancelled(stdout)),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-by-caller-313"><td>method</td><td>count_by_caller</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(caller_id)
+    }
+</code></pre>
+</details></td></tr><tr id="method-collect-completed-318"><td>method</td><td>collect_completed</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a> (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(request)
+    }
+</code></pre>
+</details></td></tr><tr id="method-push-completed-323"><td>method</td><td>push_completed</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a> (&amp; self , completion : CommandSessionCompletion)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(completion);
+    }
+</code></pre>
+</details></td></tr><tr id="method-cleanup-caller-327"><td>method</td><td>cleanup_caller</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cleanup-caller-327">cleanup_caller</a> (&amp; self , caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel and discard every command session owned by `caller_id` (the<br>per-caller workspace-run teardown). Cancelled sessions discard their<br>overlay and push no completion (the caller initiated the cancel).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel and discard every command session owned by `caller_id` (the</span>
+    <span class="rs-comment">/// per-caller workspace-run teardown). Cancelled sessions discard their</span>
+    <span class="rs-comment">/// overlay and push no completion (the caller initiated the cancel).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cleanup-caller-327">cleanup_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-kw">let</span> caller_id = caller_id.trim();
+            <span class="rs-kw">if</span> caller_id.is_empty() {
+                <span class="rs-kw">return</span> 0;
+            }
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-caller-sessions-213">caller_sessions</a>(caller_id), grace_s)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-kw">let</span> _ = (caller_id, grace_s);
+            0
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-all-347"><td>method</td><td>cancel_all</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-all-347">cancel_all</a> (&amp; self , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel and discard every live command session in the sandbox (the<br>whole-sandbox sweep backstop). Like `cleanup_caller` but across all<br>callers; cancelled sessions discard and push no completion.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel and discard every live command session in the sandbox (the</span>
+    <span class="rs-comment">/// whole-sandbox sweep backstop). Like `cleanup_caller` but across all</span>
+    <span class="rs-comment">/// callers; cancelled sessions discard and push no completion.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-all-347">cancel_all</a>(&amp;<span class="rs-self">self</span>, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>(), grace_s)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-kw">let</span> _ = grace_s;
+            0
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-and-drain-363"><td>method</td><td>cancel_and_drain</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a> (&amp; self , runs : Vec &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt; , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel every run, then reap+discard within `grace`, finalizing any<br>stragglers. Returns the number of runs that were live at entry.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel every run, then reap+discard within `grace`, finalizing any</span>
+    <span class="rs-comment">/// stragglers. Returns the number of runs that were live at entry.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a>(&amp;<span class="rs-self">self</span>, runs: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt;, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        <span class="rs-kw">if</span> runs.is_empty() {
+            <span class="rs-kw">return</span> 0;
+        }
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> &amp;runs {
+            run.session.cancel_process();
+        }
+
+        <span class="rs-kw">let</span> cancel_wait_s = <span class="rs-self">self</span>.config.cancel_wait_ms <span class="rs-kw">as</span> f64 / 1000.0;
+        <span class="rs-kw">let</span> wait_s = grace_s.unwrap_or(cancel_wait_s).max(cancel_wait_s);
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs_f64(wait_s);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending = runs.clone();
+        loop {
+            pending.retain(|run| <span class="rs-kw">match</span> run.session.reap() {
+                <span class="rs-type">Some</span>(reaped) =&gt; {
+                    <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(<span class="rs-type">Arc</span>::clone(run), reaped, <span class="rs-kw">false</span>);
+                    <span class="rs-kw">false</span>
+                }
+                <span class="rs-type">None</span> =&gt; <span class="rs-kw">true</span>,
+            });
+            <span class="rs-kw">if</span> pending.is_empty() || <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                <span class="rs-kw">break</span>;
+            }
+            std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+        }
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> pending {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.session.reap() {
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>);
+            }
+        }
+        runs.len()
+    }
+</code></pre>
+</details></td></tr><tr id="method-sweep-expired-399"><td>method</td><td>sweep_expired</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-expired-399">sweep_expired</a> (&amp; self , now : Instant) -&gt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-expired-399">sweep_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-linux-425">sweep_linux</a>(now)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-scaffold-411">sweep_scaffold</a>(now)
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-sweep-scaffold-411"><td>method</td><td>sweep_scaffold</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-scaffold-411">sweep_scaffold</a> (&amp; self , now : Instant) -&gt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-scaffold-411">sweep_scaffold</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expired = 0;
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>() {
+            <span class="rs-kw">if</span> run.session.is_expired(now) &amp;&amp; <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(run.session.id()).is_some() {
+                expired += 1;
+            }
+        }
+        <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+            expired,
+            live: <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>().len(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-sweep-linux-425"><td>method</td><td>sweep_linux</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-linux-425">sweep_linux</a> (&amp; self , now : Instant) -&gt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-linux-425">sweep_linux</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expired = 0;
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>() {
+            <span class="rs-kw">if</span> run.session.is_past_deadline(now, <span class="rs-self">self</span>.config.max_session_s) {
+                expired += 1;
+                run.session.cancel_process();
+            }
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.session.reap() {
+                <span class="rs-kw">let</span> publish_completion = !reaped.cancelled;
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, publish_completion);
+            }
+        }
+        <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+            expired,
+            live: <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>().len(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-finish-reaped-444"><td>method</td><td>finish_reaped</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; , reaped : ReapedCommand , publish_completion : bool ,) -&gt; CommandResponse</code><p class="docstring">Turn a reaped command into its final response: the run publishes (normal<br>completion) or discards (cancel) via its policy, then persists the final<br>response. Routing cancel to `discard_command_workspace` is the structural<br>guarantee that a cancelled command never reaches the OCC merge.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Turn a reaped command into its final response: the run publishes (normal</span>
+    <span class="rs-comment">/// completion) or discards (cancel) via its policy, then persists the final</span>
+    <span class="rs-comment">/// response. Routing cancel to `discard_command_workspace` is the structural</span>
+    <span class="rs-comment">/// guarantee that a cancelled command never reaches the OCC merge.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(
+        &amp;<span class="rs-self">self</span>,
+        run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;,
+        reaped: <span class="rs-type">ReapedCommand</span>,
+        publish_completion: bool,
+    ) -&gt; <span class="rs-type">CommandResponse</span> {
+        <span class="rs-kw">let</span> request = <span class="rs-type">FinalizeCommandRequest</span> {
+            runner_result: reaped.runner_result,
+            command_elapsed_s: reaped.elapsed_s,
+            status: reaped.status,
+            exit_code: <span class="rs-type">Some</span>(reaped.exit_code),
+            stdout: reaped.stdout,
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(run.session.id().to_owned()),
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(run, request, reaped.cancelled, publish_completion)
+    }
+</code></pre>
+</details></td></tr><tr id="method-finish-cancelled-scaffold-467"><td>method</td><td>finish_cancelled_scaffold</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-cancelled-scaffold-467">finish_cancelled_scaffold</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt;) -&gt; CommandResponse</code><p class="docstring">The non-Linux scaffold has no real process; its only settle path is<br>cancel, which discards (never publishes) and parks a completion.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The non-Linux scaffold has no real process; its only settle path is</span>
+    <span class="rs-comment">/// cancel, which discards (never publishes) and parks a completion.</span>
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-cancelled-scaffold-467">finish_cancelled_scaffold</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;) -&gt; <span class="rs-type">CommandResponse</span> {
+        <span class="rs-kw">let</span> request = <span class="rs-type">FinalizeCommandRequest</span> {
+            runner_result: <span class="rs-type">None</span>,
+            command_elapsed_s: run.session.elapsed_s(),
+            status: &quot;cancelled&quot;.to_owned(),
+            exit_code: <span class="rs-type">Some</span>(130),
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(run.session.id().to_owned()),
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(run, request, <span class="rs-kw">true</span>, <span class="rs-kw">true</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-finalize-run-483"><td>method</td><td>finalize_run</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; , request : FinalizeCommandRequest , cancelled : bool , publish_completion : bool ,) -&gt; CommandResponse</code><p class="docstring">Apply the run's workspace policy to `request` (publish on complete,<br>discard on cancel), persist the final response, fire the finished hook,<br>remove the run from the registry, and park a completion if requested.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Apply the run's workspace policy to `request` (publish on complete,</span>
+    <span class="rs-comment">/// discard on cancel), persist the final response, fire the finished hook,</span>
+    <span class="rs-comment">/// remove the run from the registry, and park a completion if requested.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;,
+        request: <span class="rs-type">FinalizeCommandRequest</span>,
+        cancelled: bool,
+        publish_completion: bool,
+    ) -&gt; <span class="rs-type">CommandResponse</span> {
+        <span class="rs-kw">let</span> outcome = <span class="rs-kw">if</span> cancelled {
+            run.policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-discard-command-workspace-607">discard_command_workspace</a>(request)
+        } <span class="rs-kw">else</span> {
+            run.policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-command-workspace-585">finalize_command_workspace</a>(request)
+        };
+        <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> outcome {
+            <span class="rs-type">Ok</span>(outcome) =&gt; <span class="rs-type">CommandResponse</span>::from_workspace_outcome(outcome),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">CommandResponse</span>::error(error.to_string()),
+        };
+        #[cfg(target_os = &quot;linux&quot;)]
+        run.session.persist_final(&amp;response);
+        run.policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html#method-command-session-finished-28">command_session_finished</a>(
+            run.session.id(),
+            run.session.caller_id(),
+            &amp;response.status,
+        );
+        <span class="rs-kw">let</span> command_session_id = run.session.id().to_owned();
+        <span class="rs-kw">let</span> caller_id = run.session.caller_id().to_owned();
+        <span class="rs-kw">let</span> command = run.session.command().to_owned();
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;command_session_id);
+        <span class="rs-kw">if</span> publish_completion {
+            <span class="rs-kw">let</span> notification_result = response.clone();
+            <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(<span class="rs-type">CommandSessionCompletion</span> {
+                command_session_id,
+                caller_id,
+                command,
+                result: response.clone(),
+                notification_result,
+            });
+        }
+        response
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a></code></summary><table><tbody><tr id="method-default-536"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-daemon.html#method-default-210">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">CommandSessionConfig</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:30</p>
+</article><article id="item-struct-SweepReport-541" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SweepReport pub pub struct SweepReport crates/eos-daemon/src/services/workspace_run/manager.rs expired usize live usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SweepReport</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Eq</span><span>derive: PartialEq</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>expired</td><td><code>usize</code></td></tr><tr><td>pub</td><td>live</td><td><code>usize</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:541</p>
+</article><article id="item-struct-ExpiringPolicy-567" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct ExpiringPolicy private struct ExpiringPolicy crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ExpiringPolicy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a></code>
+  <div class="tags"></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl CommandWorkspacePolicy for <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a></code></summary><table><tbody><tr id="method-prepare-command-workspace-570"><td>method</td><td>prepare_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a> (&amp; self , request : PrepareCommandRequest ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PreparedCommandWorkspace , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a>(
+            &amp;<span class="rs-self">self</span>,
+            request: <span class="rs-type">PrepareCommandRequest</span>,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+            <span class="rs-kw">let</span> session_dir = <span class="rs-type">PathBuf</span>::from(format!(&quot;/sessions/{}&quot;, request.command_session_id));
+            <span class="rs-type">Ok</span>(<span class="rs-type">PreparedCommandWorkspace</span> {
+                run_request: json!({ &quot;cmd&quot;: request.cmd }),
+                request_path: session_dir.join(&quot;runner-request.json&quot;),
+                output_path: session_dir.join(&quot;runner-result.json&quot;),
+                final_path: session_dir.join(&quot;final.json&quot;),
+                session_dir: session_dir.clone(),
+                transcript_path: session_dir.join(&quot;transcript.log&quot;),
+            })
+        }
+</code></pre>
+</details></td></tr><tr id="method-finalize-command-workspace-585"><td>method</td><td>finalize_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-command-workspace-585">finalize_command_workspace</a> (&amp; self , request : FinalizeCommandRequest ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-command-workspace-585">finalize_command_workspace</a>(
+            &amp;<span class="rs-self">self</span>,
+            request: <span class="rs-type">FinalizeCommandRequest</span>,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span> {
+                mode: <span class="rs-type">WorkspaceMode</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                success: request.command_succeeded(),
+                status: request.status,
+                exit_code: request.exit_code,
+                stdout: request.stdout,
+                stderr: request.stderr,
+                command_session_id: request.command_session_id,
+                changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+                changed_path_kinds: <span class="rs-type">Default</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                mutation_source: &quot;test&quot;.to_owned(),
+                conflict: <span class="rs-type">None</span>,
+                conflict_reason: <span class="rs-type">None</span>,
+                timings: <span class="rs-type">Default</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+            })
+        }
+</code></pre>
+</details></td></tr><tr id="method-discard-command-workspace-607"><td>method</td><td>discard_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-discard-command-workspace-607">discard_command_workspace</a> (&amp; self , request : FinalizeCommandRequest ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-discard-command-workspace-607">discard_command_workspace</a>(
+            &amp;<span class="rs-self">self</span>,
+            request: <span class="rs-type">FinalizeCommandRequest</span>,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span>::discarded(
+                <span class="rs-type">WorkspaceMode</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                request,
+            ))
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:567</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-is-teardown-control-527" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_teardown_control private fn is_teardown_control (chars : &amp; str) -&gt; bool crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_teardown_control</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a> (chars : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a>(chars: &amp;str) -&gt; bool {
+    matches!(chars, &quot;\u{3}&quot; | &quot;\u{4}&quot;)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:527</p>
+</article><article id="item-fn-contains-teardown-control-531" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn contains_teardown_control private fn contains_teardown_control (chars : &amp; str) -&gt; bool crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>contains_teardown_control</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a> (chars : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a>(chars: &amp;str) -&gt; bool {
+    chars.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&#x27;\u{3}&#x27;) || chars.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&#x27;\u{4}&#x27;)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:531</p>
+</article><article id="item-fn-manager-registers-counts-and-sweeps-sessions-618" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manager_registers_counts_and_sweeps_sessions private fn manager_registers_counts_and_sweeps_sessions () crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manager_registers_counts_and_sweeps_sessions</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-manager-registers-counts-and-sweeps-sessions-618">manager_registers_counts_and_sweeps_sessions</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-manager-registers-counts-and-sweeps-sessions-618">manager_registers_counts_and_sweeps_sessions</a>() {
+        <span class="rs-kw">let</span> manager = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <span class="rs-kw">let</span> started = manager
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a>(
+                <span class="rs-type">StartCommandSession</span> {
+                    invocation_id: &quot;inv&quot;.to_owned(),
+                    caller_id: &quot;caller&quot;.to_owned(),
+                    cmd: &quot;sleep 1&quot;.to_owned(),
+                    timeout_seconds: <span class="rs-type">Some</span>(0.001),
+                    yield_time_ms: 1000,
+                },
+                <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>,
+                <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span>,
+            )
+            .unwrap_or_else(|error| panic!(&quot;start session: {error}&quot;));
+        <span class="rs-kw">let</span> id = started
+            .command_session_id
+            .unwrap_or_else(|| panic!(&quot;running session id&quot;));
+        assert!(id.starts_with(&quot;cmd_&quot;));
+
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 1);
+
+        <span class="rs-kw">let</span> report = manager.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-expired-399">sweep_expired</a>(<span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_millis(2));
+
+        assert_eq!(report.expired, 1);
+        assert_eq!(report.live, 0);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:618</p>
+</article><article id="item-fn-ephemeral-request-647" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ephemeral_request private fn ephemeral_request (caller_id : &amp; str) -&gt; StartCommandSession crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ephemeral_request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-ephemeral-request-647">ephemeral_request</a> (caller_id : &amp; str) -&gt; StartCommandSession</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-ephemeral-request-647">ephemeral_request</a>(caller_id: &amp;str) -&gt; <span class="rs-type">StartCommandSession</span> {
+        <span class="rs-type">StartCommandSession</span> {
+            invocation_id: &quot;inv&quot;.to_owned(),
+            caller_id: caller_id.to_owned(),
+            cmd: &quot;sleep 1&quot;.to_owned(),
+            timeout_seconds: <span class="rs-type">None</span>,
+            yield_time_ms: 1000,
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:647</p>
+</article><article id="item-fn-caller-may-hold-multiple-sessions-per-kind-657" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn caller_may_hold_multiple_sessions_per_kind private fn caller_may_hold_multiple_sessions_per_kind () crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>caller_may_hold_multiple_sessions_per_kind</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-caller-may-hold-multiple-sessions-per-kind-657">caller_may_hold_multiple_sessions_per_kind</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-caller-may-hold-multiple-sessions-per-kind-657">caller_may_hold_multiple_sessions_per_kind</a>() {
+        <span class="rs-comment">// A caller holds many ephemeral command sessions (each its own ephemeral</span>
+        <span class="rs-comment">// workspace); an isolated caller holds many sessions in its one workspace.</span>
+        <span class="rs-kw">for</span> kind <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Isolated</span>] {
+            <span class="rs-kw">let</span> manager = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+            <span class="rs-kw">for</span> _ <span class="rs-kw">in</span> 0..3 {
+                manager
+                    .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-ephemeral-request-647">ephemeral_request</a>(&quot;caller&quot;), <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>, kind)
+                    .unwrap_or_else(|error| panic!(&quot;<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a> ({kind:?}): {error}&quot;));
+            }
+            assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 3);
+            assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;other&quot;)), 0);
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:657</p>
+</article><article id="item-fn-collected-completion-preserves-finalized-stdout-673" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collected_completion_preserves_finalized_stdout private fn collected_completion_preserves_finalized_stdout () crates/eos-daemon/src/services/workspace_run/manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>collected_completion_preserves_finalized_stdout</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-collected-completion-preserves-finalized-stdout-673">collected_completion_preserves_finalized_stdout</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-collected-completion-preserves-finalized-stdout-673">collected_completion_preserves_finalized_stdout</a>() {
+        <span class="rs-kw">let</span> manager = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <span class="rs-kw">let</span> command_session_id = &quot;cmd_full&quot;.to_owned();
+        <span class="rs-kw">let</span> session = <span class="rs-type">CommandSession</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">CommandSessionSpec</span> {
+            id: command_session_id.clone(),
+            caller_id: &quot;caller&quot;.to_owned(),
+            command: &quot;printf full&quot;.to_owned(),
+            timeout_seconds: <span class="rs-type">None</span>,
+        });
+        <span class="rs-kw">let</span> run = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>)));
+        <span class="rs-kw">let</span> request = <span class="rs-type">FinalizeCommandRequest</span> {
+            runner_result: <span class="rs-type">None</span>,
+            command_elapsed_s: 0.0,
+            status: &quot;ok&quot;.to_owned(),
+            exit_code: <span class="rs-type">Some</span>(0),
+            stdout: &quot;full transcript stdout&quot;.to_owned(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(command_session_id.clone()),
+        };
+
+        <span class="rs-kw">let</span> returned = manager.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(run, request, <span class="rs-kw">false</span>, <span class="rs-kw">true</span>);
+
+        assert_eq!(returned.stdout, &quot;full transcript stdout&quot;);
+        <span class="rs-kw">let</span> completions = manager.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(&amp;<span class="rs-type">CollectCompleted</span> {
+            command_session_ids: <span class="rs-type">Some</span>(vec![command_session_id]),
+            caller_id: <span class="rs-type">Some</span>(&quot;caller&quot;.to_owned()),
+        });
+        assert_eq!(completions.completions.len(), 1);
+        assert_eq!(
+            completions.completions[0].result.stdout,
+            &quot;full transcript stdout&quot;
+        );
+        assert_eq!(
+            completions.completions[0].notification_result.stdout,
+            &quot;full transcript stdout&quot;
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/manager.rs:673</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/workspace_run/manager.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">// The workspace-run manager is the Linux PTY/overlay orchestration. On non-Linux</span>
+<span class="rs-comment">// the daemon serves command-session ops as stubs, so the manager is dead there —</span>
+<span class="rs-comment">// it stays compiled for the scaffold unit tests and a uniform module tree.</span>
+#![cfg_attr(not(target_os = &quot;linux&quot;), allow(dead_code))]
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_command_session::process::spawn_current_exe_ns_runner;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_command_session::<span class="rs-type">ReapedCommand</span>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_command_session::<span class="rs-type">RunningCommandSessionParts</span>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_command_session::{wait_for_yield, <span class="rs-type">WaitOutcome</span>};
+<span class="rs-kw">use</span> eos_command_session::{
+    <span class="rs-type">CancelCommandSession</span>, <span class="rs-type">CollectCompleted</span>, <span class="rs-type">CollectCompletedResponse</span>, <span class="rs-type">CommandResponse</span>,
+    <span class="rs-type">CommandSession</span>, <span class="rs-type">CommandSessionCompletion</span>, <span class="rs-type">CommandSessionConfig</span>, <span class="rs-type">CommandSessionError</span>,
+    <span class="rs-type">CommandSessionSpec</span>, <span class="rs-type">ReadCommandProgress</span>, <span class="rs-type">StartCommandSession</span>, <span class="rs-type">WriteStdin</span>,
+};
+#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-kw">use</span> eos_workspace_api::<span class="rs-type">CommandWorkspacePolicy</span>;
+<span class="rs-kw">use</span> eos_workspace_api::<span class="rs-type">FinalizeCommandRequest</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::registry::{<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a>};
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a> {
+    <span class="rs-comment">// `config` drives only the Linux PTY/overlay paths (spawn, yield/cancel</span>
+    <span class="rs-comment">// waits, sweep deadlines); the non-Linux scaffold needs no config.</span>
+    #[cfg_attr(not(target_os = &quot;linux&quot;), allow(dead_code))]
+    config: <span class="rs-type">CommandSessionConfig</span>,
+    registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(config: <span class="rs-type">CommandSessionConfig</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            config,
+            registry: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()),
+        }
+    }
+
+    <span class="rs-comment">// Generic convenience wrapper used only by the scaffold unit tests; the</span>
+    <span class="rs-comment">// daemon's Linux op path calls `start_run` directly.</span>
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> start&lt;<span class="rs-type">P</span>&gt;(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <span class="rs-type">P</span>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">P</span>: <span class="rs-type">CommandWorkspacePolicy</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-62">start_run</a>(request, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(policy), kind)
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-62">start_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-linux-106">start_run_linux</a>(request, policy, kind)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-scaffold-78">start_run_scaffold</a>(request, policy, kind)
+        }
+    }
+
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-scaffold-78">start_run_scaffold</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> request.cmd.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;cmd must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> id = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a>();
+        <span class="rs-kw">let</span> _prepared = policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a>(request.prepare_request(id.clone()))?;
+        <span class="rs-kw">let</span> caller_id = request.caller_id;
+        <span class="rs-kw">let</span> command = request.cmd;
+        policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html#method-command-session-started-26">command_session_started</a>(&amp;id, &amp;caller_id);
+        <span class="rs-kw">let</span> session = <span class="rs-type">CommandSession</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">CommandSessionSpec</span> {
+            id: id.clone(),
+            caller_id,
+            command,
+            timeout_seconds: request.timeout_seconds,
+        });
+        <span class="rs-self">self</span>.registry
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session, policy)), kind);
+        <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(id, <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()))
+    }
+
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-run-linux-106">start_run_linux</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">StartCommandSession</span>,
+        policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+        kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> request.cmd.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;cmd must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> id = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a>();
+        <span class="rs-kw">let</span> prepared = policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a>(request.prepare_request(id.clone()))?;
+        <span class="rs-kw">let</span> process = spawn_current_exe_ns_runner(
+            &amp;prepared.request_path,
+            &amp;prepared.run_request,
+            &amp;prepared.output_path,
+            prepared.transcript_path.clone(),
+            &amp;<span class="rs-self">self</span>.config.transcript_timestamp_timezone,
+        )?;
+        <span class="rs-kw">let</span> caller_id = request.caller_id;
+        <span class="rs-kw">let</span> command = request.cmd;
+        policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html#method-command-session-started-26">command_session_started</a>(&amp;id, &amp;caller_id);
+        <span class="rs-kw">let</span> session = <span class="rs-type">CommandSession</span>::new_running(
+            <span class="rs-type">CommandSessionSpec</span> {
+                id: id.clone(),
+                caller_id,
+                command,
+                timeout_seconds: request.timeout_seconds,
+            },
+            <span class="rs-type">RunningCommandSessionParts</span> {
+                process,
+                output_path: prepared.output_path,
+                final_path: prepared.final_path,
+                transcript_path: prepared.transcript_path,
+                output_drain_grace_ms: <span class="rs-self">self</span>.config.output_drain_grace_ms,
+            },
+        );
+        <span class="rs-kw">let</span> run = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session, policy));
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(<span class="rs-type">Arc</span>::clone(&amp;run), kind);
+        <span class="rs-kw">match</span> wait_for_yield(&amp;run.session, &amp;<span class="rs-self">self</span>.config, request.yield_time_ms, 0) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(id, stdout)),
+        }
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-153">write_stdin</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">WriteStdin</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-linux-194">write_stdin_linux</a>(request)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-scaffold-164">write_stdin_scaffold</a>(request)
+        }
+    }
+
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-scaffold-164">write_stdin_scaffold</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">WriteStdin</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
+                command_session_id: request.command_session_id,
+            });
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;<span class="rs-type">Ctrl</span>-<span class="rs-type">C</span>/<span class="rs-type">Ctrl</span>-<span class="rs-type">D</span> must be sent alone to cancel command session&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-kw">if</span> request.chars.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;chars must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> _ = (run, request.yield_time_ms);
+        <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(
+            request.command_session_id,
+            <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+        ))
+    }
+
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-write-stdin-linux-194">write_stdin_linux</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">WriteStdin</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
+                command_session_id: request.command_session_id,
+            });
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;<span class="rs-type">Ctrl</span>-<span class="rs-type">C</span>/<span class="rs-type">Ctrl</span>-<span class="rs-type">D</span> must be sent alone to cancel command session&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-kw">if</span> request.chars.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;chars must be non-empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> command_session_id = request.command_session_id.clone();
+        <span class="rs-kw">let</span> start_offset = run.session.transcript_len();
+        run.session.write_process_stdin(&amp;request.chars)?;
+        <span class="rs-kw">match</span> wait_for_yield(
+            &amp;run.session,
+            &amp;<span class="rs-self">self</span>.config,
+            request.yield_time_ms,
+            start_offset,
+        ) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; {
+                <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(command_session_id, stdout))
+            }
+        }
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-read-progress-233">read_progress</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">ReadCommandProgress</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> request.last_n_lines == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
+                &quot;last_n_lines must be &gt;= 1&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>
+                .registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-completed-result-249">completed_result</a>(&amp;request.command_session_id)
+                .map(|result| result.with_last_lines(request.last_n_lines))
+                .ok_or(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        #[cfg(target_os = &quot;linux&quot;)]
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.session.reap() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)
+                .with_last_lines(request.last_n_lines));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(
+            request.command_session_id,
+            run.session.read_recent_output(request.last_n_lines),
+        ))
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">CancelCommandSession</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-linux-289">cancel_linux</a>(request)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-scaffold-275">cancel_scaffold</a>(request)
+        }
+    }
+
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-scaffold-275">cancel_scaffold</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">CancelCommandSession</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>
+                .registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;request.command_session_id)
+                .ok_or(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-cancelled-scaffold-467">finish_cancelled_scaffold</a>(run))
+    }
+
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-linux-289">cancel_linux</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">CancelCommandSession</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.command_session_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>
+                .registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;request.command_session_id)
+                .ok_or(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(request.command_session_id));
+        };
+        <span class="rs-kw">let</span> start_offset = run.session.transcript_len();
+        run.session.cancel_process();
+        <span class="rs-kw">match</span> wait_for_yield(
+            &amp;run.session,
+            &amp;<span class="rs-self">self</span>.config,
+            <span class="rs-self">self</span>.config.cancel_wait_ms,
+            start_offset,
+        ) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::cancelled(stdout)),
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(caller_id)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(request)
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(completion);
+    }
+
+    <span class="rs-comment">/// Cancel and discard every command session owned by `caller_id` (the</span>
+    <span class="rs-comment">/// per-caller workspace-run teardown). Cancelled sessions discard their</span>
+    <span class="rs-comment">/// overlay and push no completion (the caller initiated the cancel).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cleanup-caller-327">cleanup_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-kw">let</span> caller_id = caller_id.trim();
+            <span class="rs-kw">if</span> caller_id.is_empty() {
+                <span class="rs-kw">return</span> 0;
+            }
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-caller-sessions-213">caller_sessions</a>(caller_id), grace_s)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-kw">let</span> _ = (caller_id, grace_s);
+            0
+        }
+    }
+
+    <span class="rs-comment">/// Cancel and discard every live command session in the sandbox (the</span>
+    <span class="rs-comment">/// whole-sandbox sweep backstop). Like `cleanup_caller` but across all</span>
+    <span class="rs-comment">/// callers; cancelled sessions discard and push no completion.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-all-347">cancel_all</a>(&amp;<span class="rs-self">self</span>, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>(), grace_s)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-kw">let</span> _ = grace_s;
+            0
+        }
+    }
+
+    <span class="rs-comment">/// Cancel every run, then reap+discard within `grace`, finalizing any</span>
+    <span class="rs-comment">/// stragglers. Returns the number of runs that were live at entry.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-cancel-and-drain-363">cancel_and_drain</a>(&amp;<span class="rs-self">self</span>, runs: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt;, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        <span class="rs-kw">if</span> runs.is_empty() {
+            <span class="rs-kw">return</span> 0;
+        }
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> &amp;runs {
+            run.session.cancel_process();
+        }
+
+        <span class="rs-kw">let</span> cancel_wait_s = <span class="rs-self">self</span>.config.cancel_wait_ms <span class="rs-kw">as</span> f64 / 1000.0;
+        <span class="rs-kw">let</span> wait_s = grace_s.unwrap_or(cancel_wait_s).max(cancel_wait_s);
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs_f64(wait_s);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending = runs.clone();
+        loop {
+            pending.retain(|run| <span class="rs-kw">match</span> run.session.reap() {
+                <span class="rs-type">Some</span>(reaped) =&gt; {
+                    <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(<span class="rs-type">Arc</span>::clone(run), reaped, <span class="rs-kw">false</span>);
+                    <span class="rs-kw">false</span>
+                }
+                <span class="rs-type">None</span> =&gt; <span class="rs-kw">true</span>,
+            });
+            <span class="rs-kw">if</span> pending.is_empty() || <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                <span class="rs-kw">break</span>;
+            }
+            std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+        }
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> pending {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.session.reap() {
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>);
+            }
+        }
+        runs.len()
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-expired-399">sweep_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+        #[cfg(target_os = &quot;linux&quot;)]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-linux-425">sweep_linux</a>(now)
+        }
+        #[cfg(not(target_os = &quot;linux&quot;))]
+        {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-scaffold-411">sweep_scaffold</a>(now)
+        }
+    }
+
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-scaffold-411">sweep_scaffold</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expired = 0;
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>() {
+            <span class="rs-kw">if</span> run.session.is_expired(now) &amp;&amp; <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(run.session.id()).is_some() {
+                expired += 1;
+            }
+        }
+        <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+            expired,
+            live: <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>().len(),
+        }
+    }
+
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-linux-425">sweep_linux</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expired = 0;
+        <span class="rs-kw">for</span> run <span class="rs-kw">in</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>() {
+            <span class="rs-kw">if</span> run.session.is_past_deadline(now, <span class="rs-self">self</span>.config.max_session_s) {
+                expired += 1;
+                run.session.cancel_process();
+            }
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.session.reap() {
+                <span class="rs-kw">let</span> publish_completion = !reaped.cancelled;
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(run, reaped, publish_completion);
+            }
+        }
+        <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+            expired,
+            live: <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>().len(),
+        }
+    }
+
+    <span class="rs-comment">/// Turn a reaped command into its final response: the run publishes (normal</span>
+    <span class="rs-comment">/// completion) or discards (cancel) via its policy, then persists the final</span>
+    <span class="rs-comment">/// response. Routing cancel to `discard_command_workspace` is the structural</span>
+    <span class="rs-comment">/// guarantee that a cancelled command never reaches the OCC merge.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-reaped-444">finish_reaped</a>(
+        &amp;<span class="rs-self">self</span>,
+        run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;,
+        reaped: <span class="rs-type">ReapedCommand</span>,
+        publish_completion: bool,
+    ) -&gt; <span class="rs-type">CommandResponse</span> {
+        <span class="rs-kw">let</span> request = <span class="rs-type">FinalizeCommandRequest</span> {
+            runner_result: reaped.runner_result,
+            command_elapsed_s: reaped.elapsed_s,
+            status: reaped.status,
+            exit_code: <span class="rs-type">Some</span>(reaped.exit_code),
+            stdout: reaped.stdout,
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(run.session.id().to_owned()),
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(run, request, reaped.cancelled, publish_completion)
+    }
+
+    <span class="rs-comment">/// The non-Linux scaffold has no real process; its only settle path is</span>
+    <span class="rs-comment">/// cancel, which discards (never publishes) and parks a completion.</span>
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finish-cancelled-scaffold-467">finish_cancelled_scaffold</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;) -&gt; <span class="rs-type">CommandResponse</span> {
+        <span class="rs-kw">let</span> request = <span class="rs-type">FinalizeCommandRequest</span> {
+            runner_result: <span class="rs-type">None</span>,
+            command_elapsed_s: run.session.elapsed_s(),
+            status: &quot;cancelled&quot;.to_owned(),
+            exit_code: <span class="rs-type">Some</span>(130),
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(run.session.id().to_owned()),
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(run, request, <span class="rs-kw">true</span>, <span class="rs-kw">true</span>)
+    }
+
+    <span class="rs-comment">/// Apply the run's workspace policy to `request` (publish on complete,</span>
+    <span class="rs-comment">/// discard on cancel), persist the final response, fire the finished hook,</span>
+    <span class="rs-comment">/// remove the run from the registry, and park a completion if requested.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;,
+        request: <span class="rs-type">FinalizeCommandRequest</span>,
+        cancelled: bool,
+        publish_completion: bool,
+    ) -&gt; <span class="rs-type">CommandResponse</span> {
+        <span class="rs-kw">let</span> outcome = <span class="rs-kw">if</span> cancelled {
+            run.policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-discard-command-workspace-607">discard_command_workspace</a>(request)
+        } <span class="rs-kw">else</span> {
+            run.policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-command-workspace-585">finalize_command_workspace</a>(request)
+        };
+        <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> outcome {
+            <span class="rs-type">Ok</span>(outcome) =&gt; <span class="rs-type">CommandResponse</span>::from_workspace_outcome(outcome),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">CommandResponse</span>::error(error.to_string()),
+        };
+        #[cfg(target_os = &quot;linux&quot;)]
+        run.session.persist_final(&amp;response);
+        run.policy.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html#method-command-session-finished-28">command_session_finished</a>(
+            run.session.id(),
+            run.session.caller_id(),
+            &amp;response.status,
+        );
+        <span class="rs-kw">let</span> command_session_id = run.session.id().to_owned();
+        <span class="rs-kw">let</span> caller_id = run.session.caller_id().to_owned();
+        <span class="rs-kw">let</span> command = run.session.command().to_owned();
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;command_session_id);
+        <span class="rs-kw">if</span> publish_completion {
+            <span class="rs-kw">let</span> notification_result = response.clone();
+            <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(<span class="rs-type">CommandSessionCompletion</span> {
+                command_session_id,
+                caller_id,
+                command,
+                result: response.clone(),
+                notification_result,
+            });
+        }
+        response
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-is-teardown-control-527">is_teardown_control</a>(chars: &amp;str) -&gt; bool {
+    matches!(chars, &quot;\u{3}&quot; | &quot;\u{4}&quot;)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-contains-teardown-control-531">contains_teardown_control</a>(chars: &amp;str) -&gt; bool {
+    chars.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&#x27;\u{3}&#x27;) || chars.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&#x27;\u{4}&#x27;)
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">CommandSessionConfig</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>())
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-SweepReport-541">SweepReport</a> {
+    <span class="rs-kw">pub</span> expired: usize,
+    <span class="rs-kw">pub</span> live: usize,
+}
+
+<span class="rs-comment">// The manager unit tests drive the non-Linux scaffold (no real PTY); on Linux</span>
+<span class="rs-comment">// the same behavior is proven by the daemon E2E suite.</span>
+#[cfg(all(test, not(target_os = &quot;linux&quot;)))]
+#[path = &quot;../../../tests/workspace_run/manager_fake_policy.rs&quot;]
+<span class="rs-kw">mod</span> manager_fake_policy;
+
+#[cfg(all(test, not(target_os = &quot;linux&quot;)))]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+    <span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+    <span class="rs-kw">use</span> eos_workspace_api::{
+        <span class="rs-type">FinalizeCommandRequest</span>, <span class="rs-type">PrepareCommandRequest</span>, <span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>,
+        <span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceMode</span>,
+    };
+    <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>;
+
+    <span class="rs-kw">impl</span> <span class="rs-type">CommandWorkspacePolicy</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-prepare-command-workspace-570">prepare_command_workspace</a>(
+            &amp;<span class="rs-self">self</span>,
+            request: <span class="rs-type">PrepareCommandRequest</span>,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+            <span class="rs-kw">let</span> session_dir = <span class="rs-type">PathBuf</span>::from(format!(&quot;/sessions/{}&quot;, request.command_session_id));
+            <span class="rs-type">Ok</span>(<span class="rs-type">PreparedCommandWorkspace</span> {
+                run_request: json!({ &quot;cmd&quot;: request.cmd }),
+                request_path: session_dir.join(&quot;runner-request.json&quot;),
+                output_path: session_dir.join(&quot;runner-result.json&quot;),
+                final_path: session_dir.join(&quot;final.json&quot;),
+                session_dir: session_dir.clone(),
+                transcript_path: session_dir.join(&quot;transcript.log&quot;),
+            })
+        }
+
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-command-workspace-585">finalize_command_workspace</a>(
+            &amp;<span class="rs-self">self</span>,
+            request: <span class="rs-type">FinalizeCommandRequest</span>,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span> {
+                mode: <span class="rs-type">WorkspaceMode</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                success: request.command_succeeded(),
+                status: request.status,
+                exit_code: request.exit_code,
+                stdout: request.stdout,
+                stderr: request.stderr,
+                command_session_id: request.command_session_id,
+                changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+                changed_path_kinds: <span class="rs-type">Default</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                mutation_source: &quot;test&quot;.to_owned(),
+                conflict: <span class="rs-type">None</span>,
+                conflict_reason: <span class="rs-type">None</span>,
+                timings: <span class="rs-type">Default</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+            })
+        }
+
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-discard-command-workspace-607">discard_command_workspace</a>(
+            &amp;<span class="rs-self">self</span>,
+            request: <span class="rs-type">FinalizeCommandRequest</span>,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span>::discarded(
+                <span class="rs-type">WorkspaceMode</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>(),
+                request,
+            ))
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-manager-registers-counts-and-sweeps-sessions-618">manager_registers_counts_and_sweeps_sessions</a>() {
+        <span class="rs-kw">let</span> manager = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <span class="rs-kw">let</span> started = manager
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a>(
+                <span class="rs-type">StartCommandSession</span> {
+                    invocation_id: &quot;inv&quot;.to_owned(),
+                    caller_id: &quot;caller&quot;.to_owned(),
+                    cmd: &quot;sleep 1&quot;.to_owned(),
+                    timeout_seconds: <span class="rs-type">Some</span>(0.001),
+                    yield_time_ms: 1000,
+                },
+                <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>,
+                <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span>,
+            )
+            .unwrap_or_else(|error| panic!(&quot;start session: {error}&quot;));
+        <span class="rs-kw">let</span> id = started
+            .command_session_id
+            .unwrap_or_else(|| panic!(&quot;running session id&quot;));
+        assert!(id.starts_with(&quot;cmd_&quot;));
+
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 1);
+
+        <span class="rs-kw">let</span> report = manager.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-sweep-expired-399">sweep_expired</a>(<span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_millis(2));
+
+        assert_eq!(report.expired, 1);
+        assert_eq!(report.live, 0);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-ephemeral-request-647">ephemeral_request</a>(caller_id: &amp;str) -&gt; <span class="rs-type">StartCommandSession</span> {
+        <span class="rs-type">StartCommandSession</span> {
+            invocation_id: &quot;inv&quot;.to_owned(),
+            caller_id: caller_id.to_owned(),
+            cmd: &quot;sleep 1&quot;.to_owned(),
+            timeout_seconds: <span class="rs-type">None</span>,
+            yield_time_ms: 1000,
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-caller-may-hold-multiple-sessions-per-kind-657">caller_may_hold_multiple_sessions_per_kind</a>() {
+        <span class="rs-comment">// A caller holds many ephemeral command sessions (each its own ephemeral</span>
+        <span class="rs-comment">// workspace); an isolated caller holds many sessions in its one workspace.</span>
+        <span class="rs-kw">for</span> kind <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Isolated</span>] {
+            <span class="rs-kw">let</span> manager = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+            <span class="rs-kw">for</span> _ <span class="rs-kw">in</span> 0..3 {
+                manager
+                    .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-ephemeral-request-647">ephemeral_request</a>(&quot;caller&quot;), <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>, kind)
+                    .unwrap_or_else(|error| panic!(&quot;<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-start-49">start</a> ({kind:?}): {error}&quot;));
+            }
+            assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 3);
+            assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;other&quot;)), 0);
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-fn-collected-completion-preserves-finalized-stdout-673">collected_completion_preserves_finalized_stdout</a>() {
+        <span class="rs-kw">let</span> manager = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-WorkspaceRunManager-30">WorkspaceRunManager</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <span class="rs-kw">let</span> command_session_id = &quot;cmd_full&quot;.to_owned();
+        <span class="rs-kw">let</span> session = <span class="rs-type">CommandSession</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">CommandSessionSpec</span> {
+            id: command_session_id.clone(),
+            caller_id: &quot;caller&quot;.to_owned(),
+            command: &quot;printf full&quot;.to_owned(),
+            timeout_seconds: <span class="rs-type">None</span>,
+        });
+        <span class="rs-kw">let</span> run = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-manager-rs.html#item-struct-ExpiringPolicy-567">ExpiringPolicy</a>)));
+        <span class="rs-kw">let</span> request = <span class="rs-type">FinalizeCommandRequest</span> {
+            runner_result: <span class="rs-type">None</span>,
+            command_elapsed_s: 0.0,
+            status: &quot;ok&quot;.to_owned(),
+            exit_code: <span class="rs-type">Some</span>(0),
+            stdout: &quot;full transcript stdout&quot;.to_owned(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(command_session_id.clone()),
+        };
+
+        <span class="rs-kw">let</span> returned = manager.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-finalize-run-483">finalize_run</a>(run, request, <span class="rs-kw">false</span>, <span class="rs-kw">true</span>);
+
+        assert_eq!(returned.stdout, &quot;full transcript stdout&quot;);
+        <span class="rs-kw">let</span> completions = manager.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(&amp;<span class="rs-type">CollectCompleted</span> {
+            command_session_ids: <span class="rs-type">Some</span>(vec![command_session_id]),
+            caller_id: <span class="rs-type">Some</span>(&quot;caller&quot;.to_owned()),
+        });
+        assert_eq!(completions.completions.len(), 1);
+        assert_eq!(
+            completions.completions[0].result.stdout,
+            &quot;full transcript stdout&quot;
+        );
+        assert_eq!(
+            completions.completions[0].notification_result.stdout,
+            &quot;full transcript stdout&quot;
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

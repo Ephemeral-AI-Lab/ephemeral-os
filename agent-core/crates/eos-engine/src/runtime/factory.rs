@@ -12,7 +12,8 @@
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use eos_ports::{CommandServicePort, WorkflowServicePort};
+use eos_tool_core::WorkflowServicePort;
+use eos_sandbox_port::SandboxCommandApi;
 use eos_types::{AgentRunId, TaskId};
 
 use crate::background::BackgroundSessionService;
@@ -27,7 +28,7 @@ use super::types::EngineRunHandles;
 pub struct AgentRunControlFactory {
     foreground: ForegroundExecutorFactory,
     handles: EngineRunHandles,
-    command_service: Arc<dyn CommandServicePort>,
+    command_service: Arc<dyn SandboxCommandApi>,
     completion_poll_interval: Duration,
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
 }
@@ -46,7 +47,7 @@ impl AgentRunControlFactory {
     pub fn new(
         foreground: ForegroundExecutorFactory,
         handles: EngineRunHandles,
-        command_service: Arc<dyn CommandServicePort>,
+        command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
     ) -> Self {

@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/services/workspace_run/cancel.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>60</b><span>modules</span></div>
+  <div><b>596</b><span>items</span></div>
+  <div><b>261</b><span>fields</span></div>
+  <div><b>176</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-base-rs.html"><span>base.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>1/20</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-occ-mod-rs.html"><span>mod.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_router</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html"><span>ppc_router.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-process-rs.html"><span>process.rs</span><small>3/19</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link active" href="eos-daemon--src-services-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>3/11</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-ephemeral-rs.html"><span>ephemeral.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html"><span>isolated.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-registry-rs.html"><span>registry.rs</span><small>7/3</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/7</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="services::workspace_run::cancel crates/eos-daemon/src/services/workspace_run/cancel.rs CallerCancel cancel_workspace_runs_by_caller_id cancel_all_workspace_runs op_cancel_workspace_runs_by_caller_id op_cancel_workspace_runs require_caller_id">
+  <div class="module-head">
+    <div>
+      <h2>src/services/workspace_run/cancel.rs</h2>
+      <p class="path">module <code>services::workspace_run::cancel</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>5 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CallerCancel-25" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CallerCancel pub pub struct CallerCancel crates/eos-daemon/src/services/workspace_run/cancel.rs cancelled_sessions usize isolated Result &lt; Value , IsolatedError &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CallerCancel</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a></code>
+  <p class="docstring">Outcome of tearing down one caller's workspace runs.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>cancelled_sessions</td><td><code>usize</code></td></tr><tr><td>pub</td><td>isolated</td><td><code><a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , IsolatedError &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/cancel.rs:25</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-cancel-workspace-runs-by-caller-id-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_workspace_runs_by_caller_id pub pub fn cancel_workspace_runs_by_caller_id (caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; CallerCancel crates/eos-daemon/src/services/workspace_run/cancel.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cancel_workspace_runs_by_caller_id</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-workspace-runs-by-caller-id-35">cancel_workspace_runs_by_caller_id</a> (caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a></code>
+  <p class="docstring">Cancel every workspace run owned by `caller_id`: discard its command<br>session(s), then exit its isolated workspace if open. The order matters —<br>sessions are cancelled before the isolated namespace/lease teardown.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Cancel every workspace run owned by `caller_id`: discard its command</span>
+<span class="rs-comment">/// session(s), then exit its isolated workspace if open. The order matters —</span>
+<span class="rs-comment">/// sessions are cancelled before the isolated namespace/lease teardown.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-workspace-runs-by-caller-id-35">cancel_workspace_runs_by_caller_id</a>(caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a> {
+    <span class="rs-kw">let</span> cancelled_sessions =
+        commands::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-commands-rs.html#item-fn-cleanup-command-sessions-for-caller-354">cleanup_command_sessions_for_caller</a>(caller_id, grace_s);
+    <span class="rs-kw">let</span> isolated = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-211">exit_isolated</a>(caller_id, grace_s);
+    <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a> {
+        cancelled_sessions,
+        isolated,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/cancel.rs:35</p>
+</article><article id="item-fn-cancel-all-workspace-runs-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_all_workspace_runs pub pub fn cancel_all_workspace_runs (grace_s : Option &lt; f64 &gt;) -&gt; (usize , usize) crates/eos-daemon/src/services/workspace_run/cancel.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cancel_all_workspace_runs</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a> (grace_s : Option &lt; f64 &gt;) -&gt; (usize , usize)</code>
+  <p class="docstring">Cancel every workspace run in the sandbox: discard all command sessions,<br>exit every isolated caller, then reap orphaned namespace/cgroup/scratch<br>resources. Returns the per-substrate counts.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Cancel every workspace run in the sandbox: discard all command sessions,</span>
+<span class="rs-comment">/// exit every isolated caller, then reap orphaned namespace/cgroup/scratch</span>
+<span class="rs-comment">/// resources. Returns the per-substrate counts.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; (usize, usize) {
+    <span class="rs-kw">let</span> cancelled_sessions = commands::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-commands-rs.html#item-fn-cancel-all-command-sessions-366">cancel_all_command_sessions</a>(grace_s);
+    <span class="rs-kw">let</span> isolated_exited = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html#item-fn-exit-all-and-reap-220">exit_all_and_reap</a>(grace_s);
+    (cancelled_sessions, isolated_exited)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/cancel.rs:48</p>
+</article><article id="item-fn-op-cancel-workspace-runs-by-caller-id-57" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs_by_caller_id pub pub fn op_cancel_workspace_runs_by_caller_id (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/workspace_run/cancel.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_cancel_workspace_runs_by_caller_id</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <p class="docstring">`api.v1.cancel_workspace_runs_by_caller_id` — agent-core's one-RPC per-run<br>teardown. Best-effort: a not-open isolated workspace is normal (the caller<br>was ephemeral) and not surfaced as an error.</p>
+  <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `api.v1.cancel_workspace_runs_by_caller_id` — agent-core's one-RPC per-run</span>
+<span class="rs-comment">/// teardown. Best-effort: a not-open isolated workspace is normal (the caller</span>
+<span class="rs-comment">/// was ephemeral) and not surfaced as an error.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
+)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args) {
+        <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
+        <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
+    };
+    <span class="rs-kw">let</span> grace_s = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;grace_s&quot;).and_then(<span class="rs-type">Value</span>::as_f64);
+    <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-workspace-runs-by-caller-id-35">cancel_workspace_runs_by_caller_id</a>(&amp;caller_id, grace_s);
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;caller_id&quot;: caller_id,
+        &quot;cancelled_command_sessions&quot;: outcome.cancelled_sessions,
+        &quot;isolated_exited&quot;: outcome.isolated.is_ok(),
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/cancel.rs:57</p>
+</article><article id="item-fn-op-cancel-workspace-runs-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs pub pub fn op_cancel_workspace_runs (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/workspace_run/cancel.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_cancel_workspace_runs</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <p class="docstring">`api.v1.cancel_workspace_runs` — whole-sandbox cancel sweep backstop.</p>
+  <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `api.v1.cancel_workspace_runs` — whole-sandbox cancel sweep backstop.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
+)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> grace_s = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;grace_s&quot;).and_then(<span class="rs-type">Value</span>::as_f64);
+    <span class="rs-kw">let</span> (cancelled_sessions, isolated_exited) = <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s);
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;cancelled_command_sessions&quot;: cancelled_sessions,
+        &quot;isolated_callers_exited&quot;: isolated_exited,
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/cancel.rs:82</p>
+</article><article id="item-fn-require-caller-id-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_caller_id private fn require_caller_id (args : &amp; Value) -&gt; Result &lt; String , Value &gt; crates/eos-daemon/src/services/workspace_run/cancel.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>require_caller_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; String , Value &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> caller_id = args
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;caller_id&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    <span class="rs-kw">if</span> caller_id.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;error&quot;: {
+                &quot;kind&quot;: &quot;invalid_argument&quot;,
+                &quot;message&quot;: &quot;caller_id is required&quot;,
+                &quot;details&quot;: {&quot;key&quot;: &quot;caller_id&quot;},
+            },
+        }));
+    }
+    <span class="rs-type">Ok</span>(caller_id)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/cancel.rs:100</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/workspace_run/cancel.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Workspace-run cancel surface — the caller-keyed teardown coordinator.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! A workspace run composes a caller's command session(s) (`command_session`,</span>
+<span class="rs-comment">//! cancel → discard the overlay) with its isolated workspace namespace + lease</span>
+<span class="rs-comment">//! (`isolated_workspace`, exit → discard the upperdir). Neither substrate ever</span>
+<span class="rs-comment">//! OCC-publishes on cancel — discard is structural, so the shared LayerStack is</span>
+<span class="rs-comment">//! persisted only by the request-level commit gate, never by cancellation.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is the daemon half of the §7 cancellation integration:</span>
+<span class="rs-comment">//! - agent-core calls [`op_cancel_workspace_runs_by_caller_id`] once per</span>
+<span class="rs-comment">//!   cancelled agent run (`caller_id == agent_run_id`);</span>
+<span class="rs-comment">//! - the sandbox stage calls [`op_cancel_workspace_runs`] as the whole-sandbox</span>
+<span class="rs-comment">//!   backstop (the assert-no-leases gate + commit live in the cancellation spec,</span>
+<span class="rs-comment">//!   not here).</span>
+
+<span class="rs-kw">use</span> eos_isolated_workspace::<span class="rs-type">IsolatedError</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::isolated;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::commands;
+
+<span class="rs-comment">/// Outcome of tearing down one caller's workspace runs.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a> {
+    <span class="rs-comment">/// Command sessions that were live at entry (now cancelled + discarded).</span>
+    <span class="rs-kw">pub</span> cancelled_sessions: usize,
+    <span class="rs-comment">/// Isolated-workspace teardown result: the exit response if the caller was</span>
+    <span class="rs-comment">/// isolated, `Err(IsolatedError::NotOpen)` if it was ephemeral (or had no</span>
+    <span class="rs-comment">/// isolated workspace), or another `IsolatedError` on teardown failure.</span>
+    <span class="rs-kw">pub</span> isolated: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt;,
+}
+
+<span class="rs-comment">/// Cancel every workspace run owned by `caller_id`: discard its command</span>
+<span class="rs-comment">/// session(s), then exit its isolated workspace if open. The order matters —</span>
+<span class="rs-comment">/// sessions are cancelled before the isolated namespace/lease teardown.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-workspace-runs-by-caller-id-35">cancel_workspace_runs_by_caller_id</a>(caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a> {
+    <span class="rs-kw">let</span> cancelled_sessions =
+        commands::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-commands-rs.html#item-fn-cleanup-command-sessions-for-caller-354">cleanup_command_sessions_for_caller</a>(caller_id, grace_s);
+    <span class="rs-kw">let</span> isolated = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-211">exit_isolated</a>(caller_id, grace_s);
+    <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a> {
+        cancelled_sessions,
+        isolated,
+    }
+}
+
+<span class="rs-comment">/// Cancel every workspace run in the sandbox: discard all command sessions,</span>
+<span class="rs-comment">/// exit every isolated caller, then reap orphaned namespace/cgroup/scratch</span>
+<span class="rs-comment">/// resources. Returns the per-substrate counts.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; (usize, usize) {
+    <span class="rs-kw">let</span> cancelled_sessions = commands::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-commands-rs.html#item-fn-cancel-all-command-sessions-366">cancel_all_command_sessions</a>(grace_s);
+    <span class="rs-kw">let</span> isolated_exited = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html#item-fn-exit-all-and-reap-220">exit_all_and_reap</a>(grace_s);
+    (cancelled_sessions, isolated_exited)
+}
+
+<span class="rs-comment">/// `api.v1.cancel_workspace_runs_by_caller_id` — agent-core's one-RPC per-run</span>
+<span class="rs-comment">/// teardown. Best-effort: a not-open isolated workspace is normal (the caller</span>
+<span class="rs-comment">/// was ephemeral) and not surfaced as an error.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
+)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args) {
+        <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
+        <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
+    };
+    <span class="rs-kw">let</span> grace_s = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;grace_s&quot;).and_then(<span class="rs-type">Value</span>::as_f64);
+    <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-workspace-runs-by-caller-id-35">cancel_workspace_runs_by_caller_id</a>(&amp;caller_id, grace_s);
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;caller_id&quot;: caller_id,
+        &quot;cancelled_command_sessions&quot;: outcome.cancelled_sessions,
+        &quot;isolated_exited&quot;: outcome.isolated.is_ok(),
+    }))
+}
+
+<span class="rs-comment">/// `api.v1.cancel_workspace_runs` — whole-sandbox cancel sweep backstop.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
+)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> grace_s = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;grace_s&quot;).and_then(<span class="rs-type">Value</span>::as_f64);
+    <span class="rs-kw">let</span> (cancelled_sessions, isolated_exited) = <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s);
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;cancelled_command_sessions&quot;: cancelled_sessions,
+        &quot;isolated_callers_exited&quot;: isolated_exited,
+    }))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> caller_id = args
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;caller_id&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    <span class="rs-kw">if</span> caller_id.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;error&quot;: {
+                &quot;kind&quot;: &quot;invalid_argument&quot;,
+                &quot;message&quot;: &quot;caller_id is required&quot;,
+                &quot;details&quot;: {&quot;key&quot;: &quot;caller_id&quot;},
+            },
+        }));
+    }
+    <span class="rs-type">Ok</span>(caller_id)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

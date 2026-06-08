@@ -2,7 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_ports::{CommandServicePort, CommandSessionPort, Sealed};
+use eos_tool_core::{CommandSessionPort, Sealed};
+use eos_sandbox_port::SandboxCommandApi;
 use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -26,7 +27,7 @@ pub(in crate::background) struct CommandCompletion {
 pub(in crate::background) struct CommandSessionManager {
     sessions: Arc<Mutex<CommandSessions>>,
     agent_run_id: AgentRunId,
-    command_service: Arc<dyn CommandServicePort>,
+    command_service: Arc<dyn SandboxCommandApi>,
     notification: BackgroundNotificationEmitter,
 }
 
@@ -41,7 +42,7 @@ impl std::fmt::Debug for CommandSessionManager {
 impl CommandSessionManager {
     pub(in crate::background) fn new(
         agent_run_id: AgentRunId,
-        command_service: Arc<dyn CommandServicePort>,
+        command_service: Arc<dyn SandboxCommandApi>,
         notification: BackgroundNotificationEmitter,
     ) -> Self {
         Self {
@@ -250,7 +251,7 @@ mod tests {
     use super::*;
     use crate::background::session_managers::BackgroundSessionManager;
     use crate::notifications::NotificationService;
-    use crate::services::CommandService;
+    use eos_sandbox_port::SandboxCommandService;
 
     #[derive(Debug, Default)]
     struct CommandSessionTestTransport {
@@ -326,7 +327,7 @@ mod tests {
     ) -> CommandSessionManager {
         CommandSessionManager::new(
             owner.parse().expect("agent run id"),
-            Arc::new(CommandService::new(transport)),
+            Arc::new(SandboxCommandService::new(transport)),
             BackgroundNotificationEmitter::new(notifier.clone()),
         )
     }

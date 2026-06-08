@@ -22,6 +22,7 @@
 #![warn(missing_docs)]
 
 mod error;
+mod command_service;
 mod gateway;
 mod models;
 mod ops;
@@ -31,6 +32,7 @@ mod tool_api;
 mod transport;
 
 pub use error::SandboxPortError;
+pub use command_service::{SandboxCommandApi, SandboxCommandService};
 pub use gateway::SandboxGateway;
 pub use models::{
     CommandOutput, CommandSessionCancelRequest, CommandStatusView, ConflictInfo, EditFileRequest,

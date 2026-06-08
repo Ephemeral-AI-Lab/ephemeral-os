@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-run · src/outcome.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-agent-run File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>8</b><span>items</span></div>
+  <div><b>30</b><span>fields</span></div>
+  <div><b>9</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_runs.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-request-rs.html"><span>request.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="outcome crates/eos-agent-run/src/outcome.rs AgentRunOutcome AgentRunStatus">
+  <div class="module-head">
+    <div>
+      <h2>src/outcome.rs</h2>
+      <p class="path">module <code>outcome</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AgentRunOutcome-7" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunOutcome pub pub struct AgentRunOutcome crates/eos-agent-run/src/outcome.rs agent_run_id AgentRunId status AgentRunStatus terminal_result Option &lt; ToolResult &gt; terminal_payload Option &lt; JsonObject &gt; message_history Vec &lt; Message &gt; token_count Option &lt; i64 &gt; error Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AgentRunOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a></code>
+  <p class="docstring">Terminal outcome for one agent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-enum-AgentRunStatus-26">AgentRunStatus</a></code></td></tr><tr><td>pub</td><td>terminal_result</td><td><code>Option &lt; ToolResult &gt;</code></td></tr><tr><td>pub</td><td>terminal_payload</td><td><code>Option &lt; JsonObject &gt;</code></td></tr><tr><td>pub</td><td>message_history</td><td><code>Vec &lt; Message &gt;</code></td></tr><tr><td>pub</td><td>token_count</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-run/src/outcome.rs:7</p>
+</article><article id="item-enum-AgentRunStatus-26" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentRunStatus pub pub enum AgentRunStatus crates/eos-agent-run/src/outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>AgentRunStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-enum-AgentRunStatus-26">AgentRunStatus</a></code>
+  <p class="docstring">Agent-run terminal status.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Completed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-run/src/outcome.rs:26</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-agent-run/src/outcome.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Agent-run terminal outcome DTOs.</span>
+
+<span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">Message</span>;
+<span class="rs-kw">use</span> eos_tool_core::<span class="rs-type">ToolResult</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>};
+
+<span class="rs-comment">/// Terminal outcome for one agent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a> {
+    <span class="rs-comment">/// Agent-run id.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
+    <span class="rs-comment">/// Terminal status.</span>
+    <span class="rs-kw">pub</span> status: <a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-enum-AgentRunStatus-26">AgentRunStatus</a>,
+    <span class="rs-comment">/// Terminal model-facing tool result, when one was submitted.</span>
+    <span class="rs-kw">pub</span> terminal_result: <span class="rs-type">Option</span>&lt;<span class="rs-type">ToolResult</span>&gt;,
+    <span class="rs-comment">/// Persisted terminal payload, when available.</span>
+    <span class="rs-kw">pub</span> terminal_payload: <span class="rs-type">Option</span>&lt;<span class="rs-type">JsonObject</span>&gt;,
+    <span class="rs-comment">/// Final message history, when the runner makes it available.</span>
+    <span class="rs-kw">pub</span> message_history: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
+    <span class="rs-comment">/// Provider token count, when known.</span>
+    <span class="rs-kw">pub</span> token_count: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-comment">/// Framework/engine error summary, when the run failed.</span>
+    <span class="rs-kw">pub</span> error: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-comment">/// Agent-run terminal status.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-enum-AgentRunStatus-26">AgentRunStatus</a> {
+    <span class="rs-comment">/// The run completed normally.</span>
+    <span class="rs-type">Completed</span>,
+    <span class="rs-comment">/// The run failed.</span>
+    <span class="rs-type">Failed</span>,
+    <span class="rs-comment">/// The run was cancelled.</span>
+    <span class="rs-type">Cancelled</span>,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

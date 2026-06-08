@@ -76,10 +76,20 @@ class AggregateInventoryHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
-        if not path.startswith("/__refresh/"):
+        if path == "/__class_inventory_refresh":
+            target = refresh_target_from_referer(self.headers.get("Referer"))
+            if target is None:
+                self.write_json(
+                    HTTPStatus.BAD_REQUEST,
+                    {"ok": False, "error": "could not determine inventory workspace from Referer"},
+                )
+                return
+        elif path.startswith("/__refresh/"):
+            target = path.removeprefix("/__refresh/")
+        else:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
-        target = path.removeprefix("/__refresh/")
+
         try:
             refreshed = refresh(target)
         except Exception as exc:  # noqa: BLE001 - surface command failures to the caller.
@@ -89,6 +99,13 @@ class AggregateInventoryHandler(BaseHTTPRequestHandler):
 
     def handle_request(self, *, send_body: bool) -> None:
         path = urlparse(self.path).path
+        if path == "/__class_inventory_health":
+            self.write_json(
+                HTTPStatus.OK,
+                {"ok": True, "server": "aggregate-class-inventory"},
+                send_body=send_body,
+            )
+            return
         if path == "/":
             self.write_html(HTTPStatus.OK, index_page(), send_body=send_body)
             return
@@ -145,14 +162,21 @@ class AggregateInventoryHandler(BaseHTTPRequestHandler):
         if send_body:
             self.wfile.write(data)
 
-    def write_json(self, status: HTTPStatus, payload: dict[str, object]) -> None:
+    def write_json(
+        self,
+        status: HTTPStatus,
+        payload: dict[str, object],
+        *,
+        send_body: bool = True,
+    ) -> None:
         data = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(data)
+        if send_body:
+            self.wfile.write(data)
 
 
 def resolve_mount(path: str) -> tuple[InventoryMount | None, str]:
@@ -171,6 +195,15 @@ def resolve_static_path(mount: InventoryMount, subpath: str) -> Path:
     if candidate != root and root not in candidate.parents:
         raise ValueError("static path escapes inventory root")
     return candidate
+
+
+def refresh_target_from_referer(referer: str | None) -> str | None:
+    if not referer:
+        return None
+    mount, _ = resolve_mount(urlparse(referer).path)
+    if mount is None:
+        return None
+    return mount.name
 
 
 def refresh(target: str) -> list[str]:

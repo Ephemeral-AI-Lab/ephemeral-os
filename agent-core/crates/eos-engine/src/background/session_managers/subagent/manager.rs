@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_ports::{AgentRunServicePort, Sealed, SubagentSessionPort};
+use eos_tool_core::{AgentRunServicePort, Sealed, SubagentSessionPort};
 #[cfg(test)]
-use eos_ports::{StartSubagentRunOutcome, StartSubagentRunRequest};
+use eos_tool_core::{StartSubagentRunOutcome, StartSubagentRunRequest};
 #[cfg(test)]
 use eos_state::AgentRun;
 #[cfg(test)]
@@ -271,11 +271,11 @@ impl SubagentSessionPort for SubagentSessionManager {
     async fn subagent_session_snapshot(
         &self,
         subagent_session_id: &SubagentSessionId,
-    ) -> Option<eos_ports::SubagentProgress> {
+    ) -> Option<eos_tool_core::SubagentProgress> {
         self.progress(subagent_session_id)
             .await
             .map(
-                |(status, result, agent_name)| eos_ports::SubagentProgress::Found {
+                |(status, result, agent_name)| eos_tool_core::SubagentProgress::Found {
                     subagent_session_id: subagent_session_id.clone(),
                     status: background_status_to_subagent(status),
                     agent_name,
@@ -288,14 +288,14 @@ impl SubagentSessionPort for SubagentSessionManager {
         &self,
         subagent_session_id: &SubagentSessionId,
         reason: &str,
-    ) -> eos_ports::CancelledSubagent {
+    ) -> eos_tool_core::CancelledSubagent {
         if self.cancel_one(subagent_session_id, reason).await {
-            eos_ports::CancelledSubagent::Cancelled {
+            eos_tool_core::CancelledSubagent::Cancelled {
                 subagent_session_id: subagent_session_id.clone(),
                 reason: reason.to_owned(),
             }
         } else {
-            eos_ports::CancelledSubagent::MissingOrSettled {
+            eos_tool_core::CancelledSubagent::MissingOrSettled {
                 subagent_session_id: subagent_session_id.clone(),
             }
         }
@@ -320,26 +320,26 @@ impl SubagentSessionPort for SubagentSessionManager {
 }
 
 const fn subagent_status_to_background(
-    status: eos_ports::SubagentSessionStatus,
+    status: eos_tool_core::SubagentSessionStatus,
 ) -> BackgroundSessionStatus {
     match status {
-        eos_ports::SubagentSessionStatus::Running => BackgroundSessionStatus::Running,
-        eos_ports::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
-        eos_ports::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
-        eos_ports::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
-        eos_ports::SubagentSessionStatus::Delivered => BackgroundSessionStatus::Delivered,
+        eos_tool_core::SubagentSessionStatus::Running => BackgroundSessionStatus::Running,
+        eos_tool_core::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
+        eos_tool_core::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
+        eos_tool_core::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
+        eos_tool_core::SubagentSessionStatus::Delivered => BackgroundSessionStatus::Delivered,
     }
 }
 
 const fn background_status_to_subagent(
     status: BackgroundSessionStatus,
-) -> eos_ports::SubagentSessionStatus {
+) -> eos_tool_core::SubagentSessionStatus {
     match status {
-        BackgroundSessionStatus::Running => eos_ports::SubagentSessionStatus::Running,
-        BackgroundSessionStatus::Completed => eos_ports::SubagentSessionStatus::Completed,
-        BackgroundSessionStatus::Failed => eos_ports::SubagentSessionStatus::Failed,
-        BackgroundSessionStatus::Cancelled => eos_ports::SubagentSessionStatus::Cancelled,
-        BackgroundSessionStatus::Delivered => eos_ports::SubagentSessionStatus::Delivered,
+        BackgroundSessionStatus::Running => eos_tool_core::SubagentSessionStatus::Running,
+        BackgroundSessionStatus::Completed => eos_tool_core::SubagentSessionStatus::Completed,
+        BackgroundSessionStatus::Failed => eos_tool_core::SubagentSessionStatus::Failed,
+        BackgroundSessionStatus::Cancelled => eos_tool_core::SubagentSessionStatus::Cancelled,
+        BackgroundSessionStatus::Delivered => eos_tool_core::SubagentSessionStatus::Delivered,
     }
 }
 
@@ -485,7 +485,7 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
-    use eos_ports::{StartedSubagentRun, TerminalAgentRun};
+    use eos_tool_core::{StartedSubagentRun, TerminalAgentRun};
     use eos_state::{AgentRun, UtcDateTime};
 
     use crate::background::session_managers::BackgroundSessionManager;

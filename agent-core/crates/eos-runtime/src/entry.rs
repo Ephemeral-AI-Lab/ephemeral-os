@@ -14,8 +14,9 @@ use eos_agent_def::{AgentDefinition, AgentName};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_engine::{
     run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundTeardownPort,
-    CommandService, EngineCancelPort, ForegroundExecutorFactory,
+    EngineCancelPort, ForegroundExecutorFactory,
 };
+use eos_sandbox_port::SandboxCommandService;
 use eos_llm_client::Message;
 use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_tools::{
@@ -117,7 +118,7 @@ pub async fn run_request(
     let control_factory = Arc::new(AgentRunControlFactory::new(
         ForegroundExecutorFactory,
         services.engine_run_handles(&workspace_root),
-        Arc::new(CommandService::new(services.sandbox.transport.clone())),
+        Arc::new(SandboxCommandService::new(services.sandbox.transport.clone())),
         services.engine.command_session_completion_poll_interval(),
         workflow_service_cell.clone(),
     ));

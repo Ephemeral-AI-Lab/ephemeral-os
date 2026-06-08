@@ -1439,6 +1439,7 @@ fn page_shell(title: &str, h1: &str, body: &str, asset_prefix: &str) -> String {
 </head>
 <body>
   <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
     <div class="header-row">
       <div>
         <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
@@ -1634,6 +1635,16 @@ header, .summary, .toolbar, .crate-grid, .crate-layout {
   margin: 0 auto;
 }
 header { padding: 28px 0 16px; }
+.central-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.central-link:hover { text-decoration: underline; }
 .header-row {
   display: flex;
   align-items: flex-start;

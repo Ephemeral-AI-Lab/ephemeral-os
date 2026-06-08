@@ -15,7 +15,7 @@ path = "src/mod.rs"
 # precedent.
 eos-types.workspace = true
 eos-state.workspace = true
-eos-ports.workspace = true
+eos-tool-core.workspace = true
 eos-sandbox-port.workspace = true
 eos-skills.workspace = true
 eos-llm-client.workspace = true

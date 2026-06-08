@@ -1,11 +1,8 @@
 [package]
-name = "eos-ports"
+name = "eos-tool-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-
-[lib]
-path = "src/lib.rs"
 
 [dependencies]
 async-trait.workspace = true

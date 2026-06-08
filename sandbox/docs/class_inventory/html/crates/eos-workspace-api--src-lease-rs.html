@@ -8,6 +8,7 @@
 </head>
 <body>
   <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
     <div class="header-row">
       <div>
         <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
@@ -22,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>8</b><span>modules</span></div>
-  <div><b>50</b><span>items</span></div>
-  <div><b>101</b><span>fields</span></div>
+  <div><b>49</b><span>items</span></div>
+  <div><b>99</b><span>fields</span></div>
   <div><b>23</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -40,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-api.html"><span>command_session.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-workspace-api--src-file-ops-rs.html"><span>file_ops.rs</span><small>9/9</small></a></li><li><a class="file-link active" href="eos-workspace-api--src-lease-rs.html"><span>lease.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-mode-rs.html"><span>mode.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-mutation-rs.html"><span>mutation.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-read-view-rs.html"><span>read_view.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-response-rs.html"><span>response.rs</span><small>2/2</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lease crates/eos-workspace-api/src/lease.rs SnapshotLease Lifecycle">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-api.html"><span>command_session.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-workspace-api--src-file-ops-rs.html"><span>file_ops.rs</span><small>9/9</small></a></li><li><a class="file-link active" href="eos-workspace-api--src-lease-rs.html"><span>lease.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-mode-rs.html"><span>mode.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-mutation-rs.html"><span>mutation.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-read-view-rs.html"><span>read_view.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workspace-api--src-response-rs.html"><span>response.rs</span><small>2/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lease crates/eos-workspace-api/src/lease.rs SnapshotLease">
   <div class="module-head">
     <div>
       <h2>src/lease.rs</h2>
@@ -49,36 +50,24 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>2 types</span>
+      <span>1 types</span>
       <span>0 impls</span>
       <span>0 fns</span>
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SnapshotLease-12" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SnapshotLease pub pub struct SnapshotLease crates/eos-workspace-api/src/lease.rs lease_id String manifest_version i64 manifest_root_hash String layer_paths Vec &lt; PathBuf &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SnapshotLease-11" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SnapshotLease pub pub struct SnapshotLease crates/eos-workspace-api/src/lease.rs lease_id String manifest_version i64 manifest_root_hash String layer_paths Vec &lt; PathBuf &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SnapshotLease</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api--src-lease-rs.html#item-struct-SnapshotLease-12">SnapshotLease</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api--src-lease-rs.html#item-struct-SnapshotLease-11">SnapshotLease</a></code>
   <p class="docstring">Snapshot lease material needed to mount a fresh overlay (snapshot/lease HINGE<br>only).<br>Carries the lease id, the manifest coordinates captured at acquire time, and<br>the lower-layer paths the overlay mounts (newest-first). Releasing the lease<br>is rollback/teardown — it NEVER publishes upperdir changes.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>lease_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>manifest_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>manifest_root_hash</td><td><code>String</code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-workspace-api/src/lease.rs:12</p>
-</article><article id="item-struct-Lifecycle-30" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Lifecycle pub pub struct Lifecycle crates/eos-workspace-api/src/lease.rs created_at f64 last_activity f64 ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>Lifecycle</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api--src-lease-rs.html#item-struct-Lifecycle-30">Lifecycle</a></code>
-  <p class="docstring">Create/last-activity timestamps for a workspace run (TTL sweep input).</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>created_at</td><td><code>f64</code></td></tr><tr><td>pub</td><td>last_activity</td><td><code>f64</code></td></tr></tbody></table>
-
-  <p class="source">crates/eos-workspace-api/src/lease.rs:30</p>
+  <p class="source">crates/eos-workspace-api/src/lease.rs:11</p>
 </article></div>
 </section></div>
 </main>
@@ -87,12 +76,11 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-workspace-api/src/lease.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Shared snapshot-lease and lifecycle value objects.</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Shared snapshot-lease value object.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! Both ephemeral and isolated workspace runs borrow a LayerStack snapshot to</span>
-<span class="rs-comment">//! mount their overlay and track create/last-activity timestamps for TTL</span>
-<span class="rs-comment">//! sweeps. These are pure value objects with no daemon, LayerStack, or OCC</span>
-<span class="rs-comment">//! dependency; releasing a lease is rollback/teardown and NEVER a publish.</span>
+<span class="rs-comment">//! mount their overlay. This is a pure value object with no daemon, LayerStack,</span>
+<span class="rs-comment">//! or OCC dependency; releasing a lease is rollback/teardown and NEVER a publish.</span>
 
 <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
 
@@ -105,7 +93,7 @@
 <span class="rs-comment">/// the lower-layer paths the overlay mounts (newest-first). Releasing the lease</span>
 <span class="rs-comment">/// is rollback/teardown — it NEVER publishes upperdir changes.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api--src-lease-rs.html#item-struct-SnapshotLease-12">SnapshotLease</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api--src-lease-rs.html#item-struct-SnapshotLease-11">SnapshotLease</a> {
     <span class="rs-comment">/// Lease id to release on exit/rollback.</span>
     <span class="rs-kw">pub</span> lease_id: <span class="rs-type">String</span>,
     <span class="rs-comment">/// Active manifest version captured at acquire time.</span>
@@ -114,15 +102,6 @@
     <span class="rs-kw">pub</span> manifest_root_hash: <span class="rs-type">String</span>,
     <span class="rs-comment">/// Lower-layer paths to feed the overlay mount (newest-first).</span>
     <span class="rs-kw">pub</span> layer_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
-}
-
-<span class="rs-comment">/// Create/last-activity timestamps for a workspace run (TTL sweep input).</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api--src-lease-rs.html#item-struct-Lifecycle-30">Lifecycle</a> {
-    <span class="rs-comment">/// Monotonic create time (seconds).</span>
-    <span class="rs-kw">pub</span> created_at: f64,
-    <span class="rs-comment">/// Monotonic last-activity time (seconds); TTL input.</span>
-    <span class="rs-kw">pub</span> last_activity: f64,
 }
 </code></pre>
 </section>

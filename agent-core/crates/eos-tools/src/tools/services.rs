@@ -6,15 +6,15 @@
 use std::{fmt, sync::Arc};
 
 use async_trait::async_trait;
-use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
+use eos_sandbox_port::{
+    DaemonOp, SandboxCommandApi, SandboxCommandService, SandboxPortError, SandboxTransport,
+};
 use eos_skills::SkillRegistry;
 use eos_state::{RequestStore, TaskStore};
 use eos_types::{JsonObject, SandboxId};
 
-use crate::core::error::ToolError;
 use crate::ports::{
-    AttemptSubmissionPort, CommandServicePort, CommandSessionPort, Sealed, SubagentSessionPort,
-    WorkflowServicePort,
+    AttemptSubmissionPort, CommandSessionPort, SubagentSessionPort, WorkflowServicePort,
 };
 
 /// Store access for the root terminal.
@@ -92,7 +92,7 @@ impl fmt::Debug for SandboxToolService {
 /// Command-session tool dependencies.
 #[derive(Clone)]
 pub struct CommandToolService {
-    pub(crate) command_service: Arc<dyn CommandServicePort>,
+    pub(crate) command_service: Arc<dyn SandboxCommandApi>,
     pub(crate) command_session_port: Option<Arc<dyn CommandSessionPort>>,
 }
 
@@ -104,7 +104,7 @@ impl CommandToolService {
         command_session_port: Option<Arc<dyn CommandSessionPort>>,
     ) -> Self {
         Self::with_command_service(
-            Arc::new(TransportCommandService::new(transport)),
+            Arc::new(SandboxCommandService::new(transport)),
             command_session_port,
         )
     }
@@ -112,7 +112,7 @@ impl CommandToolService {
     /// Build command tool services from the command resource service.
     #[must_use]
     pub fn with_command_service(
-        command_service: Arc<dyn CommandServicePort>,
+        command_service: Arc<dyn SandboxCommandApi>,
         command_session_port: Option<Arc<dyn CommandSessionPort>>,
     ) -> Self {
         Self {
@@ -130,105 +130,6 @@ impl fmt::Debug for CommandToolService {
                 &self.command_session_port.is_some(),
             )
             .finish_non_exhaustive()
-    }
-}
-
-#[derive(Clone)]
-struct TransportCommandService {
-    transport: Arc<dyn SandboxTransport>,
-}
-
-impl std::fmt::Debug for TransportCommandService {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TransportCommandService")
-            .finish_non_exhaustive()
-    }
-}
-
-impl TransportCommandService {
-    fn new(transport: Arc<dyn SandboxTransport>) -> Self {
-        Self { transport }
-    }
-}
-
-impl Sealed for TransportCommandService {}
-
-#[async_trait]
-impl CommandServicePort for TransportCommandService {
-    async fn exec_command(
-        &self,
-        sandbox_id: &SandboxId,
-        request: &eos_sandbox_port::ExecCommandRequest,
-    ) -> Result<eos_sandbox_port::ExecCommandResult, ToolError> {
-        eos_sandbox_port::exec_command(&*self.transport, sandbox_id, request)
-            .await
-            .map_err(ToolError::Sandbox)
-    }
-
-    async fn write_stdin(
-        &self,
-        sandbox_id: &SandboxId,
-        request: &eos_sandbox_port::ExecStdinRequest,
-    ) -> Result<eos_sandbox_port::ExecCommandResult, ToolError> {
-        eos_sandbox_port::exec_stdin(&*self.transport, sandbox_id, request)
-            .await
-            .map_err(ToolError::Sandbox)
-    }
-
-    async fn read_command_progress(
-        &self,
-        sandbox_id: &SandboxId,
-        request: &eos_sandbox_port::ReadCommandProgressRequest,
-    ) -> Result<eos_sandbox_port::ExecCommandResult, ToolError> {
-        eos_sandbox_port::read_command_progress(&*self.transport, sandbox_id, request)
-            .await
-            .map_err(ToolError::Sandbox)
-    }
-
-    async fn cancel_command_session(
-        &self,
-        sandbox_id: &SandboxId,
-        request: &eos_sandbox_port::CommandSessionCancelRequest,
-    ) -> Result<eos_sandbox_port::ExecCommandResult, ToolError> {
-        eos_sandbox_port::cancel_command_session(&*self.transport, sandbox_id, request)
-            .await
-            .map_err(ToolError::Sandbox)
-    }
-
-    async fn collect_completed_commands(
-        &self,
-        sandbox_id: &SandboxId,
-        caller_id: &eos_types::AgentRunId,
-        command_session_ids: &[eos_types::CommandSessionId],
-    ) -> Result<Vec<JsonObject>, ToolError> {
-        let ids = command_session_ids
-            .iter()
-            .map(|id| id.as_str().to_owned())
-            .collect::<Vec<_>>();
-        eos_sandbox_port::collect_command_completions(
-            &*self.transport,
-            sandbox_id,
-            caller_id.as_str(),
-            &ids,
-        )
-        .await
-        .map_err(ToolError::Sandbox)
-    }
-
-    async fn cancel_commands_for_run(
-        &self,
-        sandbox_id: &SandboxId,
-        caller_id: &eos_types::AgentRunId,
-        _reason: &str,
-    ) -> Result<(), ToolError> {
-        eos_sandbox_port::cancel_workspace_runs_by_caller_id(
-            &*self.transport,
-            sandbox_id,
-            caller_id.as_str(),
-        )
-        .await
-        .map(|_| ())
-        .map_err(ToolError::Sandbox)
     }
 }
 

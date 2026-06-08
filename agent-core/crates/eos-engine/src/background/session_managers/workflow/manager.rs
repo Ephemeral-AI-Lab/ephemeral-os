@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use eos_ports::{Sealed, StartedWorkflow, WorkflowServicePort, WorkflowSessionPort};
+use eos_tool_core::{Sealed, StartedWorkflow, WorkflowServicePort, WorkflowSessionPort};
 use eos_types::{AgentRunId, WorkflowId, WorkflowSessionId};
 use tokio::sync::Mutex;
 
@@ -146,11 +146,11 @@ impl WorkflowSessionManager {
                 continue;
             };
             let status = match terminal.status {
-                eos_ports::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
-                eos_ports::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
-                eos_ports::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
-                eos_ports::SubagentSessionStatus::Running
-                | eos_ports::SubagentSessionStatus::Delivered => continue,
+                eos_tool_core::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
+                eos_tool_core::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
+                eos_tool_core::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
+                eos_tool_core::SubagentSessionStatus::Running
+                | eos_tool_core::SubagentSessionStatus::Delivered => continue,
             };
             if let Some(completion) = self.settle_running(session.id(), status).await {
                 completions.push(completion);
@@ -230,7 +230,7 @@ mod tests {
     use std::sync::{Arc, OnceLock};
 
     use async_trait::async_trait;
-    use eos_ports::{
+    use eos_tool_core::{
         OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus,
         TerminalWorkflow, ToolError, WorkflowServicePort,
     };

@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_ports::{
+use eos_tool_core::{
     AttemptSubmissionPort, CancelPort, OutstandingWorkflow, PlannerPlan, Sealed,
     StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus, SubmissionAck, TerminalWorkflow,
     WorkflowServicePort,
@@ -442,7 +442,7 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
-    use eos_ports::WorkflowServicePort as _;
+    use eos_tool_core::WorkflowServicePort as _;
     use eos_state::{AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus};
     use eos_types::JsonObject;
     use serde_json::json;

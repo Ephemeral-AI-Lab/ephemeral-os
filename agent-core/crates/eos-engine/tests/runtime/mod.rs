@@ -10,10 +10,11 @@ use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
 use eos_audit::NoopAuditSink;
 use eos_engine::{
     run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, AgentRunResult,
-    BackgroundTeardownPort, CommandService, EngineRunHandles, EventCallback, EventSourceFactory,
+    BackgroundTeardownPort, EngineRunHandles, EventCallback, EventSourceFactory,
     ForegroundExecutorFactory, StreamEvent, ToolRegistryExtender,
 };
 use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
+use eos_sandbox_port::SandboxCommandService;
 use eos_skills::SkillRegistry;
 use eos_state::{AgentRun, AgentRunStore, CoreError, Sealed, TaskId, UtcDateTime};
 use eos_testkit::{
@@ -679,7 +680,7 @@ fn control_factory_for(handles: EngineRunHandles) -> AgentRunControlFactory {
         // A long interval keeps the per-run heartbeat idle for the duration of
         // the test (no command sessions → no RPC); the control's drop aborts it.
         handles,
-        Arc::new(CommandService::new(Arc::new(FakeTransport))),
+        Arc::new(SandboxCommandService::new(Arc::new(FakeTransport))),
         std::time::Duration::from_secs(3600),
         Arc::new(std::sync::OnceLock::<Arc<dyn eos_tools::WorkflowServicePort>>::new()),
     )

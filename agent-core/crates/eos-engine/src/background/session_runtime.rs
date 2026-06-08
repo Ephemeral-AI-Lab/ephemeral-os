@@ -2,10 +2,8 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_ports::{
-    AgentRunServicePort, CommandServicePort, StartSubagentRunOutcome, StartSubagentRunRequest,
-    TerminalAgentRun,
-};
+use eos_tool_core::{AgentRunServicePort, StartSubagentRunOutcome, StartSubagentRunRequest, TerminalAgentRun};
+use eos_sandbox_port::SandboxCommandApi;
 use eos_tools::ports::{
     BackgroundSessionCounts, CancelledSubagent, CommandSessionPort, StartedWorkflow,
     SubagentProgress, SubagentSessionPort, WorkflowSessionPort,
@@ -42,7 +40,7 @@ impl BackgroundSessionRuntime {
     pub(super) fn new(
         agent_run_id: AgentRunId,
         agent_run_service: Arc<dyn AgentRunServicePort>,
-        command_service: Arc<dyn CommandServicePort>,
+        command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         notifications: NotificationService,
         workflow_service: WorkflowServiceCell,
@@ -141,7 +139,7 @@ impl BackgroundSessionService {
     pub fn new(
         agent_run_id: AgentRunId,
         handles: EngineRunHandles,
-        command_service: Arc<dyn CommandServicePort>,
+        command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         notifications: NotificationService,
         control_factory: AgentRunControlFactory,

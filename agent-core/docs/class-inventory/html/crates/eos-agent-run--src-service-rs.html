@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-run · src/service.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-agent-run File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>8</b><span>items</span></div>
+  <div><b>30</b><span>fields</span></div>
+  <div><b>9</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_runs.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-request-rs.html"><span>request.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="service crates/eos-agent-run/src/service.rs AgentRunApi">
+  <div class="module-head">
+    <div>
+      <h2>src/service.rs</h2>
+      <p class="path">module <code>service</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>4 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-trait-AgentRunApi-8" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AgentRunApi pub pub trait AgentRunApi crates/eos-agent-run/src/service.rs  spawn_agent async fn spawn_agent (&amp; self , request : SpawnAgentRequest ,) -&gt; Result &lt; AgentRunId , AgentRunError &gt; wait_for_agent_outcomes async fn wait_for_agent_outcomes (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; AgentRunOutcome , AgentRunError &gt; poll_agent_run_outcome async fn poll_agent_run_outcome (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt; cancel_agent_run async fn cancel_agent_run (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , AgentRunError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>AgentRunApi</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-agent-run--src-service-rs.html#item-trait-AgentRunApi-8">AgentRunApi</a></code>
+  <p class="docstring">Lifecycle API for spawning, waiting, polling, and cancelling agent runs.</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-spawn-agent-11"><td>required</td><td>spawn_agent</td><td><code>async fn <a class="symbol-link" href="eos-agent-run--src-service-rs.html#method-spawn-agent-11">spawn_agent</a> (&amp; self , request : <a class="symbol-link" href="eos-agent-run--src-request-rs.html#item-struct-SpawnAgentRequest-8">SpawnAgentRequest</a> ,) -&gt; Result &lt; AgentRunId , <a class="symbol-link" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a> &gt;</code><p class="docstring">Spawn an agent and return its natural run id immediately.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Spawn an agent and return its natural run id immediately.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-spawn-agent-11">spawn_agent</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-agent-run--src-request-rs.html#item-struct-SpawnAgentRequest-8">SpawnAgentRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunId</span>, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-wait-for-agent-outcomes-17"><td>required</td><td>wait_for_agent_outcomes</td><td><code>async fn <a class="symbol-link" href="eos-agent-run--src-service-rs.html#method-wait-for-agent-outcomes-17">wait_for_agent_outcomes</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a> , <a class="symbol-link" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a> &gt;</code><p class="docstring">Wait for one agent run to publish a terminal outcome.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Wait for one agent run to publish a terminal outcome.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-wait-for-agent-outcomes-17">wait_for_agent_outcomes</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-poll-agent-run-outcome-23"><td>required</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-agent-run--src-service-rs.html#method-poll-agent-run-outcome-23">poll_agent_run_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a> &gt; , <a class="symbol-link" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a> &gt;</code><p class="docstring">Nonblocking terminal outcome poll for background managers.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Nonblocking terminal outcome poll for background managers.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-poll-agent-run-outcome-23">poll_agent_run_outcome</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-cancel-agent-run-29"><td>required</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-agent-run--src-service-rs.html#method-cancel-agent-run-29">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a> &gt;</code><p class="docstring">Cancel one active agent run.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel one active agent run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-cancel-agent-run-29">cancel_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-run/src/service.rs:8</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-agent-run/src/service.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Agent-run lifecycle trait.</span>
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-request-rs.html#item-struct-SpawnAgentRequest-8">SpawnAgentRequest</a>};
+
+<span class="rs-comment">/// Lifecycle API for spawning, waiting, polling, and cancelling agent runs.</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-agent-run--src-service-rs.html#item-trait-AgentRunApi-8">AgentRunApi</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Spawn an agent and return its natural run id immediately.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-spawn-agent-11">spawn_agent</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-agent-run--src-request-rs.html#item-struct-SpawnAgentRequest-8">SpawnAgentRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunId</span>, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+
+    <span class="rs-comment">/// Wait for one agent run to publish a terminal outcome.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-wait-for-agent-outcomes-17">wait_for_agent_outcomes</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+
+    <span class="rs-comment">/// Nonblocking terminal outcome poll for background managers.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-poll-agent-run-outcome-23">poll_agent_run_outcome</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-run--src-outcome-rs.html#item-struct-AgentRunOutcome-7">AgentRunOutcome</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+
+    <span class="rs-comment">/// Cancel one active agent run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-cancel-agent-run-29">cancel_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-run--src-error-rs.html#item-enum-AgentRunError-5">AgentRunError</a>&gt;;
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

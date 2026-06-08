@@ -4,8 +4,11 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_agent_def::{AgentName, AgentType};
 use eos_agent_message_records::AgentRunRecordKind;
+use eos_agent_run::{
+    AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,
+};
 use eos_llm_client::Message;
-use eos_ports::{
+use eos_tool_core::{
     AgentRunServicePort, CommandSessionPort, Sealed, StartSubagentRunOutcome,
     StartSubagentRunRequest, StartedSubagentRun, SubagentLaunchRejection, SubagentSessionStatus,
     TerminalAgentRun, ToolError, ToolResult,
@@ -14,6 +17,7 @@ use eos_state::AgentRun;
 use eos_types::{AgentRunId, JsonObject};
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
+use tokio::sync::watch;
 use tokio::task::AbortHandle;
 
 use crate::background::BackgroundTeardownPort;
@@ -31,6 +35,7 @@ pub struct AgentRunService {
 struct SubagentRunHandle {
     control: Arc<crate::AgentRunControl>,
     abort: AbortHandle,
+    outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
 }
 
 impl std::fmt::Debug for AgentRunService {
@@ -51,6 +56,184 @@ impl AgentRunService {
 }
 
 impl Sealed for AgentRunService {}
+
+#[async_trait]
+impl AgentRunApi for AgentRunService {
+    async fn spawn_agent(
+        &self,
+        request: SpawnAgentRequest,
+    ) -> Result<AgentRunId, AgentRunError> {
+        let registry = &self.handles.agent_registry;
+        let requested_agent_name = request.agent_name.as_str().to_owned();
+        let Some(agent_def) = registry.get(&request.agent_name) else {
+            return Err(AgentRunError::AgentNotRegistered(requested_agent_name));
+        };
+        if matches!(request.record_kind, AgentRunRecordKind::Subagent { .. })
+            && agent_def.agent_type != AgentType::Subagent
+        {
+            return Err(AgentRunError::WrongAgentType {
+                agent_name: requested_agent_name,
+                expected: "subagent",
+                actual: agent_type_value(agent_def.agent_type),
+            });
+        }
+
+        let agent_def = (**agent_def).clone();
+        let agent_run_id = request.agent_run_id.unwrap_or_else(AgentRunId::new_v4);
+        let control = self
+            .control_factory
+            .persisted(agent_run_id.clone(), request.task_id.clone());
+        let background = control.background();
+        let background_port: Arc<dyn BackgroundTeardownPort> = Arc::new(background.clone());
+        let command_port: Arc<dyn CommandSessionPort> = Arc::new(background.clone());
+        let agent_run_port: Arc<dyn AgentRunServicePort> = Arc::new(background.clone());
+        let subagent_port: Arc<dyn eos_tool_core::SubagentSessionPort> =
+            Arc::new(background.clone());
+        let workflow_port: Arc<dyn eos_tool_core::WorkflowSessionPort> = Arc::new(background);
+        let meta = eos_tool_core::ExecutionMetadata {
+            agent_name: agent_def.name.as_str().to_owned(),
+            agent_run_id: Some(agent_run_id.clone()),
+            request_id: request.request_id.clone(),
+            task_id: request.task_id.clone(),
+            attempt_id: request.attempt_id.clone(),
+            workflow_id: request.workflow_id.clone(),
+            tool_use_id: None,
+            sandbox_invocation_id: None,
+            sandbox_id: request.sandbox_id.clone(),
+            is_isolated_workspace_mode: request.is_isolated_workspace_mode,
+            workspace_root: request.workspace_root,
+            conversation: Arc::from(Vec::<Message>::new()),
+        };
+
+        let run_input = AgentRunInput {
+            agent: agent_def,
+            initial_messages: request.initial_messages,
+            task_id: request.task_id,
+            agent_run_id: agent_run_id.clone(),
+            tool_metadata: meta,
+            attempt_submission: None,
+            agent_run_service: Some(agent_run_port),
+            subagent_sessions: Some(subagent_port),
+            workflow_service: None,
+            workflow_sessions: Some(workflow_port),
+            background_session: Some(background_port),
+            command_session_port: Some(command_port),
+            notifier: control.notifications(),
+            cancellation: control.cancellation(),
+            foreground: control.foreground(),
+            agent_run_registry: None,
+            persist_agent_run: request.persist,
+            record_kind: request.record_kind,
+        };
+
+        let (outcome_tx, _) = watch::channel(None);
+        let publish_tx = outcome_tx.clone();
+        let handles = self.handles.clone();
+        let spawned_agent_run_id = agent_run_id.clone();
+        let join = tokio::spawn(async move {
+            let run = run_agent(&handles, run_input, None).await;
+            let outcome = outcome_from_run(spawned_agent_run_id, run);
+            let _ = publish_tx.send(Some(outcome));
+        });
+        self.runs.lock().await.insert(
+            agent_run_id.clone(),
+            SubagentRunHandle {
+                control,
+                abort: join.abort_handle(),
+                outcome_tx,
+            },
+        );
+
+        Ok(agent_run_id)
+    }
+
+    async fn wait_for_agent_outcomes(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<AgentRunOutcome, AgentRunError> {
+        if let Some(outcome) = self.poll_agent_run_outcome(agent_run_id).await? {
+            return Ok(outcome);
+        }
+        let mut rx = {
+            let guard = self.runs.lock().await;
+            guard
+                .get(agent_run_id)
+                .map(|handle| handle.outcome_tx.subscribe())
+                .ok_or_else(|| AgentRunError::NotActiveInProcess(agent_run_id.clone()))?
+        };
+        loop {
+            if let Some(outcome) = rx.borrow().clone() {
+                return Ok(outcome);
+            }
+            rx.changed()
+                .await
+                .map_err(|_| AgentRunError::CompletionChannelClosed(agent_run_id.clone()))?;
+        }
+    }
+
+    async fn poll_agent_run_outcome(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<Option<AgentRunOutcome>, AgentRunError> {
+        if let Some(outcome) = self
+            .runs
+            .lock()
+            .await
+            .get(agent_run_id)
+            .and_then(|handle| handle.outcome_tx.borrow().clone())
+        {
+            return Ok(Some(outcome));
+        }
+        let Some(run) = self
+            .handles
+            .agent_run_store
+            .get(agent_run_id)
+            .await
+            .map_err(|err| AgentRunError::Internal(err.to_string()))?
+        else {
+            return Ok(None);
+        };
+        Ok(completion_from_agent_run(&run).map(|(status, result)| AgentRunOutcome {
+            agent_run_id: agent_run_id.clone(),
+            status: subagent_status_to_agent_run_status(status),
+            terminal_result: Some(result),
+            terminal_payload: run.terminal_tool_result.clone(),
+            message_history: Vec::new(),
+            token_count: Some(run.token_count),
+            error: run.error.clone(),
+        }))
+    }
+
+    async fn cancel_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        reason: &str,
+    ) -> Result<(), AgentRunError> {
+        let Some(handle) = self.runs.lock().await.remove(agent_run_id) else {
+            return Ok(());
+        };
+        handle
+            .control
+            .finalization()
+            .finish_cancelled(reason)
+            .await
+            .map_err(|err| AgentRunError::Internal(err.to_string()))?;
+        handle.abort.abort();
+        let _ = handle.outcome_tx.send(Some(AgentRunOutcome {
+            agent_run_id: agent_run_id.clone(),
+            status: AgentRunStatus::Cancelled,
+            terminal_result: Some(
+                ToolResult::error(format!("agent run cancelled: {reason}"))
+                    .meta("agent_run_cancelled", json!(true)),
+            ),
+            terminal_payload: None,
+            message_history: Vec::new(),
+            token_count: None,
+            error: Some(reason.to_owned()),
+        }));
+        Ok(())
+    }
+}
 
 #[async_trait]
 impl AgentRunServicePort for AgentRunService {
@@ -77,99 +260,69 @@ impl AgentRunServicePort for AgentRunService {
                 },
             ));
         };
-        let Some(sub_def) = registry.get(&target) else {
-            return Ok(StartSubagentRunOutcome::Rejected(
+        let parent_agent_run_id = ctx.require_agent_run_id()?.clone();
+        match self
+            .spawn_agent(SpawnAgentRequest {
+                agent_name: target,
+                agent_run_id: None,
+                initial_messages: vec![
+                    Message::from_user_text(request.prompt),
+                    Message::from_user_text(request.guidance),
+                ],
+                parent_agent_run_id: Some(parent_agent_run_id.clone()),
+                request_id: ctx.request_id.clone(),
+                task_id: None,
+                attempt_id: None,
+                workflow_id: None,
+                sandbox_id: ctx.sandbox_id.clone(),
+                workspace_root: ctx.workspace_root.clone(),
+                is_isolated_workspace_mode: ctx.is_isolated_workspace_mode,
+                persist: true,
+                record_kind: AgentRunRecordKind::Subagent {
+                    parent_agent_run_id,
+                },
+            })
+            .await
+        {
+            Ok(agent_run_id) => Ok(StartSubagentRunOutcome::Started(StartedSubagentRun {
+                agent_run_id,
+                agent_name: requested_agent_name,
+            })),
+            Err(AgentRunError::AgentNotRegistered(_)) => Ok(StartSubagentRunOutcome::Rejected(
                 SubagentLaunchRejection::NotRegistered {
                     agent_name: requested_agent_name,
                 },
-            ));
-        };
-        if sub_def.agent_type != AgentType::Subagent {
-            return Ok(StartSubagentRunOutcome::Rejected(
-                SubagentLaunchRejection::NotSubagent {
+            )),
+            Err(AgentRunError::WrongAgentType { actual, .. }) => Ok(
+                StartSubagentRunOutcome::Rejected(SubagentLaunchRejection::NotSubagent {
                     agent_name: requested_agent_name,
-                    agent_type: agent_type_value(sub_def.agent_type).to_owned(),
-                },
-            ));
+                    agent_type: actual.to_owned(),
+                }),
+            ),
+            Err(AgentRunError::RecursiveSubagent) => Ok(StartSubagentRunOutcome::Rejected(
+                SubagentLaunchRejection::Recursive,
+            )),
+            Err(err) => Err(ToolError::Internal(err.to_string())),
         }
-
-        let caller_agent_run_id = ctx.require_agent_run_id()?.clone();
-        let sub_def = (**sub_def).clone();
-        let agent_run_id = AgentRunId::new_v4();
-        let subagent_control = self.control_factory.persisted(agent_run_id.clone(), None);
-        let subagent_background = subagent_control.background();
-        let subagent_background_port: Arc<dyn BackgroundTeardownPort> =
-            Arc::new(subagent_background.clone());
-        let subagent_command_port: Arc<dyn CommandSessionPort> = Arc::new(subagent_background);
-        let mut subagent_meta = ctx;
-        subagent_meta.agent_name = sub_def.name.as_str().to_owned();
-        subagent_meta.agent_run_id = Some(agent_run_id.clone());
-        subagent_meta.conversation = Arc::from(Vec::<Message>::new());
-        subagent_meta.tool_use_id = None;
-
-        let run_input = AgentRunInput {
-            agent: sub_def,
-            initial_messages: vec![
-                Message::from_user_text(request.prompt),
-                Message::from_user_text(request.guidance),
-            ],
-            task_id: None,
-            agent_run_id: agent_run_id.clone(),
-            tool_metadata: subagent_meta,
-            attempt_submission: None,
-            agent_run_service: None,
-            subagent_sessions: None,
-            workflow_service: None,
-            workflow_sessions: None,
-            background_session: Some(subagent_background_port),
-            command_session_port: Some(subagent_command_port),
-            notifier: subagent_control.notifications(),
-            cancellation: subagent_control.cancellation(),
-            foreground: subagent_control.foreground(),
-            agent_run_registry: None,
-            persist_agent_run: true,
-            record_kind: AgentRunRecordKind::Subagent {
-                parent_agent_run_id: caller_agent_run_id,
-            },
-        };
-
-        let handles = self.handles.clone();
-        let control = subagent_control.clone();
-        let join = tokio::spawn(async move {
-            let _subagent_control = subagent_control;
-            let run = run_agent(&handles, run_input, None).await;
-            if let Some(error) = run.error {
-                tracing::warn!(error = %error, "background subagent run failed");
-            }
-        });
-        self.runs.lock().await.insert(
-            agent_run_id.clone(),
-            SubagentRunHandle {
-                control,
-                abort: join.abort_handle(),
-            },
-        );
-
-        Ok(StartSubagentRunOutcome::Started(StartedSubagentRun {
-            agent_run_id,
-            agent_name: requested_agent_name,
-        }))
     }
 
     async fn poll_terminal_agent_run(
         &self,
         agent_run_id: &AgentRunId,
     ) -> Result<Option<TerminalAgentRun>, ToolError> {
-        let Some(run) = self.handles.agent_run_store.get(agent_run_id).await? else {
+        let Some(outcome) = self
+            .poll_agent_run_outcome(agent_run_id)
+            .await
+            .map_err(|err| ToolError::Internal(err.to_string()))?
+        else {
             return Ok(None);
         };
-        let Some((status, result)) = completion_from_agent_run(&run) else {
+        let Some(result) = outcome.terminal_result else {
             return Ok(None);
         };
-        self.runs.lock().await.remove(agent_run_id);
         Ok(Some(TerminalAgentRun {
             agent_run_id: agent_run_id.clone(),
-            status,
+            status: agent_run_status_to_subagent_status(outcome.status),
             result,
         }))
     }
@@ -179,17 +332,47 @@ impl AgentRunServicePort for AgentRunService {
         agent_run_id: &AgentRunId,
         reason: &str,
     ) -> Result<(), ToolError> {
-        let Some(handle) = self.runs.lock().await.remove(agent_run_id) else {
-            return Ok(());
-        };
-        handle
-            .control
-            .finalization()
-            .finish_cancelled(reason)
+        AgentRunApi::cancel_agent_run(self, agent_run_id, reason)
             .await
-            .map_err(|err| ToolError::Internal(err.to_string()))?;
-        handle.abort.abort();
-        Ok(())
+            .map_err(|err| ToolError::Internal(err.to_string()))
+    }
+}
+
+fn outcome_from_run(agent_run_id: AgentRunId, run: crate::AgentRunResult) -> AgentRunOutcome {
+    let missing_terminal = run.error.is_none() && run.terminal_result.is_none();
+    let error = run.error.or_else(|| {
+        missing_terminal.then(|| "agent exited without calling a terminal tool".to_owned())
+    });
+    AgentRunOutcome {
+        agent_run_id,
+        status: if error.is_some() {
+            AgentRunStatus::Failed
+        } else {
+            AgentRunStatus::Completed
+        },
+        terminal_result: run.terminal_result,
+        terminal_payload: None,
+        message_history: Vec::new(),
+        token_count: None,
+        error,
+    }
+}
+
+const fn subagent_status_to_agent_run_status(status: SubagentSessionStatus) -> AgentRunStatus {
+    match status {
+        SubagentSessionStatus::Completed | SubagentSessionStatus::Delivered => {
+            AgentRunStatus::Completed
+        }
+        SubagentSessionStatus::Cancelled => AgentRunStatus::Cancelled,
+        SubagentSessionStatus::Running | SubagentSessionStatus::Failed => AgentRunStatus::Failed,
+    }
+}
+
+const fn agent_run_status_to_subagent_status(status: AgentRunStatus) -> SubagentSessionStatus {
+    match status {
+        AgentRunStatus::Completed => SubagentSessionStatus::Completed,
+        AgentRunStatus::Failed => SubagentSessionStatus::Failed,
+        AgentRunStatus::Cancelled => SubagentSessionStatus::Cancelled,
     }
 }
 

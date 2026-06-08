@@ -8,6 +8,7 @@
 </head>
 <body>
   <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
     <div class="header-row">
       <div>
         <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
@@ -658,7 +659,7 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> async_trait::async_trait;
-<span class="rs-kw">use</span> eos_ports::{
+<span class="rs-kw">use</span> eos_tool_core::{
     <span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">CancelPort</span>, <span class="rs-type">OutstandingWorkflow</span>, <span class="rs-type">PlannerPlan</span>, <span class="rs-type">Sealed</span>,
     <span class="rs-type">StartWorkflowRequest</span>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>, <span class="rs-type">SubagentSessionStatus</span>, <span class="rs-type">SubmissionAck</span>, <span class="rs-type">TerminalWorkflow</span>,
     <span class="rs-type">WorkflowServicePort</span>,
@@ -1097,7 +1098,7 @@
     <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
     <span class="rs-kw">use</span> async_trait::async_trait;
-    <span class="rs-kw">use</span> eos_ports::<span class="rs-type">WorkflowServicePort</span> <span class="rs-kw">as</span> _;
+    <span class="rs-kw">use</span> eos_tool_core::<span class="rs-type">WorkflowServicePort</span> <span class="rs-kw">as</span> _;
     <span class="rs-kw">use</span> eos_state::{<span class="rs-type">AttemptStatus</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">WorkflowStatus</span>};
     <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
     <span class="rs-kw">use</span> serde_json::json;

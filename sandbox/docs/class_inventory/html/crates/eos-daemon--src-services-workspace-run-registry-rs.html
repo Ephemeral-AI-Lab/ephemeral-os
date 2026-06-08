@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/services/workspace_run/registry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>60</b><span>modules</span></div>
+  <div><b>596</b><span>items</span></div>
+  <div><b>261</b><span>fields</span></div>
+  <div><b>176</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-base-rs.html"><span>base.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>1/20</small></a></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-occ-mod-rs.html"><span>mod.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-daemon--src-services-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-overlay-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-mod-rs.html"><span>mod.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_router</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html"><span>ppc_router.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-process-rs.html"><span>process.rs</span><small>3/19</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugins-state-rs.html"><span>state.rs</span><small>3/11</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>1/29</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>3/11</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-ephemeral-rs.html"><span>ephemeral.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-isolated-rs.html"><span>isolated.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-ports-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link active" href="eos-daemon--src-services-workspace-run-registry-rs.html"><span>registry.rs</span><small>7/3</small></a></li><li><a class="file-link" href="eos-daemon--src-services-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/7</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="services::workspace_run::registry crates/eos-daemon/src/services/workspace_run/registry.rs PolicyArc RunSession impl RunSession WorkspaceRunKind EphemeralWorkspaceRun IsolatedWorkspaceRun CallerRun impl CallerRun CompletedEntry WorkspaceRunRegistry impl WorkspaceRunRegistry lock sample_completion push_completed_evicts_oldest_beyond_cap">
+  <div class="module-head">
+    <div>
+      <h2>src/services/workspace_run/registry.rs</h2>
+      <p class="path">module <code>services::workspace_run::registry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>7 types</span>
+      <span>3 impls</span>
+      <span>3 fns</span>
+      <span>17 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-WorkspaceRunKind-36" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum WorkspaceRunKind pub pub enum WorkspaceRunKind crates/eos-daemon/src/services/workspace_run/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>WorkspaceRunKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a></code>
+  <p class="docstring">Which workspace a starting command session belongs to. The daemon picks the<br>kind from the caller's current mode; the registry uses it to place the session<br>into a fresh ephemeral workspace run or the caller's isolated run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code></code></td></tr><tr><td>Isolated</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:36</p>
+</article><article id="item-struct-RunSession-21" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RunSession pub(crate) pub(crate) struct RunSession crates/eos-daemon/src/services/workspace_run/registry.rs session CommandSession policy PolicyArc ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunSession</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a></code>
+  <p class="docstring">One command session paired with the workspace policy that owns its overlay<br>(ephemeral) or namespace (isolated) state. The session is the PTY substrate;<br>the policy decides publish (complete) vs discard (cancel).</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>session</td><td><code>CommandSession</code></td></tr><tr><td>pub(crate)</td><td>policy</td><td><code><a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-30"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> (session : CommandSession , policy : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session: <span class="rs-type">CommandSession</span>, policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { session, policy }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:21</p>
+</article><article id="item-struct-WorkspaceRunRegistry-123" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceRunRegistry pub(crate) pub(crate) struct WorkspaceRunRegistry crates/eos-daemon/src/services/workspace_run/registry.rs runs Mutex &lt; HashMap &lt; String , CallerRun &gt; &gt; completed Mutex &lt; HashMap &lt; String , CompletedEntry &gt; &gt; counter AtomicU64 completed_seq AtomicU64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceRunRegistry</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a></code>
+  <div class="tags"><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>runs</td><td><code>Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>completed</td><td><code>Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-CompletedEntry-118">CompletedEntry</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>counter</td><td><code>AtomicU64</code></td></tr><tr><td>private</td><td>completed_seq</td><td><code>AtomicU64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-132"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            runs: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()),
+            completed: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()),
+            counter: <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(1),
+            completed_seq: <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(1),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-next-id-142"><td>method</td><td>next_id</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a> (&amp; self) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        format!(&quot;cmd_{}&quot;, <span class="rs-self">self</span>.counter.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>))
+    }
+</code></pre>
+</details></td></tr><tr id="method-insert-147"><td>method</td><td>insert</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; , kind : <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>)</code><p class="docstring">Place a started run into its caller's runs: a fresh ephemeral workspace<br>run, or the caller's (created-on-first-session) isolated run.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Place a started run into its caller's runs: a fresh ephemeral workspace</span>
+    <span class="rs-comment">/// run, or the caller's (created-on-first-session) isolated run.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;, kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>) {
+        <span class="rs-kw">let</span> caller_id = run.session.caller_id().to_owned();
+        <span class="rs-kw">let</span> session_id = run.session.id().to_owned();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> kind {
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs
+                    .entry(caller_id)
+                    .or_insert_with(|| <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Ephemeral</span>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()));
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) = caller {
+                    ephemeral.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(session_id, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-EphemeralWorkspaceRun-45">EphemeralWorkspaceRun</a> { run });
+                }
+            }
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Isolated</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs.entry(caller_id).or_insert_with(|| {
+                    <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-IsolatedWorkspaceRun-52">IsolatedWorkspaceRun</a> {
+                        sessions: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+                    })
+                });
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Isolated</span>(isolated) = caller {
+                    isolated.sessions.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(session_id, run);
+                }
+            }
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-175"><td>method</td><td>get</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a> (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs).values().find_map(|run| run.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(id))
+    }
+</code></pre>
+</details></td></tr><tr id="method-remove-180"><td>method</td><td>remove</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a> (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">let</span> caller = runs
+            .iter()
+            .find(|(_, run)| run.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(id).is_some())
+            .map(|(caller, _)| caller.clone())?;
+        <span class="rs-kw">let</span> (run, now_empty) = runs
+            .get_mut(&amp;caller)
+            .map(|run| run.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>(id))
+            .unwrap_or((<span class="rs-type">None</span>, <span class="rs-kw">false</span>));
+        <span class="rs-kw">if</span> now_empty {
+            runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;caller);
+        }
+        run
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-by-caller-196"><td>method</td><td>count_by_caller</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-kw">let</span> runs = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> caller_id {
+            <span class="rs-type">Some</span>(caller) =&gt; runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(caller).map_or(0, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::count),
+            <span class="rs-type">None</span> =&gt; runs.values().map(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::count).sum(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-live-205"><td>method</td><td>live</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a> (&amp; self) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .values()
+            .flat_map(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::sessions)
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-caller-sessions-213"><td>method</td><td>caller_sessions</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-caller-sessions-213">caller_sessions</a> (&amp; self , caller_id : &amp; str) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code><p class="docstring">All live runs owned by `caller_id` (drives per-caller cleanup).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All live runs owned by `caller_id` (drives per-caller cleanup).</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-caller-sessions-213">caller_sessions</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(caller_id)
+            .map(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::sessions)
+            .unwrap_or_default()
+    }
+</code></pre>
+</details></td></tr><tr id="method-push-completed-223"><td>method</td><td>push_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a> (&amp; self , completion : CommandSessionCompletion)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+        <span class="rs-kw">let</span> seq = <span class="rs-self">self</span>.completed_seq.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed);
+        completed.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(
+            completion.command_session_id.clone(),
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-CompletedEntry-118">CompletedEntry</a> { seq, completion },
+        );
+        <span class="rs-comment">// Bound memory: drop the oldest uncollected completion(s) past the cap.</span>
+        <span class="rs-kw">while</span> completed.len() &gt; <span class="rs-type">MAX_COMPLETED_ENTRIES</span> {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(oldest) = completed
+                .iter()
+                .min_by_key(|(_, entry)| entry.seq)
+                .map(|(id, _)| id.clone())
+            <span class="rs-kw">else</span> {
+                <span class="rs-kw">break</span>;
+            };
+            completed.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;oldest);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-take-completed-result-243"><td>method</td><td>take_completed_result</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a> (&amp; self , id : &amp; str) -&gt; Option &lt; CommandResponse &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandResponse</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed)
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(id)
+            .map(|entry| entry.completion.result)
+    }
+</code></pre>
+</details></td></tr><tr id="method-completed-result-249"><td>method</td><td>completed_result</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-completed-result-249">completed_result</a> (&amp; self , id : &amp; str) -&gt; Option &lt; CommandResponse &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-completed-result-249">completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandResponse</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed)
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(id)
+            .map(|entry| entry.completion.result.clone())
+    }
+</code></pre>
+</details></td></tr><tr id="method-collect-completed-256"><td>method</td><td>collect_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a> (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+        <span class="rs-kw">let</span> wanted: <span class="rs-type">Option</span>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;&gt; = request
+            .command_session_ids
+            .as_ref()
+            .map(|ids| ids.iter().cloned().collect());
+        <span class="rs-kw">let</span> caller_id = request.caller_id.as_deref();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed);
+        <span class="rs-kw">let</span> matched: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = completed
+            .iter()
+            .filter(|(id, entry)| {
+                <span class="rs-kw">let</span> id_matches = wanted.as_ref().is_none_or(|ids| ids.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(*id));
+                <span class="rs-kw">let</span> caller_matches =
+                    caller_id.is_none_or(|caller_id| entry.completion.caller_id == caller_id);
+                id_matches &amp;&amp; caller_matches
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        <span class="rs-kw">let</span> completions = matched
+            .iter()
+            .filter_map(|id| completed.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(id))
+            .map(|entry| {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completion = entry.completion;
+                completion.result = completion.notification_result.clone();
+                completion
+            })
+            .collect();
+        <span class="rs-type">CollectCompletedResponse</span> {
+            success: <span class="rs-kw">true</span>,
+            completions,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:123</p>
+</article><article id="item-struct-EphemeralWorkspaceRun-45" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralWorkspaceRun private struct EphemeralWorkspaceRun crates/eos-daemon/src/services/workspace_run/registry.rs run Arc &lt; RunSession &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EphemeralWorkspaceRun</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-EphemeralWorkspaceRun-45">EphemeralWorkspaceRun</a></code>
+  <p class="docstring">One ephemeral workspace run: **exactly one** command session. Each ephemeral<br>`exec_command` gets its own workspace (its snapshot lease + run dirs live in<br>the run's policy), so the workspace and its session are 1:1 and co-terminal.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>run</td><td><code>Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:45</p>
+</article><article id="item-struct-IsolatedWorkspaceRun-52" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedWorkspaceRun private struct IsolatedWorkspaceRun crates/eos-daemon/src/services/workspace_run/registry.rs sessions HashMap &lt; String , Arc &lt; RunSession &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IsolatedWorkspaceRun</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-IsolatedWorkspaceRun-52">IsolatedWorkspaceRun</a></code>
+  <p class="docstring">The isolated workspace run: **many** command sessions sharing the caller's one<br>isolated workspace (namespace + snapshot are owned by the isolated-session<br>subsystem; this run just tracks the command sessions running inside it).</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sessions</td><td><code>HashMap &lt; String , Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:52</p>
+</article><article id="item-struct-CompletedEntry-118" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CompletedEntry private struct CompletedEntry crates/eos-daemon/src/services/workspace_run/registry.rs seq u64 completion CommandSessionCompletion ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CompletedEntry</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-CompletedEntry-118">CompletedEntry</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>seq</td><td><code>u64</code></td></tr><tr><td>private</td><td>completion</td><td><code>CommandSessionCompletion</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:118</p>
+</article><article id="item-enum-CallerRun-59" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum CallerRun private enum CallerRun crates/eos-daemon/src/services/workspace_run/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CallerRun</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a></code>
+  <p class="docstring">A caller's workspace runs. The XOR — many ephemeral workspaces (each one<br>session) **or** the one isolated workspace (many sessions) — is enforced by<br>the isolated enter/exit gate and encoded structurally here: an ephemeral<br>caller maps to a set of single-session runs, an isolated caller to one<br>many-session run.</p>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code>0: HashMap &lt; String , <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-EphemeralWorkspaceRun-45">EphemeralWorkspaceRun</a> &gt;</code></td></tr><tr><td>Isolated</td><td><code>0: <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-IsolatedWorkspaceRun-52">IsolatedWorkspaceRun</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-sessions-70"><td>method</td><td>sessions</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-sessions-70">sessions</a> (&amp; self) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-sessions-70">sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.values().map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)).collect(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.values().cloned().collect(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-77"><td>method</td><td>get</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a> (&amp; self , session_id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;<span class="rs-self">self</span>, session_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(session_id).map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(session_id).cloned(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-84"><td>method</td><td>count</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-count-84">count</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-count-84">count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.len(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.len(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-take-91"><td>method</td><td>take</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a> (&amp; mut self , session_id : &amp; str) -&gt; (Option &lt; Arc &lt; <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> &gt; &gt; , bool)</code><p class="docstring">Remove `session_id`, returning the removed run and whether this caller<br>run is now empty (so the registry can drop the caller entry).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Remove `session_id`, returning the removed run and whether this caller</span>
+    <span class="rs-comment">/// run is now empty (so the registry can drop the caller entry).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, session_id: &amp;str) -&gt; (<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt;, bool) {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; {
+                <span class="rs-kw">let</span> removed = runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(session_id).map(|run| run.run);
+                (removed, runs.is_empty())
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; {
+                <span class="rs-kw">let</span> removed = run.sessions.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(session_id);
+                (removed, run.sessions.is_empty())
+            }
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:59</p>
+</article><div class="group-label">Aliases</div><article id="item-type-PolicyArc-16" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type PolicyArc pub(crate) pub(crate) type PolicyArc = Arc &lt; dyn CommandWorkspacePolicy + Send + Sync &gt; crates/eos-daemon/src/services/workspace_run/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>PolicyArc</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) type <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a> = Arc &lt; dyn CommandWorkspacePolicy + Send + Sync &gt;</code>
+  <p class="docstring">The workspace policy owned by a run — overlay/namespace state (lease + dirs)<br>plus the finalize/discard logic. The run, not the session, owns this so the<br>publish-vs-discard decision lives at the run level.</p>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:16</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-lock-290" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock pub(crate) pub(crate) fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-daemon/src/services/workspace_run/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:290</p>
+</article><article id="item-fn-sample-completion-300" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sample_completion private fn sample_completion (id : &amp; str) -&gt; CommandSessionCompletion crates/eos-daemon/src/services/workspace_run/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sample_completion</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-sample-completion-300">sample_completion</a> (id : &amp; str) -&gt; CommandSessionCompletion</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-sample-completion-300">sample_completion</a>(id: &amp;str) -&gt; <span class="rs-type">CommandSessionCompletion</span> {
+        <span class="rs-kw">let</span> result = <span class="rs-type">CommandResponse</span>::error(&quot;&quot;);
+        <span class="rs-type">CommandSessionCompletion</span> {
+            command_session_id: id.to_owned(),
+            caller_id: &quot;caller&quot;.to_owned(),
+            command: &quot;cmd&quot;.to_owned(),
+            result: result.clone(),
+            notification_result: result,
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:300</p>
+</article><article id="item-fn-push-completed-evicts-oldest-beyond-cap-311" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn push_completed_evicts_oldest_beyond_cap private fn push_completed_evicts_oldest_beyond_cap () crates/eos-daemon/src/services/workspace_run/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>push_completed_evicts_oldest_beyond_cap</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-push-completed-evicts-oldest-beyond-cap-311">push_completed_evicts_oldest_beyond_cap</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-push-completed-evicts-oldest-beyond-cap-311">push_completed_evicts_oldest_beyond_cap</a>() {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+        <span class="rs-kw">let</span> overflow = 5;
+        <span class="rs-kw">for</span> index <span class="rs-kw">in</span> 0..(<span class="rs-type">MAX_COMPLETED_ENTRIES</span> + overflow) {
+            registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-sample-completion-300">sample_completion</a>(&amp;format!(&quot;cmd_{index}&quot;)));
+        }
+        <span class="rs-comment">// The map is bounded at the cap.</span>
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;registry.completed).len(), <span class="rs-type">MAX_COMPLETED_ENTRIES</span>);
+        <span class="rs-comment">// The oldest `overflow` completions were evicted.</span>
+        <span class="rs-kw">for</span> index <span class="rs-kw">in</span> 0..overflow {
+            assert!(registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;format!(&quot;cmd_{index}&quot;))
+                .is_none());
+        }
+        <span class="rs-comment">// A recent completion is retained and still collectable.</span>
+        <span class="rs-kw">let</span> newest = format!(&quot;cmd_{}&quot;, <span class="rs-type">MAX_COMPLETED_ENTRIES</span> + overflow - 1);
+        assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;newest).is_some());
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/workspace_run/registry.rs:311</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/workspace_run/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">// The caller-keyed registry is the Linux PTY/overlay orchestration. On non-Linux</span>
+<span class="rs-comment">// the daemon serves command-session ops as stubs, so the registry is dead there —</span>
+<span class="rs-comment">// it stays compiled for the scaffold unit tests and a uniform module tree.</span>
+#![cfg_attr(not(target_os = &quot;linux&quot;), allow(dead_code))]
+
+<span class="rs-kw">use</span> std::collections::{<span class="rs-type">HashMap</span>, <span class="rs-type">HashSet</span>};
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>};
+
+<span class="rs-kw">use</span> eos_command_session::{
+    <span class="rs-type">CollectCompleted</span>, <span class="rs-type">CollectCompletedResponse</span>, <span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSession</span>,
+    <span class="rs-type">CommandSessionCompletion</span>,
+};
+<span class="rs-kw">use</span> eos_workspace_api::<span class="rs-type">CommandWorkspacePolicy</span>;
+
+<span class="rs-comment">/// The workspace policy owned by a run — overlay/namespace state (lease + dirs)</span>
+<span class="rs-comment">/// plus the finalize/discard logic. The run, not the session, owns this so the</span>
+<span class="rs-comment">/// publish-vs-discard decision lives at the run level.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CommandWorkspacePolicy</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+
+<span class="rs-comment">/// One command session paired with the workspace policy that owns its overlay</span>
+<span class="rs-comment">/// (ephemeral) or namespace (isolated) state. The session is the PTY substrate;</span>
+<span class="rs-comment">/// the policy decides publish (complete) vs discard (cancel).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) session: <span class="rs-type">CommandSession</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(session: <span class="rs-type">CommandSession</span>, policy: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-type-PolicyArc-16">PolicyArc</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { session, policy }
+    }
+}
+
+<span class="rs-comment">/// Which workspace a starting command session belongs to. The daemon picks the</span>
+<span class="rs-comment">/// kind from the caller's current mode; the registry uses it to place the session</span>
+<span class="rs-comment">/// into a fresh ephemeral workspace run or the caller's isolated run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a> {
+    <span class="rs-type">Ephemeral</span>,
+    <span class="rs-type">Isolated</span>,
+}
+
+<span class="rs-comment">/// One ephemeral workspace run: **exactly one** command session. Each ephemeral</span>
+<span class="rs-comment">/// `exec_command` gets its own workspace (its snapshot lease + run dirs live in</span>
+<span class="rs-comment">/// the run's policy), so the workspace and its session are 1:1 and co-terminal.</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-EphemeralWorkspaceRun-45">EphemeralWorkspaceRun</a> {
+    run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;,
+}
+
+<span class="rs-comment">/// The isolated workspace run: **many** command sessions sharing the caller's one</span>
+<span class="rs-comment">/// isolated workspace (namespace + snapshot are owned by the isolated-session</span>
+<span class="rs-comment">/// subsystem; this run just tracks the command sessions running inside it).</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-IsolatedWorkspaceRun-52">IsolatedWorkspaceRun</a> {
+    sessions: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt;,
+}
+
+<span class="rs-comment">/// A caller's workspace runs. The XOR — many ephemeral workspaces (each one</span>
+<span class="rs-comment">/// session) **or** the one isolated workspace (many sessions) — is enforced by</span>
+<span class="rs-comment">/// the isolated enter/exit gate and encoded structurally here: an ephemeral</span>
+<span class="rs-comment">/// caller maps to a set of single-session runs, an isolated caller to one</span>
+<span class="rs-comment">/// many-session run.</span>
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a> {
+    <span class="rs-type">Ephemeral</span>(<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-EphemeralWorkspaceRun-45">EphemeralWorkspaceRun</a>&gt;),
+    <span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-IsolatedWorkspaceRun-52">IsolatedWorkspaceRun</a>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-sessions-70">sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.values().map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)).collect(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.values().cloned().collect(),
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;<span class="rs-self">self</span>, session_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(session_id).map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(session_id).cloned(),
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-count-84">count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.len(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.len(),
+        }
+    }
+
+    <span class="rs-comment">/// Remove `session_id`, returning the removed run and whether this caller</span>
+    <span class="rs-comment">/// run is now empty (so the registry can drop the caller entry).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, session_id: &amp;str) -&gt; (<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt;, bool) {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; {
+                <span class="rs-kw">let</span> removed = runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(session_id).map(|run| run.run);
+                (removed, runs.is_empty())
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; {
+                <span class="rs-kw">let</span> removed = run.sessions.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(session_id);
+                (removed, run.sessions.is_empty())
+            }
+        }
+    }
+}
+
+<span class="rs-comment">/// Single caller-keyed command-session authority. Each caller maps to its</span>
+<span class="rs-comment">/// `CallerRun` (many ephemeral workspace runs or the one isolated run).</span>
+<span class="rs-comment">/// Session-targeted ops resolve by scanning runs for the session id (caller count</span>
+<span class="rs-comment">/// is small).</span>
+<span class="rs-comment">/// Hard cap on parked (completed-but-uncollected) sessions. A caller that never</span>
+<span class="rs-comment">/// calls `collect_completed` would otherwise grow this map without bound; on</span>
+<span class="rs-comment">/// overflow the oldest uncollected completion is dropped. Silently losing a stale</span>
+<span class="rs-comment">/// completion is acceptable at a backstop this high — normal callers collect</span>
+<span class="rs-comment">/// promptly and never approach it.</span>
+<span class="rs-kw">const</span> <span class="rs-type">MAX_COMPLETED_ENTRIES</span>: usize = 1024;
+
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-CompletedEntry-118">CompletedEntry</a> {
+    seq: u64,
+    completion: <span class="rs-type">CommandSessionCompletion</span>,
+}
+
+#[derive(<span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a> {
+    runs: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>&gt;&gt;,
+    completed: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-CompletedEntry-118">CompletedEntry</a>&gt;&gt;,
+    counter: <span class="rs-type">AtomicU64</span>,
+    completed_seq: <span class="rs-type">AtomicU64</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            runs: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()),
+            completed: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()),
+            counter: <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(1),
+            completed_seq: <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(1),
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-next-id-142">next_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        format!(&quot;cmd_{}&quot;, <span class="rs-self">self</span>.counter.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>))
+    }
+
+    <span class="rs-comment">/// Place a started run into its caller's runs: a fresh ephemeral workspace</span>
+    <span class="rs-comment">/// run, or the caller's (created-on-first-session) isolated run.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;, kind: <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>) {
+        <span class="rs-kw">let</span> caller_id = run.session.caller_id().to_owned();
+        <span class="rs-kw">let</span> session_id = run.session.id().to_owned();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> kind {
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs
+                    .entry(caller_id)
+                    .or_insert_with(|| <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Ephemeral</span>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()));
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) = caller {
+                    ephemeral.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(session_id, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-EphemeralWorkspaceRun-45">EphemeralWorkspaceRun</a> { run });
+                }
+            }
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-WorkspaceRunKind-36">WorkspaceRunKind</a>::<span class="rs-type">Isolated</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs.entry(caller_id).or_insert_with(|| {
+                    <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-IsolatedWorkspaceRun-52">IsolatedWorkspaceRun</a> {
+                        sessions: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+                    })
+                });
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::<span class="rs-type">Isolated</span>(isolated) = caller {
+                    isolated.sessions.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(session_id, run);
+                }
+            }
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs).values().find_map(|run| run.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(id))
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">let</span> caller = runs
+            .iter()
+            .find(|(_, run)| run.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(id).is_some())
+            .map(|(caller, _)| caller.clone())?;
+        <span class="rs-kw">let</span> (run, now_empty) = runs
+            .get_mut(&amp;caller)
+            .map(|run| run.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>(id))
+            .unwrap_or((<span class="rs-type">None</span>, <span class="rs-kw">false</span>));
+        <span class="rs-kw">if</span> now_empty {
+            runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;caller);
+        }
+        run
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-kw">let</span> runs = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> caller_id {
+            <span class="rs-type">Some</span>(caller) =&gt; runs.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(caller).map_or(0, <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::count),
+            <span class="rs-type">None</span> =&gt; runs.values().map(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::count).sum(),
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-live-205">live</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .values()
+            .flat_map(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::sessions)
+            .collect()
+    }
+
+    <span class="rs-comment">/// All live runs owned by `caller_id` (drives per-caller cleanup).</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-caller-sessions-213">caller_sessions</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-RunSession-21">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(caller_id)
+            .map(<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-enum-CallerRun-59">CallerRun</a>::sessions)
+            .unwrap_or_default()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+        <span class="rs-kw">let</span> seq = <span class="rs-self">self</span>.completed_seq.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed);
+        completed.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-insert-147">insert</a>(
+            completion.command_session_id.clone(),
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-CompletedEntry-118">CompletedEntry</a> { seq, completion },
+        );
+        <span class="rs-comment">// Bound memory: drop the oldest uncollected completion(s) past the cap.</span>
+        <span class="rs-kw">while</span> completed.len() &gt; <span class="rs-type">MAX_COMPLETED_ENTRIES</span> {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(oldest) = completed
+                .iter()
+                .min_by_key(|(_, entry)| entry.seq)
+                .map(|(id, _)| id.clone())
+            <span class="rs-kw">else</span> {
+                <span class="rs-kw">break</span>;
+            };
+            completed.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(&amp;oldest);
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandResponse</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed)
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(id)
+            .map(|entry| entry.completion.result)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-completed-result-249">completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandResponse</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed)
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(id)
+            .map(|entry| entry.completion.result.clone())
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-collect-completed-318">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+        <span class="rs-kw">let</span> wanted: <span class="rs-type">Option</span>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;&gt; = request
+            .command_session_ids
+            .as_ref()
+            .map(|ids| ids.iter().cloned().collect());
+        <span class="rs-kw">let</span> caller_id = request.caller_id.as_deref();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;<span class="rs-self">self</span>.completed);
+        <span class="rs-kw">let</span> matched: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = completed
+            .iter()
+            .filter(|(id, entry)| {
+                <span class="rs-kw">let</span> id_matches = wanted.as_ref().is_none_or(|ids| ids.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(*id));
+                <span class="rs-kw">let</span> caller_matches =
+                    caller_id.is_none_or(|caller_id| entry.completion.caller_id == caller_id);
+                id_matches &amp;&amp; caller_matches
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        <span class="rs-kw">let</span> completions = matched
+            .iter()
+            .filter_map(|id| completed.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-remove-180">remove</a>(id))
+            .map(|entry| {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completion = entry.completion;
+                completion.result = completion.notification_result.clone();
+                completion
+            })
+            .collect();
+        <span class="rs-type">CollectCompletedResponse</span> {
+            success: <span class="rs-kw">true</span>,
+            completions,
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-sample-completion-300">sample_completion</a>(id: &amp;str) -&gt; <span class="rs-type">CommandSessionCompletion</span> {
+        <span class="rs-kw">let</span> result = <span class="rs-type">CommandResponse</span>::error(&quot;&quot;);
+        <span class="rs-type">CommandSessionCompletion</span> {
+            command_session_id: id.to_owned(),
+            caller_id: &quot;caller&quot;.to_owned(),
+            command: &quot;cmd&quot;.to_owned(),
+            result: result.clone(),
+            notification_result: result,
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-push-completed-evicts-oldest-beyond-cap-311">push_completed_evicts_oldest_beyond_cap</a>() {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-struct-WorkspaceRunRegistry-123">WorkspaceRunRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+        <span class="rs-kw">let</span> overflow = 5;
+        <span class="rs-kw">for</span> index <span class="rs-kw">in</span> 0..(<span class="rs-type">MAX_COMPLETED_ENTRIES</span> + overflow) {
+            registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-manager-rs.html#method-push-completed-323">push_completed</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#item-fn-sample-completion-300">sample_completion</a>(&amp;format!(&quot;cmd_{index}&quot;)));
+        }
+        <span class="rs-comment">// The map is bounded at the cap.</span>
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>(&amp;registry.completed).len(), <span class="rs-type">MAX_COMPLETED_ENTRIES</span>);
+        <span class="rs-comment">// The oldest `overflow` completions were evicted.</span>
+        <span class="rs-kw">for</span> index <span class="rs-kw">in</span> 0..overflow {
+            assert!(registry
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;format!(&quot;cmd_{index}&quot;))
+                .is_none());
+        }
+        <span class="rs-comment">// A recent completion is retained and still collectable.</span>
+        <span class="rs-kw">let</span> newest = format!(&quot;cmd_{}&quot;, <span class="rs-type">MAX_COMPLETED_ENTRIES</span> + overflow - 1);
+        assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-workspace-run-registry-rs.html#method-take-completed-result-243">take_completed_result</a>(&amp;newest).is_some());
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>
