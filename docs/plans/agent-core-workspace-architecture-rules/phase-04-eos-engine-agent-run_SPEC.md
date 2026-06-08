@@ -15,8 +15,8 @@ spawn/wait/poll/cancel/finalization and durable agent-run state updates.
 Prerequisite: Phase 03B must define and implement the durable
 request/task/workflow/agent-run lineage contract before this phase moves
 message-record writing into `eos-engine` or splits run lifecycle from loop
-execution. Phase 04 consumes `AgentRunLineage` and `AgentRunRecordContext`; it
-does not redesign DB materialization.
+execution. Phase 04 consumes `AgentRunRecordIndex` and
+`AgentRunRecordTargetFile`; it does not redesign DB materialization.
 
 ## Local Architecture
 
