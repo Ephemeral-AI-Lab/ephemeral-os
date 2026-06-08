@@ -5,9 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-async-stream.workspace = true
 async-trait.workspace = true
-eos-audit.workspace = true
 eos-agent-ports.workspace = true
 eos-tool-ports.workspace = true
 eos-llm-client.workspace = true
@@ -23,27 +21,7 @@ tokio.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-eos-skills.workspace = true
-eos-tools.workspace = true
 tempfile.workspace = true
-# Shared `ScriptedSource` + `metadata` (TESTING_SPEC §7). In-crate tests consume
-# `metadata` (an `eos-tools` type, external to this crate, so the dev-dep cycle
-# carries no `eos-engine` type across the boundary); the `ScriptedSource`-driven
-# tests are integration targets (below).
-eos-testkit = { workspace = true }
-
-# Terminal-enforcement tests (TESTING_SPEC §5.2 / §9). An integration target (not
-# `#[path]`-included) so it can drive `run_query` with `eos-testkit`'s
-# `ScriptedSource` — whose `EventSource` impl this crate owns, hence only
-# consumable where `eos-engine` is an external dependency (the dev-dep
-# two-instance rule).
-[[test]]
-name = "terminal"
-path = "tests/terminal/mod.rs"
-
-[[test]]
-name = "query"
-path = "tests/query/mod.rs"
 
 [lints]
 workspace = true

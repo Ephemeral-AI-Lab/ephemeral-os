@@ -10,7 +10,7 @@ use eos_plugin::{
 use serde_json::{json, Value};
 
 use super::{
-    plugin_runtime_config, ppc_router, process,
+    plugin_runtime_config, process,
     service::{
         acquire_service_snapshot, active_manifest_key, insert_started_service_processes,
         mark_service_ready, mark_service_restarted, mark_service_stale, mark_service_stopped,
@@ -245,7 +245,7 @@ fn refresh_connected_service(
 }
 
 fn send_refresh_sequence(
-    client: &ppc_router::PpcClient,
+    client: &eos_plugin_host::PpcClient,
     service_key: &PluginServiceKey,
     service_instance_id: &str,
     invocation_id: &str,
@@ -334,7 +334,7 @@ fn service_process_pid(service_instance_id: &str) -> Result<u32, DaemonError> {
 }
 
 fn send_refresh_request(
-    client: &ppc_router::PpcClient,
+    client: &eos_plugin_host::PpcClient,
     invocation_id: &str,
     index: usize,
     request: &RefreshRequest,

@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_def::{AgentName as DefinitionAgentName, AgentRegistry, AgentType};
+use eos_agent_def::{AgentDefinition, AgentName as DefinitionAgentName, AgentRegistry, AgentType};
+use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
 use eos_agent_ports::{
     AgentLoopLauncher, AgentLoopOutcome, AgentLoopOutcomeKind, AgentRunApi, AgentRunError,
     AgentRunOutcome, AgentRunRecordKind, AgentRunStatus, SpawnAgentRequest,
@@ -12,12 +13,13 @@ use eos_llm_client::Message;
 use eos_types::{AgentRunId, AgentRunStore};
 use tokio::sync::oneshot;
 
-use crate::active_agent_runs::ActiveAgentRuns;
+use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRuns};
 use crate::agent_loop_request::build_start_agent_loop_request;
 use crate::agent_run_persistence::{
     completion_from_agent_run, create_agent_run_if_requested, finish_agent_run_cancelled,
     finish_agent_run_if_requested, tool_result_payload,
 };
+use crate::to_message_record_kind;
 
 /// Agent-run lifecycle service.
 #[derive(Clone)]
@@ -25,6 +27,7 @@ pub struct AgentRunService {
     agent_registry: Arc<AgentRegistry>,
     agent_loop_launcher: Arc<dyn AgentLoopLauncher>,
     agent_run_store: Arc<dyn AgentRunStore>,
+    message_records: Option<AgentMessageRecords>,
     active_agent_runs: ActiveAgentRuns,
 }
 
@@ -41,12 +44,81 @@ impl AgentRunService {
         agent_registry: Arc<AgentRegistry>,
         agent_loop_launcher: Arc<dyn AgentLoopLauncher>,
         agent_run_store: Arc<dyn AgentRunStore>,
+        message_records: Option<AgentMessageRecords>,
     ) -> Self {
         Self {
             agent_registry,
             agent_loop_launcher,
             agent_run_store,
+            message_records,
             active_agent_runs: ActiveAgentRuns::new(),
+        }
+    }
+
+    async fn start_message_record(
+        &self,
+        request: &SpawnAgentRequest,
+        agent_def: &AgentDefinition,
+        agent_run_id: &AgentRunId,
+    ) -> Result<Option<ActiveAgentRunRecord>, AgentRunError> {
+        let Some(message_records) = &self.message_records else {
+            return Ok(None);
+        };
+        let Some(request_id) = request.request_id.as_ref() else {
+            return Ok(None);
+        };
+        let kind = to_message_record_kind(&request.record_kind);
+        let handle = message_records
+            .start_agent_run(AgentRunRecordStart {
+                request_id,
+                task_id: request.task_id.as_ref(),
+                agent_run_id,
+                agent_name: agent_def.name.as_str(),
+                kind: &kind,
+                system_prompt: agent_def.system_prompt.as_deref().unwrap_or_default(),
+                initial_messages: &request.initial_messages,
+            })
+            .await
+            .map_err(|err| AgentRunError::Internal(err.to_string()))?;
+        Ok(Some(ActiveAgentRunRecord::new(
+            handle,
+            request.initial_messages.len(),
+        )))
+    }
+
+    async fn finish_message_record(
+        &self,
+        message_record: Option<ActiveAgentRunRecord>,
+        outcome: &AgentRunOutcome,
+    ) {
+        let Some(message_record) = message_record else {
+            return;
+        };
+        let later_message_start = message_record
+            .initial_message_count
+            .min(outcome.message_history.len());
+        if let Err(err) = message_record
+            .handle
+            .append_messages(&outcome.message_history[later_message_start..])
+            .await
+        {
+            tracing::warn!(
+                agent_run_id = %outcome.agent_run_id,
+                error = %err,
+                "failed to append agent-run message record messages"
+            );
+        }
+
+        let status = match outcome.status {
+            AgentRunStatus::Completed => NodeFinishStatus::Completed,
+            AgentRunStatus::Failed | AgentRunStatus::Cancelled => NodeFinishStatus::Failed,
+        };
+        if let Err(err) = message_record.handle.finish(status).await {
+            tracing::warn!(
+                agent_run_id = %outcome.agent_run_id,
+                error = %err,
+                "failed to finish agent-run message record"
+            );
         }
     }
 
@@ -142,12 +214,15 @@ impl AgentRunApi for AgentRunService {
             agent_def.name.as_str(),
         )
         .await?;
+        let message_record = self
+            .start_message_record(&request, &agent_def, &agent_run_id)
+            .await?;
         let start_request =
             build_start_agent_loop_request(&agent_def, request, agent_run_id.clone());
         let started = self.agent_loop_launcher.start_agent_loop(start_request);
 
         self.active_agent_runs
-            .insert(agent_run_id.clone(), started.cancel_handle)
+            .insert(agent_run_id.clone(), started.cancel_handle, message_record)
             .await;
         let service = self.clone();
         let forward_agent_run_id = agent_run_id.clone();
@@ -205,7 +280,7 @@ impl AgentRunApi for AgentRunService {
         agent_run_id: &AgentRunId,
         reason: &str,
     ) -> Result<(), AgentRunError> {
-        let completion = self.active_agent_runs.take(agent_run_id).await;
+        let mut completion = self.active_agent_runs.take(agent_run_id).await;
         if let Some(completion) = &completion {
             completion.cancel(reason);
         }
@@ -218,6 +293,10 @@ impl AgentRunApi for AgentRunService {
             token_count: None,
             error: Some(reason.to_owned()),
         };
+        if let Some(completion) = &mut completion {
+            self.finish_message_record(completion.take_message_record(), &outcome)
+                .await;
+        }
         if let Some(completion) = completion {
             completion.publish(outcome);
         }
@@ -232,7 +311,7 @@ async fn forward_agent_loop_outcome(
     outcome_receiver: oneshot::Receiver<AgentLoopOutcome>,
 ) {
     let received = outcome_receiver.await;
-    let Some(completion) = service.active_agent_runs.take(&agent_run_id).await else {
+    let Some(mut completion) = service.active_agent_runs.take(&agent_run_id).await else {
         return;
     };
     let outcome = match received {
@@ -254,6 +333,9 @@ async fn forward_agent_loop_outcome(
                 .await
         }
     };
+    service
+        .finish_message_record(completion.take_message_record(), &outcome)
+        .await;
     completion.publish(outcome);
 }
 

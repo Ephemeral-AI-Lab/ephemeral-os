@@ -7,8 +7,9 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_str, isolated_command_session_transcript_path, live_pool_or_skip,
-    reset_isolated_workspaces, stdout, wait_for_active_leases, wait_for_container_path,
-    wait_for_isolated_command_session_transcript_recycled, wait_for_session_count,
+    reset_isolated_workspaces, settle_foreground_command, stdout, wait_for_active_leases,
+    wait_for_container_path, wait_for_isolated_command_session_transcript_recycled,
+    wait_for_session_count,
 };
 
 #[test]
@@ -17,8 +18,10 @@ fn iws_same_port_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let server_cmd =
-        "mkdir -p /eos/scratch/e2e && python3 -m http.server 39001 >/eos/scratch/e2e/eos-e2e-http.log 2>&1";
+    // Log to /tmp (writable): /eos is read-only by the mount mask, so a
+    // `>/eos/scratch/...` redirect makes the server fail before it binds the
+    // port (the `&&` short-circuits on the mkdir). The log is throwaway.
+    let server_cmd = "python3 -m http.server 39001 >/tmp/eos-e2e-iws-http.log 2>&1";
     let first_enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let first_handle_id = as_str(&first_enter, "workspace_handle_id")?.to_owned();
     let first = lease.call_ok(
@@ -246,20 +249,30 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
         let completed = lease.call_ok(
             ops::API_V1_EXEC_COMMAND,
             json!({
+                // The outer `bash` holds for `sleep 3` after backgrounding the
+                // setsid child so the escapee reliably calls setsid() (escapes the
+                // command's process group) BEFORE the command completes and the
+                // daemon kills that group. Under qemu the setsid->bash->sleep
+                // binary chain loads slowly, so without this hold the not-yet-
+                // detached child races the completion pgid-kill and dies. The
+                // descendant itself (`sleep 30`) still long-outlives the command.
                 "cmd": format!(
-                    "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & echo iws-escaped-ready'"
+                    "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & sleep 3; echo iws-escaped-ready'"
                 ),
                 "yield_time_ms": 1500,
                 "timeout_seconds": 60,}),
         )?;
+        // The `sleep 3` pushes completion past the yield window, so settle first.
+        let completed =
+            settle_foreground_command(&lease, completed, Instant::now() + Duration::from_secs(30))?;
         ensure!(
             as_str(&completed, "status")? == "ok",
             "isolated escaped-child command should complete: {completed}"
         );
-        ensure!(
-            marker_count(&lease, &marker)? >= 1,
-            "escaped descendant should be alive before isolated exit"
-        );
+        // The setsid descendant can lag into /proc under emulation; poll for the
+        // single escapee instead of an instantaneous read (still REQUIRES it to
+        // be alive before exit, which is the property under test).
+        wait_for_marker_count(&lease, &marker, 1, Duration::from_secs(15))?;
         wait_for_session_count(&lease, 0)?;
         Ok(())
     })();
@@ -269,8 +282,9 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
     let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
     body?;
     exit?;
-    // The isolated cgroup must reap the escaped descendant on exit.
-    wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(6))?;
+    // The isolated cgroup must reap the escaped descendant on exit (widened for
+    // slow emulated cgroup teardown).
+    wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(15))?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }

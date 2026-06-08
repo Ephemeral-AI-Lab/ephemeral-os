@@ -10,7 +10,10 @@ use anyhow::{Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip, stdout, wait_for_session_count};
+use crate::support::{
+    as_bool, as_i64, as_str, live_pool_or_skip, wait_for_command_stdout_contains,
+    wait_for_session_count,
+};
 
 #[test]
 fn enter_status_exit_pin_and_teardown() -> Result<()> {
@@ -100,8 +103,10 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
             "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    assert!(stdout(&exec).contains("ACTIVE"), "{exec}");
     let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    // `printf ACTIVE` may not reach the transcript within the 500ms yield under
+    // emulation; poll until it does (still proves the session is actively live).
+    wait_for_command_stdout_contains(&lease, &session_id, "ACTIVE")?;
 
     let body = (|| -> Result<()> {
         let rejected = lease.call(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
@@ -196,19 +201,14 @@ fn isolated_workspace_jsonl_records_lifecycle_and_tool_call_fields() -> Result<(
         "exit should report discarded private bytes: {exit}"
     );
 
-    let audit_file = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({
-            "cmd": "cat /eos/scratch/isolated/audit.jsonl",
-            "yield_time_ms": 1000,
-            "timeout_seconds": 10,}),
-    )?;
-    assert_eq!(
-        as_str(&audit_file, "status")?,
-        "ok",
-        "audit JSONL read command should succeed before parsing stdout: {audit_file}"
-    );
-    let events = stdout(&audit_file)
+    // Read the audit log from the container host view, not via an ephemeral
+    // exec_command: that exec mount-masks /eos to an empty tmpfs, so the
+    // daemon-written audit.jsonl is invisible inside it.
+    let audit_raw = lease
+        .container()
+        .exec(&["cat", "/eos/scratch/isolated/audit.jsonl"])
+        .context("read isolated audit jsonl from container")?;
+    let events = audit_raw
         .lines()
         .filter_map(|line| serde_json::from_str::<Value>(line).ok())
         .collect::<Vec<_>>();

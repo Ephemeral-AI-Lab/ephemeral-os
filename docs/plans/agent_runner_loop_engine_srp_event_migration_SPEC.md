@@ -1,6 +1,6 @@
 # Agent Runner / Agent Loop SRP Event Migration - SPEC
 
-Status: Proposed
+Status: Implemented
 Date: 2026-06-08
 Owner: agent-core runner / engine / tools
 
@@ -176,10 +176,9 @@ agent-core/crates/
         loop_hooks.rs         # AgentLoopHooks, NoopAgentLoopHooks
       query/
         mod.rs
-        loop_.rs
+        context.rs              # provider/event-source seams only
         provider_messages.rs
         provider_source.rs
-        provider_request.rs
       background/
         mod.rs
         notification.rs
@@ -1415,23 +1414,35 @@ cargo check --workspace --all-targets
       re-exports. Verified with `cargo check -p eos-tool-ports --all-targets`,
       `cargo check -p eos-agent-ports --all-targets`, and
       `cargo check -p eos-tools --all-targets`.
-- [ ] Phase 2 - Add non-blocking agent-loop API and engine implementation.
-      In progress: `eos-agent-ports` owns the loop launcher/outcome DTOs and
+- [x] Phase 2 - Add non-blocking agent-loop API and engine implementation.
+      Completed 2026-06-08: `eos-agent-ports` owns the loop launcher/outcome DTOs and
       `eos-engine::agent_loop` exposes `TokioAgentLoopLauncher`,
       `AgentLoopExecutor` with private assistant-turn execution, and loop
       hooks; private `AgentLoopExecutor::execute_assistant_turn` now assembles
       provider requests, consumes provider completion events, dispatches tool
       batches through engine-owned policy, renders per-call metadata through
-      `AgentExecutionMetadataService`, and detects terminal submissions.
-      Legacy `QueryContext.tool_metadata` cleanup and production wiring are
-      pending.
-- [ ] Phase 3 - Rename/expand `eos-agent-runner`.
-      In progress: crate/package/import rename from `eos-agent-run` to
-      `eos-agent-runner` is complete; runner-owned `AgentRunService`,
-      `ActiveAgentRuns`, loop-request, persistence, and message-record adapter
-      modules exist; runtime root/workflow agent launches now use the runner
-      service through the injected loop launcher. Runner-owned message-record
-      write integration remains pending.
+      `AgentExecutionMetadataService`, forwards stream/tool/system events
+      through the runtime callback, flushes background completions at loop
+      boundaries, preserves the legacy no-terminal hard-ceiling counters, and
+      detects terminal submissions. Legacy `QueryContext`, `run_query`,
+      `QueryRunRequest`, old engine runtime-control exports, old assistant-tool
+      batch-dispatch facade, the dead background finalizer, and the dead
+      process resource sampler are removed; notification rules now consume
+      explicit `AgentLoopState` context. Verified with
+      `cargo check -p eos-engine --all-targets`, `cargo test -p eos-engine --lib`,
+      `cargo check -p eos-runtime --all-targets`, and
+      `cargo test -p eos-runtime --lib`.
+- [x] Phase 3 - Rename/expand `eos-agent-runner`.
+      Completed 2026-06-08: crate/package/import rename from
+      `eos-agent-run` to `eos-agent-runner` is complete; runner-owned
+      `AgentRunService`, `ActiveAgentRuns`, loop-request, persistence, and
+      message-record adapter modules exist; runtime root/workflow agent
+      launches use the runner service through the injected loop launcher.
+      Runner-owned message-record start/append/finish integration is wired
+      through `AgentRunService` and verified by
+      `root_run_writes_runner_owned_message_records`. Direct-depth dependency
+      checks show `eos-agent-runner -> eos-agent-message-records` as the sole
+      direct message-record owner among the migrated runtime/engine/tool crates.
 - [x] Phase 4 - Remove engine back-edges to runner/agent/tools.
       Completed 2026-06-08: `eos-engine` no longer has normal dependency edges
       to `eos-agent-runner`, `eos-agent-def`, `eos-tools`, or
@@ -1444,18 +1455,36 @@ cargo check --workspace --all-targets
       Verified with `cargo tree -p eos-engine --edges normal`,
       `cargo check -p eos-engine --all-targets`, and
       `cargo test -p workspace-guard -- --nocapture`.
-- [ ] Phase 5 - Recompose through `eos-runtime`.
-      In progress: runtime now provides `AgentLoopToolRegistryFactory` and
+- [x] Phase 5 - Recompose through `eos-runtime`.
+      Completed 2026-06-08: runtime now provides `AgentLoopToolRegistryFactory` and
       `AgentExecutionMetadataService` implementations, builds
       `TokioAgentLoopLauncher`, and launches root/workflow agents through the
-      runner-owned `eos_agent_runner::AgentRunService`. Compatibility
-      cancellation registry cleanup, event callback forwarding, production
-      background-session manager wiring into the new loop path, and
-      runner-owned message-record writer integration are pending; old engine
-      runtime exports have been removed.
-- [ ] Final verification - dependency tree gates pass.
-- [ ] Final verification - workspace cargo check passes or documented
+      runner-owned `eos_agent_runner::AgentRunService`. Event callback
+      forwarding and production background-session manager wiring into the new
+      loop path are verified with focused runtime tests. Runner-owned
+      message-record writer integration is verified through the runtime root
+      request path. Runtime request cancellation routes through the
+      request-scoped `RuntimeCancelPort` and runner `AgentRunApi`, verified by
+      the focused cancellation tests. Verified with
+      `cargo check -p eos-runtime --all-targets`,
+      `cargo test -p eos-runtime --lib`, and
+      `cargo check --workspace --all-targets`.
+- [x] Final verification - dependency tree gates pass.
+      Completed 2026-06-08: direct-depth dependency trees verify
+      `eos-agent-runner` directly owns `eos-agent-message-records`, while
+      `eos-engine`, `eos-tools`, `eos-tool-ports`, `eos-agent-ports`, and
+      `eos-runtime` do not directly depend on it. `eos-engine` direct deps do
+      not include `eos-agent-runner`, `eos-agent-def`, or `eos-tools`; and
+      `eos-tools` direct deps do not include `eos-agent-runner` or
+      `eos-agent-def`.
+- [x] Final verification - workspace cargo check passes or documented
       pre-existing failures are isolated.
+      Completed 2026-06-08: `cargo check --workspace --all-targets` passes.
+      The only remaining warnings are unrelated `eos-tools` test-support
+      dead-code warnings from path-mounted test helpers. `cargo machete
+      --with-metadata` reports no unused dependencies after removing the real
+      unused `eos-tools` regex edge and recording narrow false-positive ignores
+      for path-mounted runtime/test snapshots.
 
 ## 16. Architecture Explanation
 

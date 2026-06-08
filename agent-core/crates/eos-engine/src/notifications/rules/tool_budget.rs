@@ -5,8 +5,7 @@
 
 use eos_llm_client::Message;
 
-use crate::notifications::{budget_figures, NotificationRule};
-use crate::query::QueryContext;
+use crate::notifications::{budget_figures, NotificationRule, NotificationRuleContext};
 
 /// A single tool-call budget tier (e.g. `75%`), firing once when
 /// `tool_calls_used * denominator >= tool_call_limit * numerator`.
@@ -44,7 +43,7 @@ impl NotificationRule for ToolCallBudget {
         true
     }
 
-    fn trigger(&self, _messages: &[Message], ctx: &QueryContext) -> bool {
+    fn trigger(&self, _messages: &[Message], ctx: &NotificationRuleContext<'_>) -> bool {
         if ctx.tool_call_limit == 0 || self.denominator == 0 {
             return false;
         }
@@ -52,7 +51,7 @@ impl NotificationRule for ToolCallBudget {
             >= ctx.tool_call_limit.saturating_mul(self.numerator)
     }
 
-    fn body(&self, ctx: &QueryContext) -> String {
+    fn body(&self, ctx: &NotificationRuleContext<'_>) -> String {
         let (used, limit, ceiling, turns_remaining) = budget_figures(ctx);
         let label = self.label;
         format!(

@@ -10,28 +10,28 @@ use eos_plugin::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA25
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::error::DaemonError;
+use crate::PpcError;
 
+/// Outcome of a package ensure: whether the package contract is active, whether
+/// the caller must upload, and the resolved roots / publish + setup status.
 #[derive(Debug, Clone, Default)]
-pub(super) struct PackageEnsureReport {
-    pub(super) active: bool,
-    pub(super) needs_upload: bool,
-    pub(super) package_root: Option<PathBuf>,
-    pub(super) dependency_root: Option<PathBuf>,
-    pub(super) package_published: bool,
-    pub(super) setup_ran: bool,
+pub struct PackageEnsureReport {
+    pub active: bool,
+    pub needs_upload: bool,
+    pub package_root: Option<PathBuf>,
+    pub dependency_root: Option<PathBuf>,
+    pub package_published: bool,
+    pub setup_ran: bool,
 }
 
+/// Resolved package + dependency roots for a plugin digest.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct PackageRoots {
-    pub(super) package_root: PathBuf,
-    pub(super) dependency_root: PathBuf,
+pub struct PackageRoots {
+    pub package_root: PathBuf,
+    pub dependency_root: PathBuf,
 }
 
-pub(super) fn package_roots(
-    args: &Value,
-    manifest: &PluginManifest,
-) -> Result<PackageRoots, DaemonError> {
+pub fn package_roots(args: &Value, manifest: &PluginManifest) -> Result<PackageRoots, PpcError> {
     let paths = PackagePaths::new(args, manifest)?;
     Ok(PackageRoots {
         package_root: paths.package_root,
@@ -39,17 +39,17 @@ pub(super) fn package_roots(
     })
 }
 
-pub(super) fn package_contract_active(args: &Value) -> bool {
+fn package_contract_active(args: &Value) -> bool {
     args.get("staged_package_root").is_some()
         || args.get("manifest").is_some_and(|manifest| {
             manifest.get("package").is_some() || manifest.get("setup").is_some()
         })
 }
 
-pub(super) fn ensure_package(
+pub fn ensure_package(
     args: &Value,
     manifest: Option<&PluginManifest>,
-) -> Result<PackageEnsureReport, DaemonError> {
+) -> Result<PackageEnsureReport, PpcError> {
     let Some(manifest) = manifest else {
         return Ok(PackageEnsureReport::default());
     };
@@ -78,10 +78,7 @@ pub(super) fn ensure_package(
     })
 }
 
-pub(super) fn needs_upload_response(
-    manifest: &PluginManifest,
-    report: &PackageEnsureReport,
-) -> Value {
+pub fn needs_upload_response(manifest: &PluginManifest, report: &PackageEnsureReport) -> Value {
     json!({
         "success": true,
         "plugin": manifest.plugin_id,
@@ -121,7 +118,7 @@ struct PackagePaths {
 }
 
 impl PackagePaths {
-    fn new(args: &Value, manifest: &PluginManifest) -> Result<Self, DaemonError> {
+    fn new(args: &Value, manifest: &PluginManifest) -> Result<Self, PpcError> {
         let runtime_plugins_root =
             root_arg(args, "package_runtime_root", "/eos/runtime/plugins/catalog");
         let dependency_base = root_arg(args, "package_dependency_root", "/eos/runtime/packages");
@@ -145,7 +142,7 @@ impl PackagePaths {
 }
 
 fn root_arg(args: &Value, key: &str, default: &str) -> PathBuf {
-    #[cfg(test)]
+    #[cfg(feature = "test-root-override")]
     if let Some(root) = args
         .get(key)
         .and_then(Value::as_str)
@@ -158,7 +155,7 @@ fn root_arg(args: &Value, key: &str, default: &str) -> PathBuf {
     PathBuf::from(default)
 }
 
-fn staged_package_root(args: &Value) -> Result<Option<PathBuf>, DaemonError> {
+fn staged_package_root(args: &Value) -> Result<Option<PathBuf>, PpcError> {
     let Some(value) = args.get("staged_package_root") else {
         return Ok(None);
     };
@@ -178,7 +175,7 @@ fn staged_package_root(args: &Value) -> Result<Option<PathBuf>, DaemonError> {
 fn validate_staged_package_root(
     staged_package_root: &Path,
     upload_digest_root: &Path,
-) -> Result<(), DaemonError> {
+) -> Result<(), PpcError> {
     if !staged_package_root.is_absolute() {
         return Err(PluginError::Ensure("staged_package_root must be absolute".to_owned()).into());
     }
@@ -204,7 +201,7 @@ fn validate_staged_package_root(
 fn validate_staged_package(
     manifest: &PluginManifest,
     staged_package_root: &Path,
-) -> Result<(), DaemonError> {
+) -> Result<(), PpcError> {
     if !staged_package_root.is_dir() {
         return Err(PluginError::Ensure(format!(
             "staged package root does not exist: {}",
@@ -228,7 +225,7 @@ fn validate_staged_package(
     }
 }
 
-fn publish_package(staged_package_root: &Path, paths: &PackagePaths) -> Result<bool, DaemonError> {
+fn publish_package(staged_package_root: &Path, paths: &PackagePaths) -> Result<bool, PpcError> {
     if marker_matches(
         &paths.package_root.join(PACKAGE_SHA256_MARKER),
         staged_marker(staged_package_root)
@@ -248,7 +245,7 @@ fn publish_package(staged_package_root: &Path, paths: &PackagePaths) -> Result<b
 fn prepare_package_publish_root(
     staged_package_root: &Path,
     package_root: &Path,
-) -> Result<PathBuf, DaemonError> {
+) -> Result<PathBuf, PpcError> {
     let temp_root = package_sibling_temp_root(package_root, "publish")?;
     match fs::rename(staged_package_root, &temp_root) {
         Ok(()) => Ok(temp_root),
@@ -262,7 +259,7 @@ fn prepare_package_publish_root(
     }
 }
 
-fn replace_package_root(prepared_root: &Path, package_root: &Path) -> Result<(), DaemonError> {
+fn replace_package_root(prepared_root: &Path, package_root: &Path) -> Result<(), PpcError> {
     if !package_root.exists() {
         return fs::rename(prepared_root, package_root)
             .inspect_err(|_| {
@@ -293,7 +290,7 @@ fn replace_package_root(prepared_root: &Path, package_root: &Path) -> Result<(),
     }
 }
 
-fn package_sibling_temp_root(package_root: &Path, label: &str) -> Result<PathBuf, DaemonError> {
+fn package_sibling_temp_root(package_root: &Path, label: &str) -> Result<PathBuf, PpcError> {
     let parent = package_root.parent().ok_or_else(|| {
         PluginError::Ensure(format!(
             "package root has no parent: {}",
@@ -311,7 +308,7 @@ fn package_sibling_temp_root(package_root: &Path, label: &str) -> Result<PathBuf
     )))
 }
 
-fn copy_package_tree(source_root: &Path, target_root: &Path) -> Result<(), DaemonError> {
+fn copy_package_tree(source_root: &Path, target_root: &Path) -> Result<(), PpcError> {
     fs::create_dir_all(target_root)?;
     copy_package_dir(source_root, source_root, target_root)
 }
@@ -320,7 +317,7 @@ fn copy_package_dir(
     source_root: &Path,
     source_dir: &Path,
     target_root: &Path,
-) -> Result<(), DaemonError> {
+) -> Result<(), PpcError> {
     for entry in fs::read_dir(source_dir)? {
         let entry = entry?;
         let source_path = entry.path();
@@ -349,7 +346,7 @@ fn copy_package_dir(
     Ok(())
 }
 
-fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool, DaemonError> {
+fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool, PpcError> {
     let Some(setup) = &manifest.setup else {
         return Ok(false);
     };
@@ -395,7 +392,7 @@ fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool,
     Ok(true)
 }
 
-fn reject_forbidden_setup_roots(command: &[String], cwd: &Path) -> Result<(), DaemonError> {
+fn reject_forbidden_setup_roots(command: &[String], cwd: &Path) -> Result<(), PpcError> {
     let joined = command.join("\0");
     reject_forbidden_text("plugin setup command", &joined)?;
     for arg in command {
@@ -423,7 +420,7 @@ fn setup_script_path(arg: &str, cwd: &Path) -> Option<PathBuf> {
     }
 }
 
-fn reject_forbidden_text(context: &str, text: &str) -> Result<(), DaemonError> {
+fn reject_forbidden_text(context: &str, text: &str) -> Result<(), PpcError> {
     for forbidden in ["/root", "/var"] {
         if text.contains(forbidden) {
             return Err(PluginError::Ensure(format!(
@@ -453,7 +450,7 @@ fn cleanup_upload_root(staged_package_root: &Path, upload_digest_root: &Path) {
     }
 }
 
-fn canonical_tree_digest(root: &Path) -> Result<String, DaemonError> {
+fn canonical_tree_digest(root: &Path) -> Result<String, PpcError> {
     let mut files = Vec::new();
     collect_files(root, root, &mut files)?;
     files.sort_by(|a, b| a.0.cmp(&b.0));
@@ -476,7 +473,7 @@ fn collect_files(
     root: &Path,
     dir: &Path,
     files: &mut Vec<(String, PathBuf)>,
-) -> Result<(), DaemonError> {
+) -> Result<(), PpcError> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();

@@ -1,5 +1,6 @@
 //! Mutable state for one agent loop.
 
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use eos_agent_ports::{
@@ -8,13 +9,16 @@ use eos_agent_ports::{
 };
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_tool_ports::{
-    CommandSessionToolService, SubagentToolService, SystemNotification, ToolRegistry, ToolResult,
-    WorkflowToolService,
+    CommandSessionToolService, SubagentToolService, SystemNotification, ToolKey, ToolRegistry,
+    ToolResult, WorkflowToolService,
 };
 use eos_types::AgentRunId;
 
 use crate::background::{BackgroundManagers, BackgroundTeardownService};
-use crate::notifications::NotificationService;
+use crate::notifications::{
+    enqueue_notification_rules, make_default_notification_rules, NotificationRule,
+    NotificationRuleContext, NotificationService,
+};
 
 use super::{AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory};
 use crate::EngineError;
@@ -38,10 +42,20 @@ pub(crate) struct AgentLoopState {
     pub(crate) metadata_service: Arc<dyn AgentExecutionMetadataService>,
     /// Total provider token count when known.
     pub(crate) total_token_count: Option<i64>,
-    /// Completed assistant turns.
-    pub(crate) completed_turns: u32,
+    /// Counted model-requested tool calls.
+    pub(crate) tool_calls_used: u32,
+    /// Counted text-only turns without terminal submission.
+    pub(crate) text_only_no_terminal_turns: u32,
     /// Run-local notification queue drained at loop turn boundaries.
     pub(crate) notifier: NotificationService,
+    /// Terminal tools visible to this agent loop.
+    terminal_tools: BTreeSet<ToolKey>,
+    /// Declarative notification rules.
+    notification_rules: Vec<Arc<dyn NotificationRule>>,
+    /// Fire-once notification names already emitted.
+    notification_fired: BTreeSet<String>,
+    /// Run-local background managers whose completions feed the notifier.
+    background: Option<BackgroundManagers>,
     /// Run-local background teardown service.
     background_teardown: Option<BackgroundTeardownService>,
 }
@@ -56,7 +70,12 @@ impl std::fmt::Debug for AgentLoopState {
             .field("tool_call_limit", &self.tool_call_limit)
             .field("tool_registry_len", &self.tool_registry.len())
             .field("total_token_count", &self.total_token_count)
-            .field("completed_turns", &self.completed_turns)
+            .field("tool_calls_used", &self.tool_calls_used)
+            .field(
+                "text_only_no_terminal_turns",
+                &self.text_only_no_terminal_turns,
+            )
+            .field("terminal_tools", &self.terminal_tools)
             .finish_non_exhaustive()
     }
 }
@@ -75,6 +94,11 @@ impl AgentLoopState {
                 workflow_sessions: run_services.workflow_sessions,
                 command_sessions: run_services.command_sessions,
             })?;
+        let terminal_tools = tool_registry
+            .list()
+            .filter(|tool| tool.is_terminal)
+            .map(|tool| tool.name.clone())
+            .collect();
         Ok(Self {
             agent_run_id: request.agent_run_id,
             conversation_messages: request.initial_messages,
@@ -84,14 +108,24 @@ impl AgentLoopState {
             tool_registry,
             metadata_service,
             total_token_count: None,
-            completed_turns: 0,
+            tool_calls_used: 0,
+            text_only_no_terminal_turns: 0,
             notifier: run_services.notifier,
+            terminal_tools,
+            notification_rules: make_default_notification_rules(),
+            notification_fired: BTreeSet::new(),
+            background: run_services.background,
             background_teardown: run_services.background_teardown,
         })
     }
 
-    pub(crate) fn advance_turn(&mut self) {
-        self.completed_turns = self.completed_turns.saturating_add(1);
+    pub(crate) fn record_tool_calls(&mut self, count: usize) {
+        let count = u32::try_from(count).unwrap_or(u32::MAX);
+        self.tool_calls_used = self.tool_calls_used.saturating_add(count);
+    }
+
+    pub(crate) fn record_text_only_turn(&mut self) {
+        self.text_only_no_terminal_turns = self.text_only_no_terminal_turns.saturating_add(1);
     }
 
     pub(crate) fn terminal_tool_submitted(self, outcome: ToolResult) -> AgentLoopOutcome {
@@ -115,10 +149,40 @@ impl AgentLoopState {
     }
 
     pub(crate) fn turn_limit_reached(&self) -> bool {
-        self.completed_turns >= self.tool_call_limit.max(1)
+        self.tool_calls_used
+            .saturating_add(self.text_only_no_terminal_turns)
+            >= self.hard_no_terminal_ceiling()
+    }
+
+    pub(crate) fn terminal_not_submitted_summary(&self) -> String {
+        format!(
+            "Agent stopped: terminal tool not submitted. tool_calls_used={}, text_only_no_terminal_turns={}, tool_call_limit={}, hard_ceiling={}",
+            self.tool_calls_used,
+            self.text_only_no_terminal_turns,
+            self.tool_call_limit,
+            self.hard_no_terminal_ceiling()
+        )
     }
 
     pub(crate) async fn drain_notifications(&mut self) -> Vec<SystemNotification> {
+        if let Some(background) = &self.background {
+            background.flush_completions().await;
+        }
+        let messages = self.llm_messages();
+        let rule_context = NotificationRuleContext {
+            tool_calls_used: self.tool_calls_used,
+            tool_call_limit: self.tool_call_limit,
+            terminal_tools: &self.terminal_tools,
+            terminal_submitted: false,
+        };
+        enqueue_notification_rules(
+            &messages,
+            &rule_context,
+            &self.notification_rules,
+            &mut self.notification_fired,
+            &self.notifier,
+        )
+        .await;
         let notifications = self.notifier.drain().await;
         if !notifications.is_empty() {
             self.conversation_messages
@@ -134,6 +198,21 @@ impl AgentLoopState {
             teardown.teardown(reason).await;
         }
     }
+
+    fn hard_no_terminal_ceiling(&self) -> u32 {
+        self.tool_call_limit.saturating_mul(3).saturating_add(1) / 2
+    }
+
+    fn llm_messages(&self) -> Vec<Message> {
+        self.conversation_messages
+            .iter()
+            .filter_map(|message| match message {
+                AgentLoopMessage::SystemPrompt(_) => None,
+                AgentLoopMessage::UserMessage(message)
+                | AgentLoopMessage::AssistantMessage(message) => Some(message.clone()),
+            })
+            .collect()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -142,6 +221,7 @@ pub(crate) struct AgentLoopRunServices {
     workflow_sessions: WorkflowToolService,
     command_sessions: CommandSessionToolService,
     notifier: NotificationService,
+    background: Option<BackgroundManagers>,
     background_teardown: Option<BackgroundTeardownService>,
 }
 
@@ -159,6 +239,7 @@ impl AgentLoopRunServices {
                 |_command_session_id, _sandbox_id| async {},
             ),
             notifier: NotificationService::new(),
+            background: None,
             background_teardown: None,
         }
     }
@@ -172,6 +253,7 @@ impl AgentLoopRunServices {
             workflow_sessions: background.workflow_tool_service(),
             command_sessions: background.command_session_tool_service(),
             notifier,
+            background: Some(background.clone()),
             background_teardown: Some(background.teardown_service()),
         }
     }

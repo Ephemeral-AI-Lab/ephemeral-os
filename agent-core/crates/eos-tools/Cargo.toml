@@ -30,11 +30,13 @@ serde_yaml.workspace = true
 schemars.workspace = true
 thiserror.workspace = true
 async-trait.workspace = true
-regex.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true }
 insta.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["insta"]
 
 [lints]
 workspace = true

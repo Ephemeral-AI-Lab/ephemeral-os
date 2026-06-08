@@ -63,7 +63,12 @@ fn round_trip_connected_route(
     let reply = match layer_stack_root {
         Some(expected_root) => {
             client.round_trip_with_callbacks(&request, timeout, move |callback| {
+                // The OCC writer stays daemon-owned: the injected callback runs
+                // `handle_callback_for_root` and its `DaemonError` is carried
+                // verbatim through the host's `PpcError::Callback` (the daemon's
+                // `From<PpcError>` re-wraps it on the way out).
                 occ_callbacks::handle_callback_for_root(&expected_root, callback)
+                    .map_err(|err| eos_plugin_host::PpcError::Callback(err.to_string()))
             })
         }
         None => client.round_trip(&request, timeout),
@@ -72,7 +77,7 @@ fn round_trip_connected_route(
         Ok(reply) => reply,
         Err(err) => {
             teardown_failed_connected_service(&service_instance_id, &err.to_string())?;
-            return Err(err);
+            return Err(err.into());
         }
     };
     response_payload_from_reply(&reply)

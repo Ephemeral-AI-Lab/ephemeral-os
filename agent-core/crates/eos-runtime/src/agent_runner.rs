@@ -96,6 +96,7 @@ impl AgentRunner for RuntimeAgentRunner {
             self.services.agent_core.agent_registry.clone(),
             loop_launcher,
             self.services.db.agent_run_store.clone(),
+            self.services.message_records.message_records.clone(),
         ));
         let agent_run_api: Arc<dyn AgentRunApi> = agent_runs.clone();
         let _ = agent_run_api_cell.set(agent_run_api);

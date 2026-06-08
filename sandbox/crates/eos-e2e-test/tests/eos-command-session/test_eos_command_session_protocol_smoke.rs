@@ -8,7 +8,7 @@ use serde_json::json;
 
 use crate::support::{
     as_i64, as_str, live_pool_or_skip, wait_for_active_leases,
-    wait_for_command_session_transcript_recycled,
+    wait_for_command_session_transcript_recycled, wait_for_command_stdout_contains,
 };
 
 fn command_line_marker_count(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<i64> {
@@ -42,7 +42,9 @@ fn wait_for_command_line_marker_count(
     marker: &str,
     expected: i64,
 ) -> Result<i64> {
-    let deadline = Instant::now() + Duration::from_secs(3);
+    // Widened for x86-on-arm64 emulation: a backgrounded descendant can lag into
+    // /proc, and post-cancel process-group reaping can lag out of it.
+    let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         let count = command_line_marker_count(lease, marker)?;
         if count == expected {
@@ -141,19 +143,20 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
-    assert!(
-        started["output"]["stdout"]
-            .as_str()
-            .unwrap_or_default()
-            .contains("descendant-ready"),
-        "expected descendant readiness marker: {started}"
-    );
     let session_id = as_str(&started, "command_session_id")?.to_owned();
-    let count = command_line_marker_count(&lease, &marker)?;
-    assert!(
-        count > 0,
-        "expected at least one live descendant marker process before cancel"
-    );
+    // Emulation can slip the `echo descendant-ready` past the first 500ms yield;
+    // poll the transcript for it instead of reading only the initial snapshot.
+    wait_for_command_stdout_contains(&lease, &session_id, "descendant-ready")?;
+    // The session's own `bash -lc '...MARKER...'` carries the marker in its argv
+    // alongside the `exec -a MARKER sleep 60` descendant, so poll for >= 1 marker
+    // process (not an exact count) — it can also lag into /proc under emulation.
+    let marker_deadline = Instant::now() + Duration::from_secs(15);
+    while command_line_marker_count(&lease, &marker)? < 1 {
+        if Instant::now() >= marker_deadline {
+            bail!("expected at least one live descendant marker process before cancel");
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
 
     let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,

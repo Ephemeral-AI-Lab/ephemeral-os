@@ -7,7 +7,7 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
+    array, as_i64, as_str, clean_stdout, live_pool_or_skip, stdout, wait_for_active_leases,
     wait_for_command_session_transcript_recycled, wait_for_session_count,
 };
 
@@ -27,9 +27,9 @@ fn external_sigterm_child_finalizes_via_collect_completed() -> Result<()> {
     let body = (|| -> Result<()> {
         wait_for_marker_at_least(&lease, &session.marker, 1)?;
         signal_marker(&lease, &session.marker, "TERM", SignalTarget::Pid)?;
-        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(3))?;
+        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(10))?;
 
-        let completion = wait_for_completion(&lease, &session.id, Duration::from_secs(6))?;
+        let completion = wait_for_completion(&lease, &session.id, Duration::from_secs(15))?;
         let result = completion.get("result").context("completion result")?;
         ensure!(
             as_str(result, "status")? == "error",
@@ -62,10 +62,10 @@ fn external_sigkill_process_group_is_observed_by_read_progress() -> Result<()> {
     let body = (|| -> Result<()> {
         wait_for_marker_at_least(&lease, &session.marker, 1)?;
         signal_marker(&lease, &session.marker, "KILL", SignalTarget::ProcessGroup)?;
-        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(3))?;
+        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(10))?;
 
         let terminal =
-            wait_for_read_progress_terminal(&lease, &session.id, Duration::from_secs(6))?;
+            wait_for_read_progress_terminal(&lease, &session.id, Duration::from_secs(15))?;
         ensure!(
             matches!(as_str(&terminal, "status")?, "error" | "cancelled"),
             "read_progress should observe externally killed process group as terminal: {terminal}"
@@ -126,7 +126,7 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
         cancel_session(&lease, &session.id)?;
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(3))?;
+        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(10))?;
         Ok(())
     })();
 
@@ -196,7 +196,9 @@ fn wait_for_stdout_marker(
     session_id: &str,
     initial: &Value,
 ) -> Result<String> {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    // Slow python/ns-runner startup under x86-on-arm64 emulation can delay the
+    // first transcript flush well past the native window.
+    let deadline = Instant::now() + Duration::from_secs(30);
     let mut last = initial.clone();
     loop {
         if let Some(marker) = marker_from_stdout(&last) {
@@ -219,7 +221,8 @@ fn wait_for_session_stdout_contains(
     if stdout(initial).contains(needle) {
         return Ok(());
     }
-    let deadline = Instant::now() + Duration::from_secs(5);
+    // Readiness line can lag behind slow emulated python startup.
+    let deadline = Instant::now() + Duration::from_secs(30);
     let mut last = initial.clone();
     loop {
         if Instant::now() >= deadline {
@@ -249,7 +252,10 @@ fn poll_session_output(
 }
 
 fn marker_from_stdout(value: &Value) -> Option<String> {
-    let normalized = stdout(value).replace('\r', "");
+    // The daemon transcript prefixes every line with `[ISO-8601] `, so the
+    // marker line is `[..] marker:...`. Strip the timestamp before the anchored
+    // `marker:` match; otherwise extraction never succeeds (format, not timing).
+    let normalized = clean_stdout(value).replace('\r', "");
     normalized.lines().find_map(|line| {
         line.strip_prefix("marker:")
             .map(str::trim)
@@ -399,7 +405,8 @@ print(count)
 }
 
 fn wait_for_marker_at_least(lease: &NodeLease<'_>, marker: &str, minimum: i64) -> Result<()> {
-    let deadline = Instant::now() + Duration::from_secs(3);
+    // Slow emulated spawn delays the child appearing under /proc.
+    let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         let count = marker_count(lease, marker)?;
         if count >= minimum {

@@ -290,6 +290,7 @@ pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
     u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }
 
+#[cfg(test)]
 pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
     u64::try_from(value).map_or(0.0, u64_to_f64_saturating)
 }

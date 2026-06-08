@@ -5,8 +5,8 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_command_session_transcript_recycled, wait_for_session_count,
+    array, as_i64, as_str, clean_stdout, live_pool_or_skip, settle_foreground_command, stdout,
+    wait_for_active_leases, wait_for_command_session_transcript_recycled, wait_for_session_count,
 };
 
 #[test]
@@ -22,6 +22,9 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
             "yield_time_ms": 1000,
             "timeout_seconds": 10,}),
     )?;
+    // Under emulation a slow ns-runner spawn can outlast the yield, so the
+    // command returns "running"; settle it to its terminal outcome first.
+    let failed = settle_foreground_command(&lease, failed, Instant::now() + Duration::from_secs(20))?;
     ensure!(
         as_str(&failed, "status")? == "error",
         "nonzero command should return an error status: {failed}"
@@ -271,7 +274,10 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
 }
 
 fn ensure_valid_utf8_prefix(response: &Value) -> Result<()> {
-    let output = stdout(response);
+    // Strip the per-line `[ISO-8601] ` transcript timestamp prefix; the property
+    // under test is that the Ω burst keeps its codepoint boundaries (a split Ω
+    // would surface as U+FFFD `�`, which still fails the char check below).
+    let output = clean_stdout(response);
     ensure!(
         output
             .chars()

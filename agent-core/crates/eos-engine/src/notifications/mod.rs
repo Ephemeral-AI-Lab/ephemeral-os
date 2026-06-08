@@ -7,15 +7,15 @@
 //! loop-facing [`enqueue_notification_rules`] (anchor D4: every notification is
 //! a sink producer), and the queue-backed [`NotificationService`].
 
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_llm_client::Message;
-use eos_tool_ports::{NotificationSink, Sealed, SystemNotification as ToolNotification, ToolError};
+use eos_tool_ports::{
+    NotificationSink, Sealed, SystemNotification as ToolNotification, ToolError, ToolKey,
+};
 use tokio::sync::Mutex;
-
-use crate::query::QueryContext;
 
 mod rules;
 
@@ -28,23 +28,34 @@ pub trait NotificationRule: Send + Sync {
     fn name(&self) -> String;
 
     /// Whether the rule fires at most once per run (latched in
-    /// `ctx.notification_fired`).
+    /// `notification_fired`).
     fn fire_once(&self) -> bool;
 
-    /// Whether the rule should fire for the current top-of-turn state. The
-    /// already-submitted-terminal short-circuit is handled by
-    /// [`enqueue_notification_rules`], so rules need not re-check it.
-    fn trigger(&self, messages: &[Message], ctx: &QueryContext) -> bool;
+    /// Whether the rule should fire for the current top-of-turn state.
+    fn trigger(&self, messages: &[Message], ctx: &NotificationRuleContext<'_>) -> bool;
 
     /// Render the notification body.
-    fn body(&self, ctx: &QueryContext) -> String;
+    fn body(&self, ctx: &NotificationRuleContext<'_>) -> String;
+}
+
+/// Read-only loop facts needed by notification rules.
+#[derive(Debug, Clone, Copy)]
+pub struct NotificationRuleContext<'a> {
+    /// Counted model-requested tool calls.
+    pub tool_calls_used: u32,
+    /// Configured tool-call limit.
+    pub tool_call_limit: u32,
+    /// Terminal tools visible to this loop.
+    pub terminal_tools: &'a BTreeSet<ToolKey>,
+    /// Whether a terminal submission has already ended the run.
+    pub terminal_submitted: bool,
 }
 
 /// Shared budget arithmetic for the rule bodies: `(used, limit, ceiling,
 /// turns_remaining)`. The run fails at `ceiling = ceil(1.5 * limit)` tool
 /// calls; `turns_remaining` is derived from `tool_calls_used` alone (the
 /// hard-ceiling gate itself uses the call+text-turn sum — anchor §6.5).
-pub(crate) fn budget_figures(ctx: &QueryContext) -> (u32, u32, u32, u32) {
+pub(crate) fn budget_figures(ctx: &NotificationRuleContext<'_>) -> (u32, u32, u32, u32) {
     let used = ctx.tool_calls_used;
     let limit = ctx.tool_call_limit;
     let ceiling = limit.saturating_mul(3).div_ceil(2);
@@ -74,24 +85,22 @@ pub fn make_default_notification_rules() -> Vec<Arc<dyn NotificationRule>> {
 /// latched in `ctx.notification_fired`; the loop is the sole sink consumer.
 pub async fn enqueue_notification_rules(
     messages: &[Message],
-    ctx: &mut QueryContext,
+    ctx: &NotificationRuleContext<'_>,
+    rules: &[Arc<dyn NotificationRule>],
+    notification_fired: &mut BTreeSet<String>,
     sink: &dyn NotificationSink,
 ) {
-    if ctx
-        .submission_outcome
-        .as_ref()
-        .is_some_and(|result| result.is_terminal)
-    {
+    if ctx.terminal_submitted {
         return;
     }
-    for rule in ctx.notification_rules.clone() {
+    for rule in rules {
         let name = rule.name();
-        if rule.fire_once() && ctx.notification_was_fired(&name) {
+        if rule.fire_once() && notification_fired.contains(&name) {
             continue;
         }
         if rule.trigger(messages, ctx) {
             if rule.fire_once() {
-                ctx.mark_notification_fired(name.clone());
+                notification_fired.insert(name.clone());
             }
             let _ = sink
                 .notify_system(ToolNotification {

@@ -24,8 +24,8 @@ use sha2::{Digest, Sha256};
 
 #[cfg(test)]
 use super::plugin_runtime_config;
-use super::ppc_router::PpcClient;
 use crate::error::DaemonError;
+use eos_plugin_host::PpcClient;
 
 pub(super) const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
 pub(super) const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";
@@ -553,7 +553,7 @@ fn accept_ppc_client(
         match listener.accept() {
             Ok((stream, _addr)) => {
                 stream.set_nonblocking(false)?;
-                return PpcClient::new(stream);
+                return Ok(PpcClient::new(stream)?);
             }
             Err(err) if err.kind() == ErrorKind::WouldBlock => {}
             Err(err) => return Err(err.into()),

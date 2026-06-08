@@ -50,19 +50,33 @@ async fn delegate_workflow_leaves_parent_running() {
         .unwrap()
         .unwrap();
     assert_eq!(workflow.parent_task_id, root_task_id);
-    let iterations = state
-        .db
-        .iteration_store
-        .list_for_workflow(&workflow_id)
-        .await
-        .unwrap();
+    let mut iterations = Vec::new();
+    for _ in 0..150 {
+        iterations = state
+            .db
+            .iteration_store
+            .list_for_workflow(&workflow_id)
+            .await
+            .unwrap();
+        if !iterations.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
     assert!(!iterations.is_empty(), "workflow must create an iteration");
-    let attempts = state
-        .db
-        .attempt_store
-        .list_for_iteration(&iterations[0].id)
-        .await
-        .unwrap();
+    let mut attempts = Vec::new();
+    for _ in 0..150 {
+        attempts = state
+            .db
+            .attempt_store
+            .list_for_iteration(&iterations[0].id)
+            .await
+            .unwrap();
+        if !attempts.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
     assert!(!attempts.is_empty(), "iteration must create an attempt");
 
     // Wait for the delegated workflow to actually CLOSE — the planner fails (no
@@ -287,17 +301,14 @@ struct DelegateThenTerminalRootSource {
 }
 
 impl DelegateThenTerminalRootSource {
-    fn workflow_handle(request: &LlmRequest) -> Option<(String, String)> {
+    fn workflow_handle(request: &LlmRequest) -> Option<String> {
         request.messages.iter().find_map(|message| {
             message.content.iter().find_map(|block| {
                 let ContentBlock::ToolResult { content, .. } = block else {
                     return None;
                 };
                 let value: serde_json::Value = serde_json::from_str(content).ok()?;
-                Some((
-                    value.get("workflow_id")?.as_str()?.to_owned(),
-                    value.get("workflow_task_id")?.as_str()?.to_owned(),
-                ))
+                Some(value.get("workflow_id")?.as_str()?.to_owned())
             })
         })
     }
@@ -336,7 +347,7 @@ impl EventSource for DelegateThenTerminalRootSource {
             )));
         }
 
-        if let Some((workflow_id, workflow_task_id)) = Self::workflow_handle(request) {
+        if let Some(workflow_id) = Self::workflow_handle(request) {
             tokio::time::sleep(Duration::from_millis(20)).await;
             let check_no = self
                 .checks
@@ -346,7 +357,6 @@ impl EventSource for DelegateThenTerminalRootSource {
                 "check_workflow_status",
                 json!({
                     "workflow_id": workflow_id,
-                    "workflow_task_id": workflow_task_id,
                 }),
             )));
         }

@@ -10,13 +10,12 @@ use eos_occ::{
 };
 use eos_protocol::{LayerChange, LayerPath, Manifest};
 
-use crate::response_timings::{i64_to_f64_saturating, usize_to_f64_saturating};
-
-use super::hash_current;
+use crate::{hash_current, i64_to_f64_saturating, usize_to_f64_saturating};
 
 static AUTO_SQUASH_MAX_DEPTH_CONFIG: AtomicUsize = AtomicUsize::new(AUTO_SQUASH_MAX_DEPTH);
 
-pub(super) fn configure_auto_squash_max_depth(max_depth: usize) {
+/// Configure the auto-squash depth ceiling applied after each publish.
+pub fn configure_auto_squash_max_depth(max_depth: usize) {
     AUTO_SQUASH_MAX_DEPTH_CONFIG.store(max_depth.max(1), Ordering::Relaxed);
 }
 
@@ -24,9 +23,13 @@ fn auto_squash_max_depth() -> usize {
     AUTO_SQUASH_MAX_DEPTH_CONFIG.load(Ordering::Relaxed)
 }
 
+/// `eos_occ::CommitTransactionPort` impl that revalidates a prepared changeset
+/// against the active manifest and publishes a new layer (with auto-squash) via
+/// `LayerStack` for `root`.
 #[derive(Clone)]
-pub(crate) struct LayerStackCommitTransaction {
-    pub(crate) root: PathBuf,
+pub struct LayerStackCommitTransaction {
+    /// The layer-stack root this transaction publishes into.
+    pub root: PathBuf,
 }
 
 impl CommitTransactionPort for LayerStackCommitTransaction {

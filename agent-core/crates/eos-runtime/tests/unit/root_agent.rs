@@ -347,6 +347,105 @@ async fn successful_root_keeps_engine_terminal() {
     assert_eq!(request.status, RequestStatus::Done);
 }
 
+#[tokio::test]
+async fn root_run_writes_runner_owned_message_records() {
+    let payload = json!({"status": "success", "outcome": "recorded"});
+    let factory = factory_by_agent(vec![
+        (
+            "root",
+            vec![
+                tool_use_turn(
+                    "toolu_advise",
+                    "ask_advisor",
+                    json!({"tool_name": "submit_root_outcome", "tool_payload": payload.clone()}),
+                ),
+                tool_use_turn("toolu_submit", "submit_root_outcome", payload),
+            ],
+        ),
+        (
+            "advisor",
+            vec![tool_use_turn(
+                "toolu_feedback",
+                "submit_advisor_feedback",
+                json!({
+                    "verdict": "approve",
+                    "summary": "Tool selection correct. Payload supported by the work. No residual risks.",
+                }),
+            )],
+        ),
+    ]);
+    let (state, _dir) =
+        build_test_state_with_message_records(Some(factory), vec![root_agent(), advisor_agent()])
+            .await;
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+
+    run_request(
+        &state,
+        &request_id,
+        "message record task",
+        Some("sb-1"),
+        None,
+    )
+    .await
+    .unwrap();
+
+    let agent_run = state
+        .db
+        .agent_run_store
+        .get_for_task(&root_task_id)
+        .await
+        .unwrap()
+        .expect("root agent run row exists");
+    let records = state.message_records().expect("message records configured");
+    let events = records.read_events(&agent_run.id, 0).await.unwrap();
+    let event_kinds: Vec<_> = events.iter().map(|event| event.kind.as_str()).collect();
+    assert_eq!(event_kinds.first(), Some(&"node_started"));
+    assert_eq!(event_kinds.get(1), Some(&"messages_initialized"));
+    assert!(
+        event_kinds.contains(&"messages_appended"),
+        "root run must append loop-produced messages"
+    );
+    assert_eq!(event_kinds.last(), Some(&"node_finished"));
+    assert_eq!(
+        events[0]
+            .payload
+            .get("type")
+            .and_then(|value| value.as_str()),
+        Some("root_agent")
+    );
+    assert_eq!(
+        events
+            .last()
+            .expect("node_finished event")
+            .payload
+            .get("status")
+            .and_then(|value| value.as_str()),
+        Some("completed")
+    );
+
+    let bytes = records.read_messages(&agent_run.id, 0).await.unwrap();
+    let raw = String::from_utf8(bytes.bytes).unwrap();
+    let rows: Vec<serde_json::Value> = raw
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert!(rows.iter().any(|row| {
+        row.get("type").and_then(|value| value.as_str()) == Some("initial_message")
+            && row.get("role").and_then(|value| value.as_str()) == Some("system")
+            && row.to_string().contains("test profile")
+    }));
+    assert!(rows.iter().any(|row| {
+        row.get("type").and_then(|value| value.as_str()) == Some("initial_message")
+            && row.get("role").and_then(|value| value.as_str()) == Some("user")
+            && row.to_string().contains("message record task")
+    }));
+    assert!(rows.iter().any(|row| {
+        row.get("type").and_then(|value| value.as_str()) == Some("message")
+            && row.to_string().contains("submit_root_outcome")
+    }));
+}
+
 // --- Root is advisor-gated: with no prior `ask_advisor` exchange in the
 // transcript, the stateless advisor pre-hook classifies `missing` and refuses
 // `submit_root_outcome`, so the run exhausts and the unfinished-root guard fails

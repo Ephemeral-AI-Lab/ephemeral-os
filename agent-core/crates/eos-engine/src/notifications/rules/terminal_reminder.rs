@@ -7,8 +7,7 @@
 
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 
-use crate::notifications::{budget_figures, NotificationRule};
-use crate::query::QueryContext;
+use crate::notifications::{budget_figures, NotificationRule, NotificationRuleContext};
 
 /// Reminds the model to submit a terminal tool after a bare text return.
 #[derive(Debug, Clone, Copy, Default)]
@@ -23,11 +22,11 @@ impl NotificationRule for TerminalCallReminder {
         false
     }
 
-    fn trigger(&self, messages: &[Message], ctx: &QueryContext) -> bool {
+    fn trigger(&self, messages: &[Message], ctx: &NotificationRuleContext<'_>) -> bool {
         !ctx.terminal_tools.is_empty() && last_assistant_was_text_return(messages)
     }
 
-    fn body(&self, ctx: &QueryContext) -> String {
+    fn body(&self, ctx: &NotificationRuleContext<'_>) -> String {
         let (used, limit, ceiling, turns_remaining) = budget_figures(ctx);
         let mut names: Vec<&str> = ctx
             .terminal_tools

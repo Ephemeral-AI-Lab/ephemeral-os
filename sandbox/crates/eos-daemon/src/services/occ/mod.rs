@@ -1,7 +1,10 @@
 //! Shared OCC writer facade.
+//!
+//! The layer-stack-bound `CommitTransactionPort` / `OccRouteProvider` impls plus
+//! the gitignore engine and content hashing live in [`eos_occ_layerstack`]; this
+//! module keeps the daemon-owned per-root [`service_cache`] single writer and the
+//! changeset/base-hash glue that needs the dispatcher's `DaemonError`.
 
-mod publish;
-mod route;
 mod service_cache;
 
 use std::path::Path;
@@ -9,22 +12,19 @@ use std::path::Path;
 use eos_layerstack::MergedView;
 use eos_occ::ChangesetResult;
 use eos_protocol::{LayerChange, LayerPath};
-use sha2::{Digest, Sha256};
 
 use crate::config::LayerStackConfig;
 use crate::error::DaemonError;
 
+pub(crate) use eos_occ_layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
 #[cfg(test)]
-pub(crate) use publish::LayerStackCommitTransaction;
-#[cfg(test)]
-pub(crate) use route::LayerStackRouteProvider;
-pub(crate) use route::{insert_occ_route_timings, occ_route_metrics};
+pub(crate) use eos_occ_layerstack::{hash_bytes, LayerStackCommitTransaction, LayerStackRouteProvider};
 pub(crate) use service_cache::occ_service_cache_snapshot;
 #[cfg(test)]
 pub(crate) use service_cache::{normalize_root_key, OccServiceCache, OCC_SERVICE_CACHE_MAX};
 
 pub(crate) fn configure_layer_stack(config: &LayerStackConfig) {
-    publish::configure_auto_squash_max_depth(config.auto_squash_max_depth);
+    eos_occ_layerstack::configure_auto_squash_max_depth(config.auto_squash_max_depth);
 }
 
 pub(crate) fn apply_occ_changeset(
@@ -63,30 +63,6 @@ pub(crate) fn base_hashes_for_snapshot(
             ))
         })
         .collect()
-}
-
-pub(crate) fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
-    if !exists {
-        return None;
-    }
-    content.map(hash_bytes)
-}
-
-pub(crate) fn hash_bytes(content: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(content);
-    hex_lower(&hasher.finalize())
-}
-
-fn hex_lower(bytes: &[u8]) -> String {
-    const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
-
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        out.push(char::from(LOWER_HEX[usize::from(byte >> 4)]));
-        out.push(char::from(LOWER_HEX[usize::from(byte & 0x0f)]));
-    }
-    out
 }
 
 pub(crate) fn manifest_version_u64(version: i64) -> Result<u64, DaemonError> {

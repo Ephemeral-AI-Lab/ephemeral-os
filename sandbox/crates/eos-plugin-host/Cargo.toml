@@ -1,0 +1,24 @@
+[package]
+name = "eos-plugin-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# Test-only seam: lets a caller redirect the managed package roots to temp dirs.
+# Production builds MUST leave this off so the roots stay the fixed `/eos/...`
+# managed paths and an untrusted plugin caller cannot redirect package publishing.
+# The daemon enables it from its `[dev-dependencies]` so only its test build sees it.
+test-root-override = []
+
+[dependencies]
+eos-plugin.workspace = true
+eos-protocol.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

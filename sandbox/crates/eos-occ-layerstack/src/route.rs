@@ -4,24 +4,25 @@ use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use serde_json::{json, Value};
 
-use eos_layerstack::LayerStack;
+use eos_layerstack::{LayerStack, LayerStackError};
 use eos_occ::OccRouteProvider;
 use eos_protocol::{LayerChange, LayerPath};
 
-use crate::error::DaemonError;
-use crate::response_timings::usize_to_f64_saturating;
-
-use super::hash_current;
+use crate::hash_current;
+use crate::usize_to_f64_saturating;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct OccRouteMetrics {
-    pub(crate) gated_path_count: usize,
-    pub(crate) direct_path_count: usize,
+pub struct OccRouteMetrics {
+    pub gated_path_count: usize,
+    pub direct_path_count: usize,
 }
 
+/// `eos_occ::OccRouteProvider` impl that resolves DIRECT-vs-GATED routing and
+/// base hashes from the active merged manifest of `root`.
 #[derive(Clone)]
-pub(crate) struct LayerStackRouteProvider {
-    pub(crate) root: PathBuf,
+pub struct LayerStackRouteProvider {
+    /// The layer-stack root whose merged manifest is consulted per call.
+    pub root: PathBuf,
 }
 
 impl OccRouteProvider for LayerStackRouteProvider {
@@ -48,10 +49,12 @@ impl OccRouteProvider for LayerStackRouteProvider {
     }
 }
 
-pub(crate) fn occ_route_metrics(
+/// Telemetry-only DIRECT/GATED tally over `changes`, sharing the route decision
+/// with [`LayerStackRouteProvider::is_ignored`].
+pub fn occ_route_metrics(
     root: &Path,
     changes: &[LayerChange],
-) -> Result<OccRouteMetrics, DaemonError> {
+) -> Result<OccRouteMetrics, LayerStackError> {
     let stack = LayerStack::open(root.to_path_buf())?;
     let mut metrics = OccRouteMetrics::default();
     for change in changes {
@@ -68,7 +71,7 @@ pub(crate) fn occ_route_metrics(
     Ok(metrics)
 }
 
-pub(crate) fn insert_occ_route_timings(
+pub fn insert_occ_route_timings(
     timings: &mut serde_json::Map<String, Value>,
     metrics: OccRouteMetrics,
     route_s: f64,
@@ -119,7 +122,7 @@ pub(crate) fn insert_occ_route_timings(
 /// projects, never a disk-walk. The per-pattern matching (dir-only-at-any-depth,
 /// `*`-not-crossing-`/`, `**`, `!` ordering, char classes) is delegated to the
 /// `ignore` crate's gitignore engine.
-pub(super) fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, DaemonError> {
+fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, LayerStackError> {
     let rel = path.trim_start_matches('/');
     if rel.is_empty() {
         return Ok(false);
@@ -139,7 +142,7 @@ pub(super) fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, Da
 
 /// Is directory `dir_rel` excluded? Walks its components root→leaf; once an
 /// ancestor is excluded the whole chain stays excluded (Git's directory seal).
-fn dir_is_excluded(stack: &LayerStack, dir_rel: &str) -> Result<bool, DaemonError> {
+fn dir_is_excluded(stack: &LayerStack, dir_rel: &str) -> Result<bool, LayerStackError> {
     let mut accum = String::new();
     let mut excluded = false;
     for part in dir_rel.split('/').filter(|part| !part.is_empty()) {
@@ -159,7 +162,7 @@ fn match_with_inheritance(
     stack: &LayerStack,
     path: &str,
     as_dir: bool,
-) -> Result<bool, DaemonError> {
+) -> Result<bool, LayerStackError> {
     let parts: Vec<&str> = path.split('/').collect();
     let mut ignored = false;
     let mut accum = String::new();
@@ -193,7 +196,7 @@ fn match_with_inheritance(
 fn matcher_for(
     stack: &LayerStack,
     dir_rel: &str,
-) -> Result<Option<ignore::gitignore::Gitignore>, DaemonError> {
+) -> Result<Option<ignore::gitignore::Gitignore>, LayerStackError> {
     let rel = join_rel(dir_rel, ".gitignore");
     let (bytes, exists) = stack.read_bytes(&rel)?;
     if !exists {

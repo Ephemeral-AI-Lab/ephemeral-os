@@ -12,10 +12,6 @@
 mod frame_io;
 mod pending;
 
-#[cfg(test)]
-#[path = "../../../tests/plugin/ppc_router/mod.rs"]
-mod tests;
-
 use std::os::unix::net::UnixStream;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -26,12 +22,13 @@ use serde_json::json;
 
 use self::frame_io::FrameWriter;
 use self::pending::{CallbackHandler, PendingCalls};
-use crate::error::DaemonError;
+use crate::PpcError;
 
-#[cfg(test)]
-pub(super) use self::frame_io::read_frame;
+pub use self::frame_io::read_frame;
 
-pub(super) struct PpcClient {
+/// A connected plugin service's PPC client: a synchronous request/reply façade
+/// over the service socket, multiplexed by a background reader thread.
+pub struct PpcClient {
     writer: FrameWriter,
     pending: PendingCalls,
 }
@@ -43,7 +40,8 @@ impl std::fmt::Debug for PpcClient {
 }
 
 impl PpcClient {
-    pub(super) fn new(stream: UnixStream) -> Result<Self, DaemonError> {
+    /// Wrap a connected service `stream`, spawning the reply-routing reader.
+    pub fn new(stream: UnixStream) -> Result<Self, PpcError> {
         let reader_stream = stream.try_clone()?;
         let writer = FrameWriter::new(stream);
         let pending = PendingCalls::default();
@@ -51,28 +49,31 @@ impl PpcClient {
         Ok(Self { writer, pending })
     }
 
-    pub(super) fn round_trip(
+    /// Send a request and await its reply (no callbacks serviced).
+    pub fn round_trip(
         &self,
         request: &PpcEnvelope,
         timeout: Duration,
-    ) -> Result<PpcEnvelope, DaemonError> {
+    ) -> Result<PpcEnvelope, PpcError> {
         self.send_request(request, timeout, None)
     }
 
-    pub(super) fn round_trip_with_callbacks<F>(
+    /// Send a request and await its reply, servicing plugin-originated callback
+    /// requests with `handle_callback` until the final reply arrives.
+    pub fn round_trip_with_callbacks<F>(
         &self,
         request: &PpcEnvelope,
         timeout: Duration,
         handle_callback: F,
-    ) -> Result<PpcEnvelope, DaemonError>
+    ) -> Result<PpcEnvelope, PpcError>
     where
-        F: FnMut(PpcEnvelope) -> Result<PpcEnvelope, DaemonError> + Send + 'static,
+        F: FnMut(PpcEnvelope) -> Result<PpcEnvelope, PpcError> + Send + 'static,
     {
         let callback = Arc::new(Mutex::new(handle_callback));
         let handler: CallbackHandler = Arc::new(move |frame| {
             let mut callback = callback
                 .lock()
-                .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc callback handler"))?;
+                .map_err(|_| PpcError::LockPoisoned("plugin ppc callback handler"))?;
             callback(frame)
         });
         self.send_request(request, timeout, Some(handler))
@@ -83,7 +84,7 @@ impl PpcClient {
         request: &PpcEnvelope,
         timeout: Duration,
         callback_handler: Option<CallbackHandler>,
-    ) -> Result<PpcEnvelope, DaemonError> {
+    ) -> Result<PpcEnvelope, PpcError> {
         if request.direction != PpcDirection::Request {
             return Err(PluginError::Ppc(
                 "daemon PPC round trip requires a request envelope".to_owned(),
@@ -122,7 +123,7 @@ fn spawn_reader_thread(
     mut stream: UnixStream,
     writer: FrameWriter,
     pending: PendingCalls,
-) -> Result<(), DaemonError> {
+) -> Result<(), PpcError> {
     thread::Builder::new()
         .name("eos-plugin-ppc-reader".to_owned())
         .spawn(move || reader_loop(&mut stream, &writer, &pending))?;
@@ -191,7 +192,7 @@ fn write_callback_error(
     writer: &FrameWriter,
     callback_message_id: &str,
     message: &str,
-) -> Result<(), DaemonError> {
+) -> Result<(), PpcError> {
     let body = json!({
         "success": false,
         "error": {

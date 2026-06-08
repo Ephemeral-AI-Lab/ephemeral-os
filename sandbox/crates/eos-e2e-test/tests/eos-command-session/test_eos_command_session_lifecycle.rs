@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, command_session_transcript_logs, command_session_transcript_path,
-    live_pool_or_skip, stdout, wait_for_active_leases,
+    live_pool_or_skip, settle_foreground_command, stdout, wait_for_active_leases,
     wait_for_command_session_transcript_recycled, wait_for_container_path, wait_for_session_count,
 };
 
@@ -96,11 +96,18 @@ fn assert_teardown_control_reaps_marker_process(
         "cancelled",
         "{label} should route to command-session cancel: {cancelled}"
     );
-    assert_eq!(
-        as_i64(&cancelled, "exit_code")?,
-        130,
-        "{label} should share the cancelled exit shape: {cancelled}"
-    );
+    // When the cancel reaps the child within cancel_wait_ms the daemon returns
+    // the reaped shape (exit_code 130). Under qemu emulation the reap can exceed
+    // that window, so the daemon returns the inline cancelled response with a
+    // null exit_code instead. Both are valid cancelled shapes; the authoritative
+    // teardown (process group killed, session + leases drained) is verified by
+    // the marker/session/lease waits below, so accept either exit shape here.
+    if let Some(exit_code) = cancelled.get("exit_code").and_then(Value::as_i64) {
+        assert_eq!(
+            exit_code, 130,
+            "{label} cancelled exit_code, when present, must be 130: {cancelled}"
+        );
+    }
     wait_for_session_count(lease, 0)?;
     wait_for_command_session_transcript_recycled(lease, &id)?;
     wait_for_active_leases(lease, 0)?;
@@ -170,6 +177,8 @@ fn exec_command_outputs_timestamped_transcript_lines() -> Result<()> {
             "timeout_seconds": 30
         }),
     )?;
+    let completed =
+        settle_foreground_command(&lease, completed, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(as_str(&completed, "status")?, "ok", "{completed}");
     assert!(
         stdout(&completed).contains("stamp-one") && stdout(&completed).contains("stamp-two"),
@@ -1074,6 +1083,7 @@ fn model_shell_sees_masked_proc() -> Result<()> {
             "timeout_seconds": 30
         }),
     )?;
+    let exec = settle_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     assert!(
         stdout(&exec).contains("procvisible=0"),

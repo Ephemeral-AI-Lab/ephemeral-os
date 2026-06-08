@@ -5,11 +5,11 @@ use std::sync::{mpsc, Arc, Mutex};
 
 use eos_plugin::{PluginError, PpcEnvelope};
 
-use crate::error::DaemonError;
+use crate::PpcError;
 
 pub(super) type CallbackHandler =
-    Arc<dyn Fn(PpcEnvelope) -> Result<PpcEnvelope, DaemonError> + Send + Sync>;
-pub(super) type PpcResult = Result<PpcEnvelope, DaemonError>;
+    Arc<dyn Fn(PpcEnvelope) -> Result<PpcEnvelope, PpcError> + Send + Sync>;
+pub(super) type PpcResult = Result<PpcEnvelope, PpcError>;
 
 #[derive(Clone, Default)]
 pub(super) struct PendingCalls {
@@ -26,7 +26,7 @@ impl PendingCalls {
         &self,
         message_id: String,
         callback_handler: Option<CallbackHandler>,
-    ) -> Result<mpsc::Receiver<PpcResult>, DaemonError> {
+    ) -> Result<mpsc::Receiver<PpcResult>, PpcError> {
         let (reply_tx, reply_rx) = mpsc::channel();
         let mut pending = self.lock()?;
         if pending.contains_key(&message_id) {
@@ -45,7 +45,7 @@ impl PendingCalls {
         Ok(reply_rx)
     }
 
-    pub(super) fn discard(&self, message_id: &str) -> Result<(), DaemonError> {
+    pub(super) fn discard(&self, message_id: &str) -> Result<(), PpcError> {
         self.lock()?.remove(message_id);
         Ok(())
     }
@@ -141,13 +141,13 @@ impl PendingCalls {
 
     fn lock(
         &self,
-    ) -> Result<std::sync::MutexGuard<'_, HashMap<String, PendingRequest>>, DaemonError> {
+    ) -> Result<std::sync::MutexGuard<'_, HashMap<String, PendingRequest>>, PpcError> {
         self.inner
             .lock()
-            .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc pending"))
+            .map_err(|_| PpcError::LockPoisoned("plugin ppc pending"))
     }
 
-    fn take(&self, message_id: &str) -> Result<Option<PendingRequest>, DaemonError> {
+    fn take(&self, message_id: &str) -> Result<Option<PendingRequest>, PpcError> {
         Ok(self.lock()?.remove(message_id))
     }
 }

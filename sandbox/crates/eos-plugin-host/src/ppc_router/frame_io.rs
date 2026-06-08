@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use eos_plugin::{PluginError, PpcEnvelope};
 
-use crate::error::DaemonError;
+use crate::PpcError;
 
 const MAX_PPC_FRAME_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
 
@@ -27,23 +27,19 @@ impl FrameWriter {
         &self,
         frame: &PpcEnvelope,
         timeout: Duration,
-    ) -> Result<(), DaemonError> {
+    ) -> Result<(), PpcError> {
         self.write_inner(frame, Some(timeout))
     }
 
-    pub(super) fn write(&self, frame: &PpcEnvelope) -> Result<(), DaemonError> {
+    pub(super) fn write(&self, frame: &PpcEnvelope) -> Result<(), PpcError> {
         self.write_inner(frame, None)
     }
 
-    fn write_inner(
-        &self,
-        frame: &PpcEnvelope,
-        timeout: Option<Duration>,
-    ) -> Result<(), DaemonError> {
+    fn write_inner(&self, frame: &PpcEnvelope, timeout: Option<Duration>) -> Result<(), PpcError> {
         let mut writer = self
             .stream
             .lock()
-            .map_err(|_| DaemonError::StateLockPoisoned("plugin ppc writer"))?;
+            .map_err(|_| PpcError::LockPoisoned("plugin ppc writer"))?;
         if let Some(timeout) = timeout {
             writer.set_write_timeout(Some(timeout))?;
         }
@@ -53,14 +49,14 @@ impl FrameWriter {
     }
 }
 
-pub(super) fn read_envelope(stream: &mut UnixStream) -> Result<PpcEnvelope, DaemonError> {
+pub(super) fn read_envelope(stream: &mut UnixStream) -> Result<PpcEnvelope, PpcError> {
     let bytes = read_frame(stream)?;
-    PpcEnvelope::decode(&bytes).map_err(DaemonError::from)
+    PpcEnvelope::decode(&bytes).map_err(PpcError::from)
 }
 
-pub(in crate::services::plugins) fn read_frame(
-    stream: &mut UnixStream,
-) -> Result<Vec<u8>, DaemonError> {
+/// Read one newline-terminated PPC frame from `stream`, capped at the protocol
+/// request-byte ceiling.
+pub fn read_frame(stream: &mut UnixStream) -> Result<Vec<u8>, PpcError> {
     let mut bytes = Vec::new();
     let mut one = [0_u8; 1];
     loop {

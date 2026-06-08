@@ -1,41 +1,35 @@
 #![allow(clippy::expect_used)]
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use eos_llm_client::{ContentBlock, MessageRole};
-use eos_tools::{ToolName, ToolRegistry, ToolResult};
-use eos_types::{AgentRunId, JsonObject};
+use eos_tool_ports::{ToolKey, ToolName};
+use eos_types::JsonObject;
 
 use super::*;
-use eos_testkit::metadata;
 
-fn ctx() -> QueryContext {
-    QueryContext {
-        tool_registry: Arc::new(ToolRegistry::new()),
-        cwd: PathBuf::new(),
-        model: "m".to_owned(),
-        system_prompt: String::new(),
-        max_tokens: 1,
-        tool_call_limit: 4,
-        agent_name: "root".to_owned(),
-        agent_run_id: AgentRunId::new_v4(),
-        task_id: None,
-        tool_calls_used: 0,
-        text_only_no_terminal_turns: 0,
-        tool_metadata: metadata(),
-        terminal_tools: BTreeSet::from([ToolName::SubmitRootOutcome]),
-        exit_reason: None,
-        submission_outcome: None,
-        event_source: None,
-        prompt_report: None,
-        notification_rules: make_default_notification_rules(),
-        notification_fired: BTreeSet::new(),
-        notifier: NotificationService::new(),
-        cancellation: crate::AgentRunCancellation::new(),
-        foreground: Arc::new(crate::ForegroundExecutorFactory.create(AgentRunId::new_v4())),
-        audit: None,
+struct RuleFixture {
+    rules: Vec<Arc<dyn NotificationRule>>,
+    fired: BTreeSet<String>,
+    terminal_tools: BTreeSet<ToolKey>,
+    tool_calls_used: u32,
+    tool_call_limit: u32,
+    terminal_submitted: bool,
+    notifier: NotificationService,
+}
+
+impl RuleFixture {
+    fn new() -> Self {
+        Self {
+            rules: make_default_notification_rules(),
+            fired: BTreeSet::new(),
+            terminal_tools: BTreeSet::from([ToolKey::from(ToolName::SubmitRootOutcome)]),
+            tool_calls_used: 0,
+            tool_call_limit: 4,
+            terminal_submitted: false,
+            notifier: NotificationService::new(),
+        }
     }
 }
 
@@ -70,47 +64,55 @@ fn tool_turn() -> [Message; 1] {
 
 /// Enqueue the firing rules onto the context notifier and drain them — the
 /// loop-top sequence in miniature.
-async fn fire_rules(messages: &[Message], ctx: &mut QueryContext) -> Vec<ToolNotification> {
-    let notifier = ctx.notifier.clone();
-    enqueue_notification_rules(messages, ctx, &notifier).await;
-    notifier.drain().await
+async fn fire_rules(messages: &[Message], fixture: &mut RuleFixture) -> Vec<ToolNotification> {
+    let terminal_tools = fixture.terminal_tools.clone();
+    let context = NotificationRuleContext {
+        tool_calls_used: fixture.tool_calls_used,
+        tool_call_limit: fixture.tool_call_limit,
+        terminal_tools: &terminal_tools,
+        terminal_submitted: fixture.terminal_submitted,
+    };
+    enqueue_notification_rules(
+        messages,
+        &context,
+        &fixture.rules,
+        &mut fixture.fired,
+        &fixture.notifier,
+    )
+    .await;
+    fixture.notifier.drain().await
 }
 
 #[tokio::test]
 async fn notification_rules_fire_in_order_with_dedup() {
-    let mut ctx = ctx();
-    ctx.tool_calls_used = 3; // tool_call_limit = 4 -> the 75% tier fires
+    let mut fixture = RuleFixture::new();
+    fixture.tool_calls_used = 3; // tool_call_limit = 4 -> the 75% tier fires
     let turn = text_turn("here is my answer");
-    let first = fire_rules(&turn, &mut ctx).await;
+    let first = fire_rules(&turn, &mut fixture).await;
     assert_eq!(first.len(), 2, "75% budget + terminal reminder");
     assert!(first[0].message.contains("75%"), "budget tier first");
     assert!(first[1].message.contains("terminal tool"));
 
-    let second = fire_rules(&turn, &mut ctx).await;
+    let second = fire_rules(&turn, &mut fixture).await;
     assert_eq!(second.len(), 1, "budget tier is fire-once");
     assert!(second[0].message.contains("terminal tool"));
 
-    ctx.submission_outcome = Some(ToolResult {
-        output: "done".to_owned(),
-        is_error: false,
-        metadata: JsonObject::new(),
-        is_terminal: true,
-    });
-    assert!(fire_rules(&turn, &mut ctx).await.is_empty());
+    fixture.terminal_submitted = true;
+    assert!(fire_rules(&turn, &mut fixture).await.is_empty());
 }
 
 #[tokio::test]
 async fn terminal_reminder_fires_on_text_return_and_reports_budget() {
-    let mut ctx = ctx(); // tool_call_limit = 4
-    ctx.tool_calls_used = 2; // below the first budget tier; only the reminder can fire
+    let mut fixture = RuleFixture::new(); // tool_call_limit = 4
+    fixture.tool_calls_used = 2; // below the first budget tier; only the reminder can fire
 
     // User-only transcript -> no assistant text return -> no terminal reminder.
-    assert!(fire_rules(&[Message::from_user_text("hi")], &mut ctx)
+    assert!(fire_rules(&[Message::from_user_text("hi")], &mut fixture)
         .await
         .is_empty());
 
     // A text-return assistant turn nudges, with the ceil(1.5*limit) ceiling.
-    let fired = fire_rules(&text_turn("done"), &mut ctx).await;
+    let fired = fire_rules(&text_turn("done"), &mut fixture).await;
     assert_eq!(fired.len(), 1);
     let body = &fired[0].message;
     assert!(body.contains("You have not submitted a terminal tool"));
@@ -120,17 +122,20 @@ async fn terminal_reminder_fires_on_text_return_and_reports_budget() {
 
 #[tokio::test]
 async fn reasoning_only_does_not_nudge_but_text_only_does() {
-    let mut ctx = ctx();
-    ctx.tool_calls_used = 2; // below every budget tier; only the nudge can fire
+    let mut fixture = RuleFixture::new();
+    fixture.tool_calls_used = 2; // below every budget tier; only the nudge can fire
 
     // Reasoning-only turn (no Text block) -> no nudge.
-    assert!(fire_rules(&reasoning_turn("thinking"), &mut ctx)
+    assert!(fire_rules(&reasoning_turn("thinking"), &mut fixture)
         .await
         .is_empty());
     // Tool-use turn (making progress) -> no nudge.
-    assert!(fire_rules(&tool_turn(), &mut ctx).await.is_empty());
+    assert!(fire_rules(&tool_turn(), &mut fixture).await.is_empty());
     // Text-only turn -> nudge.
-    assert_eq!(fire_rules(&text_turn("answer"), &mut ctx).await.len(), 1);
+    assert_eq!(
+        fire_rules(&text_turn("answer"), &mut fixture).await.len(),
+        1
+    );
 }
 
 #[tokio::test]

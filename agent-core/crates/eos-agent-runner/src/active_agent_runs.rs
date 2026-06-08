@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use eos_agent_message_records::AgentRunRecordHandle;
 use eos_agent_ports::{AgentLoopCancelHandle, AgentRunError, AgentRunOutcome};
 use eos_types::AgentRunId;
 use tokio::sync::{watch, Mutex};
@@ -23,6 +24,22 @@ impl std::fmt::Debug for ActiveAgentRuns {
 struct ActiveAgentRun {
     outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
     cancel_handle: AgentLoopCancelHandle,
+    message_record: Option<ActiveAgentRunRecord>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ActiveAgentRunRecord {
+    pub(crate) handle: AgentRunRecordHandle,
+    pub(crate) initial_message_count: usize,
+}
+
+impl ActiveAgentRunRecord {
+    pub(crate) fn new(handle: AgentRunRecordHandle, initial_message_count: usize) -> Self {
+        Self {
+            handle,
+            initial_message_count,
+        }
+    }
 }
 
 impl ActiveAgentRuns {
@@ -36,6 +53,7 @@ impl ActiveAgentRuns {
         &self,
         agent_run_id: AgentRunId,
         cancel_handle: AgentLoopCancelHandle,
+        message_record: Option<ActiveAgentRunRecord>,
     ) {
         let (outcome_tx, _) = watch::channel(None);
         self.inner.lock().await.insert(
@@ -43,6 +61,7 @@ impl ActiveAgentRuns {
             ActiveAgentRun {
                 outcome_tx,
                 cancel_handle,
+                message_record,
             },
         );
     }
@@ -55,6 +74,7 @@ impl ActiveAgentRuns {
             .map(|handle| ActiveAgentRunCompletion {
                 outcome_tx: handle.outcome_tx,
                 cancel_handle: handle.cancel_handle,
+                message_record: handle.message_record,
             })
     }
 
@@ -85,11 +105,16 @@ impl ActiveAgentRuns {
 pub(crate) struct ActiveAgentRunCompletion {
     outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
     cancel_handle: AgentLoopCancelHandle,
+    message_record: Option<ActiveAgentRunRecord>,
 }
 
 impl ActiveAgentRunCompletion {
     pub(crate) fn cancel(&self, reason: &str) {
         self.cancel_handle.cancel(reason.to_owned());
+    }
+
+    pub(crate) fn take_message_record(&mut self) -> Option<ActiveAgentRunRecord> {
+        self.message_record.take()
     }
 
     pub(crate) fn publish(self, outcome: AgentRunOutcome) {

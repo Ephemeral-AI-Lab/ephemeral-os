@@ -11,10 +11,12 @@ eos-protocol.workspace = true
 eos-layerstack.workspace = true
 eos-overlay.workspace = true
 eos-occ.workspace = true
+eos-occ-layerstack.workspace = true
 eos-workspace-api.workspace = true
 eos-isolated-workspace.workspace = true
 eos-ephemeral-workspace.workspace = true
 eos-plugin.workspace = true
+eos-plugin-host.workspace = true
 eos-checkpoint-host.workspace = true
 eos-runner.workspace = true
 eos-command-session.workspace = true
@@ -29,6 +31,12 @@ uuid.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { workspace = true, features = ["fs", "process", "signal"] }
+
+[dev-dependencies]
+# Enable the package-root test seam only for the daemon's own test build; the
+# production `[dependencies]` entry above leaves it off (resolver 2 keeps the
+# dev-dependency feature out of the non-test build).
+eos-plugin-host = { workspace = true, features = ["test-root-override"] }
 
 [lints]
 workspace = true

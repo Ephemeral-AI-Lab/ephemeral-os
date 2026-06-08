@@ -2,8 +2,8 @@
 #![allow(clippy::expect_used)]
 
 use eos_agent_ports::{AgentState, StartAgentLoopRequest};
-use eos_engine::{EngineError, EventSource, QueryStream, StreamEvent};
-use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec, UsageSnapshot};
+use eos_engine::{EngineError, EventSource, StreamEvent};
+use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec};
 use eos_sandbox_port::{DaemonOp, SandboxTransport};
 use eos_testkit::{
     factory_by_agent, run_until, text_turn, tool_use_turn, FakeTransport, ScriptedSource,
@@ -140,33 +140,23 @@ fn tool_use_turn_drops_non_object_input_to_empty_object() {
 #[tokio::test]
 async fn run_until_stops_inclusively_at_matching_event() {
     let events = vec![
-        Ok((
-            StreamEvent::AssistantTextDelta {
-                agent_name: String::new(),
-                agent_run_id: None,
-                text: "one".to_owned(),
-            },
-            None::<UsageSnapshot>,
-        )),
-        Ok((
-            StreamEvent::AssistantTextDelta {
-                agent_name: String::new(),
-                agent_run_id: None,
-                text: "two".to_owned(),
-            },
-            None,
-        )),
-        Ok((
-            StreamEvent::AssistantTextDelta {
-                agent_name: String::new(),
-                agent_run_id: None,
-                text: "three".to_owned(),
-            },
-            None,
-        )),
+        Ok(StreamEvent::AssistantTextDelta {
+            agent_name: String::new(),
+            agent_run_id: None,
+            text: "one".to_owned(),
+        }),
+        Ok(StreamEvent::AssistantTextDelta {
+            agent_name: String::new(),
+            agent_run_id: None,
+            text: "two".to_owned(),
+        }),
+        Ok(StreamEvent::AssistantTextDelta {
+            agent_name: String::new(),
+            agent_run_id: None,
+            text: "three".to_owned(),
+        }),
     ];
-    let mut stream: QueryStream<'_> =
-        Box::pin(futures::stream::iter::<Vec<Result<_, EngineError>>>(events));
+    let mut stream = Box::pin(futures::stream::iter::<Vec<Result<_, EngineError>>>(events));
 
     let collected = run_until(
         &mut stream,

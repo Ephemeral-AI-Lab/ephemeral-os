@@ -6,13 +6,12 @@ use eos_protocol::Intent;
 use serde_json::{json, Value};
 
 use super::{
-    ppc_router,
     process::{PluginProcessSpec, PluginServiceProcess},
     service::PluginServiceSnapshot,
 };
 use crate::error::DaemonError;
 
-pub(super) type SharedPpcClient = Arc<ppc_router::PpcClient>;
+pub(super) type SharedPpcClient = Arc<eos_plugin_host::PpcClient>;
 pub(super) const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;
 
 #[derive(Debug, Clone)]

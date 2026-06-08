@@ -196,8 +196,10 @@ dependencies = [
  "eos-isolated-workspace",
  "eos-layerstack",
  "eos-occ",
+ "eos-occ-layerstack",
  "eos-overlay",
  "eos-plugin",
+ "eos-plugin-host",
  "eos-protocol",
  "eos-runner",
  "eos-workspace-api",
@@ -286,6 +288,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-occ-layerstack"
+version = "0.1.0"
+dependencies = [
+ "eos-layerstack",
+ "eos-occ",
+ "eos-protocol",
+ "ignore",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "eos-overlay"
 version = "0.1.0"
 dependencies = [
@@ -304,6 +318,18 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "eos-plugin-host"
+version = "0.1.0"
+dependencies = [
+ "eos-plugin",
+ "eos-protocol",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "uuid",
 ]
 
 [[package]]

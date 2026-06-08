@@ -93,6 +93,25 @@ impl DaemonError {
     }
 }
 
+impl From<eos_plugin_host::PpcError> for DaemonError {
+    /// Fold a plugin-host PPC / package failure onto the matching daemon
+    /// variant. `Plugin` keeps the inner [`eos_plugin::PluginError`] so
+    /// `wire_kind` still classifies `ForbiddenInIsolatedWorkspace`; `Callback`
+    /// carries an already-formatted message that re-wraps as a PPC error.
+    fn from(err: eos_plugin_host::PpcError) -> Self {
+        use eos_plugin_host::PpcError;
+        match err {
+            PpcError::Plugin(source) => Self::Plugin(source),
+            PpcError::Protocol(source) => Self::Protocol(source),
+            PpcError::Io(source) => Self::Io(source),
+            PpcError::LockPoisoned(what) => Self::StateLockPoisoned(what),
+            PpcError::Callback(message) => {
+                Self::Plugin(eos_plugin::PluginError::Ppc(message))
+            }
+        }
+    }
+}
+
 impl From<eos_checkpoint_host::CheckpointError> for DaemonError {
     /// Fold a host checkpoint failure onto the matching daemon variant,
     /// preserving variant identity (so `wire_kind` classifies `Forbidden`

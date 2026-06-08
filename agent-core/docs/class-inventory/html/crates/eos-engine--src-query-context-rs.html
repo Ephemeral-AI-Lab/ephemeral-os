@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>42</b><span>modules</span></div>
-  <div><b>324</b><span>items</span></div>
-  <div><b>266</b><span>fields</span></div>
-  <div><b>236</b><span>methods</span></div>
+  <div><b>323</b><span>items</span></div>
+  <div><b>269</b><span>fields</span></div>
+  <div><b>243</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -72,10 +72,10 @@
         <span class="rs-self">self</span>.tool_calls_used = <span class="rs-self">self</span>.tool_calls_used.saturating_add(1);
     }
 </code></pre>
-</details></td></tr><tr id="method-record-text-only-turn-137"><td>method</td><td>record_text_only_turn</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine--src-query-context-rs.html#method-record-text-only-turn-137">record_text_only_turn</a> (&amp; mut self)</code><p class="docstring">Count one assistant turn that did not submit a terminal tool.</p><details class="function-source">
+</details></td></tr><tr id="method-record-text-only-turn-137"><td>method</td><td>record_text_only_turn</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-108">record_text_only_turn</a> (&amp; mut self)</code><p class="docstring">Count one assistant turn that did not submit a terminal tool.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Count one assistant turn that did not submit a terminal tool.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-record-text-only-turn-137">record_text_only_turn</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-108">record_text_only_turn</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-self">self</span>.text_only_no_terminal_turns = <span class="rs-self">self</span>.text_only_no_terminal_turns.saturating_add(1);
     }
 </code></pre>
@@ -174,13 +174,13 @@
   <div class="tags"></div>
 
   <p class="source">crates/eos-engine/src/query/context.rs:22</p>
-</article><article id="item-type-EventSourceFactory-25" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type EventSourceFactory pub pub type EventSourceFactory = Arc &lt; dyn Fn (&amp; StartAgentLoopRequest) -&gt; Arc &lt; dyn EventSource &gt; + Send + Sync &gt; crates/eos-engine/src/query/context.rs  ">
+</article><article id="item-type-EventSourceFactory-25" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type EventSourceFactory pub pub type EventSourceFactory = Arc &lt; dyn Fn (&amp; StartAgentLoopRequest , &amp; AgentState) -&gt; Arc &lt; dyn EventSource &gt; + Send + Sync &gt; crates/eos-engine/src/query/context.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>EventSourceFactory</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-type-EventSourceFactory-25">EventSourceFactory</a> = Arc &lt; dyn Fn (&amp; StartAgentLoopRequest) -&gt; Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-32">EventSource</a> &gt; + Send + Sync &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-type-EventSourceFactory-25">EventSourceFactory</a> = Arc &lt; dyn Fn (&amp; StartAgentLoopRequest , &amp; AgentState) -&gt; Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-32">EventSource</a> &gt; + Send + Sync &gt;</code>
   <p class="docstring">Per-loop event source factory.</p>
   <div class="tags"></div>
 
@@ -212,7 +212,7 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> async_trait::async_trait;
-<span class="rs-kw">use</span> eos_agent_ports::<span class="rs-type">StartAgentLoopRequest</span>;
+<span class="rs-kw">use</span> eos_agent_ports::{<span class="rs-type">AgentState</span>, <span class="rs-type">StartAgentLoopRequest</span>};
 <span class="rs-kw">use</span> eos_audit::<span class="rs-type">AuditSink</span>;
 <span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">LlmRequest</span>;
 <span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">ExecutionMetadata</span>, <span class="rs-type">ToolName</span>, <span class="rs-type">ToolRegistry</span>, <span class="rs-type">ToolResult</span>};
@@ -230,7 +230,7 @@
 
 <span class="rs-comment">/// Per-loop event source factory.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventSourceFactory-25">EventSourceFactory</a> =
-    <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(&amp;<span class="rs-type">StartAgentLoopRequest</span>) -&gt; <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-32">EventSource</a>&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+    <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(&amp;<span class="rs-type">StartAgentLoopRequest</span>, &amp;<span class="rs-type">AgentState</span>) -&gt; <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-32">EventSource</a>&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
 
 <span class="rs-comment">/// Per-run stream-event callback.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-29">EventCallback</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(&amp;<a class="symbol-link rs-type" href="eos-engine--src-telemetry-events-rs.html#item-enum-StreamEvent-19">StreamEvent</a>) + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
@@ -341,7 +341,7 @@
     }
 
     <span class="rs-comment">/// Count one assistant turn that did not submit a terminal tool.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-record-text-only-turn-137">record_text_only_turn</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-108">record_text_only_turn</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-self">self</span>.text_only_no_terminal_turns = <span class="rs-self">self</span>.text_only_no_terminal_turns.saturating_add(1);
     }
 

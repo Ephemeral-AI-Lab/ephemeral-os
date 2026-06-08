@@ -24,7 +24,6 @@ use self::workflow_session_manager::{
 };
 use super::notification::BackgroundNotificationEmitter;
 use crate::notifications::NotificationService;
-use crate::query::{QueryContext, QueryExitReason};
 
 type BackgroundTeardownFuture = Pin<Box<dyn Future<Output = BackgroundSessionCounts> + Send>>;
 type BackgroundTeardownCallback = Arc<dyn Fn(String) -> BackgroundTeardownFuture + Send + Sync>;
@@ -212,6 +211,42 @@ impl BackgroundManagers {
         self.runtime.count().await
     }
 
+    pub(crate) async fn flush_completions(&self) {
+        for completion in self
+            .runtime
+            .subagent_session_manager()
+            .poll_completions()
+            .await
+        {
+            self.runtime
+                .subagent_session_manager()
+                .push_notification_on_completion(completion)
+                .await;
+        }
+        for completion in self
+            .runtime
+            .workflow_session_manager()
+            .poll_completions()
+            .await
+        {
+            self.runtime
+                .workflow_session_manager()
+                .push_notification_on_completion(completion)
+                .await;
+        }
+        for completion in self
+            .runtime
+            .command_session_manager()
+            .poll_completions()
+            .await
+        {
+            self.runtime
+                .command_session_manager()
+                .push_notification_on_completion(completion)
+                .await;
+        }
+    }
+
     #[must_use]
     pub fn teardown_service(&self) -> BackgroundTeardownService {
         let background = self.clone();
@@ -367,110 +402,5 @@ impl std::fmt::Debug for BackgroundTeardownService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BackgroundTeardownService")
             .finish_non_exhaustive()
-    }
-}
-
-/// Normal-exit background cleanup for one agent run.
-pub(crate) struct BackgroundSessionFinalizer {
-    background: Option<BackgroundTeardownService>,
-    armed: bool,
-}
-
-impl BackgroundSessionFinalizer {
-    pub(crate) fn new(background: Option<BackgroundTeardownService>) -> Self {
-        Self {
-            background,
-            armed: true,
-        }
-    }
-
-    pub(crate) async fn finalize(&mut self, ctx: &QueryContext, error: Option<&str>) {
-        let Some(background) = &self.background else {
-            self.disarm();
-            return;
-        };
-        let reason = finalize_reason(ctx.exit_reason, error);
-        background.teardown(&reason).await;
-        self.disarm();
-    }
-
-    /// Disarm without running cleanup: the caller has handed background teardown
-    /// to another owner, so neither `finalize` nor the `Drop` backstop should fire
-    /// a second teardown.
-    pub(crate) fn disarm(&mut self) {
-        self.armed = false;
-    }
-}
-
-impl Drop for BackgroundSessionFinalizer {
-    fn drop(&mut self) {
-        if !self.armed {
-            return;
-        }
-        let Some(background) = self.background.take() else {
-            return;
-        };
-        let reason = "engine run dropped before background finalization".to_owned();
-        let Ok(handle) = tokio::runtime::Handle::try_current() else {
-            tracing::warn!(
-                "engine run dropped outside a Tokio runtime; background cleanup could not be spawned"
-            );
-            return;
-        };
-        handle.spawn(async move {
-            background.teardown(&reason).await;
-        });
-    }
-}
-
-fn finalize_reason(exit_reason: Option<QueryExitReason>, error: Option<&str>) -> String {
-    match (exit_reason, error) {
-        (_, Some(error)) => format!("engine run failed: {error}"),
-        (Some(QueryExitReason::TerminalNotSubmitted), None) => {
-            "parent agent exited without submitting a terminal tool".to_owned()
-        }
-        (Some(QueryExitReason::ToolStop), None) => "parent agent submitted its terminal".to_owned(),
-        (None, None) => "parent agent exited".to_owned(),
-    }
-}
-
-#[cfg(test)]
-mod finalizer_tests {
-    #![allow(clippy::expect_used)]
-
-    use tokio::sync::mpsc;
-    use tokio::time::{timeout, Duration};
-
-    use super::*;
-
-    fn recording_background(tx: mpsc::UnboundedSender<String>) -> BackgroundTeardownService {
-        BackgroundTeardownService::new(move |reason| {
-            let tx = tx.clone();
-            async move {
-                tx.send(reason).expect("send cleanup");
-                BackgroundSessionCounts {
-                    total: 0,
-                    subagents: 0,
-                    workflows: 0,
-                    command_sessions: 0,
-                }
-            }
-        })
-    }
-
-    #[tokio::test]
-    async fn drop_spawns_background_cleanup_when_still_armed() {
-        let (tx, mut rx) = mpsc::unbounded_channel();
-        let background = recording_background(tx);
-
-        {
-            let _finalizer = BackgroundSessionFinalizer::new(Some(background));
-        }
-
-        let reason = timeout(Duration::from_millis(100), rx.recv())
-            .await
-            .expect("cleanup spawned")
-            .expect("cleanup message");
-        assert_eq!(reason, "engine run dropped before background finalization");
     }
 }

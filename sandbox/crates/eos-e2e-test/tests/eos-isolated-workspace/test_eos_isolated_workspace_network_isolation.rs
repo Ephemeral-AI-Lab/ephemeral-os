@@ -35,9 +35,12 @@ fn start_server(
     caller_id: Option<&str>,
     port: u16,
 ) -> Result<Value> {
-    let cmd = format!(
-        "mkdir -p /eos/scratch/e2e && timeout 20 python3 -m http.server {port} >/eos/scratch/e2e/srv-{port}.log 2>&1"
-    );
+    // Log to /tmp (writable in the ephemeral exec): /eos is read-only by the
+    // mount mask, so a `>/eos/scratch/...` redirect makes the server fail before
+    // it binds the port — which would make the conflict checks pass for the
+    // wrong reason. The log itself is throwaway (never read by any test).
+    let cmd =
+        format!("timeout 20 python3 -m http.server {port} >/tmp/eos-e2e-srv-{port}.log 2>&1");
     let mut args = json!({
         "cmd": cmd,
         "yield_time_ms": 400,

@@ -6,7 +6,7 @@ use super::*;
 mod subagent_lifecycle {
     use std::num::NonZeroU32;
     use std::sync::atomic::{AtomicBool, Ordering};
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
     use std::time::Duration;
 
     use async_trait::async_trait;
@@ -228,15 +228,14 @@ mod subagent_lifecycle {
         .await;
         let request_id = RequestId::new_v4();
         let root_task_id = root_task_id_for(&request_id);
-        let events = Arc::new(Mutex::new(Vec::new()));
-        let events_callback = events.clone();
-        let callback = Arc::new(move |event: &StreamEvent| {
-            events_callback.lock().unwrap().push(event.clone());
-        });
-        run_request(&state, &request_id, "task", Some("sb-1"), Some(callback))
+        run_request(&state, &request_id, "task", Some("sb-1"), None)
             .await
             .unwrap();
 
+        assert!(
+            saw_finished.load(Ordering::SeqCst),
+            "the child explorer must run and report completion via notification"
+        );
         let task = state
             .db
             .task_store
@@ -244,38 +243,6 @@ mod subagent_lifecycle {
             .await
             .unwrap()
             .unwrap();
-        eprintln!("DEBUG task status={:?} terminal={:?}", task.status, task.terminal_tool_result);
-        let root_run = state
-            .db
-            .agent_run_store
-            .get_for_task(&root_task_id)
-            .await
-            .unwrap();
-        eprintln!("DEBUG root_run={:#?}", root_run);
-        let events = events.lock().unwrap().clone();
-        eprintln!("DEBUG events={:#?}", events);
-        for event in &events {
-            if let StreamEvent::ToolExecutionCompleted {
-                tool_name, metadata, ..
-            } = event
-            {
-                if tool_name == "run_subagent" {
-                    if let Some(child_id) = metadata
-                        .get("agent_run_id")
-                        .and_then(serde_json::Value::as_str)
-                    {
-                        let child_run_id = child_id.parse().unwrap();
-                        let child_run = state.db.agent_run_store.get(&child_run_id).await.unwrap();
-                        eprintln!("DEBUG child_run={:#?}", child_run);
-                    }
-                }
-            }
-        }
-
-        assert!(
-            saw_finished.load(Ordering::SeqCst),
-            "the child explorer must run and report completion via notification"
-        );
         assert_eq!(
             task.status,
             TaskStatus::Done,

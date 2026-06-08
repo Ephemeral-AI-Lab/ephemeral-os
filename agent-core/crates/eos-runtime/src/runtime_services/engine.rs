@@ -17,7 +17,6 @@ pub(crate) struct EngineService {
 }
 
 impl EngineService {
-    #[allow(dead_code)] // Used by the old AgentRunControl path until cancellation cleanup is removed.
     pub(crate) fn command_session_completion_poll_interval(&self) -> Duration {
         Duration::from_millis(
             self.runtime_config

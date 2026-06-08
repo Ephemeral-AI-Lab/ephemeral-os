@@ -8,8 +8,9 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, command_session_transcript_logs, live_pool_or_skip, stdout,
-    wait_for_active_leases, wait_for_command_session_transcript_recycled, wait_for_session_count,
+    array, as_i64, as_str, command_session_transcript_logs, live_pool_or_skip,
+    settle_foreground_command, stdout, wait_for_active_leases,
+    wait_for_command_session_transcript_recycled, wait_for_session_count,
 };
 
 struct CommandFamily {
@@ -94,6 +95,13 @@ fn run_command_family(family_name: &str) -> Result<()> {
                 "cmd": variant.cmd,
                 "yield_time_ms": 1000,
                 "timeout_seconds": timeout_s,}),
+        )?;
+        // Under emulation a quick variant can outlast the yield and return
+        // "running"; settle to its terminal foreground outcome before asserting.
+        let response = settle_foreground_command(
+            &lease,
+            response,
+            Instant::now() + Duration::from_secs(timeout_s + 5),
         )?;
         let elapsed = call_started.elapsed();
         assert_command_ok(&response, family.name, variant.name)?;
@@ -285,6 +293,14 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
             let (index, response, elapsed) = handle
                 .join()
                 .map_err(|_| anyhow!("parallel command worker panicked"))??;
+            // Under emulation a quick worker may not finish inside the 1s yield
+            // window, so `exec_command` returns "running"; poll it to its
+            // terminal outcome before asserting on the finalized payload.
+            let response = settle_foreground_command(
+                &lease,
+                response,
+                Instant::now() + Duration::from_secs(timeout_s),
+            )?;
             assert_command_ok(&response, "parallel-load", "worker")?;
             ensure!(
                 output_contains(&response, &format!("worker:{level}:{index}")),
@@ -366,13 +382,28 @@ time.sleep(60)'"
                         as_str(&started, "status")? == "running",
                         "parallel prompt worker should stay running: {started}"
                     );
-                    ensure!(
-                        output_contains(&started, &format!("prompt:{marker}")),
-                        "parallel prompt worker should expose its own prompt: {started}"
-                    );
                     let session_id = as_str(&started, "command_session_id")?.to_owned();
                     let prompt_needle = format!("prompt:{marker}");
                     let reply_needle = format!("reply:{marker}:payload-{level}-{index}");
+                    // Under emulation python startup can outlast the 500ms yield,
+                    // so the prompt may not be in the start snapshot yet; poll the
+                    // transcript for this worker's own prompt before proceeding.
+                    let started = if output_contains(&started, &prompt_needle) {
+                        started
+                    } else {
+                        poll_read_progress_until_contains(
+                            &client,
+                            &root,
+                            &caller_id,
+                            &session_id,
+                            &prompt_needle,
+                            Instant::now() + Duration::from_secs(timeout_s.min(15)),
+                        )?
+                    };
+                    ensure!(
+                        output_contains(&started, &prompt_needle),
+                        "parallel prompt worker should expose its own prompt: {started}"
+                    );
 
                     let answered = request_with_identity(
                         &client,
@@ -815,7 +846,9 @@ fn ensure_terminalish_status(response: &Value) -> Result<()> {
 }
 
 fn output_contains(response: &Value, needle: &str) -> bool {
-    stdout(response).replace("\r\n", "\n").contains(needle)
+    // Strip the per-line `[ISO-8601] ` transcript timestamp prefix the daemon
+    // prepends before matching on the command's actual output.
+    crate::support::strip_transcript_timestamps(stdout(response)).contains(needle)
 }
 
 fn timing(response: &Value, key: &str) -> Option<f64> {

@@ -8,9 +8,20 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, live_pool_or_skip,
-    seed_base_files, strip_transcript_timestamps, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    seed_base_files, settle_foreground_command, strip_transcript_timestamps, stdout,
+    wait_for_active_leases, wait_for_session_count,
 };
+
+/// Run a foreground `exec_command` and settle it to its terminal outcome. Under
+/// x86-on-arm64 emulation a quick command can outlast its yield window and return
+/// `"running"`; this polls it to completion so the caller's assertions on the
+/// finalized payload (status, exit_code, changed_paths, upperdir timings) hold
+/// whether it finished foreground or just after. Used only for foreground execs;
+/// the background/running-path tests keep their explicit `lease.call_ok`.
+fn exec_settled(lease: &NodeLease<'_>, args: Value) -> Result<Value> {
+    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, args)?;
+    settle_foreground_command(lease, response, Instant::now() + Duration::from_secs(25))
+}
 
 /// Read a nested `timings.<key>` number from a response.
 fn timing_f64(value: &Value, key: &str) -> Option<f64> {
@@ -34,11 +45,11 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
     let first = format!("{dir}/first.txt");
     let second = format!("{dir}/nested/second.txt");
 
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": format!("mkdir -p {dir}/nested && printf first > {first} && printf second > {second}"),
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -59,11 +70,11 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
         "exec response must expose OCC publish timing: {exec}"
     );
 
-    let read_only = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let read_only = exec_settled(
+        &lease,
         json!({
             "cmd": format!("cat {first} {second}"),
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&read_only, "status")?, "ok", "{read_only}");
@@ -82,11 +93,11 @@ fn exec_write_outside_workspace_is_not_captured() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let marker = format!("/tmp/eos_outside_{}", unique_suffix().replace('-', "_"));
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": format!("mkdir -p scope_in && printf inside > scope_in/inside.txt && printf outside > {marker}"),
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -108,9 +119,9 @@ fn exec_write_outside_workspace_is_not_captured() -> Result<()> {
     );
     // Secondary: the outside write landed on the real container /tmp and a fresh
     // ephemeral exec re-derived over / still sees it.
-    let read_back = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": format!("cat {marker}"), "yield_time_ms": 1000, "timeout_seconds": 10}),
+    let read_back = exec_settled(
+        &lease,
+        json!({"cmd": format!("cat {marker}"), "yield_time_ms": 8000, "timeout_seconds": 10}),
     )?;
     assert_eq!(clean_stdout(&read_back), "outside", "{read_back}");
     Ok(())
@@ -131,8 +142,8 @@ fn exec_mount_mask_uses_test_config_hidden_paths() -> Result<()> {
         ])
         .context("seed extra mount-mask probe dir")?;
 
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": r#"set -eu
 mount_fstype() {
@@ -169,7 +180,7 @@ printf 'cgroup_state=%s\n' "$(dir_state /sys/fs/cgroup)"
 printf 'extra_fs=%s\n' "$(mount_fstype /tmp/eos-mask-test)"
 printf 'extra_state=%s\n' "$(dir_state /tmp/eos-mask-test)"
 "#,
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -208,11 +219,11 @@ fn foreground_exec_recycles_overlay_scratch() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let mut audit = lease.audit_tap()?;
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": "mkdir -p auditscope && printf x > auditscope/a.txt",
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -262,11 +273,11 @@ fn overlay_delete_replacement_write_and_foreign_publish_are_readable() -> Result
         json!({"path": &old, "content": "old\n", "overwrite": true}),
     )?;
 
-    let overlay = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let overlay = exec_settled(
+        &lease,
         json!({
             "cmd": format!("rm -f {deleted} {old} && mkdir -p {replaced} && printf new > {replacement}"),
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
@@ -334,11 +345,11 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
     )?;
     // A tiny overlay write must capture only its own delta — the overlay does NOT
     // copy the 200KB base into the upperdir (the O(1)-lowerdir-disk property).
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": "printf SMALL > perf/delta.txt",
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -377,11 +388,11 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
             file_count,
             1_000_000,
         )?;
-        let exec = lease.call_ok(
-            ops::API_V1_EXEC_COMMAND,
+        let exec = exec_settled(
+            &lease,
             json!({
                 "cmd": format!("printf SMALL > perf/flat/delta-{index}.txt"),
-                "yield_time_ms": 1000,
+                "yield_time_ms": 8000,
                 "timeout_seconds": 15,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -414,11 +425,11 @@ fn exec_run_dir_scratch_stays_bounded() -> Result<()> {
     // metadata, never the shared lowerdir, so its measured tree stays bounded
     // and untruncated.
     seed_base_files(&lease, "perf/scratch/base", 5, 1_000_000)?;
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": "printf TINY > perf/scratch/delta.txt",
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
@@ -480,11 +491,11 @@ fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+    let exec = exec_settled(
+        &lease,
         json!({
             "cmd": "mkdir -p overlay && printf from-overlay > overlay/exec.txt",
-            "yield_time_ms": 1000,
+            "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok");

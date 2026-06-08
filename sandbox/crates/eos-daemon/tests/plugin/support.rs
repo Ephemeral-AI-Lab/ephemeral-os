@@ -136,7 +136,7 @@ pub(super) fn read_ppc_request(
     stream: &mut std::os::unix::net::UnixStream,
     context: &'static str,
 ) -> Result<PpcEnvelope, TestError> {
-    let frame = ppc_router::read_frame(stream)?;
+    let frame = eos_plugin_host::read_frame(stream)?;
     PpcEnvelope::decode(&frame)
         .map_err(|err| std::io::Error::other(format!("{context}: {err}")).into())
 }

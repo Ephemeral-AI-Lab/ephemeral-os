@@ -8,12 +8,12 @@ use eos_plugin::{
 use serde_json::Value;
 
 use super::{
-    package::{self, PackageRoots},
     plugin_runtime_config,
     process::PluginProcessSpec,
     state::{LoadedPluginRuntime, PluginOperationRoute, MAX_PLUGIN_CALLER_FIELD_CHARS},
 };
 use crate::error::DaemonError;
+use eos_plugin_host::{package_roots, PackageRoots};
 
 pub(super) fn validate_plugin_caller_fields(args: &Value) -> Result<(), DaemonError> {
     const TOP_LEVEL_FIELDS: &[&str] = &["caller_id", "invocation_id"];
@@ -107,7 +107,7 @@ impl ParsedEnsure {
     fn from_manifest(args: &Value, manifest: PluginManifest) -> Result<Self, DaemonError> {
         let manifest_for_package = manifest.clone();
         let ppc_socket_root = ppc_socket_root(args);
-        let package_roots = package::package_roots(args, &manifest)?;
+        let package_roots = package_roots(args, &manifest)?;
         let layer_stack_root = args
             .get("layer_stack_root")
             .and_then(Value::as_str)

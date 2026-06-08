@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>42</b><span>modules</span></div>
-  <div><b>324</b><span>items</span></div>
-  <div><b>266</b><span>fields</span></div>
-  <div><b>236</b><span>methods</span></div>
+  <div><b>323</b><span>items</span></div>
+  <div><b>269</b><span>fields</span></div>
+  <div><b>243</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -178,7 +178,7 @@
                     .<a class="symbol-link rs-fn" href="eos-engine--src-telemetry-prompt-report-rs.html#method-record-assistant-143">record_assistant</a>(run_request.prompt_report_seq, &amp;message, usage)
                     .<span class="rs-kw">await</span>?;
             }
-            <span class="rs-kw">let</span> tool_uses = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-335">tool_uses_from_message</a>(&amp;message);
+            <span class="rs-kw">let</span> tool_uses = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-423">tool_uses_from_message</a>(&amp;message);
             <span class="rs-kw">for</span> call <span class="rs-kw">in</span> &amp;tool_uses {
                 <span class="rs-kw">if</span> !streamed_tool_use_ids.contains(&amp;call.tool_use_id) {
                     ctx.<a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-record-tool-call-132">record_tool_call</a>();
@@ -187,7 +187,7 @@
 
             <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-append-transcript-message-102">append_transcript_message</a>(messages, message.clone()).<span class="rs-kw">await</span>?;
             <span class="rs-kw">if</span> tool_uses.is_empty() {
-                ctx.<a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-record-text-only-turn-137">record_text_only_turn</a>();
+                ctx.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-108">record_text_only_turn</a>();
                 <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-terminal-submission-failed-23">terminal_submission_failed</a>(ctx) {
                     <span class="rs-kw">let</span> notifications = <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-collect-notifications-78">collect_notifications</a>(ctx, messages).<span class="rs-kw">await</span>;
                     <span class="rs-kw">for</span> notification <span class="rs-kw">in</span> &amp;notifications {
@@ -277,11 +277,11 @@
     <h3>tool_uses_from_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine.html#item-fn-tool-uses-from-message-335">tool_uses_from_message</a> (message : &amp; Message) -&gt; Vec &lt; <a class="symbol-link" href="eos-engine--src-tool-call-dispatch-rs.html#item-struct-ToolUseRequest-23">ToolUseRequest</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine.html#item-fn-tool-uses-from-message-423">tool_uses_from_message</a> (message : &amp; Message) -&gt; Vec &lt; <a class="symbol-link" href="eos-engine--src-tool-call-dispatch-rs.html#item-struct-ToolUseRequest-23">ToolUseRequest</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-335">tool_uses_from_message</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-dispatch-rs.html#item-struct-ToolUseRequest-23">ToolUseRequest</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-423">tool_uses_from_message</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-dispatch-rs.html#item-struct-ToolUseRequest-23">ToolUseRequest</a>&gt; {
     message
         .content
         .iter()
@@ -309,11 +309,11 @@
     <h3>notification_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-177">notification_message</a> (notifications : &amp; [SystemNotification]) -&gt; Option &lt; Message &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-217">notification_message</a> (notifications : &amp; [SystemNotification]) -&gt; Option &lt; Message &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-177">notification_message</a>(notifications: &amp;[<span class="rs-type">SystemNotification</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Message</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-217">notification_message</a>(notifications: &amp;[<span class="rs-type">SystemNotification</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Message</span>&gt; {
     <span class="rs-kw">if</span> notifications.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -429,7 +429,7 @@
     messages: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
     notifications: &amp;[<span class="rs-type">SystemNotification</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(message) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-177">notification_message</a>(notifications) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(message) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-217">notification_message</a>(notifications) {
         <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-append-transcript-message-102">append_transcript_message</a>(messages, message).<span class="rs-kw">await</span>?;
     }
     <span class="rs-type">Ok</span>(())
@@ -516,7 +516,7 @@
     &quot;terminal_not_submitted&quot;.parse().map_err(<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>::from)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-335">tool_uses_from_message</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-dispatch-rs.html#item-struct-ToolUseRequest-23">ToolUseRequest</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-423">tool_uses_from_message</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-dispatch-rs.html#item-struct-ToolUseRequest-23">ToolUseRequest</a>&gt; {
     message
         .content
         .iter()
@@ -535,7 +535,7 @@
         .collect()
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-177">notification_message</a>(notifications: &amp;[<span class="rs-type">SystemNotification</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Message</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-217">notification_message</a>(notifications: &amp;[<span class="rs-type">SystemNotification</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Message</span>&gt; {
     <span class="rs-kw">if</span> notifications.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -586,7 +586,7 @@
     messages: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
     notifications: &amp;[<span class="rs-type">SystemNotification</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(message) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-177">notification_message</a>(notifications) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(message) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-fn-notification-message-217">notification_message</a>(notifications) {
         <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-append-transcript-message-102">append_transcript_message</a>(messages, message).<span class="rs-kw">await</span>?;
     }
     <span class="rs-type">Ok</span>(())
@@ -683,7 +683,7 @@
                     .<a class="symbol-link rs-fn" href="eos-engine--src-telemetry-prompt-report-rs.html#method-record-assistant-143">record_assistant</a>(run_request.prompt_report_seq, &amp;message, usage)
                     .<span class="rs-kw">await</span>?;
             }
-            <span class="rs-kw">let</span> tool_uses = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-335">tool_uses_from_message</a>(&amp;message);
+            <span class="rs-kw">let</span> tool_uses = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-423">tool_uses_from_message</a>(&amp;message);
             <span class="rs-kw">for</span> call <span class="rs-kw">in</span> &amp;tool_uses {
                 <span class="rs-kw">if</span> !streamed_tool_use_ids.contains(&amp;call.tool_use_id) {
                     ctx.<a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-record-tool-call-132">record_tool_call</a>();
@@ -692,7 +692,7 @@
 
             <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-append-transcript-message-102">append_transcript_message</a>(messages, message.clone()).<span class="rs-kw">await</span>?;
             <span class="rs-kw">if</span> tool_uses.is_empty() {
-                ctx.<a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-record-text-only-turn-137">record_text_only_turn</a>();
+                ctx.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-108">record_text_only_turn</a>();
                 <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-terminal-submission-failed-23">terminal_submission_failed</a>(ctx) {
                     <span class="rs-kw">let</span> notifications = <a class="symbol-link rs-fn" href="eos-engine--src-query-loop--rs.html#item-fn-collect-notifications-78">collect_notifications</a>(ctx, messages).<span class="rs-kw">await</span>;
                     <span class="rs-kw">for</span> notification <span class="rs-kw">in</span> &amp;notifications {

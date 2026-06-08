@@ -21,7 +21,7 @@ use eos_types::{
 use serde_json::json;
 
 use crate::entry::root_task_id_for;
-use crate::runtime_services::support::build_test_state;
+use crate::runtime_services::support::{build_test_state, build_test_state_with_message_records};
 use crate::runtime_services::{EventCallback, EventSourceFactory};
 use crate::{RequestOutcome, RequestRunInput, RuntimeServices};
 use eos_testkit::{

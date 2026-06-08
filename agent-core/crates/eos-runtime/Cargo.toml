@@ -40,5 +40,8 @@ eos-testkit = { workspace = true }
 [features]
 tokio-console = ["dep:console-subscriber"]
 
+[package.metadata.cargo-machete]
+ignored = ["eos-testkit", "futures", "tempfile"]
+
 [lints]
 workspace = true

@@ -5,7 +5,7 @@
 //! [`BackgroundCompletion`], which the emitter renders to a `[BACKGROUND
 //! COMPLETED]` message and enqueues into the agent run's own
 //! [`NotificationService`]. The emitter wraps the exact service owned by the
-//! run's `AgentRunControl`, so a completion reaches the run that owns the work
+//! run's `AgentLoopState`, so a completion reaches the run that owns the work
 //! and never another run's queue (spec §13.1). Callers must clone the terminal
 //! data out from under any manager lock and drop the lock *before* awaiting `emit`.
 

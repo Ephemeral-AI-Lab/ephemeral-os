@@ -4,13 +4,11 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use eos_occ::{CommitQueue, OccService};
+use eos_occ_layerstack::{LayerStackCommitTransaction, LayerStackRouteProvider};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::response_timings::usize_to_f64_saturating;
-
-use super::publish::LayerStackCommitTransaction;
-use super::route::LayerStackRouteProvider;
 
 pub(crate) const OCC_SERVICE_CACHE_MAX: usize = 256;
 

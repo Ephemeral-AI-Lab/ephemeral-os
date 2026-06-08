@@ -19,7 +19,6 @@ use crate::notifications::NotificationService;
 use crate::query::{provider_messages::build_provider_messages, EventSource};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
-    ToolUseRequest,
 };
 use crate::{stamp_identity, EngineError, StreamEvent};
 
@@ -116,9 +115,8 @@ impl AgentLoopExecutor {
                 state
                     .teardown_background("agent loop exited without a terminal tool submission")
                     .await;
-                let outcome = state.loop_failed_summary(
-                    "agent loop exited without a terminal tool submission".to_owned(),
-                );
+                let summary = state.terminal_not_submitted_summary();
+                let outcome = state.loop_failed_summary(summary);
                 self.loop_hooks.on_complete(&outcome).await;
                 return outcome;
             }
@@ -141,7 +139,7 @@ impl AgentLoopExecutor {
             };
 
             match turn_result {
-                AssistantTurnResult::Continue => state.advance_turn(),
+                AssistantTurnResult::Continue => {}
                 AssistantTurnResult::TerminalToolSubmitted { outcome } => {
                     state
                         .teardown_background("parent agent submitted its terminal")
@@ -196,10 +194,12 @@ impl AgentLoopExecutor {
         }
 
         let tool_calls = tool_uses_from_message(&message);
+        state.record_tool_calls(tool_calls.len());
         state
             .conversation_messages
             .push(eos_agent_ports::AgentLoopMessage::AssistantMessage(message));
         if tool_calls.is_empty() {
+            state.record_text_only_turn();
             return Ok(AssistantTurnResult::Continue);
         }
 
@@ -393,6 +393,13 @@ pub(crate) enum AssistantTurnResult {
 struct LoopToolDispatchOutcome {
     tool_results: Vec<ContentBlock>,
     submission_outcome: Option<ToolResult>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ToolUseRequest {
+    tool_use_id: ToolUseId,
+    name: String,
+    input: JsonObject,
 }
 
 fn build_loop_provider_request(state: &AgentLoopState) -> LlmRequest {

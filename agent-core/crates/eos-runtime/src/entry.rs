@@ -210,6 +210,7 @@ pub async fn run_request(
                 services.agent_core.agent_registry.clone(),
                 loop_launcher,
                 services.db.agent_run_store.clone(),
+                services.message_records.message_records.clone(),
             ));
             let agent_run_api: Arc<dyn AgentRunApi> = agent_runs.clone();
             let _ = agent_run_api_cell.set(agent_run_api);

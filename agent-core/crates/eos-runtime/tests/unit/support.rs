@@ -104,6 +104,21 @@ pub(crate) async fn build_test_state(
     factory: Option<EventSourceFactory>,
     agents: Vec<AgentDefinition>,
 ) -> (RuntimeServices, tempfile::TempDir) {
+    build_test_state_inner(factory, agents, false).await
+}
+
+pub(crate) async fn build_test_state_with_message_records(
+    factory: Option<EventSourceFactory>,
+    agents: Vec<AgentDefinition>,
+) -> (RuntimeServices, tempfile::TempDir) {
+    build_test_state_inner(factory, agents, true).await
+}
+
+async fn build_test_state_inner(
+    factory: Option<EventSourceFactory>,
+    agents: Vec<AgentDefinition>,
+    message_records: bool,
+) -> (RuntimeServices, tempfile::TempDir) {
     let dir = tempfile::tempdir().expect("tempdir");
     let url = format!("sqlite://{}", dir.path().join("test.db").display());
     let registry: AgentRegistry = agents.into_iter().collect();
@@ -117,6 +132,9 @@ pub(crate) async fn build_test_state(
         .agent_registry(Arc::new(registry));
     if let Some(factory) = factory {
         builder = builder.event_source_factory(factory);
+    }
+    if message_records {
+        builder = builder.message_records_root(dir.path().join("message-records"));
     }
     let state = builder.build().await.expect("build app state");
     (state, dir)

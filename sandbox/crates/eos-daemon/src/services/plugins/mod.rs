@@ -10,8 +10,6 @@ mod dispatch;
 mod ensure_args;
 mod occ_callbacks;
 mod overlay;
-mod package;
-mod ppc_router;
 mod process;
 mod refresh;
 mod service;
@@ -40,7 +38,7 @@ use connected::response_payload_from_reply;
 #[cfg(test)]
 use dispatch::route_for_op;
 use ensure_args::{loaded_matches_parsed, validate_plugin_caller_fields, ParsedEnsure};
-use package::{ensure_package, needs_upload_response, PackageEnsureReport};
+use eos_plugin_host::{ensure_package, needs_upload_response, PackageEnsureReport};
 #[cfg(test)]
 use refresh::WORKSPACE_SNAPSHOT_REFRESH_OP;
 use refresh::{probe_service_health, service_health_probe_targets};
@@ -100,6 +98,7 @@ pub fn op_ensure(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
     let package_report = match ensure_package(args, parsed.manifest.as_ref()) {
         Ok(report) => report,
         Err(err) => {
+            let err = DaemonError::from(err);
             record_setup_failure(parsed.manifest.as_ref(), &err);
             return Err(err);
         }
@@ -287,7 +286,7 @@ fn register_ppc_client_for_tests(
     }
     state.service_ppc_clients.insert(
         service_instance_id,
-        Arc::new(ppc_router::PpcClient::new(stream)?),
+        Arc::new(eos_plugin_host::PpcClient::new(stream)?),
     );
     drop(state);
     Ok(())
