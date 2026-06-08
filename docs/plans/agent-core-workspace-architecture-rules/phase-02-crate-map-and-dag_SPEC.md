@@ -361,13 +361,13 @@ budget guard must confirm no logic lands there.
 | Rename `eos-tools` → `eos-tool`; rename `eos-agent-runner` → `eos-agent-run` | Not started |
 | Fold `eos-tool-ports` into `eos-tool` (+ contracts to `eos-types`) | Not started |
 | Split `eos-agent-ports` per the contract floor | In progress (2026-06-09; agent-run lifecycle contracts moved to `eos-types`; metadata/state contracts still need a tool/audit-safe split) |
-| Fold `eos-agent-message-records` into `eos-engine/src/records.rs` | Not started |
+| Fold `eos-agent-message-records` into `eos-engine/src/records.rs` | Done (2026-06-09; crate removed from workspace, implementation/test moved under `eos-engine::records`, runner imports through `eos-engine`) |
 | Fold `eos-skills` into `eos-tool/src/tools/skills.rs` | Not started |
 | Fold `eos-plugin-catalog` into `eos-agent-core/src/runtime/plugins.rs` | Not started |
 | Fold `eos-agent-def`: DTOs → `eos-types`, loader → `eos-agent-core/src/agents.rs` | In progress (2026-06-09; DTOs and passive registry moved, loader still local) |
 | Dissolve `eos-config`: structs to owners, parser → types, loader → facade | In progress (2026-06-09; pure parser moved, config structs/loader still local) |
 | Fold `eos-audit`: sink → facade, `AuditSink` trait → `eos-types` | Not started |
-| Update workspace dependencies and internal imports | In progress (2026-06-09; staged imports updated for completed sinks) |
+| Update workspace dependencies and internal imports | In progress (2026-06-09; staged imports updated for completed sinks and message-record fold) |
 | Update dependency DAG guard to the target edge set | Done (2026-06-09; staged legacy graph remains active until the final crate map is present) |
 
 ## Acceptance Criteria

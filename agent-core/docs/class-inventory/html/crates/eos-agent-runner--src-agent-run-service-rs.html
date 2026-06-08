@@ -655,11 +655,11 @@
 
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span> <span class="rs-kw">as</span> <span class="rs-type">DefinitionAgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentType</span>};
-<span class="rs-kw">use</span> eos_agent_message_records::{<span class="rs-type">AgentMessageRecords</span>, <span class="rs-type">AgentRunRecordStart</span>, <span class="rs-type">NodeFinishStatus</span>};
 <span class="rs-kw">use</span> eos_agent_ports::{
     <span class="rs-type">AgentLoopLauncher</span>, <span class="rs-type">AgentLoopOutcome</span>, <span class="rs-type">AgentLoopOutcomeKind</span>, <span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunError</span>,
     <span class="rs-type">AgentRunMessageRecordKind</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">SpawnAgentRequest</span>,
 };
+<span class="rs-kw">use</span> eos_engine::records::{<span class="rs-type">AgentMessageRecords</span>, <span class="rs-type">AgentRunRecordStart</span>, <span class="rs-type">NodeFinishStatus</span>};
 <span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">Message</span>;
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunStore</span>};
 <span class="rs-kw">use</span> tokio::sync::oneshot;
