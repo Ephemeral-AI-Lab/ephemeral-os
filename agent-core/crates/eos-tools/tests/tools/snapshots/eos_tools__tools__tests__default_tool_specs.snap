@@ -968,13 +968,6 @@ expression: specs
       "properties": {
         "workflow_id": {
           "type": "string"
-        },
-        "workflow_task_id": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
         }
       }
     },
@@ -982,20 +975,20 @@ expression: specs
   },
   {
     "name": "cancel_workflow",
-    "description": "Cancel an outstanding delegated workflow by workflow_task_id.",
+    "description": "Cancel an outstanding delegated workflow by workflow_id.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CancelWorkflowInput",
       "type": "object",
       "required": [
-        "workflow_task_id"
+        "workflow_id"
       ],
       "properties": {
         "reason": {
           "default": "",
           "type": "string"
         },
-        "workflow_task_id": {
+        "workflow_id": {
           "type": "string"
         }
       }

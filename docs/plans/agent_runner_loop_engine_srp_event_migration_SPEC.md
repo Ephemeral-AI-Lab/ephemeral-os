@@ -1,4 +1,4 @@
-# Agent Runner / Engine Loop SRP Event Migration - SPEC
+# Agent Runner / Loop Engine SRP Event Migration - SPEC
 
 Status: Proposed
 Date: 2026-06-08
@@ -17,11 +17,11 @@ Supersedes for this migration:
 
 ## 1. Intent
 
-Split the agent-run, engine-loop, and tool-framework responsibilities so each
+Split the agent-run, loop-engine, and tool-framework responsibilities so each
 crate has one clear reason to change:
 
 - `eos-agent-runner` owns agent-run lifecycle.
-- `eos-engine` owns the engine loop internals.
+- `eos-engine` owns loop engine control flow and one-step agent execution.
 - `eos-tools` owns concrete model-facing tools.
 - `eos-tool-core` owns shared tool contracts and framework primitives.
 - `eos-runtime` owns production composition.
@@ -31,7 +31,7 @@ remove runner/engine round trips, remove engine awareness of agent profiles, and
 make loop completion event-driven without making the engine depend on the
 runner.
 
-This spec only covers these engine-loop outcomes:
+This spec only covers these loop-engine outcomes:
 
 - terminal tool submitted successfully,
 - loop failed or exited without a valid terminal submission.
@@ -44,10 +44,23 @@ Out of scope for this spec:
 - generic background abstractions,
 - model-facing behavior redesign.
 
+This spec intentionally avoids an internal type named `AgentRunner` because the
+crate name `eos-agent-runner` already means "agent-run lifecycle". Inside
+`eos-engine`, the loop-control type is `AgentLoop` and the one-step execution
+contract is `StepExecutor`.
+
 ## 2. Design Rules
 
 - `eos-agent-runner` is a thin lifecycle wrapper over the public
-  `eos-engine` loop API.
+  `eos-engine` loop-launcher contract.
+- `AgentLoop` owns control flow, tick sequencing, async polling, lifecycle
+  hooks, and conversion from step results into `LoopEngineOutcome`.
+- `StepExecutor` owns exactly one agent decision step: model request assembly,
+  provider streaming, tool-call dispatch, tool-call result incorporation, and
+  terminal submission detection.
+- `AgentLoop` depends on `StepExecutor` through an object-safe trait. The
+  default production dispatch is `Arc<dyn StepExecutor>` because runtime wiring
+  selects provider/tool behavior and tests need substitute step executors.
 - `eos-engine` never imports `eos-agent-runner`, `eos-agent-def`, or
   `eos-tools`.
 - `eos-agent-runner` may depend on `eos-engine` and `eos-tool-core`.
@@ -57,18 +70,20 @@ Out of scope for this spec:
 - `eos-engine` may depend on `eos-tool-core` for `ToolRegistry`,
   `ToolExecutor`, `ToolResult`, execution metadata, dispatch helpers, and
   family-specific tool session services.
-- Background session managers stay in `eos-engine`. Do not create
+- Background session trackers stay in `eos-engine`. Do not create
   `BackgroundCompletionSource`, `BackgroundSessionSource`,
   `eos-tool-core/src/background.rs`, or a generic background port.
-- The engine-loop request must stay thin. It contains loop inputs, not service
+- The loop-engine request must stay thin. It contains loop inputs, not service
   bags.
 - Agent-run state transitions and persistence updates happen only in
   `eos-agent-runner`.
-- Engine-loop completion is delivered through a returned completion receiver.
+- Loop-engine completion is delivered through a returned outcome receiver.
   The engine does not call back into the runner.
+- `eos-agent-runner` starts loops through `AgentLoopLauncher`, not through
+  private `eos-engine` modules.
 - Avoid the word `token` in cancellation-related names. If cancellation is
-  preserved in this migration, use `EngineLoopCancelHandle` and
-  `EngineLoopCancelSignal`.
+  preserved in this migration, use `LoopEngineCancelHandle` and
+  `LoopEngineCancelSignal`.
 
 Naming rules for this migration:
 
@@ -76,14 +91,18 @@ Naming rules for this migration:
   `AgentRunApiService`.
 - Concrete service implementations use `*Service`, for example
   `AgentRunService`.
-- Internal lifecycle events use `<Domain>LifecycleEvent`, for example
-  `AgentRunLifecycleEvent`.
-- Event variants should name the lifecycle fact, for example
-  `EngineLoopCompleted` and `EngineLoopCompletionDropped`.
-- Avoid role-level event/command names; use `AgentRunLifecycleEvent` and
-  `AgentRunCommand`.
+- Internal completion events use `<Domain>CompletionEvent`, for example
+  `AgentRunCompletionEvent`.
+- Event variants should name the observed completion fact, for example
+  `LoopEngineOutcomeReceived` and `LoopEngineOutcomeSenderDropped`.
+- Avoid role-level event names; use `AgentRunCompletionEvent`.
+- Avoid `AgentManager`, `LoopHandler`, bare `Engine`, `DecisionEngine`,
+  `Processor`, `Data`, and `Context` for new target code. Prefer `AgentLoop`,
+  `StepExecutor`, `AgentState`, `StepResult`, and `ToolRegistry`.
+- Lifecycle hooks use the same verb pattern: `on_start`, `on_step`, and
+  `on_complete`.
 - Values returned from `submit_*_outcome` tools use the field name `outcome`.
-  Avoid payload-oriented names for this value.
+  Avoid transport-envelope names for this value.
 
 ## 3. Target Crate Layout
 
@@ -93,43 +112,48 @@ agent-core/crates/
     Cargo.toml
     src/
       lib.rs
-      error.rs
-      request.rs              # SpawnAgentRequest
-      outcome.rs              # AgentRunOutcome, AgentRunStatus
-      service.rs              # AgentRunApiService + AgentRunService
-      active_runs.rs          # ActiveRuns, ActiveRun, waiter registration
-      events.rs               # AgentRunCommand, AgentRunLifecycleEvent
-      engine_request.rs       # AgentDefinition -> InitEngineLoopRequest
-      persistence.rs          # create/finish agent_run rows
-      run_records.rs          # optional agent-run record start/finish/final write
+      agent_run_error.rs      # AgentRunError
+      spawn_agent_request.rs  # SpawnAgentRequest
+      agent_run_outcome.rs    # AgentRunOutcome, AgentRunStatus
+      agent_run_service.rs    # AgentRunApiService + AgentRunService
+      active_agent_runs.rs    # ActiveAgentRuns, ActiveAgentRun
+      completion_events.rs    # AgentRunCompletionEvent
+      loop_engine_request.rs  # AgentDefinition -> InitLoopEngineRequest
+      agent_run_persistence.rs # create/finish agent_run rows
+      agent_run_records.rs    # optional agent-run record start/finish/final write
 
   eos-engine/
     Cargo.toml
     src/
       lib.rs
-      engine_loop/
+      loop_engine/
         mod.rs
-        init.rs               # init_engine_loop(...)
-        run.rs                # private run_loop_to_completion(...)
-        request.rs            # InitEngineLoopRequest, EngineLoopMessage
-        outcome.rs            # EngineLoopOutcome
-        handle.rs             # EngineLoopRun
-        registry_factory.rs   # EngineToolRegistryFactory
+        launcher.rs           # AgentLoopLauncher, TokioAgentLoopLauncher
+        start.rs              # start_loop_engine(...) compatibility facade
+        agent_loop.rs         # AgentLoop control flow
+        step_executor.rs      # StepExecutor, DefaultStepExecutor
+        step_result.rs        # StepResult
+        agent_state.rs        # AgentState
+        loop_hooks.rs         # AgentLoopHooks, NoopAgentLoopHooks
+        init_request.rs       # InitLoopEngineRequest, LoopEngineMessage
+        loop_outcome.rs       # LoopEngineOutcome
+        started_loop.rs       # StartedLoopEngine
+        tool_registry_factory.rs # LoopEngineToolRegistryFactory
       query/
         mod.rs
-        context.rs
+        state.rs              # QueryLoopState
         loop_.rs
         provider_messages.rs
         provider_source.rs
-        request.rs
+        provider_request.rs
       background/
         mod.rs
         notification.rs
-        background_session_manager/
+        background_sessions/
           mod.rs
-          subagent_session_manager.rs
-          workflow_session_manager.rs
-          command_session_manager.rs
+          subagent_sessions.rs
+          workflow_sessions.rs
+          command_sessions.rs
       notifications/
       telemetry/
       tool_call/
@@ -139,17 +163,17 @@ agent-core/crates/
     Cargo.toml
     src/
       lib.rs
-      error.rs                # ToolError
-      intent.rs               # ToolIntent
-      metadata.rs             # ExecutionMetadata
-      name.rs                 # ToolName, ToolKey
-      result.rs               # ToolResult, OutputShape
-      registry.rs             # ToolRegistry
-      executor.rs             # ToolExecutor, RegisteredTool
-      execution.rs            # execute_tool_once and hook execution
-      dispatch.rs             # lifecycle_batch_decision, terminal batch policy
-      hooks.rs                # hook contracts or closed hook framework
-      session_services.rs     # Subagent/Workflow/Command session tool services
+      tool_error.rs           # ToolError
+      tool_intent.rs          # ToolIntent
+      execution_metadata.rs   # ExecutionMetadata
+      tool_name.rs            # ToolName, ToolKey
+      tool_result.rs          # ToolResult, OutputShape
+      tool_registry.rs        # ToolRegistry
+      tool_executor.rs        # ToolExecutor, RegisteredTool
+      tool_execution.rs       # execute_tool_once and hook execution
+      tool_dispatch.rs        # lifecycle_batch_decision, terminal batch policy
+      tool_hooks.rs           # hook contracts or closed hook framework
+      session_tool_services.rs # Subagent/Workflow/Command session tool services
 
   eos-tools/
     Cargo.toml
@@ -169,12 +193,12 @@ agent-core/crates/
         submission/
         workflow/
         terminal.rs
-      services.rs             # concrete non-shared services only, if any remain
+      tool_dependencies.rs    # concrete non-shared tool dependencies
 
   eos-runtime/
     src/
       runtime_services/
-      tool_registry_factory.rs # implements EngineToolRegistryFactory using eos-tools
+      tool_registry_factory.rs # implements LoopEngineToolRegistryFactory using eos-tools
 ```
 
 ## 4. Target Dependency Graph
@@ -209,50 +233,53 @@ eos-engine -> eos-tools
 eos-agent-runner -> eos-tools
 ```
 
-## 5. Public Engine Loop API
+## 5. Public Loop Engine API
 
-The engine loop is non-blocking at the public API boundary:
+The loop engine is non-blocking at the public API boundary:
 
 ```rust
-pub fn init_engine_loop(request: InitEngineLoopRequest) -> EngineLoopRun;
+pub fn start_loop_engine(request: InitLoopEngineRequest) -> StartedLoopEngine;
 ```
 
-`init_engine_loop` starts the loop internally and returns immediately with a
-run handle:
+`start_loop_engine` starts the loop internally and returns immediately with a
+started-loop handle:
 
 ```rust
-pub struct EngineLoopRun {
-    pub run_id: AgentRunId,
-    pub completion: oneshot::Receiver<EngineLoopOutcome>,
+pub struct StartedLoopEngine {
+    pub agent_run_id: AgentRunId,
+    pub outcome_receiver: oneshot::Receiver<LoopEngineOutcome>,
 }
 ```
 
 The internal spawned task runs the loop to completion:
 
 ```rust
-fn init_engine_loop(request: InitEngineLoopRequest) -> EngineLoopRun {
-    let run_id = request.run_id.clone();
-    let (completion_tx, completion) = oneshot::channel();
+fn start_loop_engine(request: InitLoopEngineRequest) -> StartedLoopEngine {
+    let agent_run_id = request.agent_run_id.clone();
+    let (outcome_sender, outcome_receiver) = oneshot::channel();
 
     tokio::spawn(async move {
-        let outcome = run_loop_to_completion(request).await;
-        let _ = completion_tx.send(outcome);
+        let outcome = drive_loop_engine_until_outcome(request).await;
+        let _ = outcome_sender.send(outcome);
     });
 
-    EngineLoopRun { run_id, completion }
+    StartedLoopEngine {
+        agent_run_id,
+        outcome_receiver,
+    }
 }
 ```
 
 The public request stays thin:
 
 ```rust
-pub struct InitEngineLoopRequest {
-    pub run_id: AgentRunId,
-    pub initial_messages: Vec<EngineLoopMessage>,
-    pub model: String,
-    pub max_tokens: u32,
+pub struct InitLoopEngineRequest {
+    pub agent_run_id: AgentRunId,
+    pub initial_messages: Vec<LoopEngineMessage>,
+    pub model_key: String,
+    pub max_completion_tokens: u32,
     pub tool_call_limit: u32,
-    pub registry_factory: Arc<dyn EngineToolRegistryFactory>,
+    pub tool_registry_factory: Arc<dyn LoopEngineToolRegistryFactory>,
 }
 ```
 
@@ -264,26 +291,26 @@ Use an engine-local message enum so the system prompt can be represented without
 changing `eos_llm_client::Message`:
 
 ```rust
-pub enum EngineLoopMessage {
-    System(String),
-    User(Message),
-    Assistant(Message),
+pub enum LoopEngineMessage {
+    SystemPrompt(String),
+    UserMessage(Message),
+    AssistantMessage(Message),
 }
 ```
 
 The outcome has only terminal and failure forms in this spec:
 
 ```rust
-pub enum EngineLoopOutcome {
-    Terminal {
+pub enum LoopEngineOutcome {
+    TerminalToolSubmitted {
         outcome: ToolResult,
-        final_messages: Vec<EngineLoopMessage>,
-        token_count: Option<i64>,
+        final_conversation_messages: Vec<LoopEngineMessage>,
+        total_token_count: Option<i64>,
     },
-    Failed {
-        error: String,
-        final_messages: Vec<EngineLoopMessage>,
-        token_count: Option<i64>,
+    LoopFailed {
+        error_summary: String,
+        final_conversation_messages: Vec<LoopEngineMessage>,
+        total_token_count: Option<i64>,
     },
 }
 ```
@@ -291,29 +318,30 @@ pub enum EngineLoopOutcome {
 Missing terminal submission is a failure:
 
 ```text
-loop exits without terminal tool -> EngineLoopOutcome::Failed
+loop exits without terminal tool -> LoopEngineOutcome::LoopFailed
 ```
 
 ## 6. Tool Registry Factory
 
-`registry_factory` is the only composition hook on `InitEngineLoopRequest`.
+`tool_registry_factory` is the only composition hook on
+`InitLoopEngineRequest`.
 
 ```rust
-pub trait EngineToolRegistryFactory: Send + Sync {
-    fn build_registry(
+pub trait LoopEngineToolRegistryFactory: Send + Sync {
+    fn build_tool_registry(
         &self,
-        context: EngineToolRegistryContext,
+        input: LoopEngineToolRegistryBuildInput,
     ) -> Result<ToolRegistry, EngineError>;
 }
 ```
 
 The request does not carry service bags. The engine creates its own background
-managers and passes the family-specific services to the factory through the
-build context:
+session trackers and passes the family-specific services to the factory through
+the build input:
 
 ```rust
-pub struct EngineToolRegistryContext {
-    pub run_id: AgentRunId,
+pub struct LoopEngineToolRegistryBuildInput {
+    pub agent_run_id: AgentRunId,
     pub subagent_sessions: SubagentSessionToolService,
     pub workflow_sessions: WorkflowSessionToolService,
     pub command_sessions: CommandSessionToolService,
@@ -322,7 +350,7 @@ pub struct EngineToolRegistryContext {
 
 Rules:
 
-- `EngineToolRegistryFactory` lives in `eos-engine`.
+- `LoopEngineToolRegistryFactory` lives in `eos-engine`.
 - `ToolRegistry` and session tool service wrappers live in `eos-tool-core`.
 - The production implementation lives in `eos-runtime`.
 - The production implementation may call `eos_tools` registry builders.
@@ -345,7 +373,7 @@ pub trait AgentRunApiService: Send + Sync {
         agent_run_id: &AgentRunId,
     ) -> Result<AgentRunOutcome, AgentRunError>;
 
-    async fn poll_for_agent_outcome(
+    async fn poll_agent_outcome_after_interval(
         &self,
         agent_run_id: &AgentRunId,
         interval: Duration,
@@ -355,24 +383,25 @@ pub trait AgentRunApiService: Send + Sync {
 
 ### `spawn_agent`
 
-`spawn_agent` is non-blocking with respect to the engine loop.
+`spawn_agent` is non-blocking with respect to the loop engine.
 
 Flow:
 
 1. Resolve `AgentDefinition` by name.
 2. Allocate or accept `AgentRunId`.
 3. Build the fully prepared `initial_messages`.
-4. Build `InitEngineLoopRequest`.
+4. Build `InitLoopEngineRequest`.
 5. Create the durable `agent_run` row when requested.
-6. Call `eos_engine::init_engine_loop(request)`.
-7. Insert an `ActiveRun` with the completion receiver's waiter channel.
-8. Spawn a completion watcher that converts engine completion into a runner
-   lifecycle event.
+6. Call `eos_engine::start_loop_engine(request)`.
+7. Insert an `ActiveAgentRun` with the loop-engine outcome receiver's waiter
+   channel.
+8. Spawn an outcome-forwarding task that converts loop-engine completion into an
+   agent-run completion event.
 9. Return `AgentRunId` immediately.
 
 ### `wait_for_agent_outcome`
 
-`wait_for_agent_outcome` blocks the caller asynchronously until the engine loop
+`wait_for_agent_outcome` blocks the caller asynchronously until the loop engine
 finishes.
 
 Implementation rule:
@@ -385,9 +414,9 @@ Implementation rule:
 This is the efficient Rust path: the task parks until notified rather than
 waking on an interval.
 
-### `poll_for_agent_outcome`
+### `poll_agent_outcome_after_interval`
 
-`poll_for_agent_outcome` is the DB/read-model polling path.
+`poll_agent_outcome_after_interval` is the DB/read-model polling path.
 
 Semantics:
 
@@ -399,33 +428,33 @@ Semantics:
 This API is for external/background consumers that need interval polling. It is
 not used for active in-process runner completion.
 
-### Agent-Run Lifecycle Event Handling
+### Agent-Run Completion Event Application
 
-The runner receives engine completion through an internal lifecycle event:
+The runner receives loop-engine completion through an internal completion event:
 
 ```rust
-pub enum AgentRunLifecycleEvent {
-    EngineLoopCompleted {
+pub enum AgentRunCompletionEvent {
+    LoopEngineOutcomeReceived {
         agent_run_id: AgentRunId,
-        outcome: EngineLoopOutcome,
+        outcome: LoopEngineOutcome,
     },
-    EngineLoopCompletionDropped {
+    LoopEngineOutcomeSenderDropped {
         agent_run_id: AgentRunId,
     },
 }
 ```
 
-Suggested internal handler name:
+Suggested internal method name:
 
 ```rust
-async fn handle_engine_loop_completed(
+async fn finalize_agent_run_from_loop_engine_outcome(
     &self,
     agent_run_id: AgentRunId,
-    outcome: EngineLoopOutcome,
+    outcome: LoopEngineOutcome,
 ) -> Result<(), AgentRunError>;
 ```
 
-This handler is the only place that maps `EngineLoopOutcome` into durable
+This method is the only place that maps `LoopEngineOutcome` into durable
 agent-run state and `AgentRunOutcome`.
 
 ## 8. Completion Workflow
@@ -435,25 +464,25 @@ sequenceDiagram
     participant Caller as caller / eos-tools
     participant Runner as eos-agent-runner
     participant Engine as eos-engine
-    participant Watcher as runner completion watcher
-    participant Actor as runner event handler
+    participant Forwarder as loop-engine outcome forwarding task
+    participant Lifecycle as agent-run lifecycle service
     participant Store as AgentRunStore
 
     Caller->>Runner: spawn_agent(SpawnAgentRequest)
     Runner->>Runner: resolve agent + build initial_messages
     Runner->>Store: create_run(agent_run_id)
-    Runner->>Engine: init_engine_loop(InitEngineLoopRequest)
-    Engine-->>Runner: EngineLoopRun { completion }
-    Runner->>Runner: insert ActiveRun
-    Runner->>Watcher: spawn watcher over completion receiver
+    Runner->>Engine: start_loop_engine(InitLoopEngineRequest)
+    Engine-->>Runner: StartedLoopEngine { outcome_receiver }
+    Runner->>Runner: insert ActiveAgentRun
+    Runner->>Forwarder: spawn task over outcome_receiver
     Runner-->>Caller: AgentRunId
 
     Engine->>Engine: run loop internally
-    Engine-->>Watcher: completion receives EngineLoopOutcome
-    Watcher->>Actor: AgentRunLifecycleEvent::EngineLoopCompleted
-    Actor->>Store: finish_run(...)
-    Actor->>Actor: publish AgentRunOutcome to waiters
-    Actor->>Actor: remove ActiveRun
+    Engine-->>Forwarder: outcome_receiver receives LoopEngineOutcome
+    Forwarder->>Lifecycle: AgentRunCompletionEvent::LoopEngineOutcomeReceived
+    Lifecycle->>Store: finish_run(...)
+    Lifecycle->>Lifecycle: publish AgentRunOutcome to waiters
+    Lifecycle->>Lifecycle: remove ActiveAgentRun
 ```
 
 Key properties:
@@ -466,24 +495,24 @@ Key properties:
 
 ## 9. Outcome Mapping
 
-| Engine outcome | Runner state update | Agent outcome |
+| Loop-engine outcome | Runner state update | Agent outcome |
 | --- | --- | --- |
-| `EngineLoopOutcome::Terminal` | finish run with outcome | `AgentRunStatus::Completed` |
-| `EngineLoopOutcome::Failed` | finish run with error summary | `AgentRunStatus::Failed` |
-| completion channel dropped | finish or publish internal failure | `AgentRunStatus::Failed` |
+| `LoopEngineOutcome::TerminalToolSubmitted` | finish run with outcome | `AgentRunStatus::Completed` |
+| `LoopEngineOutcome::LoopFailed` | finish run with error summary | `AgentRunStatus::Failed` |
+| outcome sender dropped | finish or publish internal failure | `AgentRunStatus::Failed` |
 
-`EngineLoopOutcome::Terminal` contains a `ToolResult`, but `AgentRunOutcome`
-does not expose `ToolResult`. The runner stores or projects the terminal
-`submit_*_outcome` value into a JSON/factual agent-run outcome:
+`LoopEngineOutcome::TerminalToolSubmitted` contains a `ToolResult`, but
+`AgentRunOutcome` does not expose `ToolResult`. The runner stores or projects
+the terminal `submit_*_outcome` value into a JSON/factual agent-run outcome:
 
 ```rust
 pub struct AgentRunOutcome {
     pub agent_run_id: AgentRunId,
     pub status: AgentRunStatus,
     pub outcome: Option<JsonObject>,
-    pub message_history: Vec<Message>,
-    pub token_count: Option<i64>,
-    pub error: Option<String>,
+    pub final_conversation_messages: Vec<Message>,
+    pub total_token_count: Option<i64>,
+    pub error_summary: Option<String>,
 }
 ```
 
@@ -497,41 +526,41 @@ boundaries such as `run_subagent` or `ask_advisor`.
 | Current | Action | Target |
 | --- | --- | --- |
 | `agent-core/crates/eos-agent-run` | rename crate/package | `agent-core/crates/eos-agent-runner` |
-| `src/service.rs` | keep and expand | `AgentRunApiService`, `AgentRunService` |
-| `src/request.rs` | keep | `SpawnAgentRequest` |
-| `src/outcome.rs` | keep | `AgentRunOutcome`, `AgentRunStatus` |
-| `src/error.rs` | keep | `AgentRunError` |
-| engine `runtime/agent_run_service.rs` | move and rewrite | runner `service.rs` |
-| engine `runtime/registry.rs` | move and rewrite | runner `active_runs.rs` |
-| engine `runtime/persistence.rs` | move and rewrite | runner `persistence.rs` |
-| engine message-record start/finish | move if retained | runner `run_records.rs` |
+| `src/service.rs` | rename and expand | runner `agent_run_service.rs` |
+| `src/request.rs` | rename | runner `spawn_agent_request.rs` |
+| `src/outcome.rs` | rename | runner `agent_run_outcome.rs` |
+| `src/error.rs` | rename | runner `agent_run_error.rs` |
+| engine `runtime/agent_run_service.rs` | move and rewrite | runner `agent_run_service.rs` |
+| engine `runtime/registry.rs` | move and rewrite | runner `active_agent_runs.rs` |
+| engine `runtime/persistence.rs` | move and rewrite | runner `agent_run_persistence.rs` |
+| engine message-record start/finish | move if retained | runner `agent_run_records.rs` |
 
 ### `eos-engine`
 
 | Current | Action | Target |
 | --- | --- | --- |
-| `runtime/agent_loop.rs` | split | engine-owned loop driver under `engine_loop/` |
-| `runtime/agent_run_service.rs` | remove from engine | runner `service.rs` |
-| `runtime/types.rs` | delete/split | `engine_loop/request.rs`, `outcome.rs`, runner types |
+| `runtime/agent_loop.rs` | split | engine-owned loop driver under `loop_engine/` |
+| `runtime/agent_run_service.rs` | remove from engine | runner `agent_run_service.rs` |
+| `runtime/types.rs` | delete/split | `loop_engine/init_request.rs`, `loop_engine/loop_outcome.rs`, runner types |
 | `runtime/control.rs` | delete as bag type | narrow pieces only if still needed |
 | `runtime/factory.rs` | remove from engine API | runner/runtime composition |
-| `runtime/setup.rs` | split | runner builds init request; engine builds query context |
-| `runtime/persistence.rs` | remove from engine | runner `persistence.rs` |
-| `runtime/registry.rs` | remove from engine | runner `active_runs.rs` |
-| `agent/` | remove from engine | runner `engine_request.rs` |
+| `runtime/setup.rs` | split | runner builds init request; engine builds query-loop state |
+| `runtime/persistence.rs` | remove from engine | runner `agent_run_persistence.rs` |
+| `runtime/registry.rs` | remove from engine | runner `active_agent_runs.rs` |
+| `agent/` | remove from engine | runner `loop_engine_request.rs` |
 | `prompt/` | remove or fold | runner initial message preparation |
 | `query/`, `background/`, `notifications/`, `tool_call/`, `telemetry/` | keep | engine internals |
 
 Engine public re-exports should include:
 
 ```text
-init_engine_loop
-InitEngineLoopRequest
-EngineLoopMessage
-EngineLoopRun
-EngineLoopOutcome
-EngineToolRegistryFactory
-EngineToolRegistryContext
+start_loop_engine
+InitLoopEngineRequest
+LoopEngineMessage
+StartedLoopEngine
+LoopEngineOutcome
+LoopEngineToolRegistryFactory
+LoopEngineToolRegistryBuildInput
 EngineError
 ```
 
@@ -554,17 +583,17 @@ Move shared contracts and execution framework from `eos-tools`:
 
 | Current `eos-tools` path | Target `eos-tool-core` path |
 | --- | --- |
-| `core/error.rs` | `error.rs` |
-| `core/intent.rs` | `intent.rs` |
-| `core/metadata.rs` | `metadata.rs` |
-| `core/name.rs` | `name.rs` |
-| `core/result.rs` | `result.rs` |
-| `registry/tool_registry.rs` | `registry.rs` |
-| `runtime/executor.rs` | `executor.rs` |
-| `runtime/execution.rs` | `execution.rs` |
-| `runtime/dispatch.rs` | `dispatch.rs` |
-| concrete hook framework or hook trait | `hooks.rs` |
-| family-specific session callback services | `session_services.rs` |
+| `core/error.rs` | `tool_error.rs` |
+| `core/intent.rs` | `tool_intent.rs` |
+| `core/metadata.rs` | `execution_metadata.rs` |
+| `core/name.rs` | `tool_name.rs` |
+| `core/result.rs` | `tool_result.rs` |
+| `registry/tool_registry.rs` | `tool_registry.rs` |
+| `runtime/executor.rs` | `tool_executor.rs` |
+| `runtime/execution.rs` | `tool_execution.rs` |
+| `runtime/dispatch.rs` | `tool_dispatch.rs` |
+| concrete hook framework or hook trait | `tool_hooks.rs` |
+| family-specific session callback services | `session_tool_services.rs` |
 
 `eos-tool-core` must not contain:
 
@@ -618,7 +647,7 @@ Delete the engine-level bag. Its fields move to the owning crate:
 | `skill_service` | `eos-runtime` / concrete tool wiring |
 | `tool_registry_extender` | `eos-runtime` registry factory |
 | `audit` | engine telemetry input if still needed, not in runner handles |
-| `workspace_root` | no top-level engine loop field |
+| `workspace_root` | no top-level loop engine field |
 
 ### Replace `AgentRunInput`
 
@@ -629,7 +658,7 @@ Runner-owned spawn context:
 ```rust
 pub struct SpawnAgentRequest {
     pub agent_name: AgentName,
-    pub agent_run_id: Option<AgentRunId>,
+    pub requested_agent_run_id: Option<AgentRunId>,
     pub initial_messages: Vec<Message>,
     pub parent_agent_run_id: Option<AgentRunId>,
     pub request_id: Option<RequestId>,
@@ -639,37 +668,37 @@ pub struct SpawnAgentRequest {
     pub sandbox_id: Option<SandboxId>,
     pub workspace_root: String,
     pub is_isolated_workspace_mode: bool,
-    pub persist: bool,
-    pub record_kind: AgentRunRecordKind,
+    pub persist_agent_run: bool,
+    pub message_record_kind: AgentRunRecordKind,
 }
 ```
 
-Engine-owned loop request:
+Loop-engine init request:
 
 ```rust
-pub struct InitEngineLoopRequest {
-    pub run_id: AgentRunId,
-    pub initial_messages: Vec<EngineLoopMessage>,
-    pub model: String,
-    pub max_tokens: u32,
+pub struct InitLoopEngineRequest {
+    pub agent_run_id: AgentRunId,
+    pub initial_messages: Vec<LoopEngineMessage>,
+    pub model_key: String,
+    pub max_completion_tokens: u32,
     pub tool_call_limit: u32,
-    pub registry_factory: Arc<dyn EngineToolRegistryFactory>,
+    pub tool_registry_factory: Arc<dyn LoopEngineToolRegistryFactory>,
 }
 ```
 
-### Shrink `QueryContext`
+### Rename And Shrink `QueryLoopState`
 
 Keep query-loop state:
 
 ```text
 tool_registry
-model
-max_tokens
+model_key
+max_completion_tokens
 tool_call_limit
 tool call counters
 terminal_tools
-submission_outcome
-event_source / provider source
+terminal_tool_outcome
+provider_stream_source
 notification rules and queue
 audit/telemetry fields if engine still needs them
 ```
@@ -684,7 +713,8 @@ agent registry/profile references
 agent-run persistence handles
 ```
 
-`agent_run_id` may remain as a correlation id because it is the loop `run_id`.
+`agent_run_id` may remain as a correlation id because it is the loop-engine
+run id.
 
 ## 12. Migration Phases
 
@@ -703,13 +733,13 @@ cargo check -p eos-tool-core --all-targets
 cargo check -p eos-tools --all-targets
 ```
 
-### Phase 2 - Add public non-blocking engine loop API
+### Phase 2 - Add public non-blocking loop engine API
 
-- Add `eos-engine/src/engine_loop/`.
-- Add `InitEngineLoopRequest`.
-- Add `EngineLoopRun`.
-- Add `EngineLoopOutcome`.
-- Add `init_engine_loop`.
+- Add `eos-engine/src/loop_engine/`.
+- Add `InitLoopEngineRequest`.
+- Add `StartedLoopEngine`.
+- Add `LoopEngineOutcome`.
+- Add `start_loop_engine`.
 - Keep old engine runtime API temporarily behind compatibility if needed.
 
 Verification:
@@ -724,9 +754,9 @@ cargo check -p eos-engine --all-targets
 - Rename `eos-agent-run` to `eos-agent-runner`.
 - Move agent-run service, active-run registry, and persistence ownership from
   engine to runner.
-- Implement event-driven completion watcher.
+- Implement the event-driven outcome-forwarding task.
 - Implement `spawn_agent`, `wait_for_agent_outcome`, and
-  `poll_for_agent_outcome`.
+  `poll_agent_outcome_after_interval`.
 
 Verification:
 
@@ -761,7 +791,7 @@ eos-tools
 
 ### Phase 5 - Runtime composition
 
-- Implement `EngineToolRegistryFactory` in `eos-runtime`.
+- Implement `LoopEngineToolRegistryFactory` in `eos-runtime`.
 - Wire concrete `eos-tools` registry construction through the factory.
 - Wire root requests, workflow launches, subagent tools, and advisor tools to
   `AgentRunApiService::spawn_agent`.
@@ -776,14 +806,14 @@ cargo check --workspace --all-targets
 
 ## 13. Acceptance Criteria
 
-- `spawn_agent` returns `AgentRunId` without waiting for the engine loop to
+- `spawn_agent` returns `AgentRunId` without waiting for the loop engine to
   finish.
-- Engine-loop completion reaches the runner through a completion receiver and
-  internal `AgentRunLifecycleEvent::EngineLoopCompleted`.
+- Loop-engine completion reaches the runner through an outcome receiver and
+  internal `AgentRunCompletionEvent::LoopEngineOutcomeReceived`.
 - `wait_for_agent_outcome` waits on in-memory notification for active runs and
-  does not interval-poll the engine loop.
-- `poll_for_agent_outcome` is the only interval-based DB/read-model polling
-  path.
+  does not interval-poll the loop engine.
+- `poll_agent_outcome_after_interval` is the only interval-based DB/read-model
+  polling path.
 - Only `eos-agent-runner` mutates persisted agent-run state.
 - `eos-engine` exposes a thin public loop API and owns query/background/tool
   dispatch/notification/telemetry internals.
@@ -793,7 +823,7 @@ cargo check --workspace --all-targets
 - `eos-tools` contains concrete model-facing tools only.
 - `eos-tool-core` contains shared tool contracts/framework primitives only.
 - No generic background abstraction is introduced.
-- `EngineLoopOutcome` only has terminal and failure outcomes in this spec.
+- `LoopEngineOutcome` only has terminal and failure outcomes in this spec.
 
 ## 14. Progress Tracker
 

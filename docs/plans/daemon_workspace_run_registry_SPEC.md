@@ -565,13 +565,25 @@ the caller-keyed registry, cancel routes structurally to discard, and agent-core
 ### Verification
 
 musl `cargo check --all-targets` + `clippy -D warnings` clean (the Linux-gated floor;
-macOS does not compile the core). Host unit tests pass. E2E against a rebuilt `eosd`
-in the Docker `sweevo-dask__dask-10042` container: all **registry-correctness** tests
-pass — the three `cancel_workspace_runs*` tests, `collect_completed_drains`, `exec_timeout`,
-`session_count_accuracy`. The one failure, `ctrl_c_char_cancels_command_session`, is a
-pre-existing qemu timing flake (the cancel exceeds `cancel_wait_ms=500ms` under x86-on-arm64
-emulation and returns the inline `CommandResponse::cancelled` (`exit_code: null`) path — code
-untouched by this audit), in the documented process/signal/PTY flake set.
+macOS does not compile the core). Host unit tests pass; a new unit test locks the F3
+`KillReason → status` map. E2E against a rebuilt `eosd` in the Docker
+`sweevo-dask__dask-10042` container, all **registry-correctness** tests pass:
+
+- F1 / cancel-never-publishes: the three `cancel_workspace_runs*` tests, incl.
+  `cancel_workspace_runs_by_caller_id_discards_overlay_writes` (the §9 manifest-unchanged
+  invariant).
+- **F3 end-to-end**: a new `background_timeout_parks_collectable_completion` —
+  a backgrounded, unpolled command that hits its timeout is reaped by the *sweep* and parks
+  a collectable completion (this exercises `sweep_expired → time_out_process → finish_reaped →
+  push_completed → collect`; before F3 it was dropped silently). `exec_timeout` covers the
+  separate *foreground/runner* timeout path (it reaps inline via `wait_for_yield`, `kill == None`)
+  — confirming that path is unbroken, not F3's sweep path.
+- F4 `collect_completed_drains`; F2 `session_count_accuracy`.
+
+The one failure, `ctrl_c_char_cancels_command_session`, is a pre-existing qemu timing flake
+(the cancel exceeds `cancel_wait_ms=500ms` under x86-on-arm64 emulation and returns the inline
+`CommandResponse::cancelled` (`exit_code: null`) path — code untouched by this audit), in the
+documented process/signal/PTY flake set.
 
 ### Acknowledged divergences (left as-is) & deferred cross-spec findings
 
