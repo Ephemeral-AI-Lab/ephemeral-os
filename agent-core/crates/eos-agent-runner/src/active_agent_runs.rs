@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use eos_agent_message_records::AgentRunRecordHandle;
 use eos_agent_ports::{AgentLoopCancelHandle, AgentRunError, AgentRunOutcome};
+use eos_engine::records::AgentRunRecordHandle;
 use eos_types::AgentRunId;
 use tokio::sync::{watch, Mutex};
 

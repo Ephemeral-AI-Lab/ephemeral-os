@@ -437,19 +437,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-agent-message-records"
-version = "0.1.0"
-dependencies = [
- "eos-llm-client",
- "eos-types",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "eos-agent-ports"
 version = "0.1.0"
 dependencies = [
@@ -467,8 +454,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
- "eos-agent-message-records",
  "eos-agent-ports",
+ "eos-engine",
  "eos-llm-client",
  "eos-tool-ports",
  "eos-types",

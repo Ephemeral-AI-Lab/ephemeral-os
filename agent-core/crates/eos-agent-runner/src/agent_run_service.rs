@@ -4,11 +4,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentName as DefinitionAgentName, AgentRegistry, AgentType};
-use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
 use eos_agent_ports::{
     AgentLoopLauncher, AgentLoopOutcome, AgentLoopOutcomeKind, AgentRunApi, AgentRunError,
     AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,
 };
+use eos_engine::records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
 use eos_llm_client::Message;
 use eos_types::{AgentRunId, AgentRunStore};
 use tokio::sync::oneshot;

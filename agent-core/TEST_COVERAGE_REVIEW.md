@@ -84,7 +84,7 @@ covered, notable enumerable gaps · **Weak** = mostly partial / contract gaps.
 | eos-sandbox-port | 3025 | **Mixed** | 6 / 9 / 4 | `parse.rs` + `ops.rs` golden-grade | outbound payloads unverified; `plugin`/`control` untested |
 | eos-engine | 5509 | **Mixed** | 8 / 8 / 9 | notifications, supervisor ledger, provider-msg sanitization | successful-terminal exit + parent-exit async cleanup untested |
 | eos-workflow | 4824 | **Mixed** | 3 / 7 / 1 | stage machine + reducer gate + compensation sagas | `composer::compose` dark; plan-shape validation breadth |
-| eos-agent-message-records | 866 | **Weak** | 0 / 7 / 0 | record/event round-trip on happy path | `WorkflowTask` kind 0% exercised; `safe_segment` traversal guard + `finish()` untested |
+| eos-engine::records | 866 | **Weak** | 0 / 7 / 0 | record/event round-trip on happy path | `WorkflowTask` kind 0% exercised; `safe_segment` traversal guard + `finish()` untested |
 | eos-testkit | 305 | _helper_ | — | shared test doubles (correctly has ~0 own tests) | n/a |
 
 \* Buckets use each reviewer's significant-module count; conventions vary
@@ -148,7 +148,7 @@ DTO/wiring/`main.rs` holders with no logic.
    *use* of that config to build OpenAI/Anthropic/Codex/Claude clients —
    including "secret is required" and "missing models.active" — runs no test
    because every runtime test injects a fake client.
-9. **`eos-agent-message-records`: `WorkflowTask` record kind is 0% exercised**
+9. **`eos-engine::records`: `WorkflowTask` record kind is 0% exercised**
    (its multi-segment workflow/iteration/attempt path + `extend_payload` fields +
    `WorkflowTaskRole` labels), the **`safe_segment` path-traversal guard** has
    zero coverage (a directory-escape hole if it regresses — sibling crates test

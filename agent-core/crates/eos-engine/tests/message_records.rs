@@ -4,12 +4,14 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::str::FromStr;
 
-use eos_agent_message_records::{
+use eos_engine::records::{
     AgentMessageRecords, AgentRunRecordKind, AgentRunRecordStart, MessageRecordError,
     NodeFinishStatus, WorkflowTaskRole,
 };
-use eos_llm_client::{ContentBlock, Message, MessageRole};
-use eos_types::{AgentRunId, AttemptId, IterationId, RequestId, TaskId, ToolUseId, WorkflowId};
+use eos_types::{
+    AgentRunId, AttemptId, ContentBlock, IterationId, Message, MessageRole, RequestId, TaskId,
+    ToolUseId, WorkflowId,
+};
 use serde_json::{json, Value};
 
 fn ids() -> (RequestId, TaskId, AgentRunId) {

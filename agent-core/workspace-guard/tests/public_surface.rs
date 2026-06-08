@@ -64,16 +64,6 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
             ],
         ),
         (
-            "eos-agent-message-records",
-            &[
-                "use:error",
-                "use:handle",
-                "use:kind",
-                "use:record",
-                "use:service",
-            ],
-        ),
-        (
             "eos-agent-ports",
             &[
                 "mod:agent_loop",
@@ -93,7 +83,7 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "use:active_agent_runs",
                 "use:agent_run_records",
                 "use:agent_run_service",
-                "use:eos_agent_message_records",
+                "use:eos_engine",
                 "use:eos_agent_ports",
             ],
         ),
@@ -128,6 +118,7 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "mod:agent_loop",
                 "mod:background",
                 "mod:query",
+                "mod:records",
                 "mod:tool_call",
                 "use:agent_loop",
                 "use:background",

@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
 
-use crate::error::Result;
-use crate::handle::AgentRunRecordHandle;
-use crate::io::{read_bytes_after, read_events_after};
-use crate::kind::AgentRunRecordStart;
-use crate::layout;
-use crate::record::{NodeEvent, RecordBytes};
+use super::error::Result;
+use super::handle::AgentRunRecordHandle;
+use super::io::{read_bytes_after, read_events_after};
+use super::kind::AgentRunRecordStart;
+use super::layout;
+use super::record::{NodeEvent, RecordBytes};
 
 /// Shared message-record root service.
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ impl AgentMessageRecords {
     /// initial node-local events.
     ///
     /// # Errors
-    /// Returns [`crate::MessageRecordError`] if path validation, directory
+    /// Returns [`super::MessageRecordError`] if path validation, directory
     /// creation, JSON encoding, or file append fails.
     pub async fn start_agent_run(
         &self,
@@ -84,7 +84,7 @@ impl AgentMessageRecords {
     /// Read raw `messages.jsonl` bytes for an agent run after `after_byte`.
     ///
     /// # Errors
-    /// Returns [`crate::MessageRecordError::NotFound`] if the agent-run node or
+    /// Returns [`super::MessageRecordError::NotFound`] if the agent-run node or
     /// message file does not exist.
     pub async fn read_messages(
         &self,
@@ -98,7 +98,7 @@ impl AgentMessageRecords {
     /// Replay node-local events with `seq > after_seq`.
     ///
     /// # Errors
-    /// Returns [`crate::MessageRecordError::NotFound`] if the agent-run node or
+    /// Returns [`super::MessageRecordError::NotFound`] if the agent-run node or
     /// event file does not exist.
     pub async fn read_events(
         &self,

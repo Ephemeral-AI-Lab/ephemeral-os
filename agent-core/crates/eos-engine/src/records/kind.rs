@@ -1,4 +1,4 @@
-use eos_llm_client::Message;
+use eos_types::Message;
 use eos_types::{AgentRunId, AttemptId, IterationId, JsonObject, RequestId, TaskId, WorkflowId};
 use serde_json::json;
 

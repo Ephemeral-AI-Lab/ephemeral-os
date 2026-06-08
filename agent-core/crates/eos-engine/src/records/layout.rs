@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 
 use eos_types::AgentRunId;
 
-use crate::error::{MessageRecordError, Result};
-use crate::kind::{AgentRunRecordKind, AgentRunRecordStart};
+use super::error::{MessageRecordError, Result};
+use super::kind::{AgentRunRecordKind, AgentRunRecordStart};
 
 pub(crate) async fn resolve_agent_run(root: &Path, agent_run_id: &AgentRunId) -> Result<PathBuf> {
     safe_segment("agent_run_id", agent_run_id.as_str())?;

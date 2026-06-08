@@ -6,6 +6,7 @@ pub mod agent_loop;
 pub mod background;
 mod notifications;
 pub mod query;
+pub mod records;
 mod support;
 mod telemetry;
 pub mod tool_call;

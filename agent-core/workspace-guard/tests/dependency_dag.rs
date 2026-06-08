@@ -21,16 +21,12 @@ fn legacy_edges() -> Edges {
             &["eos-audit", "eos-tool-ports", "eos-types"],
         ),
         (
-            "eos-agent-message-records",
-            &["eos-llm-client", "eos-types"],
-        ),
-        (
             "eos-agent-runner",
             &[
                 "eos-types",
                 "eos-agent-def",
                 "eos-agent-ports",
-                "eos-agent-message-records",
+                "eos-engine",
                 "eos-llm-client",
                 "eos-tool-ports",
             ],

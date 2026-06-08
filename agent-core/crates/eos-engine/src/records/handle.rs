@@ -1,13 +1,13 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use eos_llm_client::{ContentBlock, Message};
 use eos_types::JsonObject;
+use eos_types::{ContentBlock, Message};
 use serde_json::{json, Value};
 
-use crate::error::Result;
-use crate::io::{append_event, append_initial_message_rows, append_message_rows};
-use crate::record::MessageAppendRange;
+use super::error::Result;
+use super::io::{append_event, append_initial_message_rows, append_message_rows};
+use super::record::MessageAppendRange;
 
 /// A started agent-run message-record node.
 #[derive(Debug, Clone)]
@@ -28,7 +28,7 @@ impl AgentRunRecordHandle {
     /// `events.jsonl`.
     ///
     /// # Errors
-    /// Returns [`crate::MessageRecordError`] if message or event append fails.
+    /// Returns [`super::MessageRecordError`] if message or event append fails.
     pub async fn append_messages(&self, messages: &[Message]) -> Result<MessageAppendRange> {
         let range = append_message_rows(&self.messages_path, "message", messages).await?;
         if range.count > 0 {
@@ -53,7 +53,7 @@ impl AgentRunRecordHandle {
     /// Append the terminal node event.
     ///
     /// # Errors
-    /// Returns [`crate::MessageRecordError`] if event append fails.
+    /// Returns [`super::MessageRecordError`] if event append fails.
     pub async fn finish(&self, status: NodeFinishStatus) -> Result<()> {
         let mut payload = JsonObject::new();
         payload.insert("status".to_owned(), json!(status.as_str()));

@@ -1,12 +1,12 @@
 use std::path::Path;
 
-use eos_llm_client::{ContentBlock, Message, MessageRole};
+use eos_types::{ContentBlock, Message, MessageRole};
 use eos_types::{JsonObject, UtcDateTime};
 use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
-use crate::error::{MessageRecordError, Result};
-use crate::record::{MessageAppendRange, NodeEvent, RecordBytes};
+use super::error::{MessageRecordError, Result};
+use super::record::{MessageAppendRange, NodeEvent, RecordBytes};
 
 #[derive(Serialize)]
 struct MessageRow<'a> {

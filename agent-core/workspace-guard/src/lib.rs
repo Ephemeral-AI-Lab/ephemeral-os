@@ -43,7 +43,6 @@ pub const LEGACY_MIGRATION_CRATES: &[&str] = &[
     "eos-runtime",
     "eos-agent-ports",
     "eos-tool-ports",
-    "eos-agent-message-records",
     "eos-tools",
     "eos-agent-runner",
     "eos-skills",
