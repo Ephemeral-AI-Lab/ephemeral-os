@@ -131,17 +131,17 @@
   <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a></code>
   <p class="docstring">Persistence surface for request/task (Rust `TaskStoreProtocol`, task half).</p>
   <div class="tags"><span>async_trait</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-insert-task-85"><td>required</td><td>insert_task</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a> (&amp; self , task : &amp; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>) -&gt; Result &lt; () , CoreError &gt;</code><p class="docstring">Insert a fresh task row.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-insert-task-85"><td>required</td><td>insert_task</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a> (&amp; self , task : &amp; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>) -&gt; Result &lt; () , CoreError &gt;</code><p class="docstring">Insert a fresh task row.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Insert a fresh task row.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;<span class="rs-self">self</span>, task: &amp;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;<span class="rs-self">self</span>, task: &amp;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-get-88"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; TaskId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> &gt; , CoreError &gt;</code><p class="docstring">Load a task by id.</p><details class="function-source">
+</details></td></tr><tr id="method-get-88"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; TaskId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> &gt; , CoreError &gt;</code><p class="docstring">Load a task by id.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Load a task by id.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-set-task-status-if-current-91"><td>required</td><td>set_task_status_if_current</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a> (&amp; self , id : &amp; TaskId , expected : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a> , status : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a> , outcomes : Option &lt; &amp; [<a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> &gt; , CoreError &gt;</code><p class="docstring">Optimistic-concurrency status flip (Rust `set_task_status_if_current`).<br>`Ok(None)` ⇒ the current status did not match `expected`.</p><details class="function-source">
+</details></td></tr><tr id="method-set-task-status-if-current-91"><td>required</td><td>set_task_status_if_current</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a> (&amp; self , id : &amp; TaskId , expected : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a> , status : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a> , outcomes : Option &lt; &amp; [<a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> &gt; , CoreError &gt;</code><p class="docstring">Optimistic-concurrency status flip (Rust `set_task_status_if_current`).<br>`Ok(None)` ⇒ the current status did not match `expected`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Optimistic-concurrency status flip (Rust `set_task_status_if_current`).</span>
     <span class="rs-comment">/// `Ok(None)` ⇒ the current status did not match `expected`.</span>
@@ -152,7 +152,7 @@
         status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>,
         outcomes: <span class="rs-type">Option</span>&lt;&amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>]&gt;,
         terminal_tool_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
 </code></pre>
 </details></td></tr><tr id="method-latch-attempt-tasks-cancelled-102"><td>required</td><td>latch_attempt_tasks_cancelled</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-latch-attempt-tasks-cancelled-102">latch_attempt_tasks_cancelled</a> (&amp; self , attempt_id : &amp; AttemptId , ids : &amp; [TaskId] ,) -&gt; Result &lt; () , CoreError &gt;</code><p class="docstring">Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime<br>teardown, stamping the cancelled terminal payload. Only rows owned by<br>`attempt_id` that are still `Pending`/`Running` flip; terminal rows are<br>left untouched, so the call is idempotent. This closes the scheduler gap<br>(`cancel_attempt`, spec §12.4) so no generator/reducer launches into the<br>cancellation window.</p><details class="function-source">
   <summary>code</summary>
@@ -168,12 +168,12 @@
         ids: &amp;[<span class="rs-type">TaskId</span>],
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-list-for-request-114"><td>required</td><td>list_for_request</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a> (&amp; self , request_id : &amp; RequestId) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> &gt; , CoreError &gt;</code><p class="docstring">All tasks owned by one request, ordered by creation — the request task<br>tree (`needs` edges live on each [`Task`]). Read-side API for the backend<br>composition root (spec §State Reader).</p><details class="function-source">
+</details></td></tr><tr id="method-list-for-request-114"><td>required</td><td>list_for_request</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a> (&amp; self , request_id : &amp; RequestId) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> &gt; , CoreError &gt;</code><p class="docstring">All tasks owned by one request, ordered by creation — the request task<br>tree (`needs` edges live on each [`Task`]). Read-side API for the backend<br>composition root (spec §State Reader).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// All tasks owned by one request, ordered by creation — the request task</span>
     <span class="rs-comment">/// tree (`needs` edges live on each [`Task`]). Read-side API for the backend</span>
     <span class="rs-comment">/// composition root (spec §State Reader).</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a>(&amp;<span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a>(&amp;<span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
@@ -477,15 +477,15 @@
     <h3>sample_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a> () -&gt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a> () -&gt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
-        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
+        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
             id: &quot;t1&quot;.parse().expect(&quot;id&quot;),
             request_id: <span class="rs-type">RequestId</span>::new_v4(),
-            role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
             instruction: &quot;do the thing&quot;.to_owned(),
             status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>,
             workflow_id: <span class="rs-type">None</span>,
@@ -608,7 +608,7 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::pagination::{<a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-Page-14">Page</a>, <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-PageResult-33">PageResult</a>, <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-RequestListFilter-43">RequestListFilter</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::plan::{<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>, <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::workflow::{<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-enum-WorkflowStatus-11">WorkflowStatus</a>};
 
 <span class="rs-comment">/// Alias for the error every `Store` method returns (anchor §5/§8).</span>
@@ -666,10 +666,10 @@
 #[async_trait]
 <span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
     <span class="rs-comment">/// Insert a fresh task row.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;<span class="rs-self">self</span>, task: &amp;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;<span class="rs-self">self</span>, task: &amp;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
 
     <span class="rs-comment">/// Load a task by id.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
 
     <span class="rs-comment">/// Optimistic-concurrency status flip (Rust `set_task_status_if_current`).</span>
     <span class="rs-comment">/// `Ok(None)` ⇒ the current status did not match `expected`.</span>
@@ -680,7 +680,7 @@
         status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>,
         outcomes: <span class="rs-type">Option</span>&lt;&amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>]&gt;,
         terminal_tool_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
 
     <span class="rs-comment">/// Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime</span>
     <span class="rs-comment">/// teardown, stamping the cancelled terminal payload. Only rows owned by</span>
@@ -697,7 +697,7 @@
     <span class="rs-comment">/// All tasks owned by one request, ordered by creation — the request task</span>
     <span class="rs-comment">/// tree (`needs` edges live on each [`Task`]). Read-side API for the backend</span>
     <span class="rs-comment">/// composition root (spec §State Reader).</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a>(&amp;<span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a>(&amp;<span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
 }
 
 <span class="rs-comment">/// Persistence surface for [`Iteration`] (Rust `IterationStoreProtocol`).</span>
@@ -895,14 +895,14 @@
 <span class="rs-kw">mod</span> tests {
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::<span class="rs-type">FakeTaskStore</span>;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
     <span class="rs-kw">use</span> eos_types::<span class="rs-type">RequestId</span>;
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
-        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
+        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
             id: &quot;t1&quot;.parse().expect(&quot;id&quot;),
             request_id: <span class="rs-type">RequestId</span>::new_v4(),
-            role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
             instruction: &quot;do the thing&quot;.to_owned(),
             status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>,
             workflow_id: <span class="rs-type">None</span>,

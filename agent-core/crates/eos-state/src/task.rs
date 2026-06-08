@@ -35,7 +35,10 @@ impl TaskStatus {
     /// (Rust `TERMINAL_GENERATOR_STATUSES`).
     #[must_use]
     pub const fn is_terminal_generator(self) -> bool {
-        matches!(self, Self::Done | Self::Failed | Self::Blocked | Self::Cancelled)
+        matches!(
+            self,
+            Self::Done | Self::Failed | Self::Blocked | Self::Cancelled
+        )
     }
 }
 

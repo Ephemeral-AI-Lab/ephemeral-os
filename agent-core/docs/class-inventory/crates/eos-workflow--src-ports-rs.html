@@ -587,7 +587,7 @@
         <span class="rs-kw">let</span> attempt = stores.attempt(attempt_id).unwrap();
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
         assert!(attempt.fail_reason().is_none());
-        <span class="rs-kw">let</span> planner_task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>().unwrap()).unwrap();
+        <span class="rs-kw">let</span> planner_task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>().unwrap()).unwrap();
         assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>);
         assert_eq!(
             planner_task
@@ -597,7 +597,7 @@
             <span class="rs-type">Some</span>(&amp;json!(&quot;cancelled&quot;))
         );
         <span class="rs-comment">// `cancel_workflow` must never mutate the parent task (anchor §3).</span>
-        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
     }
 </code></pre>
 </details>
@@ -616,13 +616,13 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_ports::<span class="rs-type">WorkflowControlPort</span>;
 <span class="rs-kw">use</span> eos_state::{
     <span class="rs-type">AttemptClosure</span>, <span class="rs-type">GeneratorSubmission</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">ReducerSubmission</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">WorkflowId</span>,
     <span class="rs-type">WorkflowStatus</span>,
 };
 <span class="rs-kw">use</span> eos_tools::{
     <span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">CancelPort</span>, <span class="rs-type">OutstandingWorkflow</span>, <span class="rs-type">PlannerPlan</span>, <span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>,
-    <span class="rs-type">WorkflowControlPort</span>,
 };
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">WorkflowSessionId</span>};
 <span class="rs-kw">use</span> parking_lot::<span class="rs-type">Mutex</span>;
@@ -1019,8 +1019,8 @@
     <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
     <span class="rs-kw">use</span> async_trait::async_trait;
+    <span class="rs-kw">use</span> eos_ports::<span class="rs-type">WorkflowControlPort</span> <span class="rs-kw">as</span> _;
     <span class="rs-kw">use</span> eos_state::{<span class="rs-type">AttemptStatus</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">WorkflowStatus</span>};
-    <span class="rs-kw">use</span> eos_tools::<span class="rs-type">WorkflowControlPort</span> <span class="rs-kw">as</span> _;
     <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
     <span class="rs-kw">use</span> serde_json::json;
 
@@ -1121,7 +1121,7 @@
         <span class="rs-kw">let</span> attempt = stores.attempt(attempt_id).unwrap();
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
         assert!(attempt.fail_reason().is_none());
-        <span class="rs-kw">let</span> planner_task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>().unwrap()).unwrap();
+        <span class="rs-kw">let</span> planner_task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>().unwrap()).unwrap();
         assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>);
         assert_eq!(
             planner_task
@@ -1131,7 +1131,7 @@
             <span class="rs-type">Some</span>(&amp;json!(&quot;cancelled&quot;))
         );
         <span class="rs-comment">// `cancel_workflow` must never mutate the parent task (anchor §3).</span>
-        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
     }
 }
 </code></pre>

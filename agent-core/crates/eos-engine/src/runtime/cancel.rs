@@ -17,11 +17,11 @@
 //! run's own `run_agent` finalizer reliably loses the claim and skips its row +
 //! teardown (the message-record is still finished by `run_agent`, cancel-aware).
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{TaskStatus, TaskStore};
-use eos_tools::{CancelPort, ToolError, WorkflowControlPort};
+use eos_tools::{CancelPort, ToolError};
 use eos_types::{AgentRunId, JsonObject, TaskId};
 
 use super::registry::AgentRunRegistry;
@@ -31,9 +31,6 @@ use super::registry::AgentRunRegistry;
 pub struct EngineCancelPort {
     registry: AgentRunRegistry,
     task_store: Arc<dyn TaskStore>,
-    /// Late-bound workflow control (built downstream of the runner). Read at
-    /// cancel time so a run's delegated workflows are cancelled during teardown.
-    workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
 }
 
 impl std::fmt::Debug for EngineCancelPort {
@@ -43,18 +40,12 @@ impl std::fmt::Debug for EngineCancelPort {
 }
 
 impl EngineCancelPort {
-    /// Wire the port with the live-run registry, the task store, and the
-    /// late-bound workflow-control cell.
+    /// Wire the port with the live-run registry and task store.
     #[must_use]
-    pub fn new(
-        registry: AgentRunRegistry,
-        task_store: Arc<dyn TaskStore>,
-        workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
-    ) -> Self {
+    pub fn new(registry: AgentRunRegistry, task_store: Arc<dyn TaskStore>) -> Self {
         Self {
             registry,
             task_store,
-            workflow_control,
         }
     }
 }
@@ -73,7 +64,12 @@ impl CancelPort for EngineCancelPort {
         // Persisted-state cancellation: CAS the task row from its current
         // non-terminal status to Cancelled. Reading first then CASing on the
         // observed status keeps terminal tasks untouched and makes repeats no-op.
-        if let Some(task) = self.task_store.get(task_id).await.map_err(ToolError::Store)? {
+        if let Some(task) = self
+            .task_store
+            .get(task_id)
+            .await
+            .map_err(ToolError::Store)?
+        {
             if matches!(task.status, TaskStatus::Pending | TaskStatus::Running) {
                 let terminal = cancelled_terminal(reason);
                 self.task_store
@@ -111,8 +107,7 @@ impl CancelPort for EngineCancelPort {
         // Tear down foreground effects (inline child runs / registered resources)
         // and background work (subagents, delegated workflows, command sessions).
         control.foreground().teardown(self, reason).await?;
-        let workflow_control = self.workflow_control.get().cloned();
-        control.background().teardown(workflow_control, reason).await;
+        control.background().teardown(reason).await;
         // Finish the durable agent_run row (cancelled payload); ephemeral runs
         // own no row. The message-record is finished by `run_agent`.
         control

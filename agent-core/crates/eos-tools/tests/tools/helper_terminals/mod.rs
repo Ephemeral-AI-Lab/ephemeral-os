@@ -26,6 +26,8 @@ fn registry() -> ToolRegistry {
         None,
         None,
         None,
+        None,
+        None,
         SkillToolService::new(Arc::new(eos_skills::SkillRegistry::new())),
     )
 }

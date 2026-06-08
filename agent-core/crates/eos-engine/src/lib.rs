@@ -8,14 +8,15 @@ mod notifications;
 pub mod prompt;
 pub mod query;
 mod runtime;
+pub mod services;
 mod support;
 mod telemetry;
 pub mod tool_call;
 
 pub use agent::{build_query_context, BuildQueryContextInput};
 pub use background::{
-    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSessionFactory,
-    BackgroundSessionService, BackgroundSessionStatus,
+    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSessionService,
+    BackgroundSessionStatus, BackgroundTeardownPort,
 };
 pub use notifications::{make_default_notification_rules, NotificationRule, NotificationService};
 pub use query::{
@@ -28,5 +29,6 @@ pub use runtime::{
     EventCallback, EventSourceFactory, ForegroundExecutor, ForegroundExecutorFactory,
     ForegroundResourceId, ToolRegistryExtender,
 };
+pub use services::{AgentRunService, CommandService, WorkflowService};
 pub use support::EngineError;
 pub use telemetry::{stamp_identity, AssistantMessageComplete, PromptReportRecorder, StreamEvent};

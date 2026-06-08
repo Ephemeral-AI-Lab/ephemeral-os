@@ -1,448 +1,754 @@
-# Background Session Manager Refactor — SPEC
+# Background Session and Runtime Service Cleanup - SPEC
 
 Status: Implemented
 Date: 2026-06-08
-Owner: agent-core engine
-Scope: `agent-core/crates/eos-engine`, `agent-core/crates/eos-tools`,
-`agent-core/crates/eos-workflow`
+Owner: agent-core engine / tools / runtime
+Scope: `agent-core/crates/eos-ports`, `agent-core/crates/eos-tools`,
+`agent-core/crates/eos-engine`, `agent-core/crates/eos-runtime`
+Supersedes: the earlier implemented
+`docs/plans/background_session_manager_refactor_SPEC.md` target shape.
 Related:
 - `docs/plans/agent_run_local_background_supervisor_SPEC.md`
 - `docs/plans/uniform_recursive_cancellation_SPEC.md`
+- `docs/plans/runtime_services_tool_metadata_split_SPEC.md`
+- `docs/plans/daemon_workspace_run_registry_SPEC.md`
 
 ## 1. Problem
 
-`agent-core/crates/eos-engine/src/background` currently mixes several concepts:
+The current Rust background session path still mixes these responsibilities:
 
-- per-agent-run background session accounting,
-- subagent launch policy and model-facing progress rendering,
-- delegated workflow bookkeeping,
-- command-session completion recovery,
-- parent-exit finalization,
-- notification rendering,
-- implementation names inherited from the old "supervisor/lane/record" model.
+- model-facing tool orchestration,
+- subagent launch through `run_agent`,
+- workflow lifecycle control through `WorkflowControlPort`,
+- sandbox command execution and command-result replay policy,
+- background session registration,
+- background terminal polling,
+- notification delivery,
+- parent-run teardown.
 
-That makes the background module look broader than its intended ownership.
-Background should not own model-tool semantics, workflow creation, or command
-execution behavior. It should own the engine-local lifecycle accounting for
-background sessions: count live sessions, observe completion, emit completion
-notifications, and cancel live background sessions when requested.
+That makes `eos-engine/src/background` broader than its intended ownership.
+Background should not start a subagent, start a workflow, start a command, render
+progress, or own command replay policy. It should only track background sessions
+owned by one agent run, detect terminal completion, push completion
+notifications, count running sessions, and cancel all running sessions for that
+agent run.
+
+The tool layer should remain the orchestrator: parse input, validate arguments,
+call the resource service, decide whether to register a background session, and
+render the `ToolResult`. Runtime services should expose backend capabilities
+across crate boundaries. Background session managers should remain passive
+registries plus terminal pollers.
 
 ## 2. Goals
 
-- Replace `lane`, `record`, `supervisor`, and `handle` vocabulary with explicit
-  background-session manager vocabulary.
-- Keep one per-agent-run background runtime.
-- Keep one session manager per background family: subagent, workflow, command.
-- Give the three session-manager folders the same file pattern:
-  `manager.rs`, `session.rs`, and `monitor.rs`.
-- Keep the shared interfaces for those three files in
-  `session_managers/mod.rs`.
-- Rename folders under `session_managers/` to `subagent`, `workflow`, and
-  `command`; do not use `_session` in the folder names.
-- Make `BackgroundSessionRuntime` an aggregate root only. It should expose the three
-  concrete managers, aggregate counts, and aggregate cancellation.
-- Keep subagent/workflow/command-specific lifecycle details encapsulated inside
-  the relevant session manager.
-- Shift tool-specific behavior out of `background`.
+- Add an `eos-ports` crate for narrow trait contracts and DTOs shared across
+  `eos-tools` and `eos-engine`.
+- Move resource service contracts into `eos-ports/src/{agent_run,workflow,command}.rs`.
+- Put each background session port beside its resource service port:
+  `SubagentSessionPort` in `agent_run.rs`, `WorkflowSessionPort` in
+  `workflow.rs`, and `CommandSessionPort` in `command.rs`.
+- Add concrete runtime service implementations under
+  `eos-engine/src/services/{agent_run,workflow,command}.rs`.
+- Keep `workflow.rs` service implementation in `eos-engine/src/services/`, even
+  if it wraps `eos-workflow` internals.
+- Remove `eos-engine/src/background/factory.rs`.
+- Remove `WorkflowControlPort` / `workflow_control` from the background and tool
+  wiring path; replace it with `WorkflowServicePort`.
+- Remove subagent launch from the background module; `run_subagent` should use
+  `AgentRunServicePort`, then register the returned agent run with
+  `SubagentSessionPort`.
+- Remove command-result replay APIs from background session management:
+  `command_session_result`, `mark_command_session_reported`, and
+  `command_session_already_reported`.
+- Remove model-facing progress and cancellation-result rendering from background
+  ports and managers.
+- Assign every per-kind background session manager the owning `agent_run_id` at
+  construction. No manager method should accept an owner/caller id per
+  operation.
+- Keep `ExecutionMetadata` facts-only. Do not add service ports or managers to
+  `ToolExecutionData`, `ExecutionMetadata`, or any equivalent service bag.
+- Register tools through constructors that capture only the services each tool
+  needs.
 
 ## 3. Non-Goals
 
-- No workflow creation inside `background`; workflow creation stays in
-  `eos-workflow` behind `WorkflowPort::start`.
-- No command execution inside `background`; command execution stays in the
-  sandbox tool/daemon path.
-- No model-facing prompt wording, rejection wording, or progress rendering inside
-  `background`.
-- No broad service bag for manager dependencies.
-- No inheritance-style hierarchy or public generic abstraction.
-- No `core.rs`, `status.rs`, `snapshot.rs`, or shared top-level
-  `session_managers/monitor.rs` layer unless later code growth proves it needed.
-- No `cancel_all` method on concrete session managers. Use one `cancel(reason)`
-  method per manager and one aggregate `BackgroundSessionRuntime::cancel(reason)`.
+- No broad `eos-services` crate in this pass.
+- No generic public `BackgroundPollKey`.
+- No shared public background-session interface.
+- No `background.rs` file in `eos-ports`; each session port lives in the
+  corresponding kind file.
+- No `RegisterSubagentSession`, `RegisterWorkflowSession`, or
+  `RegisterCommandSession` DTO just to wrap one registration call.
+- No port method that accepts model-facing tool input structs.
+- No port method that renders `ToolResult`.
+- No direct `eos-tools -> eos-engine` dependency.
+- No inheritance-style trait hierarchy or abstract-base-style module.
+- No progress polling in background terminal polling.
+- No command "already reported" state in background.
 
-## 4. Target Ownership
+## 4. Ownership Model
 
-```text
-Agent run
-  owns BackgroundSessionRuntime
-    ├─ agent_run_id
-    ├─ SubagentSessionManager
-    │    ├─ live subagent sessions
-    │    └─ SubagentSessionMonitor
-    ├─ WorkflowSessionManager
-    │    ├─ live workflow sessions
-    │    └─ WorkflowSessionMonitor
-    └─ CommandSessionManager
-         ├─ live command sessions
-         └─ CommandSessionMonitor
+```mermaid
+flowchart TD
+  Tool["Tool executor"]
+  AgentSvc["AgentRunServicePort"]
+  WorkflowSvc["WorkflowServicePort"]
+  CommandSvc["CommandServicePort"]
+  SubSess["SubagentSessionPort"]
+  WfSess["WorkflowSessionPort"]
+  CmdSess["CommandSessionPort"]
+  Managers["eos-engine background managers"]
+  Notify["run-local NotificationService"]
+
+  Tool -->|"start subagent"| AgentSvc
+  Tool -->|"start workflow"| WorkflowSvc
+  Tool -->|"exec command"| CommandSvc
+  Tool -->|"register agent_run_id"| SubSess
+  Tool -->|"register workflow_id"| WfSess
+  Tool -->|"register command_session_id + sandbox_id"| CmdSess
+
+  SubSess --> Managers
+  WfSess --> Managers
+  CmdSess --> Managers
+  Managers -->|"terminal notifications only"| Notify
 ```
 
-Each concrete manager owns:
+| Layer | Owns |
+| --- | --- |
+| `eos-tools` tool executors | parsing, validation, call ordering, registration decision, model-facing rendering |
+| `eos-ports` | trait contracts and typed request/response DTOs only |
+| `eos-engine/src/services` | concrete backend capabilities for agent runs, workflows, and commands |
+| `eos-engine/src/background` | per-agent-run session maps, terminal polling, counts, cancel-all, notifications |
+| `eos-runtime` | composition of concrete services, run controls, registries, and tool constructors |
 
-- its live session map,
-- its own completion polling logic through the shared manager interface,
-- notification emission on finish,
-- its own cancellation mechanics.
-
-The monitors do not call `NotificationService` directly. They use the manager
-interface:
+Per-run background invariant:
 
 ```text
-monitor loop -> manager.poll() -> manager.finish(completion)
-manager.finish(completion) -> BackgroundNotificationEmitter.emit(...)
+Every BackgroundSessionRuntime is owned by exactly one agent_run_id.
+Every SubagentSessionManager, WorkflowSessionManager, and CommandSessionManager
+inside that runtime is constructed with the same owning agent_run_id.
+No background session manager accepts an owner/caller id in register, count,
+cancel, or poll methods.
 ```
 
 ## 5. Target File and Folder Structure
 
 ```text
-agent-core/crates/eos-engine/src/background/
-  mod.rs
-  factory.rs
-  session_runtime.rs
-  notification.rs
-  session_managers/
-    mod.rs
-    subagent/
+agent-core/crates/
+  eos-ports/
+    Cargo.toml
+    src/
+      lib.rs
+      agent_run.rs
+      workflow.rs
+      command.rs
+
+  eos-tools/src/
+    ports/
+      mod.rs                 # removed or reduced to re-export eos-ports during migration
+    tools/
+      services.rs            # constructor helpers only, no service bag for execution data
+      subagent/
+        mod.rs
+        run_subagent.rs
+        check_subagent_progress.rs
+        cancel_subagent.rs
+      workflow/
+        mod.rs
+        delegate_workflow.rs
+        check_workflow_status.rs
+        cancel_workflow.rs
+      sandbox/
+        exec_command.rs
+        write_stdin.rs
+        read_command_progress.rs
+
+  eos-engine/src/
+    services/
       mod.rs
-      manager.rs
-      session.rs
-      monitor.rs
-    workflow/
+      agent_run.rs            # impl AgentRunServicePort
+      workflow.rs             # impl WorkflowServicePort; wraps eos-workflow
+      command.rs              # impl CommandServicePort; wraps eos-sandbox-port
+    background/
       mod.rs
-      manager.rs
-      session.rs
-      monitor.rs
-    command/
-      mod.rs
-      manager.rs
-      session.rs
-      monitor.rs
+      notification.rs
+      session_runtime.rs      # aggregate over the three managers; no launching
+      session_managers/
+        mod.rs
+        subagent/
+          mod.rs
+          manager.rs          # impl SubagentSessionPort
+          monitor.rs
+          session.rs
+        workflow/
+          mod.rs
+          manager.rs          # impl WorkflowSessionPort
+          monitor.rs
+          session.rs
+        command/
+          mod.rs
+          manager.rs          # impl CommandSessionPort
+          monitor.rs
+          session.rs
+      # factory.rs deleted
+
+  eos-runtime/src/
+    entry.rs                  # composes concrete services and session managers
+    agent_runner.rs           # passes constructor-captured services to workflow agents
 ```
 
-Removed/replaced concepts:
+Workspace changes:
 
-| Current | Target |
-| --- | --- |
-| `background/handle.rs` | fold cloneable service/runtime wrapper into `session_runtime.rs` or rename to service explicitly if needed |
-| `background/supervisor.rs` | remove; state lives in concrete managers |
-| `background/parent_exit.rs` | fold finalizer into `session_runtime.rs` or a narrowly named `finalizer.rs` if it remains separate |
-| `background/lanes/*` | replace with `session_managers/{subagent,workflow,command}` |
-| `BackgroundSupervisorRuntime` | `BackgroundSessionRuntime` |
-| `BackgroundTaskSupervisor` | remove |
-| `BackgroundSupervisorHandle` | replace with a port-facing service name if a cloneable wrapper remains |
-| `SubagentLane` / `WorkflowLane` / `CommandSessionLane` | `SubagentSessionManager` / `WorkflowSessionManager` / `CommandSessionManager` |
-| `*Record` | session structs in `session.rs` |
+```toml
+# agent-core/Cargo.toml
+[workspace]
+members = [
+  "crates/eos-ports",
+  # existing crates...
+]
 
-## 6. Shared Interfaces
+[workspace.dependencies]
+eos-ports = { path = "crates/eos-ports" }
+```
 
-`session_managers/mod.rs` is the shared contract layer for the three local file
-roles: manager, session, and monitor.
+Dependency direction:
+
+```text
+eos-tools   -> eos-ports
+eos-engine  -> eos-ports, eos-tools, eos-workflow, eos-sandbox-port
+eos-runtime -> eos-engine, eos-ports
+```
+
+## 6. Port Contracts
+
+### 6.1 `eos-ports/src/agent_run.rs`
+
+`AgentRunServicePort` is the resource service used by `run_subagent` and by the
+subagent background poller. It does not parse tool input or render tool output.
 
 ```rust
-pub(super) mod command;
-pub(super) mod subagent;
-pub(super) mod workflow;
-
-pub(super) trait BackgroundSession {
-    type Id: Eq + std::hash::Hash + Clone + Send + Sync + 'static;
-
-    fn id(&self) -> &Self::Id;
-}
-
 #[async_trait::async_trait]
-pub(super) trait BackgroundSessionManager {
-    type Session: BackgroundSession + Send + 'static;
-    type Completion: Send + 'static;
+pub trait AgentRunServicePort: Sealed + Send + Sync {
+    async fn start_subagent_run(
+        &self,
+        request: StartSubagentRunRequest,
+    ) -> Result<StartedSubagentRun, ToolError>;
 
-    async fn insert(&self, session: Self::Session);
-    async fn count(&self) -> usize;
-    async fn poll(&self) -> Vec<Self::Completion>;
-    async fn finish(&self, completion: Self::Completion);
-    async fn cancel(&self, reason: &str);
-}
+    async fn poll_terminal_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<Option<TerminalAgentRun>, ToolError>;
 
-pub(super) trait BackgroundSessionMonitor {
-    type Manager: BackgroundSessionManager + Clone + Send + Sync + 'static;
-
-    fn spawn(manager: Self::Manager, interval: std::time::Duration) -> Self;
-}
-
-pub(super) fn spawn_monitor_loop<M>(
-    manager: M,
-    interval: std::time::Duration,
-) -> tokio::task::JoinHandle<()>
-where
-    M: BackgroundSessionManager + Clone + Send + Sync + 'static,
-    M::Completion: Send + 'static,
-{
-    tokio::spawn(async move {
-        loop {
-            for completion in manager.poll().await {
-                manager.finish(completion).await;
-            }
-            tokio::time::sleep(interval).await;
-        }
-    })
+    async fn cancel_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        reason: &str,
+    ) -> Result<(), ToolError>;
 }
 ```
 
-This shared layer is private to `eos-engine`. It is not a public abstraction.
-The concrete managers keep domain-specific fields and behavior.
+`SubagentSessionPort` is the background-session port implemented by
+`SubagentSessionManager`.
 
-## 7. BackgroundSessionRuntime API
+```rust
+#[async_trait::async_trait]
+pub trait SubagentSessionPort: Sealed + Send + Sync {
+    async fn register_background_session(&self, agent_run_id: &AgentRunId);
+    async fn cancel_all_background_sessions(&self, reason: &str);
+    async fn poll_complete_background_sessions(&self) -> usize;
+}
+```
 
-`BackgroundSessionRuntime` is the aggregate root. It should not forward every possible
-operation. It should expose managers and aggregate behavior only.
+Registration uses `agent_run_id` because the agent run row is the authoritative
+resource the background poller checks.
+
+### 6.2 `eos-ports/src/workflow.rs`
+
+`WorkflowServicePort` replaces the old tool/background use of
+`WorkflowControlPort`.
+
+```rust
+#[async_trait::async_trait]
+pub trait WorkflowServicePort: Sealed + Send + Sync {
+    async fn start_workflow(
+        &self,
+        request: StartWorkflowRequest,
+    ) -> Result<StartedWorkflow, ToolError>;
+
+    async fn poll_terminal_workflow(
+        &self,
+        workflow_id: &WorkflowId,
+    ) -> Result<Option<TerminalWorkflow>, ToolError>;
+
+    async fn cancel_workflow(
+        &self,
+        workflow_id: &WorkflowId,
+        reason: &str,
+    ) -> Result<(), ToolError>;
+
+    async fn find_outstanding_workflows(
+        &self,
+        parent_task_id: &TaskId,
+        agent_run_id: &AgentRunId,
+    ) -> Result<Vec<OutstandingWorkflow>, ToolError>;
+
+    async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, ToolError>;
+}
+```
+
+`WorkflowSessionPort` is the background-session port implemented by
+`WorkflowSessionManager`.
+
+```rust
+#[async_trait::async_trait]
+pub trait WorkflowSessionPort: Sealed + Send + Sync {
+    async fn register_background_session(&self, workflow_id: &WorkflowId);
+    async fn cancel_all_background_sessions(&self, reason: &str);
+    async fn poll_complete_background_sessions(&self) -> usize;
+}
+```
+
+Registration uses `workflow_id` because workflow state is the authoritative
+resource the background poller checks. If `workflow_task_id` remains needed for
+workflow cancellation during migration, that mapping belongs inside
+`WorkflowService`, not in the background registration API.
+
+### 6.3 `eos-ports/src/command.rs`
+
+`CommandServicePort` wraps sandbox command operations. It is a resource service,
+not background bookkeeping.
+
+```rust
+#[async_trait::async_trait]
+pub trait CommandServicePort: Sealed + Send + Sync {
+    async fn exec_command(
+        &self,
+        request: StartCommandRequest,
+    ) -> Result<CommandStartResult, ToolError>;
+
+    async fn write_stdin(
+        &self,
+        request: WriteCommandStdinRequest,
+    ) -> Result<CommandUpdateResult, ToolError>;
+
+    async fn read_command_progress(
+        &self,
+        request: ReadCommandProgressRequest,
+    ) -> Result<CommandUpdateResult, ToolError>;
+
+    async fn collect_completed_commands(
+        &self,
+        sandbox_id: &SandboxId,
+        caller_id: &AgentRunId,
+        command_session_ids: &[CommandSessionId],
+    ) -> Result<Vec<CompletedCommand>, ToolError>;
+
+    async fn cancel_commands_for_run(
+        &self,
+        sandbox_id: &SandboxId,
+        caller_id: &AgentRunId,
+        reason: &str,
+    ) -> Result<(), ToolError>;
+}
+```
+
+`CommandSessionPort` is the background-session port implemented by
+`CommandSessionManager`.
+
+```rust
+#[async_trait::async_trait]
+pub trait CommandSessionPort: Sealed + Send + Sync {
+    async fn register_background_session(
+        &self,
+        command_session_id: &CommandSessionId,
+        sandbox_id: &SandboxId,
+    );
+
+    async fn cancel_all_background_sessions(&self, reason: &str);
+    async fn poll_complete_background_sessions(&self) -> usize;
+}
+```
+
+Registration uses `command_session_id` and `sandbox_id`. The caller id is the
+owning `agent_run_id` already stored by the per-run `CommandSessionManager`.
+
+## 7. Tool Constructor Wiring
+
+No services should be added to `ExecutionMetadata`, `ToolExecutionData`, or any
+equivalent per-call fact object.
+
+Tools should capture the services they need in their constructors:
+
+```rust
+RunSubagent::new(agent_run_service, subagent_sessions)
+DelegateWorkflow::new(workflow_service, workflow_sessions)
+CheckWorkflowStatus::new(workflow_service)
+CancelWorkflow::new(workflow_service)
+ExecCommand::new(command_service, command_sessions)
+WriteStdin::new(command_service)
+ReadCommandProgress::new(command_service)
+```
+
+The tool remains responsible for orchestration. Example target flow:
+
+```rust
+let started = agent_run_service.start_subagent_run(request).await?;
+subagent_sessions
+    .register_background_session(&started.agent_run_id)
+    .await;
+Ok(render_subagent_launched(started))
+```
+
+```rust
+let started = workflow_service.start_workflow(request).await?;
+workflow_sessions
+    .register_background_session(&started.workflow_id)
+    .await;
+Ok(render_workflow_started(started))
+```
+
+```rust
+let result = command_service.exec_command(request).await?;
+if result.is_running() {
+    if let Some(command_session_id) = result.command_session_id() {
+        command_sessions
+            .register_background_session(command_session_id, sandbox_id)
+            .await;
+    }
+}
+Ok(render_command_result(result))
+```
+
+## 8. Engine Services
+
+### 8.1 `services/agent_run.rs`
+
+`AgentRunService` owns the concrete engine-side capability to start, poll, and
+cancel agent runs. It may use:
+
+- `run_agent`,
+- `AgentRunControlFactory`,
+- `AgentRunRegistry`,
+- `EngineRunHandles`,
+- `AgentRunStore`,
+- agent registry validation.
+
+The service must not render `run_subagent` model-facing text. It returns typed
+facts such as `StartedSubagentRun` and `TerminalAgentRun`.
+
+### 8.2 `services/workflow.rs`
+
+`WorkflowService` owns the concrete workflow lifecycle adapter. It may use:
+
+- `eos-workflow` starter/control logic,
+- workflow, iteration, attempt, and task stores,
+- cancellation recursion through the runtime cancel port,
+- workflow-depth and outstanding-workflow queries required by hooks and tools.
+
+The old `WorkflowControlPort` name and `workflow_control` field should disappear
+from tool and background wiring. Migration may keep a compatibility shim
+internally for a short period, but public code should move to
+`WorkflowServicePort`.
+
+### 8.3 `services/command.rs`
+
+`CommandService` owns the concrete sandbox command adapter. It may use:
+
+- `eos-sandbox-port::exec_command`,
+- `eos-sandbox-port::write_stdin`,
+- `eos-sandbox-port::read_command_progress`,
+- `eos-sandbox-port::collect_command_completions`,
+- `eos-sandbox-port::cancel_workspace_runs_by_caller_id`,
+- the sandbox transport.
+
+It should return typed command results for tool rendering. It should not store
+background state.
+
+## 9. Background Managers
+
+Each manager implements its corresponding session port directly in its
+`manager.rs` file.
+
+```text
+session_managers/subagent/manager.rs
+  impl SubagentSessionPort for SubagentSessionManager
+
+session_managers/workflow/manager.rs
+  impl WorkflowSessionPort for WorkflowSessionManager
+
+session_managers/command/manager.rs
+  impl CommandSessionPort for CommandSessionManager
+```
+
+Every manager is constructed with the owning `agent_run_id` and its kind-specific
+resource service:
+
+```rust
+SubagentSessionManager::new(
+    agent_run_id.clone(),
+    agent_run_service.clone(),
+    notification.clone(),
+)
+
+WorkflowSessionManager::new(
+    agent_run_id.clone(),
+    workflow_service.clone(),
+    notification.clone(),
+)
+
+CommandSessionManager::new(
+    agent_run_id.clone(),
+    command_service.clone(),
+    notification,
+)
+```
+
+Target fields:
+
+```rust
+pub(super) struct SubagentSessionManager {
+    agent_run_id: AgentRunId,
+    sessions: Arc<Mutex<HashMap<AgentRunId, SubagentSession>>>,
+    agent_run_service: Arc<dyn AgentRunServicePort>,
+    notification: BackgroundNotificationEmitter,
+}
+
+pub(super) struct WorkflowSessionManager {
+    agent_run_id: AgentRunId,
+    sessions: Arc<Mutex<HashMap<WorkflowId, WorkflowSession>>>,
+    workflow_service: Arc<dyn WorkflowServicePort>,
+    notification: BackgroundNotificationEmitter,
+}
+
+pub(super) struct CommandSessionManager {
+    agent_run_id: AgentRunId,
+    sessions: Arc<Mutex<HashMap<CommandSessionId, CommandSession>>>,
+    command_service: Arc<dyn CommandServicePort>,
+    notification: BackgroundNotificationEmitter,
+}
+```
+
+Each manager exposes these concrete methods:
+
+```rust
+register_background_session(...)
+count_background_sessions() -> usize
+cancel_all_background_sessions(reason)
+poll_complete_background_sessions() -> usize
+push_notification_on_background_session_completion(...)
+```
+
+`poll_complete_background_sessions` is terminal-only. It does not report
+progress.
+
+### 9.1 Subagent Polling
+
+`SubagentSessionManager::poll_complete_background_sessions`:
+
+1. Snapshot running `agent_run_id`s.
+2. For each `agent_run_id`, call
+   `AgentRunServicePort::poll_terminal_agent_run(agent_run_id)`.
+3. If the run is not terminal, continue.
+4. If terminal, settle the local session.
+5. Push one background completion notification.
+6. Return the number of delivered completions.
+
+Terminal source: `AgentRun.finished_at`.
+Notification data source: terminal tool result or run error.
+
+### 9.2 Workflow Polling
+
+`WorkflowSessionManager::poll_complete_background_sessions`:
+
+1. Snapshot running `workflow_id`s.
+2. For each `workflow_id`, call
+   `WorkflowServicePort::poll_terminal_workflow(workflow_id)`.
+3. If the workflow is not terminal, continue.
+4. If terminal, settle the local session.
+5. Push one background completion notification.
+6. Return the number of delivered completions.
+
+Terminal source: typed workflow lifecycle state. Do not parse rendered
+`check_workflow_status` text.
+
+### 9.3 Command Polling
+
+`CommandSessionManager::poll_complete_background_sessions`:
+
+1. Snapshot running command sessions grouped by `sandbox_id`.
+2. For each group, call
+   `CommandServicePort::collect_completed_commands(sandbox_id, self.agent_run_id, ids)`.
+3. If no completion is returned for an id, it remains running.
+4. For each returned completion, settle the local session.
+5. Push one background completion notification.
+6. Return the number of delivered completions.
+
+Terminal source: sandbox daemon `api.v1.command.collect_completed`.
+
+## 10. Background Runtime
+
+`BackgroundSessionRuntime` is an aggregate root only. It owns three managers and
+their monitors:
 
 ```rust
 pub(super) struct BackgroundSessionRuntime {
     agent_run_id: AgentRunId,
-    subagent_session_manager: SubagentSessionManager,
-    workflow_session_manager: WorkflowSessionManager,
-    command_session_manager: CommandSessionManager,
-}
-
-impl BackgroundSessionRuntime {
-    pub(super) fn new(...) -> Self;
-
-    pub(super) fn agent_run_id(&self) -> &AgentRunId;
-
-    pub(super) fn subagent_session_manager(&self) -> &SubagentSessionManager;
-    pub(super) fn workflow_session_manager(&self) -> &WorkflowSessionManager;
-    pub(super) fn command_session_manager(&self) -> &CommandSessionManager;
-
-    pub(super) async fn count(&self) -> BackgroundSessionCounts;
-
-    pub(super) async fn cancel(&self, reason: &str) -> BackgroundSessionCounts;
+    subagent_session_manager: Arc<SubagentSessionManager>,
+    workflow_session_manager: Arc<WorkflowSessionManager>,
+    command_session_manager: Arc<CommandSessionManager>,
+    _subagent_monitor: SubagentSessionMonitor,
+    _workflow_monitor: WorkflowSessionMonitor,
+    _command_monitor: CommandSessionMonitor,
 }
 ```
 
-`BackgroundSessionRuntime::cancel(reason)` calls:
+`BackgroundSessionRuntime::new` must pass the same `agent_run_id` into all three
+managers:
 
 ```rust
-self.subagent_session_manager.cancel(reason).await;
-self.workflow_session_manager.cancel(reason).await;
-self.command_session_manager.cancel(reason).await;
-self.count().await
+let subagent_session_manager = Arc::new(SubagentSessionManager::new(
+    agent_run_id.clone(),
+    agent_run_service,
+    notification.clone(),
+));
+let workflow_session_manager = Arc::new(WorkflowSessionManager::new(
+    agent_run_id.clone(),
+    workflow_service,
+    notification.clone(),
+));
+let command_session_manager = Arc::new(CommandSessionManager::new(
+    agent_run_id.clone(),
+    command_service,
+    notification,
+));
 ```
 
-`BackgroundSessionRuntime::cancel` must not accept `SubagentPort`, `WorkflowPort`,
-`CommandPort`, or other manager-specific dependencies. Those dependencies belong
-inside the manager that uses them.
-
-## 8. Concrete Managers
-
-Each concrete manager uses the same dependency naming convention:
-`subagent_port`, `workflow_port`, and `command_port`. These are
-manager-facing ports for background tracking, polling, and cancellation. They
-may wrap broader existing crate ports during migration, but the background
-module should depend on the narrow role names.
-
-### 8.1 Subagent
+It should expose:
 
 ```rust
-#[derive(Clone)]
-pub(super) struct SubagentSessionManager {
-    sessions: Arc<Mutex<HashMap<SubagentSessionId, SubagentSession>>>,
-    subagent_port: Arc<dyn SubagentPort>,
-    notification: BackgroundNotificationEmitter,
-}
+fn subagent_sessions(&self) -> Arc<dyn SubagentSessionPort>;
+fn workflow_sessions(&self) -> Arc<dyn WorkflowSessionPort>;
+fn command_sessions(&self) -> Arc<dyn CommandSessionPort>;
+
+async fn count_background_sessions(&self) -> BackgroundSessionCounts;
+async fn cancel_all_background_sessions(&self, reason: &str) -> BackgroundSessionCounts;
+async fn teardown(&self, reason: &str) -> BackgroundSessionCounts;
 ```
 
-`subagent/session.rs`:
+It should not expose `spawn`, `progress`, `mark_workflow_cancelled`,
+`command_session_result`, `mark_command_session_reported`, or
+`command_session_already_reported`.
 
-```rust
-pub(super) struct SubagentSession {
-    id: SubagentSessionId,
-    agent_run_id: AgentRunId,
-    driver: JoinHandle<AgentRunResult>,
-}
+`BackgroundSessionFinalizer` should call `teardown(reason)` without
+`workflow_control`.
 
-impl BackgroundSession for SubagentSession {
-    type Id = SubagentSessionId;
+## 11. Removal and Cleanup Inventory
 
-    fn id(&self) -> &Self::Id {
-        &self.id
-    }
-}
-```
+This is a cleanup plan, not only an additive migration. Remove or replace these
+items and any equivalents found during implementation:
 
-Subagent polling uses the same loop pattern as workflow and command. The
-manager's `poll()` checks live subagent sessions for completed local driver
-tasks, converts completed drivers into `SubagentCompletion`, and returns those
-completions. `finish()` removes the completed session and emits the background
-notification.
-
-### 8.2 Workflow
-
-```rust
-#[derive(Clone)]
-pub(super) struct WorkflowSessionManager {
-    sessions: Arc<Mutex<HashMap<WorkflowSessionId, WorkflowSession>>>,
-    workflow_port: Arc<OnceLock<Arc<dyn WorkflowPort>>>,
-    notification: BackgroundNotificationEmitter,
-}
-```
-
-`workflow/session.rs`:
-
-```rust
-pub(super) struct WorkflowSession {
-    id: WorkflowSessionId,
-    workflow_id: WorkflowId,
-}
-
-impl BackgroundSession for WorkflowSession {
-    type Id = WorkflowSessionId;
-
-    fn id(&self) -> &Self::Id {
-        &self.id
-    }
-}
-```
-
-Workflow polling asks `WorkflowPort::status` for live sessions. Terminal
-workflow states produce `WorkflowCompletion`; non-terminal or transient failures
-remain live and are retried by the next monitor tick.
-
-### 8.3 Command
-
-```rust
-#[derive(Clone)]
-pub(super) struct CommandSessionManager {
-    sessions: Arc<Mutex<HashMap<CommandSessionId, CommandSession>>>,
-    agent_run_id: AgentRunId,
-    command_port: Arc<dyn CommandPort>,
-    notification: BackgroundNotificationEmitter,
-}
-```
-
-`command/session.rs`:
-
-```rust
-pub(super) struct CommandSession {
-    id: CommandSessionId,
-    sandbox_id: SandboxId,
-}
-
-impl BackgroundSession for CommandSession {
-    type Id = CommandSessionId;
-
-    fn id(&self) -> &Self::Id {
-        &self.id
-    }
-}
-```
-
-Command polling groups live command sessions by sandbox and calls daemon
-completion collection once per sandbox. Returned terminal completions produce
-`CommandCompletion`; missing completions remain live.
-
-## 9. Monitors
-
-Each agent run owns one monitor per session family:
-
-```text
-BackgroundSessionRuntime
-  ├─ SubagentSessionManager -> SubagentSessionMonitor
-  ├─ WorkflowSessionManager -> WorkflowSessionMonitor
-  └─ CommandSessionManager  -> CommandSessionMonitor
-```
-
-Each concrete `monitor.rs` uses the same shared loop:
-
-```rust
-pub(super) struct SubagentSessionMonitor {
-    join: JoinHandle<()>,
-}
-
-impl BackgroundSessionMonitor for SubagentSessionMonitor {
-    type Manager = SubagentSessionManager;
-
-    fn spawn(manager: Self::Manager, interval: Duration) -> Self {
-        Self {
-            join: spawn_monitor_loop(manager, interval),
-        }
-    }
-}
-```
-
-Workflow and command monitors have the same shape with their own manager type.
-The per-family differences live in `manager.poll()`, not in the monitor loop.
-
-## 10. Functionality Shift Out of `background`
-
-The refactor should reduce the responsibility of
-`agent-core/crates/eos-engine/src/background`.
-
-Move or keep outside `background`:
-
-| Functionality | Target owner |
+| Remove / replace | Target |
 | --- | --- |
-| `run_subagent` model-facing validation and rejection text | `agent-core/crates/eos-tools/src/tools/subagent` |
-| subagent launch prompt shaping | `agent-core/crates/eos-tools/src/tools/subagent` |
-| `check_subagent_progress` model-facing rendering | `agent-core/crates/eos-tools/src/tools/subagent` |
-| `cancel_subagent` model-facing output text | `agent-core/crates/eos-tools/src/tools/subagent` |
-| workflow creation / delegated lifecycle creation | `agent-core/crates/eos-workflow` through `WorkflowPort::start` |
-| command execution and stdin/progress tool output rendering | `agent-core/crates/eos-tools/src/tools/sandbox` plus sandbox transport/daemon |
+| `eos_tools::ports::WorkflowControlPort` | `eos_ports::workflow::WorkflowServicePort` |
+| fields/args named `workflow_control` | `workflow_service` where a workflow service is actually needed |
+| `WorkflowControlCell` / `OnceLock<Arc<dyn WorkflowControlPort>>` in background | direct `WorkflowServicePort` dependency in `WorkflowSessionManager` |
+| `BackgroundSessionPort::spawn` | `AgentRunServicePort::start_subagent_run` plus `SubagentSessionPort::register_background_session` |
+| `SubagentLaunch`, `SpawnedSubagent`, `SubagentLaunchRejection` in background port | tool-owned input/validation plus service DTOs |
+| `BackgroundSessionPort::progress` | tool-specific status/progress path outside background |
+| `BackgroundSessionPort::mark_workflow_cancelled` | workflow cancellation through `WorkflowServicePort` |
+| `BackgroundSessionPort::teardown(workflow_control, reason)` | `teardown(reason)` |
+| `CommandSessionPort::command_session_result` | command tool/service result path |
+| `CommandSessionPort::mark_command_session_reported` | remove from background; command replay policy cannot live in session manager |
+| `CommandSessionPort::command_session_already_reported` | remove from background |
+| `BackgroundSessionFactory` / `background/factory.rs` | direct construction in `AgentRunControlFactory` or runtime setup |
+| service fields in `ExecutionMetadata` or `ToolExecutionData` | constructor-captured tool services |
+| broad `BackgroundSessionPort` | per-kind `SubagentSessionPort`, `WorkflowSessionPort`, `CommandSessionPort` |
+| `background.rs` in `eos-ports` | kind-local session ports in `agent_run.rs`, `workflow.rs`, `command.rs` |
 
-Keep inside `background`:
+Implementation should search for equivalent legacy names, including:
 
-| Functionality | Reason |
+- `workflow_control`
+- `WorkflowControlPort`
+- `BackgroundSessionPort`
+- `SubagentLaunch`
+- `SpawnedSubagent`
+- `mark_workflow_cancelled`
+- `command_session_result`
+- `mark_command_session_reported`
+- `command_session_already_reported`
+- `BackgroundSessionFactory`
+
+## 12. Migration Plan
+
+| Phase | Work |
 | --- | --- |
-| live background session accounting | engine lifecycle ownership |
-| per-family completion monitoring | engine owns completion notification delivery |
-| completion notification emission | completion notifications target the owning agent run |
-| cancellation of live tracked sessions | parent-run cancellation / exit lifecycle |
-| aggregate count and aggregate cancel | per-agent-run runtime ownership |
+| 1 | Add `eos-ports` crate and move/redefine port contracts without changing behavior. |
+| 2 | Add `eos-engine/src/services/{agent_run,workflow,command}.rs` concrete service implementations. |
+| 3 | Refactor tool constructors to capture resource services and per-kind session ports directly. |
+| 4 | Move subagent launch out of background into `AgentRunService`; `run_subagent` starts then registers by `agent_run_id`. |
+| 5 | Replace `WorkflowControlPort` usage with `WorkflowServicePort`; remove `workflow_control` from background runtime/finalizer. |
+| 6 | Replace command background replay APIs with command service/tool behavior; keep background command manager terminal-only. |
+| 7 | Delete `background/factory.rs`; construct per-run background services/managers directly from runtime/control factory. |
+| 8 | Remove broad `BackgroundSessionPort` and old compatibility shims once all call sites use per-kind ports. |
+| 9 | Run focused checks and update tests/fakes to the new service/session port split. |
 
-The background module should return typed facts or accept typed sessions and
-completions. It should not render model-facing tool output.
+## 13. Acceptance Criteria
 
-## 11. Naming Rules
+- `agent-core/crates/eos-ports` exists and is included in the workspace.
+- `eos-ports` has only `agent_run.rs`, `workflow.rs`, `command.rs`, and
+  `lib.rs` for this feature; no `background.rs`.
+- `eos-tools` depends on `eos-ports`, not `eos-engine`.
+- `eos-engine/src/services/{agent_run,workflow,command}.rs` provide concrete
+  implementations of the resource service ports.
+- `workflow.rs` service implementation lives under `eos-engine/src/services/`.
+- `SubagentSessionManager`, `WorkflowSessionManager`, and
+  `CommandSessionManager` each implement their corresponding session port in
+  their own `manager.rs`.
+- `SubagentSessionManager`, `WorkflowSessionManager`, and
+  `CommandSessionManager` are each constructed with the owning `agent_run_id`.
+- All three managers inside one `BackgroundSessionRuntime` carry the same
+  `agent_run_id`.
+- No background session manager method accepts an owner/caller id per operation.
+- `register_background_session` signatures use direct authoritative backend
+  handles:
+  - subagent: `agent_run_id`,
+  - workflow: `workflow_id`,
+  - command: `command_session_id` and `sandbox_id`.
+- Each manager has:
+  - `register_background_session`,
+  - `count_background_sessions`,
+  - `cancel_all_background_sessions`,
+  - `poll_complete_background_sessions`,
+  - `push_notification_on_background_session_completion`.
+- `poll_complete_background_sessions` is terminal-only and never reports
+  progress.
+- No background manager starts an agent run, starts a workflow, or starts a
+  command.
+- No background API contains `progress`, `mark_workflow_cancelled`,
+  `command_session_result`, `mark_command_session_reported`, or
+  `command_session_already_reported`.
+- No `workflow_control` field or argument remains in the background module.
+- `ExecutionMetadata` remains service-free.
+- No service ports are added to `ToolExecutionData` or equivalent per-call
+  execution-data structs.
+- `BackgroundSessionFactory` is removed.
+- Focused verification passes:
+  - `cd agent-core && cargo check -p eos-ports --all-targets`
+  - `cd agent-core && cargo check -p eos-tools --all-targets`
+  - `cd agent-core && cargo check -p eos-engine --all-targets`
+  - targeted unit tests for subagent, workflow, and command manager polling and
+    cancellation.
 
-- Use `agent_run_id`, not `owner_agent_run_id`.
-- In `SubagentSession`, use `agent_run_id`, not `child_agent_run_id` or
-  `sub_agent_run_id`.
-- Use `notification` for a `BackgroundNotificationEmitter` field, not
-  `notifications`.
-- Use `subagent_session_manager`, `workflow_session_manager`, and
-  `command_session_manager` for `BackgroundSessionRuntime` fields and accessors.
-- Use `BackgroundSessionRuntime` for the per-agent-run aggregate.
-- Use `BackgroundSessionManager` for the private shared trait implemented by the
-  three concrete session managers.
-- Avoid `lane`, `record`, `supervisor`, and `handle` as new domain vocabulary.
-
-## 12. Acceptance Criteria
-
-- The new folder structure exists under `eos-engine/src/background` with
-  `session_managers/{subagent,workflow,command}`.
-- No new folder names under `session_managers/` end with `_session`.
-- `session_managers/mod.rs` defines the shared manager/session/monitor
-  interfaces.
-- `BackgroundSessionRuntime` has only aggregate-root methods:
-  `new`, `agent_run_id`, concrete-manager accessors, `count`, and `cancel`.
-- `BackgroundSessionRuntime::cancel` takes only `reason: &str` and delegates to all
-  three managers.
-- Workflow-specific dependencies such as `WorkflowPort` are stored in
-  `WorkflowSessionManager`, not passed into `BackgroundSessionRuntime::cancel`.
-- Command-specific dependencies such as `CommandPort` are stored in
-  `CommandSessionManager`, not passed into `BackgroundSessionRuntime::cancel`.
-- `BackgroundNotificationEmitter` is referenced through a singular
-  `notification` field.
-- Tool-specific wording and progress rendering are no longer implemented inside
-  `background`.
-- `cargo check -p eos-engine --all-targets` passes after implementation.
-- Focused tests cover count, finish notification, and cancel behavior for
-  subagent, workflow, and command session managers.
-
-## 13. Progress Tracker
+## 14. Progress Tracker
 
 | Phase | Status | Work |
 | --- | --- | --- |
-| 1 | Complete | Introduce new modules and shared interfaces without changing behavior. |
-| 2 | Complete | Move subagent tracking to `session_managers/subagent`; move model-facing subagent behavior out of `background`. |
-| 3 | Complete | Move workflow tracking/polling to `session_managers/workflow`; keep workflow creation in `eos-workflow`. |
-| 4 | Complete | Move command tracking/polling to `session_managers/command`; keep command execution/output rendering outside `background`. |
-| 5 | Complete | Replace old `lane`/`record`/`supervisor` exports and remove stale files. |
-| 6 | Complete | Run focused checks and update architecture references if implementation lands. |
+| 1 | Completed | Add `eos-ports` crate and workspace dependency entries. |
+| 2 | Completed | Add resource service implementations under `eos-engine/src/services`. |
+| 3 | Completed | Split tool constructors by resource service and session port. |
+| 4 | Completed | Move subagent launching out of background. |
+| 5 | Completed | Replace tool/background `WorkflowControlPort` / `workflow_control` wiring with `WorkflowServicePort`; keep the compatibility trait only in `eos-ports` plus runtime/workflow adapter internals. |
+| 6 | Completed | Remove command replay APIs from background session management. |
+| 7 | Completed | Delete `background/factory.rs` and simplify background runtime construction. |
+| 8 | Completed | Remove broad `BackgroundSessionPort` and compatibility fakes/tests. |
+| 9 | Completed | Run focused cargo checks and targeted manager/tool tests. |

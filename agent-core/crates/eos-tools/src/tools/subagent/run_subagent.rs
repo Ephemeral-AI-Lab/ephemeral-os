@@ -14,8 +14,8 @@ use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
 use crate::ports::{
-    BackgroundSessionPort, SpawnedSubagent, StartedSubagent, SubagentLaunch,
-    SubagentLaunchRejection,
+    AgentRunServicePort, StartSubagentRunOutcome, StartSubagentRunRequest, StartedSubagentRun,
+    SubagentLaunchRejection, SubagentSessionPort,
 };
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec_with_agent_enum;
@@ -31,19 +31,28 @@ struct RunSubagentInput {
 }
 
 pub(in crate::tools::subagent) struct RunSubagent {
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
 }
 
 impl RunSubagent {
     pub(in crate::tools::subagent) fn new(
-        background_session: Option<Arc<dyn BackgroundSessionPort>>,
+        agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+        subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
     ) -> Self {
-        Self { background_session }
+        Self {
+            agent_run_service,
+            subagent_sessions,
+        }
     }
 }
 
-fn launch_result(agent_name: &str, started: &StartedSubagent) -> ToolResult {
-    let session_id = started.subagent_session_id.as_str();
+fn launch_result(
+    started: &StartedSubagentRun,
+    subagent_session_id: &eos_types::SubagentSessionId,
+) -> ToolResult {
+    let session_id = subagent_session_id.as_str();
+    let agent_name = started.agent_name.as_str();
     let mut metadata = JsonObject::new();
     metadata.insert("subagent_session_id".to_owned(), json!(session_id));
     metadata.insert("status".to_owned(), json!("running"));
@@ -118,21 +127,27 @@ impl ToolExecutor for RunSubagent {
             ));
         }
         match self
-            .background_session
+            .agent_run_service
             .as_deref()
-            .ok_or(ToolError::MissingPort("background_session"))?
-            .spawn(
-                ctx,
-                SubagentLaunch {
-                    agent_name: parsed.agent_name.clone(),
-                    prompt: parsed.prompt.clone(),
-                    guidance: explorer_launch_guidance(),
-                },
-            )
+            .ok_or(ToolError::MissingPort("agent_run_service"))?
+            .start_subagent_run(StartSubagentRunRequest {
+                ctx: ctx.clone(),
+                agent_name: parsed.agent_name.clone(),
+                prompt: parsed.prompt.clone(),
+                guidance: explorer_launch_guidance(),
+            })
             .await?
         {
-            SpawnedSubagent::Launched(started) => Ok(launch_result(&parsed.agent_name, &started)),
-            SpawnedSubagent::Rejected(rejection) => Ok(launch_rejection(rejection)),
+            StartSubagentRunOutcome::Started(started) => {
+                let subagent_session_id = self
+                    .subagent_sessions
+                    .as_deref()
+                    .ok_or(ToolError::MissingPort("subagent_sessions"))?
+                    .register_background_session(&started.agent_run_id, &started.agent_name)
+                    .await;
+                Ok(launch_result(&started, &subagent_session_id))
+            }
+            StartSubagentRunOutcome::Rejected(rejection) => Ok(launch_rejection(rejection)),
         }
     }
 }
@@ -141,7 +156,8 @@ pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
     caller: &CallerScope,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
 ) {
     let run = config.get(ToolName::RunSubagent);
     super::super::register_tool(
@@ -155,6 +171,6 @@ pub(super) fn register(
             &caller.dispatchable_subagents,
         ),
         OutputShape::Text,
-        Arc::new(RunSubagent::new(background_session)),
+        Arc::new(RunSubagent::new(agent_run_service, subagent_sessions)),
     );
 }

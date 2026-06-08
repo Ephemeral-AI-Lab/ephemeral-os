@@ -319,11 +319,10 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    // A consumer that never reads stdin. A bounded stdin write must still return
-    // promptly and leave the session cancellable. NOTE: the daemon's stdin write is
-    // a blocking `write_all` on the PTY master, so a payload larger than the kernel
-    // PTY buffer to a non-reading consumer would block the writer; this test stays
-    // deliberately under that bound (1 KiB, one line) to exercise the safe path.
+    // A consumer that never reads stdin. A small stdin write fits the PTY buffer
+    // and returns immediately while the session stays cancellable. The over-buffer
+    // case (where the non-blocking writer must bound the push by a deadline) is
+    // covered by `over_buffer_stdin_to_non_reading_consumer_returns_backpressure`.
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
@@ -366,6 +365,67 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     );
     wait_for_session_count(&lease, 0)?;
     wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // A consumer that never reads stdin, plus a payload far larger than the kernel
+    // PTY input buffer. The non-blocking writer must bound the push by a deadline
+    // and return a structured backpressure error instead of wedging, and the
+    // session must stay cancellable. (Before the non-blocking rewrite this write
+    // blocked until the session timeout.)
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'echo no-read-ready; sleep 60'",
+            "yield_time_ms": 800,
+            "timeout_seconds": 120,
+        }),
+    )?;
+    ensure!(
+        as_str(&started, "status")? == "running",
+        "non-reading consumer should start: {started}"
+    );
+    let id = as_str(&started, "command_session_id")?.to_owned();
+
+    // Many newline-terminated lines, far past the ~4 KiB cooked PTY input buffer.
+    // A single overlong line would be dropped past MAX_CANON without blocking; only
+    // accumulated unread lines fill the input queue and exert real backpressure.
+    let payload = "eos-e2e-backpressure-line\n".repeat(16384);
+    let write_started = Instant::now();
+    let pushed = lease.call(
+        ops::API_V1_WRITE_STDIN,
+        json!({
+            "command_session_id": &id,
+            "chars": payload,
+            "yield_time_ms": 300,
+        }),
+    )?;
+    let elapsed = write_started.elapsed();
+    ensure!(
+        elapsed < Duration::from_secs(15),
+        "over-buffer stdin must return bounded, not wedge: took {elapsed:?}"
+    );
+    ensure!(
+        pushed.to_string().contains("backpressure"),
+        "over-buffer stdin to a non-reading consumer should surface a backpressure diagnostic: {pushed}"
+    );
+
+    let cancelled = lease.call(
+        ops::API_V1_COMMAND_CANCEL,
+        json!({"command_session_id": &id}),
+    )?;
+    ensure!(
+        matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
+        "session must stay cancellable after backpressure: {cancelled}"
+    );
+    wait_for_session_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }

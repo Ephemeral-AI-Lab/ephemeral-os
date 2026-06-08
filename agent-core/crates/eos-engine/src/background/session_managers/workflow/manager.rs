@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use eos_tools::{StartedWorkflowSession, WorkflowControlPort};
-use eos_types::{WorkflowId, WorkflowSessionId};
+use eos_ports::{Sealed, StartedWorkflow, WorkflowServicePort, WorkflowSessionPort};
+use eos_types::{AgentRunId, WorkflowId, WorkflowSessionId};
 use tokio::sync::Mutex;
 
 use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
 use super::session::WorkflowSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
-pub(in crate::background) type WorkflowControlCell = Arc<OnceLock<Arc<dyn WorkflowControlPort>>>;
+pub(in crate::background) type WorkflowServiceCell = Arc<OnceLock<Arc<dyn WorkflowServicePort>>>;
 
 #[derive(Debug, Clone)]
 pub(in crate::background) struct WorkflowCompletion {
@@ -22,31 +22,38 @@ pub(in crate::background) struct WorkflowCompletion {
 /// Tracks delegated workflow sessions for one agent run.
 #[derive(Clone)]
 pub(in crate::background) struct WorkflowSessionManager {
+    agent_run_id: AgentRunId,
     sessions: Arc<Mutex<HashMap<WorkflowSessionId, WorkflowSession>>>,
-    workflow_port: WorkflowControlCell,
+    workflow_service: WorkflowServiceCell,
     notification: BackgroundNotificationEmitter,
 }
 
 impl std::fmt::Debug for WorkflowSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WorkflowSessionManager")
+            .field("agent_run_id", &self.agent_run_id)
             .finish_non_exhaustive()
     }
 }
 
 impl WorkflowSessionManager {
     pub(in crate::background) fn new(
-        workflow_port: WorkflowControlCell,
+        agent_run_id: AgentRunId,
+        workflow_service: WorkflowServiceCell,
         notification: BackgroundNotificationEmitter,
     ) -> Self {
         Self {
+            agent_run_id,
             sessions: Arc::new(Mutex::new(HashMap::new())),
-            workflow_port,
+            workflow_service,
             notification,
         }
     }
 
-    pub(in crate::background) async fn register(&self, workflow: &StartedWorkflowSession) {
+    pub(in crate::background) async fn register_background_session(
+        &self,
+        workflow: &StartedWorkflow,
+    ) {
         self.insert(WorkflowSession::running(
             workflow.workflow_task_id.clone(),
             workflow.workflow_id.clone(),
@@ -65,16 +72,15 @@ impl WorkflowSessionManager {
             .is_some_and(WorkflowSession::cancel)
     }
 
-    pub(in crate::background) async fn cancel_with_port(
-        &self,
-        workflow_port: Option<Arc<dyn WorkflowControlPort>>,
-        reason: &str,
-    ) {
-        let workflow_port = workflow_port.or_else(|| self.workflow_port.get().cloned());
+    pub(in crate::background) async fn cancel_background_sessions(&self, reason: &str) {
+        let workflow_service = self.workflow_service.get().cloned();
         let running = self.running_ids().await;
         for workflow_task_id in &running {
-            if let Some(port) = &workflow_port {
-                if let Err(err) = port.cancel(workflow_task_id, reason).await {
+            if let Some(service) = &workflow_service {
+                if let Err(err) = service
+                    .cancel_workflow_session(workflow_task_id, reason)
+                    .await
+                {
                     tracing::warn!(
                         error = %err,
                         workflow_task_id = workflow_task_id.as_str(),
@@ -124,20 +130,27 @@ impl WorkflowSessionManager {
     }
 
     pub(in crate::background) async fn poll_completions(&self) -> Vec<WorkflowCompletion> {
-        let Some(workflow_port) = self.workflow_port.get().cloned() else {
+        let Some(workflow_service) = self.workflow_service.get().cloned() else {
             return Vec::new();
         };
         let mut completions = Vec::new();
         for session in self.running_sessions().await {
-            let status_text = match workflow_port
-                .status(session.workflow_id(), Some(session.id()))
+            let terminal = match workflow_service
+                .poll_terminal_workflow(session.workflow_id(), session.id())
                 .await
             {
-                Ok(text) => text,
+                Ok(terminal) => terminal,
                 Err(_) => continue,
             };
-            let Some(status) = terminal_status(&status_text) else {
+            let Some(terminal) = terminal else {
                 continue;
+            };
+            let status = match terminal.status {
+                eos_ports::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
+                eos_ports::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
+                eos_ports::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
+                eos_ports::SubagentSessionStatus::Running
+                | eos_ports::SubagentSessionStatus::Delivered => continue,
             };
             if let Some(completion) = self.settle_running(session.id(), status).await {
                 completions.push(completion);
@@ -180,19 +193,33 @@ impl BackgroundSessionManager for WorkflowSessionManager {
     }
 
     async fn cancel(&self, reason: &str) {
-        self.cancel_with_port(None, reason).await;
+        self.cancel_background_sessions(reason).await;
     }
 }
 
-pub(super) fn terminal_status(status_text: &str) -> Option<BackgroundSessionStatus> {
-    if status_text.contains("is Succeeded.") {
-        Some(BackgroundSessionStatus::Completed)
-    } else if status_text.contains("is Failed.") {
-        Some(BackgroundSessionStatus::Failed)
-    } else if status_text.contains("is Cancelled.") {
-        Some(BackgroundSessionStatus::Cancelled)
-    } else {
-        None
+impl Sealed for WorkflowSessionManager {}
+
+#[async_trait]
+impl WorkflowSessionPort for WorkflowSessionManager {
+    async fn register_background_session(&self, workflow: &StartedWorkflow) {
+        WorkflowSessionManager::register_background_session(self, workflow).await;
+    }
+
+    async fn count_background_sessions(&self) -> usize {
+        BackgroundSessionManager::count(self).await
+    }
+
+    async fn cancel_all_background_sessions(&self, reason: &str) {
+        BackgroundSessionManager::cancel(self, reason).await;
+    }
+
+    async fn poll_complete_background_sessions(&self) -> usize {
+        let completions = self.poll_completions().await;
+        let count = completions.len();
+        for completion in completions {
+            self.push_notification_on_completion(completion).await;
+        }
+        count
     }
 }
 
@@ -203,8 +230,11 @@ mod tests {
     use std::sync::{Arc, OnceLock};
 
     use async_trait::async_trait;
+    use eos_ports::{
+        OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus,
+        TerminalWorkflow, ToolError, WorkflowServicePort,
+    };
     use eos_state::TaskId;
-    use eos_tools::{OutstandingWorkflow, StartedWorkflowSession, ToolError};
     use eos_types::AgentRunId;
 
     use crate::background::notification::BackgroundNotificationEmitter;
@@ -214,33 +244,28 @@ mod tests {
     use super::*;
 
     #[derive(Debug)]
-    struct AlwaysSucceededControl;
+    struct AlwaysSucceededService;
 
-    impl eos_tools::ports::Sealed for AlwaysSucceededControl {}
+    impl Sealed for AlwaysSucceededService {}
 
     #[async_trait]
-    impl WorkflowControlPort for AlwaysSucceededControl {
-        async fn start(
+    impl WorkflowServicePort for AlwaysSucceededService {
+        async fn start_workflow(
             &self,
-            _parent_task_id: &TaskId,
-            _agent_run_id: &AgentRunId,
-            _workflow_goal: &str,
-        ) -> Result<StartedWorkflowSession, ToolError> {
+            _request: StartWorkflowRequest,
+        ) -> Result<StartedWorkflow, ToolError> {
             unreachable!("not used")
         }
 
-        async fn status(
+        async fn check_workflow_status(
             &self,
-            workflow_id: &WorkflowId,
-            workflow_task_id: Option<&WorkflowSessionId>,
+            _workflow_id: &WorkflowId,
+            _workflow_task_id: Option<&WorkflowSessionId>,
         ) -> Result<String, ToolError> {
-            let handle = workflow_task_id.map_or("?", WorkflowSessionId::as_str);
-            Ok(format!(
-                "Workflow {workflow_id} ({handle}) is Succeeded. Goal: x"
-            ))
+            unreachable!("not used")
         }
 
-        async fn cancel(
+        async fn cancel_workflow_session(
             &self,
             _workflow_task_id: &WorkflowSessionId,
             _reason: &str,
@@ -248,7 +273,19 @@ mod tests {
             Ok("cancelled".to_owned())
         }
 
-        async fn find_outstanding(
+        async fn poll_terminal_workflow(
+            &self,
+            workflow_id: &WorkflowId,
+            workflow_task_id: &WorkflowSessionId,
+        ) -> Result<Option<TerminalWorkflow>, ToolError> {
+            Ok(Some(TerminalWorkflow {
+                workflow_id: workflow_id.clone(),
+                workflow_task_id: workflow_task_id.clone(),
+                status: SubagentSessionStatus::Completed,
+            }))
+        }
+
+        async fn find_outstanding_workflows(
             &self,
             _parent_task_id: &TaskId,
             _agent_run_id: &AgentRunId,
@@ -262,27 +299,13 @@ mod tests {
     }
 
     fn manager(notifier: &NotificationService) -> WorkflowSessionManager {
-        let cell: WorkflowControlCell = Arc::new(OnceLock::new());
-        let _ = cell.set(Arc::new(AlwaysSucceededControl));
-        WorkflowSessionManager::new(cell, BackgroundNotificationEmitter::new(notifier.clone()))
-    }
-
-    #[test]
-    fn terminal_status_parses_renderings() {
-        assert_eq!(
-            terminal_status("Workflow w1 (wf_1) is Succeeded. Goal: x"),
-            Some(BackgroundSessionStatus::Completed)
-        );
-        assert_eq!(
-            terminal_status("Workflow w1 (wf_1) is Failed. Goal: x"),
-            Some(BackgroundSessionStatus::Failed)
-        );
-        assert_eq!(
-            terminal_status("Workflow w1 (wf_1) is Cancelled. Goal: x"),
-            Some(BackgroundSessionStatus::Cancelled)
-        );
-        assert_eq!(terminal_status("Workflow w1 (wf_1) is Open. Goal: x"), None);
-        assert_eq!(terminal_status("Workflow wf_1 was not found."), None);
+        let cell: WorkflowServiceCell = Arc::new(OnceLock::new());
+        let _ = cell.set(Arc::new(AlwaysSucceededService));
+        WorkflowSessionManager::new(
+            "owner-run".parse().expect("agent run id"),
+            cell,
+            BackgroundNotificationEmitter::new(notifier.clone()),
+        )
     }
 
     #[tokio::test]
@@ -290,7 +313,7 @@ mod tests {
         let notifier = NotificationService::new();
         let manager = manager(&notifier);
         manager
-            .register(&StartedWorkflowSession {
+            .register_background_session(&StartedWorkflow {
                 workflow_id: WorkflowId::new_v4(),
                 workflow_task_id: "wf_1".parse().expect("workflow session"),
             })
@@ -310,7 +333,7 @@ mod tests {
             .contains("[BACKGROUND COMPLETED] workflow_task_id=wf_1"));
 
         manager
-            .register(&StartedWorkflowSession {
+            .register_background_session(&StartedWorkflow {
                 workflow_id: WorkflowId::new_v4(),
                 workflow_task_id: "wf_2".parse().expect("workflow session"),
             })

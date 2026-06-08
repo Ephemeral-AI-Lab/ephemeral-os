@@ -55,18 +55,18 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Task-66" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Task pub pub struct Task crates/eos-state/src/task.rs id TaskId request_id RequestId role TaskRole instruction String status TaskStatus workflow_id Option &lt; WorkflowId &gt; iteration_id Option &lt; IterationId &gt; attempt_id Option &lt; AttemptId &gt; agent_name Option &lt; String &gt; needs Vec &lt; TaskId &gt; outcomes Vec &lt; ExecutionTaskOutcome &gt; terminal_tool_result Option &lt; JsonObject &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Task-69" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Task pub pub struct Task crates/eos-state/src/task.rs id TaskId request_id RequestId role TaskRole instruction String status TaskStatus workflow_id Option &lt; WorkflowId &gt; iteration_id Option &lt; IterationId &gt; attempt_id Option &lt; AttemptId &gt; agent_name Option &lt; String &gt; needs Vec &lt; TaskId &gt; outcomes Vec &lt; ExecutionTaskOutcome &gt; terminal_tool_result Option &lt; JsonObject &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Task</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a></code>
   <p class="docstring">Immutable view of a persisted task (Rust `task/task.py:Task`).</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>role</td><td><code><a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a></code></td></tr><tr><td>pub</td><td>instruction</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a></code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>Option &lt; WorkflowId &gt;</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>Option &lt; IterationId &gt;</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>Option &lt; AttemptId &gt;</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>needs</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;</code></td></tr><tr><td>pub</td><td>terminal_tool_result</td><td><code>Option &lt; JsonObject &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>role</td><td><code><a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a></code></td></tr><tr><td>pub</td><td>instruction</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a></code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>Option &lt; WorkflowId &gt;</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>Option &lt; IterationId &gt;</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>Option &lt; AttemptId &gt;</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>needs</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;</code></td></tr><tr><td>pub</td><td>terminal_tool_result</td><td><code>Option &lt; JsonObject &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-state/src/task.rs:66</p>
+  <p class="source">crates/eos-state/src/task.rs:69</p>
 </article><article id="item-enum-TaskStatus-14" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum TaskStatus pub pub enum TaskStatus crates/eos-state/src/task.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
@@ -82,24 +82,27 @@
     <span class="rs-comment">/// (Rust `TERMINAL_GENERATOR_STATUSES`).</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-task-rs.html#method-is-terminal-generator-34">is_terminal_generator</a>(<span class="rs-self">self</span>) -&gt; bool {
-        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Done</span> | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Blocked</span> | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span>)
+        matches!(
+            <span class="rs-self">self</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Done</span> | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Blocked</span> | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span>
+        )
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-state/src/task.rs:14</p>
-</article><article id="item-enum-TaskRole-42" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum TaskRole pub pub enum TaskRole crates/eos-state/src/task.rs  ">
+</article><article id="item-enum-TaskRole-45" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum TaskRole pub pub enum TaskRole crates/eos-state/src/task.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>TaskRole</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a></code>
   <p class="docstring">The four persisted task roles (Rust `TASK_AGENT_ROLES`). The execution<br>state role is `Generator`; no profile-alias role enters persisted state<br>(anchor §4, GC-eos-state-02).</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Root</td><td><code></code></td></tr><tr><td>Planner</td><td><code></code></td></tr><tr><td>Generator</td><td><code></code></td></tr><tr><td>Reducer</td><td><code></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-state/src/task.rs:42</p>
+  <p class="source">crates/eos-state/src/task.rs:45</p>
 </article></div>
 </section></div>
 </main>
@@ -145,7 +148,10 @@
     <span class="rs-comment">/// (Rust `TERMINAL_GENERATOR_STATUSES`).</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-task-rs.html#method-is-terminal-generator-34">is_terminal_generator</a>(<span class="rs-self">self</span>) -&gt; bool {
-        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Done</span> | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Blocked</span> | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span>)
+        matches!(
+            <span class="rs-self">self</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Done</span> | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Blocked</span> | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span>
+        )
     }
 }
 
@@ -154,7 +160,7 @@
 <span class="rs-comment">/// (anchor §4, GC-eos-state-02).</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
 #[serde(rename_all = &quot;snake_case&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a> {
     <span class="rs-comment">/// Root request agent (`Task(role=root, workflow_id=None)`).</span>
     <span class="rs-type">Root</span>,
     <span class="rs-comment">/// Planner agent authoring an attempt's generator/reducer DAG.</span>
@@ -166,22 +172,22 @@
 }
 
 <span class="rs-comment">/// The four persisted task roles, mirroring Rust `TASK_AGENT_ROLES`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">TASK_AGENT_ROLES</span>: [<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>; 4] = [
-    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Root</span>,
-    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Planner</span>,
-    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
-    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Reducer</span>,
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">TASK_AGENT_ROLES</span>: [<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>; 4] = [
+    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Root</span>,
+    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Planner</span>,
+    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
+    <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Reducer</span>,
 ];
 
 <span class="rs-comment">/// Immutable view of a persisted task (Rust `task/task.py:Task`).</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
     <span class="rs-comment">/// Task identifier.</span>
     <span class="rs-kw">pub</span> id: <span class="rs-type">TaskId</span>,
     <span class="rs-comment">/// Owning request.</span>
     <span class="rs-kw">pub</span> request_id: <span class="rs-type">RequestId</span>,
     <span class="rs-comment">/// Agent role.</span>
-    <span class="rs-kw">pub</span> role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>,
+    <span class="rs-kw">pub</span> role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>,
     <span class="rs-comment">/// Instruction text the agent runs against.</span>
     <span class="rs-kw">pub</span> instruction: <span class="rs-type">String</span>,
     <span class="rs-comment">/// Lifecycle status.</span>

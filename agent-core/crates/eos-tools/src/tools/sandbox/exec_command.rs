@@ -66,20 +66,21 @@ impl ToolExecutor for ExecCommand {
             .unwrap_or_else(InvocationId::new_v4);
         let mut base = request_base(ctx, "exec_command")?;
         base.invocation_id = Some(invocation_id);
-        let command = parsed.cmd.clone();
         let request = ExecCommandRequest {
             base,
             cmd: parsed.cmd,
             yield_time_ms: Some(parsed.yield_time_ms),
             timeout: parsed.timeout,
         };
-        let result =
-            match eos_sandbox_port::exec_command(&*self.service.transport, sandbox_id, &request)
-                .await
-            {
-                Ok(result) => result,
-                Err(err) => return Ok(ToolResult::error(err.to_string())),
-            };
+        let result = match self
+            .service
+            .command_service
+            .exec_command(sandbox_id, &request)
+            .await
+        {
+            Ok(result) => result,
+            Err(err) => return Ok(ToolResult::error(err.to_string())),
+        };
         // Register a backgrounded session on this run's command-session manager.
         // The manager is bound to the owning agent run, so no per-call agent-run
         // argument is threaded through the tool request.
@@ -88,7 +89,8 @@ impl ToolExecutor for ExecCommand {
             &result.command_session_id,
         ) {
             if result.is_running() {
-                port.register(session_id, sandbox_id, &command).await;
+                port.register_background_session(session_id, sandbox_id)
+                    .await;
             }
         }
         Ok(command_tool_result(&result))

@@ -13,14 +13,15 @@ use anyhow::{Context, Result};
 use eos_agent_def::{AgentDefinition, AgentName};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_engine::{
-    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundSessionFactory,
-    EngineCancelPort, ForegroundExecutorFactory,
+    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundTeardownPort,
+    CommandService, EngineCancelPort, ForegroundExecutorFactory, WorkflowService,
 };
 use eos_llm_client::Message;
+use eos_ports::WorkflowControlPort;
 use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_tools::{
-    AttemptSubmissionPort, BackgroundSessionPort, CancelPort, CommandSessionPort,
-    WorkflowControlPort,
+    AgentRunServicePort, AttemptSubmissionPort, CancelPort, CommandSessionPort,
+    SubagentSessionPort, WorkflowServicePort, WorkflowSessionPort,
 };
 use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
 use eos_workflow::{
@@ -103,12 +104,10 @@ pub async fn run_request(
         .await
         .context("creating the request row")?;
 
-    // GUARDRAIL: `workflow_control` is built downstream of the runner (starter →
-    // attempt_deps → runner), so it is late-bound through this cell and read at
-    // run() time — irreducible given the construction cycle. The cell is created
-    // up front so the background factory can hand each run's workflow-completion
-    // poller a `Weak` to it (the poller reads it once control is wired).
-    let workflow_control_cell: Arc<OnceLock<Arc<dyn WorkflowControlPort>>> =
+    // GUARDRAIL: workflow service construction closes over the starter/control
+    // adapter built below, while the runner/control factory need a handle up
+    // front. The cell is set before any root or workflow agent starts.
+    let workflow_service_cell: Arc<OnceLock<Arc<dyn WorkflowServicePort>>> =
         Arc::new(OnceLock::new());
     // Per-agent-run runtime. The request owns only the shared, immutable factory
     // and the live-run registry — never per-agent mutable state. Each
@@ -118,12 +117,10 @@ pub async fn run_request(
     // makes live runs addressable for recursive cancellation.
     let control_factory = Arc::new(AgentRunControlFactory::new(
         ForegroundExecutorFactory,
-        BackgroundSessionFactory::new(
-            services.engine_run_handles(&workspace_root),
-            services.sandbox.transport.clone(),
-            services.engine.command_session_completion_poll_interval(),
-            workflow_control_cell.clone(),
-        ),
+        services.engine_run_handles(&workspace_root),
+        Arc::new(CommandService::new(services.sandbox.transport.clone())),
+        services.engine.command_session_completion_poll_interval(),
+        workflow_service_cell.clone(),
     ));
     let agent_run_registry = AgentRunRegistry::new();
     let iteration_coordinators = Arc::new(OpenIterationCoordinatorRegistry::new());
@@ -147,7 +144,7 @@ pub async fn run_request(
         services.clone(),
         workspace_root.clone(),
         attempt_submission,
-        workflow_control_cell.clone(),
+        workflow_service_cell.clone(),
         control_factory.clone(),
         agent_run_registry.clone(),
     ));
@@ -173,7 +170,6 @@ pub async fn run_request(
     let cancel_port: Arc<dyn CancelPort> = Arc::new(EngineCancelPort::new(
         agent_run_registry.clone(),
         services.db.task_store.clone(),
-        workflow_control_cell.clone(),
     ));
     // Publish this request's cancellation port so `cancel_agent_core_user_request`
     // (called from another task) can reach it. The guard removes it when
@@ -190,10 +186,11 @@ pub async fn run_request(
         services.db.task_store.clone(),
         cancel_port,
     ));
-    // Late-bind the control port into the workflow-agent runner (closes D1: a
-    // nested planner's deferral hook reads workflow_depth; every workflow agent's
-    // no-inflight hook reads find_outstanding).
-    let _ = workflow_control_cell.set(workflow_control.clone());
+    // Late-bind the workflow service into the workflow-agent runner and each
+    // per-run workflow-session poller.
+    let workflow_service: Arc<dyn WorkflowServicePort> =
+        Arc::new(WorkflowService::new(workflow_control.clone()));
+    let _ = workflow_service_cell.set(workflow_service.clone());
 
     // Root task: `root-{request_id}` (Option A), running, no workflow.
     let root_task_id = root_task_id_for(&request_id);
@@ -249,7 +246,10 @@ pub async fn run_request(
                 },
             );
             let background = control.background();
-            let background_session: Arc<dyn BackgroundSessionPort> = Arc::new(background.clone());
+            let agent_run_service: Arc<dyn AgentRunServicePort> = Arc::new(background.clone());
+            let subagent_sessions: Arc<dyn SubagentSessionPort> = Arc::new(background.clone());
+            let workflow_sessions: Arc<dyn WorkflowSessionPort> = Arc::new(background.clone());
+            let background_session: Arc<dyn BackgroundTeardownPort> = Arc::new(background.clone());
             let command_session_port: Arc<dyn CommandSessionPort> = Arc::new(background);
             let run = run_agent(
                 &services.engine_run_handles(&workspace_root),
@@ -260,7 +260,10 @@ pub async fn run_request(
                     agent_run_id,
                     tool_metadata: metadata,
                     attempt_submission: None,
-                    workflow_control: Some(workflow_control.clone()),
+                    agent_run_service: Some(agent_run_service),
+                    subagent_sessions: Some(subagent_sessions),
+                    workflow_service: Some(workflow_service.clone()),
+                    workflow_sessions: Some(workflow_sessions),
                     background_session: Some(background_session),
                     command_session_port: Some(command_session_port),
                     notifier: control.notifications(),

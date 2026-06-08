@@ -75,6 +75,8 @@ pub fn build_default_registry(config: &ToolConfigSet, caller: &CallerScope) -> T
         None,
         None,
         None,
+        None,
+        None,
         SkillToolService::new(Arc::new(eos_skills::SkillRegistry::new())),
     )
 }
@@ -90,16 +92,18 @@ pub fn build_default_registry_with_services(
     sandbox_service: SandboxToolService,
     root_submission: Option<RootSubmissionService>,
     attempt_submission: Option<AttemptSubmissionService>,
-    workflow_control: Option<Arc<dyn crate::ports::WorkflowControlPort>>,
-    background_session: Option<Arc<dyn crate::ports::BackgroundSessionPort>>,
+    agent_run_service: Option<Arc<dyn crate::ports::AgentRunServicePort>>,
+    subagent_sessions: Option<Arc<dyn crate::ports::SubagentSessionPort>>,
+    workflow_service: Option<Arc<dyn crate::ports::WorkflowServicePort>>,
+    workflow_sessions: Option<Arc<dyn crate::ports::WorkflowSessionPort>>,
     command_session_port: Option<Arc<dyn crate::ports::CommandSessionPort>>,
     skill_service: SkillToolService,
 ) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
     let hook_services = HookServices::new(
         Some(sandbox_service.transport()),
-        workflow_control.clone(),
-        background_session.clone(),
+        workflow_service.clone(),
+        subagent_sessions.clone(),
     );
     let command_service =
         CommandToolService::new(sandbox_service.transport(), command_session_port);
@@ -112,13 +116,14 @@ pub fn build_default_registry_with_services(
     isolated_workspace::register(&mut registry, config, sandbox_service);
     submission::register(&mut registry, config, root_submission, attempt_submission);
     ask_helper::register(&mut registry, config);
-    workflow::register(
+    workflow::register(&mut registry, config, workflow_service, workflow_sessions);
+    subagent::register(
         &mut registry,
         config,
-        workflow_control,
-        background_session.clone(),
+        caller,
+        agent_run_service,
+        subagent_sessions,
     );
-    subagent::register(&mut registry, config, caller, background_session);
     skills::register(&mut registry, config, caller, skill_service);
     registry.apply_hook_services(hook_services);
     registry

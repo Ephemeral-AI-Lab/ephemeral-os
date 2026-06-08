@@ -45,9 +45,12 @@ pub(crate) fn dag_resolution(tasks: &[Task]) -> Result<DagResolution> {
         status.is_terminal_generator()
             || (*status == TaskStatus::Pending && unreachable.contains(task_id))
     });
-    let any_failed_or_blocked = statuses
-        .values()
-        .any(|s| matches!(s, TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::Cancelled));
+    let any_failed_or_blocked = statuses.values().any(|s| {
+        matches!(
+            s,
+            TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::Cancelled
+        )
+    });
     if all_quiescent && any_failed_or_blocked {
         Ok(DagResolution::FailedOrBlocked)
     } else {

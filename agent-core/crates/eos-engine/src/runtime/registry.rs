@@ -65,7 +65,9 @@ impl AgentRunRegistry {
         let mut guard = self.inner.lock().expect("registry lock");
         let agent_run_id = control.agent_run_id().clone();
         if let Some(task_id) = control.task_id() {
-            guard.by_task_id.insert(task_id.clone(), agent_run_id.clone());
+            guard
+                .by_task_id
+                .insert(task_id.clone(), agent_run_id.clone());
         }
         guard
             .by_run_id
@@ -75,7 +77,13 @@ impl AgentRunRegistry {
     /// Look up a live (not-yet-claimed) run.
     #[must_use]
     pub fn get(&self, agent_run_id: &AgentRunId) -> Option<Arc<AgentRunControl>> {
-        match self.inner.lock().expect("registry lock").by_run_id.get(agent_run_id) {
+        match self
+            .inner
+            .lock()
+            .expect("registry lock")
+            .by_run_id
+            .get(agent_run_id)
+        {
             Some(AgentRunEntry::Running(control)) => Some(control.clone()),
             _ => None,
         }
@@ -115,8 +123,6 @@ impl AgentRunRegistry {
     pub fn finish_cancel(&self, agent_run_id: &AgentRunId) {
         let mut guard = self.inner.lock().expect("registry lock");
         guard.by_run_id.remove(agent_run_id);
-        guard
-            .by_task_id
-            .retain(|_, run_id| run_id != agent_run_id);
+        guard.by_task_id.retain(|_, run_id| run_id != agent_run_id);
     }
 }

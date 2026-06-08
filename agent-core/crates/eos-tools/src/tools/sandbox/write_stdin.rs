@@ -13,8 +13,7 @@ use crate::runtime::executor::ToolExecutor;
 
 use super::super::CommandToolService;
 use super::lib::{
-    command_result_value, command_tool_result, command_tool_result_from_value, default_yield_ms,
-    invalid_input, is_command_session_not_found, request_base, validate_command_timing,
+    command_tool_result, default_yield_ms, invalid_input, request_base, validate_command_timing,
 };
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -71,7 +70,9 @@ impl ToolExecutor for WriteStdin {
                 base: request_base(ctx, "write_stdin")?,
                 command_session_id: command_session_id.clone(),
             };
-            eos_sandbox_port::cancel_command_session(&*self.service.transport, sandbox_id, &request)
+            self.service
+                .command_service
+                .cancel_command_session(sandbox_id, &request)
                 .await
         } else if contains_teardown_control(&parsed.chars) {
             return Ok(invalid_input(
@@ -85,39 +86,15 @@ impl ToolExecutor for WriteStdin {
                 chars: parsed.chars.clone(),
                 yield_time_ms: Some(parsed.yield_time_ms),
             };
-            eos_sandbox_port::exec_stdin(&*self.service.transport, sandbox_id, &request).await
+            self.service
+                .command_service
+                .write_stdin(sandbox_id, &request)
+                .await
         };
         let result = match result {
             Ok(result) => result,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
-        // If the daemon already lost the live session, surface the background's
-        // stored terminal; otherwise, once a terminal status is observed inline,
-        // latch it as delivered so the heartbeat never re-notifies the same result.
-        if let Some(port) = &self.service.command_session_port {
-            if is_command_session_not_found(&result) {
-                if port
-                    .command_session_already_reported(command_session_id)
-                    .await
-                {
-                    return Ok(ToolResult::ok(format!(
-                        "Command session {command_session_id} already completed; \
-                         its result was already reported."
-                    )));
-                }
-                if let Some(stored) = port.command_session_result(command_session_id).await {
-                    port.mark_command_session_reported(command_session_id, stored.clone())
-                        .await;
-                    return Ok(command_tool_result_from_value(&stored));
-                }
-            } else if !result.is_running() {
-                port.mark_command_session_reported(
-                    command_session_id,
-                    command_result_value(&result),
-                )
-                .await;
-            }
-        }
         Ok(command_tool_result(&result))
     }
 }

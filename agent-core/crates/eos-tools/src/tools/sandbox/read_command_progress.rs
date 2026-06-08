@@ -12,10 +12,7 @@ use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
 
 use super::super::CommandToolService;
-use super::lib::{
-    command_result_value, command_tool_result, command_tool_result_from_value, invalid_input,
-    is_command_session_not_found, request_base,
-};
+use super::lib::{command_tool_result, invalid_input, request_base};
 
 const MAX_LAST_N_LINES: u32 = 200;
 
@@ -72,40 +69,15 @@ impl ToolExecutor for ReadCommandProgress {
             command_session_id: command_session_id.clone(),
             last_n_lines: parsed.last_n_lines,
         };
-        let result = match eos_sandbox_port::read_command_progress(
-            &*self.service.transport,
-            sandbox_id,
-            &request,
-        )
-        .await
+        let result = match self
+            .service
+            .command_service
+            .read_command_progress(sandbox_id, &request)
+            .await
         {
             Ok(result) => result,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
-        if let Some(port) = &self.service.command_session_port {
-            if is_command_session_not_found(&result) {
-                if port
-                    .command_session_already_reported(command_session_id)
-                    .await
-                {
-                    return Ok(ToolResult::ok(format!(
-                        "Command session {command_session_id} already completed; \
-                         its result was already reported."
-                    )));
-                }
-                if let Some(stored) = port.command_session_result(command_session_id).await {
-                    port.mark_command_session_reported(command_session_id, stored.clone())
-                        .await;
-                    return Ok(command_tool_result_from_value(&stored));
-                }
-            } else if !result.is_running() {
-                port.mark_command_session_reported(
-                    command_session_id,
-                    command_result_value(&result),
-                )
-                .await;
-            }
-        }
         Ok(command_tool_result(&result))
     }
 }

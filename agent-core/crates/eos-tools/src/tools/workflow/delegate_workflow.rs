@@ -12,7 +12,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{BackgroundSessionPort, WorkflowControlPort};
+use crate::ports::{StartWorkflowRequest, WorkflowServicePort, WorkflowSessionPort};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
@@ -25,18 +25,18 @@ struct DelegateWorkflowInput {
 }
 
 pub(in crate::tools::workflow) struct DelegateWorkflow {
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
 }
 
 impl DelegateWorkflow {
     pub(in crate::tools::workflow) fn new(
-        workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        background_session: Option<Arc<dyn BackgroundSessionPort>>,
+        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+        workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
     ) -> Self {
         Self {
-            workflow_control,
-            background_session,
+            workflow_service,
+            workflow_sessions,
         }
     }
 }
@@ -57,16 +57,18 @@ impl ToolExecutor for DelegateWorkflow {
         }
         let task_id = ctx.require_task_id()?;
         let agent_run_id = ctx.require_agent_run_id()?;
-        let control = self
-            .workflow_control
+        let service = self
+            .workflow_service
             .as_deref()
-            .ok_or(ToolError::MissingPort("workflow_control"))?;
-        let background = self
-            .background_session
+            .ok_or(ToolError::MissingPort("workflow_service"))?;
+        let sessions = self
+            .workflow_sessions
             .as_deref()
-            .ok_or(ToolError::MissingPort("background_session"))?;
+            .ok_or(ToolError::MissingPort("workflow_sessions"))?;
 
-        let outstanding = control.find_outstanding(task_id, agent_run_id).await?;
+        let outstanding = service
+            .find_outstanding_workflows(task_id, agent_run_id)
+            .await?;
         if let Some(existing) = outstanding.first() {
             let payload = json!({
                 "workflow_task_id": existing.workflow_task_id.as_str(),
@@ -78,8 +80,14 @@ impl ToolExecutor for DelegateWorkflow {
             return Ok(ToolResult::error(payload.to_string()));
         }
 
-        let started = control.start(task_id, agent_run_id, &parsed.goal).await?;
-        background.register_workflow(&started).await;
+        let started = service
+            .start_workflow(StartWorkflowRequest {
+                parent_task_id: task_id.clone(),
+                agent_run_id: agent_run_id.clone(),
+                workflow_goal: parsed.goal.clone(),
+            })
+            .await?;
+        sessions.register_background_session(&started).await;
         let payload = json!({
             "workflow_task_id": started.workflow_task_id.as_str(),
             "workflow_id": started.workflow_id.as_str(),
@@ -111,8 +119,8 @@ impl ToolExecutor for DelegateWorkflow {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
 ) {
     let delegate = config.get(ToolName::DelegateWorkflow);
     super::super::register_tool(
@@ -125,6 +133,6 @@ pub(super) fn register(
             schema_for!(DelegateWorkflowInput),
         ),
         OutputShape::Text,
-        Arc::new(DelegateWorkflow::new(workflow_control, background_session)),
+        Arc::new(DelegateWorkflow::new(workflow_service, workflow_sessions)),
     );
 }

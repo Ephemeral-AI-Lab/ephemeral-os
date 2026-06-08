@@ -8,12 +8,13 @@ use eos_audit::AuditSink;
 use eos_llm_client::{LlmClient, Message};
 use eos_state::AgentRunStore;
 use eos_tools::{
-    AttemptSubmissionService, BackgroundSessionPort, CommandSessionPort, ExecutionMetadata,
-    RootSubmissionService, SandboxToolService, SkillToolService, ToolConfigSet, ToolRegistry,
-    ToolResult, WorkflowControlPort,
+    AgentRunServicePort, AttemptSubmissionService, CommandSessionPort, ExecutionMetadata,
+    RootSubmissionService, SandboxToolService, SkillToolService, SubagentSessionPort,
+    ToolConfigSet, ToolRegistry, ToolResult, WorkflowServicePort, WorkflowSessionPort,
 };
 use eos_types::{AgentRunId, TaskId};
 
+use crate::background::BackgroundTeardownPort;
 use crate::notifications::NotificationService;
 use crate::query::EventSource;
 use crate::telemetry::StreamEvent;
@@ -100,11 +101,16 @@ pub struct AgentRunInput {
     /// Per-attempt terminal submission service for planner/generator/reducer
     /// agents. `None` for root/helper runs.
     pub attempt_submission: Option<AttemptSubmissionService>,
-    /// Workflow control service for workflow tools and workflow-state hooks.
-    pub workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    /// Background-session service for subagent/workflow tools and
-    /// run-finalization cleanup.
-    pub background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    /// Agent-run service for subagent launch tools.
+    pub agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    /// Subagent background-session registry for this run.
+    pub subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+    /// Workflow service for workflow tools and workflow-state hooks.
+    pub workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    /// Workflow background-session registry for this run.
+    pub workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+    /// Background teardown for run-finalization cleanup.
+    pub background_session: Option<Arc<dyn BackgroundTeardownPort>>,
     /// Command-session lifecycle port for shell tools.
     pub command_session_port: Option<Arc<dyn CommandSessionPort>>,
     /// The run-local notification sink owned by this run's `AgentRunControl` and
@@ -138,7 +144,10 @@ impl std::fmt::Debug for AgentRunInput {
             .field("task_id", &self.task_id)
             .field("agent_run_id", &self.agent_run_id)
             .field("has_attempt_submission", &self.attempt_submission.is_some())
-            .field("has_workflow_control", &self.workflow_control.is_some())
+            .field("has_agent_run_service", &self.agent_run_service.is_some())
+            .field("has_subagent_sessions", &self.subagent_sessions.is_some())
+            .field("has_workflow_service", &self.workflow_service.is_some())
+            .field("has_workflow_sessions", &self.workflow_sessions.is_some())
             .field("has_background_session", &self.background_session.is_some())
             .field(
                 "has_command_session_port",

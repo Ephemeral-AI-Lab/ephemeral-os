@@ -5,13 +5,20 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{mpsc, Mutex, MutexGuard, PoisonError};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
+use rustix::event::{poll, PollFd, PollFlags};
+use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
 use serde_json::Value;
 
 use crate::transcript::TranscriptTimestampPrefixer;
 
 use super::{open_pty_pair, terminate_process_group};
+
+/// Cap on how long a single `write_stdin` pushes bytes into the PTY before
+/// returning a structured backpressure error. The master is non-blocking, so a
+/// consumer that never drains its stdin cannot wedge the writer past this bound.
+const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
 
 pub struct CommandSessionProcess {
     pgid: Option<i32>,
@@ -153,8 +160,42 @@ impl CommandSessionProcess {
         }
     }
 
+    /// Push `bytes` to the command's stdin without blocking unbounded. The master
+    /// is non-blocking; when the consumer stops draining, `write` returns
+    /// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`
+    /// before returning a structured backpressure error. Cancel/terminate is a
+    /// separate (`killpg`) path, so the session stays controllable throughout.
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
-        lock(&self.writer).write_all(bytes)
+        let mut writer = lock(&self.writer);
+        let deadline = Instant::now() + STDIN_WRITE_DEADLINE;
+        let mut offset = 0;
+        while offset < bytes.len() {
+            match writer.write(&bytes[offset..]) {
+                Ok(0) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::WriteZero,
+                        "command session stdin closed",
+                    ));
+                }
+                Ok(written) => offset += written,
+                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
+                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                    let timeout_ms = poll_timeout_ms(deadline);
+                    if timeout_ms == 0 {
+                        return Err(stdin_backpressure());
+                    }
+                    let mut fds = [PollFd::new(&*writer, PollFlags::OUT)];
+                    match poll(&mut fds, timeout_ms) {
+                        Ok(0) => return Err(stdin_backpressure()),
+                        Ok(_) => {}
+                        Err(rustix::io::Errno::INTR) => {}
+                        Err(err) => return Err(io::Error::from(err)),
+                    }
+                }
+                Err(err) => return Err(err),
+            }
+        }
+        Ok(())
     }
 
     pub fn terminate(&self) {
@@ -199,6 +240,9 @@ pub fn spawn_current_exe_ns_runner(
 ) -> io::Result<CommandSessionProcess> {
     write_run_request(request_path, run_request)?;
     let (master, slave) = open_pty_pair()?;
+    // Non-blocking master OFD (shared by the writer dup and the reader): writes
+    // can't wedge on a non-draining consumer, and the reader polls instead.
+    set_nonblocking(&master)?;
     let mut child_command = Command::new(std::env::current_exe()?);
     child_command
         .arg("ns-runner")
@@ -249,6 +293,17 @@ fn spawn_command_output_reader(
             .ok();
         let mut buf = [0_u8; 8192];
         loop {
+            // The master is non-blocking; block here until readable or hangup with
+            // no busy-loop and no added latency (infinite poll wakes on the first
+            // byte or on slave close), then drain what is available.
+            {
+                let mut fds = [PollFd::new(&master, PollFlags::IN)];
+                match poll(&mut fds, -1) {
+                    Ok(_) => {}
+                    Err(rustix::io::Errno::INTR) => continue,
+                    Err(_) => break,
+                }
+            }
             match master.read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => {
@@ -259,6 +314,7 @@ fn spawn_command_output_reader(
                         }
                     }
                 }
+                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(_) => break,
             }
@@ -280,4 +336,27 @@ fn write_run_request(path: &Path, request: &Value) -> io::Result<()> {
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Mark `file`'s open file description non-blocking so `read`/`write` return
+/// `WouldBlock` instead of stalling. Applied to the PTY master before it is
+/// shared between the writer dup and the reader thread.
+fn set_nonblocking(file: &File) -> io::Result<()> {
+    let flags = fcntl_getfl(file)?;
+    fcntl_setfl(file, flags | OFlags::NONBLOCK)?;
+    Ok(())
+}
+
+/// Milliseconds left until `deadline`, clamped to a non-negative `i32` for
+/// `poll`. Returns 0 once the deadline has passed.
+fn poll_timeout_ms(deadline: Instant) -> i32 {
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    i32::try_from(remaining.as_millis()).unwrap_or(i32::MAX)
+}
+
+fn stdin_backpressure() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::WouldBlock,
+        "stdin_backpressure: command is not draining its stdin",
+    )
 }

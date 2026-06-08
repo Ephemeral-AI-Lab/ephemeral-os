@@ -6,13 +6,14 @@ use std::sync::Arc;
 use eos_agent_def::AgentDefinition;
 use eos_llm_client::DEFAULT_MAX_TOKENS;
 use eos_tools::{
-    build_default_registry_with_services, AttemptSubmissionService, BackgroundSessionPort,
-    CallerScope, CommandSessionPort, ExecutionMetadata, WorkflowControlPort,
+    build_default_registry_with_services, AgentRunServicePort, AttemptSubmissionService,
+    CallerScope, CommandSessionPort, ExecutionMetadata, SubagentSessionPort, WorkflowServicePort,
+    WorkflowSessionPort,
 };
 use eos_types::{AgentRunId, TaskId};
 
 use crate::agent::{build_query_context, BuildQueryContextInput};
-use crate::background::BackgroundSessionFinalizer;
+use crate::background::{BackgroundSessionFinalizer, BackgroundTeardownPort};
 use crate::notifications::NotificationService;
 use crate::query::QueryContext;
 use crate::EngineError;
@@ -27,8 +28,11 @@ pub(super) struct AgentRunSetupInput {
     pub(super) agent_run_id: AgentRunId,
     pub(super) tool_metadata: ExecutionMetadata,
     pub(super) attempt_submission: Option<AttemptSubmissionService>,
-    pub(super) workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    pub(super) background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    pub(super) agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    pub(super) subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+    pub(super) workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    pub(super) workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+    pub(super) background_session: Option<Arc<dyn BackgroundTeardownPort>>,
     pub(super) command_session_port: Option<Arc<dyn CommandSessionPort>>,
     pub(super) notifier: NotificationService,
     pub(super) cancellation: AgentRunCancellation,
@@ -50,7 +54,10 @@ pub(super) fn prepare_agent_run_context(
         agent_run_id,
         tool_metadata,
         attempt_submission,
-        workflow_control,
+        agent_run_service,
+        subagent_sessions,
+        workflow_service,
+        workflow_sessions,
         background_session,
         command_session_port,
         notifier,
@@ -70,8 +77,10 @@ pub(super) fn prepare_agent_run_context(
         handles.sandbox_service.clone(),
         handles.root_submission.clone(),
         attempt_submission,
-        workflow_control.clone(),
-        background_session.clone(),
+        agent_run_service,
+        subagent_sessions,
+        workflow_service,
+        workflow_sessions,
         command_session_port,
         handles.skill_service.clone(),
     );
@@ -79,8 +88,7 @@ pub(super) fn prepare_agent_run_context(
         extender(&mut registry);
     }
 
-    let background_session_finalizer =
-        BackgroundSessionFinalizer::new(background_session, workflow_control);
+    let background_session_finalizer = BackgroundSessionFinalizer::new(background_session);
     let ctx = build_query_context(BuildQueryContextInput {
         agent,
         model,

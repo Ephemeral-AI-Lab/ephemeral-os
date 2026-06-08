@@ -5,8 +5,8 @@
 //! Terminal tools and `exit_isolated_workspace` settle in-process subagent
 //! records before checking the remaining session families. `enter_isolated_workspace`
 //! remains inspect-only. Workflows stay owned by persisted workflow state via
-//! [`WorkflowControlPort::find_outstanding`], and command sessions stay owned by
-//! the sandbox daemon via `api.v1.command_session_count`.
+//! `WorkflowServicePort::find_outstanding_workflows`, and command sessions stay
+//! owned by the sandbox daemon via `api.v1.command_session_count`.
 
 use eos_types::JsonObject;
 use serde_json::{json, Value};
@@ -73,23 +73,26 @@ pub(crate) async fn run_require_no_background_sessions(
 ) -> Result<HookOutcome, ToolError> {
     let agent_run_id = ctx.require_agent_run_id()?;
 
-    if let Some(background) = &services.background_session {
+    if let Some(subagent_sessions) = &services.subagent_sessions {
         // Terminal/exit tools settle the agent's subagents to 0; enter_isolated
         // only inspects (reject). After cancellation `report.subagent == 0`, so
         // the deny below fires only on the reject path.
-        let report = if cancels_inflight_subagents(tool) {
-            background.cancel_subagents().await
+        let subagents = if cancels_inflight_subagents(tool) {
+            subagent_sessions
+                .cancel_all_background_sessions("parent submitted its terminal")
+                .await;
+            subagent_sessions.count_background_sessions().await
         } else {
-            background.running_background_tasks().await
+            subagent_sessions.count_background_sessions().await
         };
-        if report.subagents > 0 {
+        if subagents > 0 {
             return Ok(HookOutcome::Deny(
                 HookDenial::new(
-                    subagent_in_flight_message(report.subagents, tool),
+                    subagent_in_flight_message(subagents, tool),
                     "no_background_sessions",
                 )
                 .with_reason("ephemeral_jobs_in_flight")
-                .with_count(report.subagents),
+                .with_count(subagents),
             ));
         }
     }
@@ -97,8 +100,10 @@ pub(crate) async fn run_require_no_background_sessions(
     // Workflow dimension: the background tracks workflow sessions, but persisted
     // workflow lifecycle remains authoritative here. Deny while a delegated
     // workflow is still open.
-    if let (Some(control), Some(task_id)) = (&services.workflow_control, &ctx.task_id) {
-        let outstanding = control.find_outstanding(task_id, agent_run_id).await?;
+    if let (Some(service), Some(task_id)) = (&services.workflow_service, &ctx.task_id) {
+        let outstanding = service
+            .find_outstanding_workflows(task_id, agent_run_id)
+            .await?;
         if !outstanding.is_empty() {
             return Ok(HookOutcome::Deny(
                 HookDenial::new(
@@ -185,7 +190,7 @@ mod tests {
     use super::*;
 
     use std::sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
     };
 
@@ -193,77 +198,57 @@ mod tests {
     use eos_types::{AgentRunId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 
     use crate::ports::{
-        BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, OutstandingWorkflow,
-        Sealed, SpawnedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress,
-        WorkflowControlPort,
+        CancelledSubagent, OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow,
+        SubagentProgress, SubagentSessionPort, TerminalWorkflow, WorkflowServicePort,
     };
-    struct ReportBackgroundSession {
-        report: BackgroundSessionCounts,
+    struct ReportSubagentSessions {
+        subagents: AtomicUsize,
         cancel_called: AtomicBool,
     }
 
-    impl ReportBackgroundSession {
-        const fn new(report: BackgroundSessionCounts) -> Self {
+    impl ReportSubagentSessions {
+        const fn new(subagents: usize) -> Self {
             Self {
-                report,
+                subagents: AtomicUsize::new(subagents),
                 cancel_called: AtomicBool::new(false),
             }
         }
     }
 
-    impl Sealed for ReportBackgroundSession {}
+    impl Sealed for ReportSubagentSessions {}
 
     #[async_trait]
-    impl BackgroundSessionPort for ReportBackgroundSession {
-        async fn spawn(
-            &self,
-            _: &ExecutionMetadata,
-            _: SubagentLaunch,
-        ) -> Result<SpawnedSubagent, ToolError> {
+    impl SubagentSessionPort for ReportSubagentSessions {
+        async fn register_background_session(&self, _: &AgentRunId, _: &str) -> SubagentSessionId {
             unreachable!("not used by hook tests")
         }
 
-        async fn progress(
+        async fn subagent_session_snapshot(
             &self,
             _: &SubagentSessionId,
-            _: u8,
-        ) -> Result<SubagentProgress, ToolError> {
+        ) -> Option<SubagentProgress> {
             unreachable!("not used by hook tests")
         }
 
-        async fn cancel(
+        async fn cancel_background_session(
             &self,
             _: &SubagentSessionId,
             _: &str,
-        ) -> Result<CancelledSubagent, ToolError> {
+        ) -> CancelledSubagent {
             unreachable!("not used by hook tests")
         }
 
-        async fn running_background_tasks(&self) -> BackgroundSessionCounts {
-            self.report
+        async fn count_background_sessions(&self) -> usize {
+            self.subagents.load(Ordering::Relaxed)
         }
 
-        async fn cancel_subagents(&self) -> BackgroundSessionCounts {
+        async fn cancel_all_background_sessions(&self, _: &str) {
             self.cancel_called.store(true, Ordering::Relaxed);
-            BackgroundSessionCounts {
-                subagents: 0,
-                total: self.report.workflows + self.report.command_sessions,
-                ..self.report
-            }
+            self.subagents.store(0, Ordering::Relaxed);
         }
 
-        async fn register_workflow(&self, _: &StartedWorkflowSession) {}
-
-        async fn mark_workflow_cancelled(&self, _: &WorkflowSessionId, _: &str) -> bool {
-            false
-        }
-
-        async fn teardown(
-            &self,
-            _: Option<Arc<dyn WorkflowControlPort>>,
-            _: &str,
-        ) -> BackgroundSessionCounts {
-            unreachable!("not used by hook tests")
+        async fn poll_complete_background_sessions(&self) -> usize {
+            0
         }
     }
 
@@ -271,17 +256,15 @@ mod tests {
     impl Sealed for OneOutstanding {}
 
     #[async_trait]
-    impl WorkflowControlPort for OneOutstanding {
-        async fn start(
+    impl WorkflowServicePort for OneOutstanding {
+        async fn start_workflow(
             &self,
-            _: &TaskId,
-            _: &AgentRunId,
-            _: &str,
-        ) -> Result<StartedWorkflowSession, ToolError> {
+            _: StartWorkflowRequest,
+        ) -> Result<StartedWorkflow, ToolError> {
             unreachable!("deny short-circuits before start")
         }
 
-        async fn status(
+        async fn check_workflow_status(
             &self,
             _: &WorkflowId,
             _: Option<&WorkflowSessionId>,
@@ -289,11 +272,23 @@ mod tests {
             unreachable!()
         }
 
-        async fn cancel(&self, _: &WorkflowSessionId, _: &str) -> Result<String, ToolError> {
+        async fn cancel_workflow_session(
+            &self,
+            _: &WorkflowSessionId,
+            _: &str,
+        ) -> Result<String, ToolError> {
             unreachable!()
         }
 
-        async fn find_outstanding(
+        async fn poll_terminal_workflow(
+            &self,
+            _: &WorkflowId,
+            _: &WorkflowSessionId,
+        ) -> Result<Option<TerminalWorkflow>, ToolError> {
+            unreachable!()
+        }
+
+        async fn find_outstanding_workflows(
             &self,
             _: &TaskId,
             _: &AgentRunId,
@@ -307,19 +302,6 @@ mod tests {
 
         async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, ToolError> {
             Ok(1)
-        }
-    }
-
-    const fn report(
-        subagents: usize,
-        workflows: usize,
-        command_sessions: usize,
-    ) -> BackgroundSessionCounts {
-        BackgroundSessionCounts {
-            total: subagents + workflows + command_sessions,
-            subagents,
-            workflows,
-            command_sessions,
         }
     }
 
@@ -381,7 +363,7 @@ mod tests {
     }
 
     // The workflow dimension: a terminal is denied while a delegated workflow is
-    // still outstanding, gated on the authoritative WorkflowControlPort rather
+    // still outstanding, gated on the authoritative WorkflowServicePort rather
     // than a background session entry.
     #[tokio::test]
     async fn outstanding_workflow_denies_terminal() {
@@ -417,7 +399,7 @@ mod tests {
     async fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling() {
         use crate::support::metadata;
 
-        let background = Arc::new(ReportBackgroundSession::new(report(1, 0, 0)));
+        let background = Arc::new(ReportSubagentSessions::new(1));
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
         let services = crate::tools::HookServices::new(None, None, Some(background.clone()));
@@ -524,7 +506,7 @@ mod tests {
 
         use crate::support::{metadata, FakeTransport};
 
-        let background = Arc::new(ReportBackgroundSession::new(report(3, 0, 0)));
+        let background = Arc::new(ReportSubagentSessions::new(3));
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
         ctx.sandbox_id = Some("sandbox-1".parse().expect("sandbox id"));

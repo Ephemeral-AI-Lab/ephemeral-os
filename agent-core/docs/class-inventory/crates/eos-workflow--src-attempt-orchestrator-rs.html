@@ -244,7 +244,7 @@
 </details></td></tr><tr id="method-materialize-plan-tasks-217"><td>method</td><td>materialize_plan_tasks</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-materialize-plan-tasks-217">materialize_plan_tasks</a> (&amp; self , plan : &amp; PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; PlannerSubmission &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-materialize-plan-tasks-217">materialize_plan_tasks</a>(&amp;<span class="rs-self">self</span>, plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">PlannerSubmission</span>&gt; {
-        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-150">validate_plan_shape</a>(plan)?;
+        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(plan)?;
         <span class="rs-kw">let</span> attempt = <span class="rs-self">self</span>
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-validate-planner-submission-600">validate_planner_submission</a>(&amp;plan.planner_task_id)
             .<span class="rs-kw">await</span>?;
@@ -261,7 +261,7 @@
         <span class="rs-comment">// Pending rows. Mirrors PLAN §3 ("validate shape / acyclic / ROLE, then</span>
         <span class="rs-comment">// materialize") and Rust `build_planner_submission`, which resolves all</span>
         <span class="rs-comment">// agents up front before creating tasks.</span>
-        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-245">validate_plan_agents</a>(plan, &amp;<span class="rs-self">self</span>.deps.agent_registry)?;
+        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-248">validate_plan_agents</a>(plan, &amp;<span class="rs-self">self</span>.deps.agent_registry)?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> local_to_task = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
         <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
             <span class="rs-kw">let</span> id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;attempt.id, &amp;task.id)?;
@@ -965,7 +965,7 @@
     }
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-materialize-plan-tasks-217">materialize_plan_tasks</a>(&amp;<span class="rs-self">self</span>, plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">PlannerSubmission</span>&gt; {
-        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-150">validate_plan_shape</a>(plan)?;
+        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(plan)?;
         <span class="rs-kw">let</span> attempt = <span class="rs-self">self</span>
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-validate-planner-submission-600">validate_planner_submission</a>(&amp;plan.planner_task_id)
             .<span class="rs-kw">await</span>?;
@@ -982,7 +982,7 @@
         <span class="rs-comment">// Pending rows. Mirrors PLAN §3 ("validate shape / acyclic / ROLE, then</span>
         <span class="rs-comment">// materialize") and Rust `build_planner_submission`, which resolves all</span>
         <span class="rs-comment">// agents up front before creating tasks.</span>
-        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-245">validate_plan_agents</a>(plan, &amp;<span class="rs-self">self</span>.deps.agent_registry)?;
+        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-248">validate_plan_agents</a>(plan, &amp;<span class="rs-self">self</span>.deps.agent_registry)?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> local_to_task = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
         <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
             <span class="rs-kw">let</span> id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;attempt.id, &amp;task.id)?;

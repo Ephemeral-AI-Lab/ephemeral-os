@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{JsonObject, SubagentSessionId, WorkflowSessionId};
+use eos_types::{AgentRunId, JsonObject, SubagentSessionId};
 use serde_json::json;
 
 use super::super::{
@@ -11,11 +11,10 @@ use super::super::{
     run_subagent::RunSubagent,
 };
 use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
 use crate::ports::{
-    BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, Sealed, SpawnedSubagent,
-    StartedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress,
-    SubagentSessionStatus, WorkflowControlPort,
+    AgentRunServicePort, CancelledSubagent, Sealed, StartSubagentRunOutcome,
+    StartSubagentRunRequest, StartedSubagentRun, SubagentProgress, SubagentSessionPort,
+    SubagentSessionStatus, TerminalAgentRun,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
@@ -28,27 +27,52 @@ struct FakeBackgroundSession {
 impl Sealed for FakeBackgroundSession {}
 
 #[async_trait]
-impl BackgroundSessionPort for FakeBackgroundSession {
-    async fn spawn(
+impl AgentRunServicePort for FakeBackgroundSession {
+    async fn start_subagent_run(
         &self,
-        _ctx: &ExecutionMetadata,
-        launch: SubagentLaunch,
-    ) -> Result<SpawnedSubagent, ToolError> {
+        request: StartSubagentRunRequest,
+    ) -> Result<StartSubagentRunOutcome, ToolError> {
         self.spawned
             .lock()
             .unwrap()
-            .push((launch.agent_name, launch.prompt));
-        Ok(SpawnedSubagent::Launched(StartedSubagent {
-            subagent_session_id: "subagent_1".parse()?,
+            .push((request.agent_name.clone(), request.prompt));
+        Ok(StartSubagentRunOutcome::Started(StartedSubagentRun {
+            agent_run_id: AgentRunId::new_v4(),
+            agent_name: request.agent_name,
         }))
     }
 
-    async fn progress(
+    async fn poll_terminal_agent_run(
+        &self,
+        _agent_run_id: &AgentRunId,
+    ) -> Result<Option<TerminalAgentRun>, ToolError> {
+        Ok(None)
+    }
+
+    async fn cancel_agent_run(
+        &self,
+        _agent_run_id: &AgentRunId,
+        _reason: &str,
+    ) -> Result<(), ToolError> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl SubagentSessionPort for FakeBackgroundSession {
+    async fn register_background_session(
+        &self,
+        _agent_run_id: &AgentRunId,
+        _agent_name: &str,
+    ) -> SubagentSessionId {
+        "subagent_1".parse().unwrap()
+    }
+
+    async fn subagent_session_snapshot(
         &self,
         subagent_session_id: &SubagentSessionId,
-        _last_n_messages: u8,
-    ) -> Result<SubagentProgress, ToolError> {
-        Ok(SubagentProgress::Found {
+    ) -> Option<SubagentProgress> {
+        Some(SubagentProgress::Found {
             subagent_session_id: subagent_session_id.clone(),
             status: SubagentSessionStatus::Running,
             agent_name: "explorer".to_owned(),
@@ -56,56 +80,25 @@ impl BackgroundSessionPort for FakeBackgroundSession {
         })
     }
 
-    async fn cancel(
+    async fn cancel_background_session(
         &self,
         subagent_session_id: &SubagentSessionId,
         reason: &str,
-    ) -> Result<CancelledSubagent, ToolError> {
-        Ok(CancelledSubagent::Cancelled {
+    ) -> CancelledSubagent {
+        CancelledSubagent::Cancelled {
             subagent_session_id: subagent_session_id.clone(),
             reason: reason.to_owned(),
-        })
-    }
-
-    async fn running_background_tasks(&self) -> BackgroundSessionCounts {
-        BackgroundSessionCounts {
-            total: 0,
-            subagents: 0,
-            workflows: 0,
-            command_sessions: 0,
         }
     }
 
-    async fn cancel_subagents(&self) -> BackgroundSessionCounts {
-        BackgroundSessionCounts {
-            total: 0,
-            subagents: 0,
-            workflows: 0,
-            command_sessions: 0,
-        }
+    async fn count_background_sessions(&self) -> usize {
+        0
     }
 
-    async fn register_workflow(&self, _workflow: &StartedWorkflowSession) {}
+    async fn cancel_all_background_sessions(&self, _reason: &str) {}
 
-    async fn mark_workflow_cancelled(
-        &self,
-        _workflow_task_id: &WorkflowSessionId,
-        _reason: &str,
-    ) -> bool {
-        false
-    }
-
-    async fn teardown(
-        &self,
-        _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        _reason: &str,
-    ) -> BackgroundSessionCounts {
-        BackgroundSessionCounts {
-            total: 0,
-            subagents: 0,
-            workflows: 0,
-            command_sessions: 0,
-        }
+    async fn poll_complete_background_sessions(&self) -> usize {
+        0
     }
 }
 
@@ -121,7 +114,7 @@ async fn run_subagent_returns_session_id() {
     let background = Arc::new(FakeBackgroundSession::default());
     let ctx = metadata();
 
-    let res = RunSubagent::new(Some(background.clone()))
+    let res = RunSubagent::new(Some(background.clone()), Some(background.clone()))
         .execute(
             &obj(&[
                 ("agent_name", json!("explorer")),

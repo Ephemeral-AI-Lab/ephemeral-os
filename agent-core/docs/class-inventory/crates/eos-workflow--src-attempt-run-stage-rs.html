@@ -527,7 +527,7 @@
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> generator_id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;started.attempt_id, &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-366">node</a>(&quot;g1&quot;)).unwrap();
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;generator_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;generator_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
@@ -577,7 +577,7 @@
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> planner_task = stores
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
             .unwrap();
         assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
@@ -707,7 +707,7 @@
             .<span class="rs-kw">await</span>
             .unwrap();
 
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;task_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;task_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
@@ -1174,7 +1174,7 @@
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> generator_id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;started.attempt_id, &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-366">node</a>(&quot;g1&quot;)).unwrap();
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;generator_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;generator_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
@@ -1213,7 +1213,7 @@
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> planner_task = stores
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
             .unwrap();
         assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
@@ -1323,7 +1323,7 @@
             .<span class="rs-kw">await</span>
             .unwrap();
 
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;task_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;task_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),

@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{AgentRunId, JsonObject, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+use eos_types::{AgentRunId, JsonObject, TaskId, WorkflowId, WorkflowSessionId};
 use serde_json::json;
 
 use super::super::{
@@ -11,10 +11,9 @@ use super::super::{
     delegate_workflow::DelegateWorkflow,
 };
 use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
 use crate::ports::{
-    BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, OutstandingWorkflow, Sealed,
-    SpawnedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress, WorkflowControlPort,
+    OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
+    WorkflowServicePort, WorkflowSessionPort,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
@@ -27,77 +26,29 @@ fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
 }
 
 #[derive(Default)]
-struct RecordingBackgroundSession {
+struct RecordingWorkflowSessions {
     workflows: Mutex<Vec<String>>,
-    cancelled_workflows: Mutex<Vec<String>>,
 }
 
-impl Sealed for RecordingBackgroundSession {}
+impl Sealed for RecordingWorkflowSessions {}
 
 #[async_trait]
-impl BackgroundSessionPort for RecordingBackgroundSession {
-    async fn spawn(
-        &self,
-        _ctx: &ExecutionMetadata,
-        _launch: SubagentLaunch,
-    ) -> Result<SpawnedSubagent, ToolError> {
-        unreachable!()
-    }
-
-    async fn progress(
-        &self,
-        _subagent_session_id: &SubagentSessionId,
-        _last_n_messages: u8,
-    ) -> Result<SubagentProgress, ToolError> {
-        unreachable!()
-    }
-
-    async fn cancel(
-        &self,
-        _subagent_session_id: &SubagentSessionId,
-        _reason: &str,
-    ) -> Result<CancelledSubagent, ToolError> {
-        unreachable!()
-    }
-
-    async fn running_background_tasks(&self) -> BackgroundSessionCounts {
-        BackgroundSessionCounts {
-            total: 0,
-            subagents: 0,
-            workflows: 0,
-            command_sessions: 0,
-        }
-    }
-
-    async fn cancel_subagents(&self) -> BackgroundSessionCounts {
-        self.running_background_tasks().await
-    }
-
-    async fn register_workflow(&self, workflow: &StartedWorkflowSession) {
+impl WorkflowSessionPort for RecordingWorkflowSessions {
+    async fn register_background_session(&self, workflow: &StartedWorkflow) {
         self.workflows
             .lock()
             .unwrap()
             .push(workflow.workflow_task_id.as_str().to_owned());
     }
 
-    async fn mark_workflow_cancelled(
-        &self,
-        workflow_task_id: &WorkflowSessionId,
-        _reason: &str,
-    ) -> bool {
-        self.cancelled_workflows
-            .lock()
-            .unwrap()
-            .push(workflow_task_id.as_str().to_owned());
-        true
+    async fn count_background_sessions(&self) -> usize {
+        0
     }
 
-    async fn teardown(
-        &self,
-        _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        _reason: &str,
-    ) -> BackgroundSessionCounts {
-        self.running_background_tasks().await
+    async fn cancel_all_background_sessions(&self, _reason: &str) {}
+
+    async fn poll_complete_background_sessions(&self) -> usize {
+        0
     }
 }
 
@@ -106,17 +57,15 @@ struct OutstandingControl;
 impl Sealed for OutstandingControl {}
 
 #[async_trait]
-impl WorkflowControlPort for OutstandingControl {
-    async fn start(
+impl WorkflowServicePort for OutstandingControl {
+    async fn start_workflow(
         &self,
-        _parent_task_id: &TaskId,
-        _agent_run_id: &AgentRunId,
-        _workflow_goal: &str,
-    ) -> Result<StartedWorkflowSession, ToolError> {
+        _request: StartWorkflowRequest,
+    ) -> Result<StartedWorkflow, ToolError> {
         unreachable!("outstanding short-circuit returns before start")
     }
 
-    async fn status(
+    async fn check_workflow_status(
         &self,
         _workflow_id: &WorkflowId,
         _workflow_task_id: Option<&WorkflowSessionId>,
@@ -124,7 +73,7 @@ impl WorkflowControlPort for OutstandingControl {
         unreachable!()
     }
 
-    async fn cancel(
+    async fn cancel_workflow_session(
         &self,
         _workflow_task_id: &WorkflowSessionId,
         _reason: &str,
@@ -132,7 +81,15 @@ impl WorkflowControlPort for OutstandingControl {
         unreachable!()
     }
 
-    async fn find_outstanding(
+    async fn poll_terminal_workflow(
+        &self,
+        _workflow_id: &WorkflowId,
+        _workflow_task_id: &WorkflowSessionId,
+    ) -> Result<Option<TerminalWorkflow>, ToolError> {
+        unreachable!()
+    }
+
+    async fn find_outstanding_workflows(
         &self,
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
@@ -156,7 +113,7 @@ async fn delegate_workflow_outstanding_is_error() {
 
     let res = DelegateWorkflow::new(
         Some(Arc::new(OutstandingControl)),
-        Some(Arc::new(RecordingBackgroundSession::default())),
+        Some(Arc::new(RecordingWorkflowSessions::default())),
     )
     .execute(&obj(&[("goal", json!("do something"))]), &ctx)
     .await
@@ -171,20 +128,18 @@ struct StartingControl;
 impl Sealed for StartingControl {}
 
 #[async_trait]
-impl WorkflowControlPort for StartingControl {
-    async fn start(
+impl WorkflowServicePort for StartingControl {
+    async fn start_workflow(
         &self,
-        _parent_task_id: &TaskId,
-        _agent_run_id: &AgentRunId,
-        _workflow_goal: &str,
-    ) -> Result<StartedWorkflowSession, ToolError> {
-        Ok(StartedWorkflowSession {
+        _request: StartWorkflowRequest,
+    ) -> Result<StartedWorkflow, ToolError> {
+        Ok(StartedWorkflow {
             workflow_id: WorkflowId::new_v4(),
             workflow_task_id: "wf_1".parse()?,
         })
     }
 
-    async fn status(
+    async fn check_workflow_status(
         &self,
         _workflow_id: &WorkflowId,
         _workflow_task_id: Option<&WorkflowSessionId>,
@@ -192,7 +147,7 @@ impl WorkflowControlPort for StartingControl {
         unreachable!()
     }
 
-    async fn cancel(
+    async fn cancel_workflow_session(
         &self,
         _workflow_task_id: &WorkflowSessionId,
         _reason: &str,
@@ -200,7 +155,15 @@ impl WorkflowControlPort for StartingControl {
         unreachable!()
     }
 
-    async fn find_outstanding(
+    async fn poll_terminal_workflow(
+        &self,
+        _workflow_id: &WorkflowId,
+        _workflow_task_id: &WorkflowSessionId,
+    ) -> Result<Option<TerminalWorkflow>, ToolError> {
+        unreachable!()
+    }
+
+    async fn find_outstanding_workflows(
         &self,
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
@@ -215,7 +178,7 @@ impl WorkflowControlPort for StartingControl {
 
 #[tokio::test]
 async fn delegate_workflow_registers_background_session() {
-    let background = Arc::new(RecordingBackgroundSession::default());
+    let background = Arc::new(RecordingWorkflowSessions::default());
     let mut ctx = metadata();
     ctx.task_id = Some("parent".parse().unwrap());
 
@@ -251,7 +214,7 @@ async fn workflow_controls_reject_empty_ids() {
         assert!(res.output.contains("workflow"), "{}", res.output);
     }
 
-    let cancel = CancelWorkflow::new(None, None)
+    let cancel = CancelWorkflow::new(None)
         .execute(&obj(&[("workflow_task_id", json!(""))]), &ctx)
         .await
         .expect("ok");

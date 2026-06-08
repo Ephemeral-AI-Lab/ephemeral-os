@@ -19,10 +19,7 @@ struct RecordingCancelPort {
 #[async_trait]
 impl CancelPort for RecordingCancelPort {
     async fn cancel_task(&self, task_id: &TaskId, _reason: &str) -> Result<(), ToolError> {
-        self.cancelled_tasks
-            .lock()
-            .unwrap()
-            .push(task_id.clone());
+        self.cancelled_tasks.lock().unwrap().push(task_id.clone());
         Ok(())
     }
 
@@ -96,7 +93,10 @@ async fn cancel_finished_request_is_noop() {
         .await
         .unwrap();
 
-    assert!(!report.had_live_run, "no port registered for a finished request");
+    assert!(
+        !report.had_live_run,
+        "no port registered for a finished request"
+    );
     let request = services
         .db
         .request_store

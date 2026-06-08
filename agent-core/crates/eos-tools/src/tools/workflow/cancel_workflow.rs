@@ -11,7 +11,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{BackgroundSessionPort, WorkflowControlPort};
+use crate::ports::WorkflowServicePort;
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
@@ -28,19 +28,14 @@ struct CancelWorkflowInput {
 }
 
 pub(in crate::tools::workflow) struct CancelWorkflow {
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
 }
 
 impl CancelWorkflow {
     pub(in crate::tools::workflow) fn new(
-        workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        background_session: Option<Arc<dyn BackgroundSessionPort>>,
+        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
     ) -> Self {
-        Self {
-            workflow_control,
-            background_session,
-        }
+        Self { workflow_service }
     }
 }
 
@@ -62,16 +57,11 @@ impl ToolExecutor for CancelWorkflow {
             ));
         }
         let output = self
-            .workflow_control
+            .workflow_service
             .as_deref()
-            .ok_or(ToolError::MissingPort("workflow_control"))?
-            .cancel(&parsed.workflow_task_id, &parsed.reason)
+            .ok_or(ToolError::MissingPort("workflow_service"))?
+            .cancel_workflow_session(&parsed.workflow_task_id, &parsed.reason)
             .await?;
-        if let Some(background) = &self.background_session {
-            background
-                .mark_workflow_cancelled(&parsed.workflow_task_id, &parsed.reason)
-                .await;
-        }
         Ok(ToolResult::ok(output))
     }
 }
@@ -79,8 +69,7 @@ impl ToolExecutor for CancelWorkflow {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
 ) {
     let cancel = config.get(ToolName::CancelWorkflow);
     super::super::register_tool(
@@ -93,6 +82,6 @@ pub(super) fn register(
             schema_for!(CancelWorkflowInput),
         ),
         OutputShape::Text,
-        Arc::new(CancelWorkflow::new(workflow_control, background_session)),
+        Arc::new(CancelWorkflow::new(workflow_service)),
     );
 }

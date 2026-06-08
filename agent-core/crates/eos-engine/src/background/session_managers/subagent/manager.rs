@@ -2,24 +2,24 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_def::{AgentName, AgentType};
-use eos_agent_message_records::AgentRunRecordKind;
-use eos_llm_client::Message;
+use eos_ports::{AgentRunServicePort, Sealed, SubagentSessionPort};
+#[cfg(test)]
+use eos_ports::{StartSubagentRunOutcome, StartSubagentRunRequest};
+#[cfg(test)]
 use eos_state::AgentRun;
-use eos_tools::ports::{
-    BackgroundSessionPort, CommandSessionPort, SpawnedSubagent, StartedSubagent, SubagentLaunch,
-    SubagentLaunchRejection,
-};
-use eos_tools::{ExecutionMetadata, ToolError, ToolResult};
-use eos_types::{AgentRunId, JsonObject, SubagentSessionId};
+#[cfg(test)]
+use eos_tools::ToolError;
+use eos_tools::ToolResult;
+#[cfg(test)]
+use eos_types::JsonObject;
+use eos_types::{AgentRunId, SubagentSessionId};
+#[cfg(test)]
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
 
 use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
-use super::session::{SubagentCancelAction, SubagentSession};
+use super::session::SubagentSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
-use crate::runtime::AgentRunControlFactory;
-use crate::{run_agent, AgentRunInput, EngineRunHandles};
 
 #[derive(Debug, Clone)]
 pub(in crate::background) struct SubagentCompletion {
@@ -37,148 +37,32 @@ struct SubagentSessionState {
 /// Tracks subagent background sessions for one agent run.
 #[derive(Clone)]
 pub(in crate::background) struct SubagentSessionManager {
+    agent_run_id: AgentRunId,
     sessions: Arc<Mutex<SubagentSessionState>>,
-    handles: EngineRunHandles,
-    control_factory: AgentRunControlFactory,
+    agent_run_service: Arc<dyn AgentRunServicePort>,
     notification: BackgroundNotificationEmitter,
 }
 
 impl std::fmt::Debug for SubagentSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SubagentSessionManager")
+            .field("agent_run_id", &self.agent_run_id)
             .finish_non_exhaustive()
     }
 }
 
 impl SubagentSessionManager {
     pub(in crate::background) fn new(
-        handles: EngineRunHandles,
-        control_factory: AgentRunControlFactory,
+        agent_run_id: AgentRunId,
+        agent_run_service: Arc<dyn AgentRunServicePort>,
         notification: BackgroundNotificationEmitter,
     ) -> Self {
         Self {
+            agent_run_id,
             sessions: Arc::new(Mutex::new(SubagentSessionState::default())),
-            handles,
-            control_factory,
+            agent_run_service,
             notification,
         }
-    }
-
-    pub(in crate::background) async fn spawn(
-        &self,
-        ctx: &ExecutionMetadata,
-        launch: SubagentLaunch,
-    ) -> Result<SpawnedSubagent, ToolError> {
-        let registry = &self.handles.agent_registry;
-
-        if let Ok(caller) = AgentName::new(ctx.agent_name.as_str()) {
-            if registry.get(&caller).map(|def| def.agent_type) == Some(AgentType::Subagent) {
-                return Ok(SpawnedSubagent::Rejected(
-                    SubagentLaunchRejection::Recursive,
-                ));
-            }
-        }
-
-        let requested_agent_name = launch.agent_name.clone();
-        let Ok(target) = AgentName::new(&requested_agent_name) else {
-            return Ok(SpawnedSubagent::Rejected(
-                SubagentLaunchRejection::NotRegistered {
-                    agent_name: requested_agent_name,
-                },
-            ));
-        };
-        let Some(sub_def) = registry.get(&target) else {
-            return Ok(SpawnedSubagent::Rejected(
-                SubagentLaunchRejection::NotRegistered {
-                    agent_name: requested_agent_name,
-                },
-            ));
-        };
-        if sub_def.agent_type != AgentType::Subagent {
-            return Ok(SpawnedSubagent::Rejected(
-                SubagentLaunchRejection::NotSubagent {
-                    agent_name: requested_agent_name,
-                    agent_type: agent_type_value(sub_def.agent_type).to_owned(),
-                },
-            ));
-        }
-        let sub_def = (**sub_def).clone();
-        let SubagentLaunch {
-            agent_name,
-            prompt,
-            guidance,
-        } = launch;
-
-        let caller_agent_run_id = ctx.require_agent_run_id()?.clone();
-        let mut tool_input = JsonObject::new();
-        tool_input.insert("agent_name".to_owned(), json!(agent_name.clone()));
-        tool_input.insert("prompt".to_owned(), json!(prompt.clone()));
-
-        let agent_run_id = AgentRunId::new_v4();
-        let subagent_control = self.control_factory.persisted(agent_run_id.clone(), None);
-        let subagent_background = subagent_control.background();
-        let subagent_background_port: Arc<dyn BackgroundSessionPort> =
-            Arc::new(subagent_background.clone());
-        let subagent_command_port: Arc<dyn CommandSessionPort> = Arc::new(subagent_background);
-        let mut subagent_meta = ctx.clone();
-        subagent_meta.agent_name = sub_def.name.as_str().to_owned();
-        subagent_meta.agent_run_id = Some(agent_run_id.clone());
-        subagent_meta.conversation = Arc::from(Vec::<Message>::new());
-        subagent_meta.tool_use_id = None;
-
-        let run_input = AgentRunInput {
-            agent: sub_def,
-            initial_messages: vec![
-                Message::from_user_text(prompt),
-                Message::from_user_text(guidance),
-            ],
-            task_id: None,
-            agent_run_id: agent_run_id.clone(),
-            tool_metadata: subagent_meta,
-            attempt_submission: None,
-            workflow_control: None,
-            background_session: Some(subagent_background_port),
-            command_session_port: Some(subagent_command_port),
-            notifier: subagent_control.notifications(),
-            cancellation: subagent_control.cancellation(),
-            foreground: subagent_control.foreground(),
-            agent_run_registry: None,
-            persist_agent_run: true,
-            record_kind: AgentRunRecordKind::Subagent {
-                parent_agent_run_id: caller_agent_run_id.clone(),
-            },
-        };
-
-        let handles = self.handles.clone();
-        let subagent_session_id = self.next_session_id().await;
-        trace_background_tool(
-            "background_tool.started",
-            &subagent_session_id,
-            &caller_agent_run_id,
-            BackgroundSessionStatus::Running,
-            None,
-        );
-
-        let session_control = subagent_control.clone();
-        let join = tokio::spawn(async move {
-            let _subagent_control = subagent_control;
-            let run = run_agent(&handles, run_input, None).await;
-            if let Some(error) = run.error {
-                tracing::warn!(error = %error, "background subagent run failed");
-            }
-        });
-
-        self.insert(SubagentSession::running(
-            subagent_session_id.clone(),
-            session_control,
-            join.abort_handle(),
-            tool_input,
-        ))
-        .await;
-
-        Ok(SpawnedSubagent::Launched(StartedSubagent {
-            subagent_session_id,
-        }))
     }
 
     pub(in crate::background) async fn progress(
@@ -187,12 +71,7 @@ impl SubagentSessionManager {
     ) -> Option<(BackgroundSessionStatus, Option<ToolResult>, String)> {
         let guard = self.sessions.lock().await;
         let session = guard.sessions.get(subagent_session_id)?;
-        let agent_name = session
-            .tool_input()
-            .get("agent_name")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_owned();
+        let agent_name = session.agent_name().to_owned();
         Some((session.status(), session.result().cloned(), agent_name))
     }
 
@@ -201,17 +80,31 @@ impl SubagentSessionManager {
         subagent_session_id: &SubagentSessionId,
         reason: &str,
     ) -> bool {
-        let action = {
+        let agent_run_id = {
             let mut guard = self.sessions.lock().await;
-            guard
-                .sessions
-                .get_mut(subagent_session_id)
-                .and_then(|session| session.cancel(reason))
+            let Some(session) = guard.sessions.get_mut(subagent_session_id) else {
+                return false;
+            };
+            if session.cancel(reason) {
+                Some(session.agent_run_id().clone())
+            } else {
+                None
+            }
         };
-        let Some(action) = action else {
+        let Some(agent_run_id) = agent_run_id else {
             return false;
         };
-        finish_cancelled_subagent(action, reason).await;
+        if let Err(err) = self
+            .agent_run_service
+            .cancel_agent_run(&agent_run_id, reason)
+            .await
+        {
+            tracing::warn!(
+                error = %err,
+                agent_run_id = agent_run_id.as_str(),
+                "background subagent cancellation failed"
+            );
+        }
         true
     }
 
@@ -244,20 +137,27 @@ impl SubagentSessionManager {
         let running = self.running_agent_runs().await;
         let mut completions = Vec::new();
         for (subagent_session_id, agent_run_id) in running {
-            let run = match self.handles.agent_run_store.get(&agent_run_id).await {
-                Ok(Some(run)) => run,
-                Ok(None) | Err(_) => continue,
+            let terminal = match self
+                .agent_run_service
+                .poll_terminal_agent_run(&agent_run_id)
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(_) => continue,
             };
-            let Some((status, result, exit_code)) = completion_from_agent_run(&run) else {
+            let Some(terminal) = terminal else {
                 continue;
             };
+            let status = subagent_status_to_background(terminal.status);
+            let result = terminal.result;
+            let is_error = result.is_error;
             if let Some(completion) = self.settle(&subagent_session_id, status, result).await {
                 trace_background_tool(
                     terminal_event_type(status),
                     &subagent_session_id,
                     &agent_run_id,
                     status,
-                    Some(exit_code),
+                    Some(i64::from(is_error)),
                 );
                 completions.push(completion);
             }
@@ -317,35 +217,129 @@ impl BackgroundSessionManager for SubagentSessionManager {
             guard
                 .sessions
                 .values_mut()
-                .filter_map(|session| session.cancel(reason))
+                .filter_map(|session| {
+                    if session.cancel(reason) {
+                        Some(session.agent_run_id().clone())
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>()
         };
-        for action in actions {
-            finish_cancelled_subagent(action, reason).await;
+        for agent_run_id in actions {
+            if let Err(err) = self
+                .agent_run_service
+                .cancel_agent_run(&agent_run_id, reason)
+                .await
+            {
+                tracing::warn!(
+                    error = %err,
+                    agent_run_id = agent_run_id.as_str(),
+                    "background subagent cancellation failed"
+                );
+            }
         }
     }
 }
 
-async fn finish_cancelled_subagent(action: SubagentCancelAction, reason: &str) {
-    if let Err(err) = action
-        .agent_run_control
-        .finalization()
-        .finish_cancelled(reason)
-        .await
-    {
-        tracing::warn!(
-            error = %err,
-            agent_run_id = action.agent_run_control.agent_run_id().as_str(),
-            "background subagent cancellation finalization failed"
+impl Sealed for SubagentSessionManager {}
+
+#[async_trait]
+impl SubagentSessionPort for SubagentSessionManager {
+    async fn register_background_session(
+        &self,
+        agent_run_id: &AgentRunId,
+        agent_name: &str,
+    ) -> SubagentSessionId {
+        let subagent_session_id = self.next_session_id().await;
+        trace_background_tool(
+            "background_tool.started",
+            &subagent_session_id,
+            agent_run_id,
+            BackgroundSessionStatus::Running,
+            None,
         );
+        self.insert(SubagentSession::tracked(
+            subagent_session_id.clone(),
+            agent_run_id.clone(),
+            agent_name.to_owned(),
+        ))
+        .await;
+        subagent_session_id
     }
-    action.agent_run_abort.abort();
+
+    async fn subagent_session_snapshot(
+        &self,
+        subagent_session_id: &SubagentSessionId,
+    ) -> Option<eos_ports::SubagentProgress> {
+        self.progress(subagent_session_id)
+            .await
+            .map(
+                |(status, result, agent_name)| eos_ports::SubagentProgress::Found {
+                    subagent_session_id: subagent_session_id.clone(),
+                    status: background_status_to_subagent(status),
+                    agent_name,
+                    result,
+                },
+            )
+    }
+
+    async fn cancel_background_session(
+        &self,
+        subagent_session_id: &SubagentSessionId,
+        reason: &str,
+    ) -> eos_ports::CancelledSubagent {
+        if self.cancel_one(subagent_session_id, reason).await {
+            eos_ports::CancelledSubagent::Cancelled {
+                subagent_session_id: subagent_session_id.clone(),
+                reason: reason.to_owned(),
+            }
+        } else {
+            eos_ports::CancelledSubagent::MissingOrSettled {
+                subagent_session_id: subagent_session_id.clone(),
+            }
+        }
+    }
+
+    async fn count_background_sessions(&self) -> usize {
+        BackgroundSessionManager::count(self).await
+    }
+
+    async fn cancel_all_background_sessions(&self, reason: &str) {
+        BackgroundSessionManager::cancel(self, reason).await;
+    }
+
+    async fn poll_complete_background_sessions(&self) -> usize {
+        let completions = self.poll_completions().await;
+        let count = completions.len();
+        for completion in completions {
+            self.push_notification_on_completion(completion).await;
+        }
+        count
+    }
 }
 
-const fn agent_type_value(agent_type: AgentType) -> &'static str {
-    match agent_type {
-        AgentType::Agent => "agent",
-        AgentType::Subagent => "subagent",
+const fn subagent_status_to_background(
+    status: eos_ports::SubagentSessionStatus,
+) -> BackgroundSessionStatus {
+    match status {
+        eos_ports::SubagentSessionStatus::Running => BackgroundSessionStatus::Running,
+        eos_ports::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
+        eos_ports::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
+        eos_ports::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
+        eos_ports::SubagentSessionStatus::Delivered => BackgroundSessionStatus::Delivered,
+    }
+}
+
+const fn background_status_to_subagent(
+    status: BackgroundSessionStatus,
+) -> eos_ports::SubagentSessionStatus {
+    match status {
+        BackgroundSessionStatus::Running => eos_ports::SubagentSessionStatus::Running,
+        BackgroundSessionStatus::Completed => eos_ports::SubagentSessionStatus::Completed,
+        BackgroundSessionStatus::Failed => eos_ports::SubagentSessionStatus::Failed,
+        BackgroundSessionStatus::Cancelled => eos_ports::SubagentSessionStatus::Cancelled,
+        BackgroundSessionStatus::Delivered => eos_ports::SubagentSessionStatus::Delivered,
     }
 }
 
@@ -389,6 +383,7 @@ fn trace_background_tool(
     );
 }
 
+#[cfg(test)]
 pub(super) fn completion_from_agent_run(
     run: &AgentRun,
 ) -> Option<(BackgroundSessionStatus, ToolResult, i64)> {
@@ -410,6 +405,7 @@ pub(super) fn completion_from_agent_run(
     ))
 }
 
+#[cfg(test)]
 fn tool_result_from_payload(payload: &JsonObject) -> ToolResult {
     let output = payload
         .get("output")
@@ -487,142 +483,55 @@ mod tests {
     #![allow(clippy::expect_used)]
 
     use std::sync::Arc;
-    use std::time::Duration;
 
     use async_trait::async_trait;
-    use eos_agent_def::AgentRegistry;
-    use eos_audit::NoopAuditSink;
-    use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError};
-    use eos_sandbox_port::SandboxTransport;
-    use eos_skills::SkillRegistry;
-    use eos_state::{
-        AgentRun, AgentRunStore, CoreError, Sealed as StateSealed, TaskId, UtcDateTime,
-    };
-    use eos_testkit::{test_tools_root, FakeTransport};
-    use eos_tools::{SandboxToolService, SkillToolService, ToolConfigSet};
+    use eos_ports::{StartedSubagentRun, TerminalAgentRun};
+    use eos_state::{AgentRun, UtcDateTime};
 
     use crate::background::session_managers::BackgroundSessionManager;
     use crate::NotificationService;
-    use crate::{
-        AgentRunControlFactory, BackgroundSessionFactory, EngineRunHandles,
-        ForegroundExecutorFactory,
-    };
 
     use super::*;
 
-    #[derive(Debug)]
-    struct NoopLlmClient;
-
-    #[async_trait]
-    impl LlmClient for NoopLlmClient {
-        async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
-            Ok(Box::pin(futures::stream::empty()))
-        }
-    }
-
     #[derive(Debug, Default)]
-    struct NoopAgentRunStore;
-
-    impl StateSealed for NoopAgentRunStore {}
+    struct FakeAgentRunService;
 
     #[async_trait]
-    impl AgentRunStore for NoopAgentRunStore {
-        async fn create_run(
+    impl AgentRunServicePort for FakeAgentRunService {
+        async fn start_subagent_run(
             &self,
-            agent_run_id: &AgentRunId,
-            task_id: Option<&TaskId>,
-            agent_name: &str,
-            initial_messages: Option<&[JsonObject]>,
-        ) -> Result<AgentRun, CoreError> {
-            Ok(AgentRun {
-                id: agent_run_id.clone(),
-                task_id: task_id.cloned(),
-                initial_messages: initial_messages.map(<[_]>::to_vec),
-                agent_name: agent_name.to_owned(),
-                message_history: None,
-                terminal_tool_result: None,
-                token_count: 0,
-                error: None,
-                created_at: UtcDateTime::now(),
-                finished_at: None,
-            })
+            request: StartSubagentRunRequest,
+        ) -> Result<StartSubagentRunOutcome, ToolError> {
+            Ok(StartSubagentRunOutcome::Started(StartedSubagentRun {
+                agent_run_id: AgentRunId::new_v4(),
+                agent_name: request.agent_name,
+            }))
         }
 
-        async fn finish_run(
+        async fn poll_terminal_agent_run(
             &self,
             _agent_run_id: &AgentRunId,
-            _message_history: Option<&[JsonObject]>,
-            _terminal_tool_result: Option<&JsonObject>,
-            _token_count: i64,
-            _error: Option<&str>,
-        ) -> Result<Option<AgentRun>, CoreError> {
+        ) -> Result<Option<TerminalAgentRun>, ToolError> {
             Ok(None)
         }
 
-        async fn get(&self, _agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, CoreError> {
-            Ok(None)
-        }
-
-        async fn get_for_task(&self, _task_id: &TaskId) -> Result<Option<AgentRun>, CoreError> {
-            Ok(None)
+        async fn cancel_agent_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _reason: &str,
+        ) -> Result<(), ToolError> {
+            Ok(())
         }
     }
 
-    fn handles() -> EngineRunHandles {
-        let transport: Arc<dyn SandboxTransport> = Arc::new(FakeTransport);
-        EngineRunHandles {
-            agent_run_store: Arc::new(NoopAgentRunStore),
-            llm_client: Arc::new(NoopLlmClient),
-            event_source_factory: None,
-            agent_registry: Arc::new(
-                Vec::<eos_agent_def::AgentDefinition>::new()
-                    .into_iter()
-                    .collect::<AgentRegistry>(),
-            ),
-            tool_config: Arc::new(
-                ToolConfigSet::load_from_dir(&test_tools_root()).expect("tool config"),
-            ),
-            sandbox_service: SandboxToolService::new(transport),
-            root_submission: None,
-            skill_service: SkillToolService::new(Arc::new(SkillRegistry::new())),
-            tool_registry_extender: None,
-            audit: Arc::new(NoopAuditSink),
-            message_records: None,
-            workspace_root: "/tmp".to_owned(),
-        }
-    }
+    impl Sealed for FakeAgentRunService {}
 
     fn manager(notifier: &NotificationService) -> SubagentSessionManager {
-        let handles = handles();
-        let control_factory = AgentRunControlFactory::new(
-            ForegroundExecutorFactory,
-            BackgroundSessionFactory::new(
-                handles.clone(),
-                Arc::new(FakeTransport),
-                Duration::from_secs(3600),
-                Arc::new(std::sync::OnceLock::new()),
-            ),
-        );
         SubagentSessionManager::new(
-            handles,
-            control_factory,
+            "owner-run".parse().expect("agent run id"),
+            Arc::new(FakeAgentRunService),
             BackgroundNotificationEmitter::new(notifier.clone()),
         )
-    }
-
-    fn tool_input(agent_name: &str) -> JsonObject {
-        let mut input = JsonObject::new();
-        input.insert("agent_name".to_owned(), json!(agent_name));
-        input
-    }
-
-    fn subagent_control(
-        manager: &SubagentSessionManager,
-        agent_run_id: &str,
-    ) -> Arc<crate::AgentRunControl> {
-        manager
-            .control_factory
-            .persisted(agent_run_id.parse().expect("agent run id"), None)
     }
 
     fn finished_run(terminal_tool_result: Option<JsonObject>, error: Option<&str>) -> AgentRun {
@@ -671,13 +580,11 @@ mod tests {
         let notifier = NotificationService::new();
         let manager = manager(&notifier);
         let running_id: SubagentSessionId = "subagent_1".parse().expect("subagent id");
-        let run_abort = tokio::spawn(std::future::pending::<()>()).abort_handle();
         manager
-            .insert(SubagentSession::running(
+            .insert(SubagentSession::tracked(
                 running_id.clone(),
-                subagent_control(&manager, "run-sub-1"),
-                run_abort,
-                tool_input("explorer"),
+                "run-sub-1".parse().expect("agent run id"),
+                "explorer".to_owned(),
             ))
             .await;
 
@@ -686,13 +593,11 @@ mod tests {
         assert_eq!(manager.count().await, 0);
 
         let done_id: SubagentSessionId = "subagent_2".parse().expect("subagent id");
-        let run_abort = tokio::spawn(std::future::pending::<()>()).abort_handle();
         manager
-            .insert(SubagentSession::running(
+            .insert(SubagentSession::tracked(
                 done_id.clone(),
-                subagent_control(&manager, "run-sub-2"),
-                run_abort,
-                tool_input("explorer"),
+                "run-sub-2".parse().expect("agent run id"),
+                "explorer".to_owned(),
             ))
             .await;
         let completion = manager

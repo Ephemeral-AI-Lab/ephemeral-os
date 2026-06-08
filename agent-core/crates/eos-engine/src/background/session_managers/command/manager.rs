@@ -2,9 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_sandbox_port::{
-    cancel_workspace_runs_by_caller_id, collect_command_completions, SandboxTransport,
-};
+use eos_ports::{CommandServicePort, CommandSessionPort, Sealed};
 use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -28,7 +26,7 @@ pub(in crate::background) struct CommandCompletion {
 pub(in crate::background) struct CommandSessionManager {
     sessions: Arc<Mutex<CommandSessions>>,
     agent_run_id: AgentRunId,
-    command_port: Arc<dyn SandboxTransport>,
+    command_service: Arc<dyn CommandServicePort>,
     notification: BackgroundNotificationEmitter,
 }
 
@@ -43,22 +41,21 @@ impl std::fmt::Debug for CommandSessionManager {
 impl CommandSessionManager {
     pub(in crate::background) fn new(
         agent_run_id: AgentRunId,
-        command_port: Arc<dyn SandboxTransport>,
+        command_service: Arc<dyn CommandServicePort>,
         notification: BackgroundNotificationEmitter,
     ) -> Self {
         Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
             agent_run_id,
-            command_port,
+            command_service,
             notification,
         }
     }
 
-    pub(in crate::background) async fn register(
+    pub(in crate::background) async fn register_background_session(
         &self,
         command_session_id: &CommandSessionId,
         sandbox_id: &SandboxId,
-        _command: &str,
     ) {
         let session = CommandSession::running(command_session_id.clone(), sandbox_id.clone());
         self.sessions
@@ -68,47 +65,14 @@ impl CommandSessionManager {
             .or_insert(session);
     }
 
-    pub(in crate::background) async fn command_session_result(
-        &self,
-        command_session_id: &CommandSessionId,
-    ) -> Option<Value> {
-        let guard = self.sessions.lock().await;
-        let session = guard.get(command_session_id)?;
-        if matches!(session.status(), BackgroundSessionStatus::Running) {
-            return None;
-        }
-        session.result().cloned()
-    }
-
-    pub(in crate::background) async fn mark_command_session_reported(
-        &self,
-        command_session_id: &CommandSessionId,
-        result: Value,
-    ) {
-        if let Some(session) = self.sessions.lock().await.get_mut(command_session_id) {
-            session.mark_reported(result);
-        }
-    }
-
-    pub(in crate::background) async fn command_session_already_reported(
-        &self,
-        command_session_id: &CommandSessionId,
-    ) -> bool {
-        self.sessions
-            .lock()
-            .await
-            .get(command_session_id)
-            .is_some_and(|session| matches!(session.status(), BackgroundSessionStatus::Delivered))
-    }
-
-    fn running_by_sandbox(sessions: &CommandSessions) -> Vec<(SandboxId, Vec<String>)> {
-        let mut groups: BTreeMap<SandboxId, Vec<String>> = BTreeMap::new();
+    fn running_by_sandbox(sessions: &CommandSessions) -> Vec<(SandboxId, Vec<CommandSessionId>)> {
+        let mut groups: BTreeMap<SandboxId, Vec<CommandSessionId>> = BTreeMap::new();
         for session in sessions.values() {
             if matches!(session.status(), BackgroundSessionStatus::Running) {
                 groups
                     .entry(session.sandbox_id().clone())
                     .or_default()
-                    .push(session.id().as_str().to_owned());
+                    .push(session.id().clone());
             }
         }
         groups.into_iter().collect()
@@ -162,13 +126,10 @@ impl CommandSessionManager {
         };
         let mut out = Vec::new();
         for (sandbox_id, ids) in groups {
-            let Ok(completions) = collect_command_completions(
-                &*self.command_port,
-                &sandbox_id,
-                self.agent_run_id.as_str(),
-                &ids,
-            )
-            .await
+            let Ok(completions) = self
+                .command_service
+                .collect_completed_commands(&sandbox_id, &self.agent_run_id, &ids)
+                .await
             else {
                 continue;
             };
@@ -221,12 +182,10 @@ impl BackgroundSessionManager for CommandSessionManager {
             Self::running_sandboxes(&guard)
         };
         for sandbox in sandboxes {
-            if let Err(err) = cancel_workspace_runs_by_caller_id(
-                &*self.command_port,
-                &sandbox,
-                self.agent_run_id.as_str(),
-            )
-            .await
+            if let Err(err) = self
+                .command_service
+                .cancel_commands_for_run(&sandbox, &self.agent_run_id, reason)
+                .await
             {
                 tracing::warn!(
                     error = %err,
@@ -243,6 +202,37 @@ impl BackgroundSessionManager for CommandSessionManager {
     }
 }
 
+impl Sealed for CommandSessionManager {}
+
+#[async_trait]
+impl CommandSessionPort for CommandSessionManager {
+    async fn register_background_session(
+        &self,
+        command_session_id: &CommandSessionId,
+        sandbox_id: &SandboxId,
+    ) {
+        CommandSessionManager::register_background_session(self, command_session_id, sandbox_id)
+            .await;
+    }
+
+    async fn count_background_sessions(&self) -> usize {
+        BackgroundSessionManager::count(self).await
+    }
+
+    async fn cancel_all_background_sessions(&self, reason: &str) {
+        BackgroundSessionManager::cancel(self, reason).await;
+    }
+
+    async fn poll_complete_background_sessions(&self) -> usize {
+        let completions = self.poll_completions().await;
+        let count = completions.len();
+        for completion in completions {
+            self.push_notification_on_completion(completion).await;
+        }
+        count
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::expect_used)]
@@ -251,7 +241,7 @@ mod tests {
     use std::sync::Mutex as StdMutex;
     use std::time::Duration;
 
-    use eos_sandbox_port::{DaemonOp, SandboxPortError};
+    use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
     use eos_types::JsonObject;
     use serde_json::json;
     use tokio::time::{sleep, timeout};
@@ -260,6 +250,7 @@ mod tests {
     use super::*;
     use crate::background::session_managers::BackgroundSessionManager;
     use crate::notifications::NotificationService;
+    use crate::services::CommandService;
 
     #[derive(Debug, Default)]
     struct CommandSessionTestTransport {
@@ -335,7 +326,7 @@ mod tests {
     ) -> CommandSessionManager {
         CommandSessionManager::new(
             owner.parse().expect("agent run id"),
-            transport,
+            Arc::new(CommandService::new(transport)),
             BackgroundNotificationEmitter::new(notifier.clone()),
         )
     }
@@ -348,10 +339,9 @@ mod tests {
         let notifier = NotificationService::new();
         let manager = manager("agent-a", &notifier, transport.clone());
         manager
-            .register(
+            .register_background_session(
                 &"cmd_1".parse().expect("command id"),
                 &"sandbox-a".parse().expect("sandbox id"),
-                "cargo test",
             )
             .await;
         let _monitor = CommandSessionMonitor::spawn(manager.clone(), Duration::from_millis(1));
@@ -375,11 +365,7 @@ mod tests {
         let collect = transport.payloads(DaemonOp::CommandCollectCompleted);
         assert!(!collect.is_empty());
         assert_eq!(collect[0]["caller_id"], json!("agent-a"));
-        assert!(
-            manager
-                .command_session_already_reported(&"cmd_1".parse().expect("command id"))
-                .await
-        );
+        assert_eq!(manager.count().await, 0);
     }
 
     #[tokio::test]
@@ -389,10 +375,9 @@ mod tests {
         let manager = manager("agent-a", &notifier, transport.clone());
         for id in ["cmd_1", "cmd_2"] {
             manager
-                .register(
+                .register_background_session(
                     &id.parse().expect("command id"),
                     &"sandbox-a".parse().expect("sandbox id"),
-                    "cargo test",
                 )
                 .await;
         }

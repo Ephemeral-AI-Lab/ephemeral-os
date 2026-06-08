@@ -248,7 +248,7 @@
         <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> before = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap();
+        <span class="rs-kw">let</span> before = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap();
 
         <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot; delegated goal &quot;, &amp;parent.id)
@@ -256,7 +256,7 @@
             .unwrap();
 
         <span class="rs-comment">// Parent row is untouched.</span>
-        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap(), before);
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap(), before);
 
         <span class="rs-kw">let</span> workflow = stores.workflow(&amp;started.workflow_id).unwrap();
         assert_eq!(workflow.parent_task_id, parent.id);
@@ -269,7 +269,7 @@
         assert_eq!(attempt.stage(), <span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>);
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         assert!(stores
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;attempt.id).unwrap())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;attempt.id).unwrap())
             .is_some());
     }
 </code></pre>
@@ -383,7 +383,7 @@
             <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">StartupFailed</span>)
         );
         <span class="rs-comment">// Parent untouched.</span>
-        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
     }
 </code></pre>
 </details>
@@ -592,7 +592,7 @@
         <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> before = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap();
+        <span class="rs-kw">let</span> before = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap();
 
         <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot; delegated goal &quot;, &amp;parent.id)
@@ -600,7 +600,7 @@
             .unwrap();
 
         <span class="rs-comment">// Parent row is untouched.</span>
-        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap(), before);
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap(), before);
 
         <span class="rs-kw">let</span> workflow = stores.workflow(&amp;started.workflow_id).unwrap();
         assert_eq!(workflow.parent_task_id, parent.id);
@@ -613,7 +613,7 @@
         assert_eq!(attempt.stage(), <span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>);
         assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         assert!(stores
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;attempt.id).unwrap())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;attempt.id).unwrap())
             .is_some());
     }
 
@@ -708,7 +708,7 @@
             <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">StartupFailed</span>)
         );
         <span class="rs-comment">// Parent untouched.</span>
-        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-346">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
     }
 }
 </code></pre>

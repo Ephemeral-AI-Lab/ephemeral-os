@@ -361,12 +361,12 @@
     <h3>task_with</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a> (id : &amp; str , role : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a> , outcomes : Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;) -&gt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a> (id : &amp; str , role : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a> , outcomes : Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;) -&gt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(id: &amp;str, role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>, outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
-        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(id: &amp;str, role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>, outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
+        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
             id: <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-tid-207">tid</a>(id),
             request_id: <span class="rs-type">RequestId</span>::new_v4(),
             role,
@@ -479,7 +479,7 @@
         <span class="rs-kw">let</span> store = <span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
         <span class="rs-kw">let</span> g = <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(
             &quot;g1&quot;,
-            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
             vec![<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-outcome-211">outcome</a>(
                 &quot;g1&quot;,
                 <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>::<span class="rs-type">Generator</span>,
@@ -488,7 +488,7 @@
         );
         <span class="rs-kw">let</span> r = <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(
             &quot;r1&quot;,
-            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Reducer</span>,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Reducer</span>,
             vec![<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-outcome-211">outcome</a>(
                 &quot;r1&quot;,
                 <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>::<span class="rs-type">Reducer</span>,
@@ -638,7 +638,7 @@
         <span class="rs-kw">let</span> store = <span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
         store.put(<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(
             &quot;g1&quot;,
-            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
             vec![<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-outcome-211">outcome</a>(
                 &quot;g1&quot;,
                 <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>::<span class="rs-type">Generator</span>,
@@ -890,7 +890,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>};
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::<span class="rs-type">FakeTaskStore</span>;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
     <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AttemptId</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">UtcDateTime</span>, <span class="rs-type">WorkflowId</span>};
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-tid-207">tid</a>(s: &amp;str) -&gt; <span class="rs-type">TaskId</span> {
@@ -906,8 +906,8 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(id: &amp;str, role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>, outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
-        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(id: &amp;str, role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>, outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
+        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-69">Task</a> {
             id: <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-tid-207">tid</a>(id),
             request_id: <span class="rs-type">RequestId</span>::new_v4(),
             role,
@@ -983,7 +983,7 @@
         <span class="rs-kw">let</span> store = <span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
         <span class="rs-kw">let</span> g = <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(
             &quot;g1&quot;,
-            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
             vec![<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-outcome-211">outcome</a>(
                 &quot;g1&quot;,
                 <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>::<span class="rs-type">Generator</span>,
@@ -992,7 +992,7 @@
         );
         <span class="rs-kw">let</span> r = <a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(
             &quot;r1&quot;,
-            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Reducer</span>,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Reducer</span>,
             vec![<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-outcome-211">outcome</a>(
                 &quot;r1&quot;,
                 <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>::<span class="rs-type">Reducer</span>,
@@ -1108,7 +1108,7 @@
         <span class="rs-kw">let</span> store = <span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
         store.put(<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-task-with-220">task_with</a>(
             &quot;g1&quot;,
-            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-45">TaskRole</a>::<span class="rs-type">Generator</span>,
             vec![<a class="symbol-link rs-fn" href="eos-state--src-outcomes-rs.html#item-fn-outcome-211">outcome</a>(
                 &quot;g1&quot;,
                 <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>::<span class="rs-type">Generator</span>,

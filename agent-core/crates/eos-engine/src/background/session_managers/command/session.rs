@@ -30,20 +30,11 @@ impl CommandSession {
         self.status
     }
 
-    pub(super) fn result(&self) -> Option<&Value> {
-        self.result.as_ref()
-    }
-
     pub(super) fn deliver(&mut self, result: Value) -> BackgroundSessionStatus {
         let status = command_completion_status(Some(&result));
         self.result = Some(result);
         self.status = BackgroundSessionStatus::Delivered;
         status
-    }
-
-    pub(super) fn mark_reported(&mut self, result: Value) {
-        self.status = BackgroundSessionStatus::Delivered;
-        self.result = Some(result);
     }
 
     pub(super) fn cancel(&mut self) {

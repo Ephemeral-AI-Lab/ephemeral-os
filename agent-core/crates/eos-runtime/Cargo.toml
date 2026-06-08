@@ -18,6 +18,7 @@ eos-state.workspace = true
 eos-types.workspace = true
 eos-llm-client.workspace = true
 eos-tools.workspace = true
+eos-ports.workspace = true
 eos-audit.workspace = true
 anyhow.workspace = true
 tokio.workspace = true

@@ -10,6 +10,7 @@ async-trait.workspace = true
 eos-audit.workspace = true
 eos-agent-message-records.workspace = true
 eos-llm-client.workspace = true
+eos-ports.workspace = true
 eos-tools.workspace = true
 eos-sandbox-port.workspace = true
 eos-agent-def.workspace = true

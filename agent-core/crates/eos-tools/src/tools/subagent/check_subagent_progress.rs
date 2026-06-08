@@ -12,7 +12,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{BackgroundSessionPort, SubagentProgress};
+use crate::ports::{SubagentProgress, SubagentSessionPort};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
@@ -31,14 +31,14 @@ struct CheckSubagentProgressInput {
 }
 
 pub(in crate::tools::subagent) struct CheckSubagentProgress {
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
 }
 
 impl CheckSubagentProgress {
     pub(in crate::tools::subagent) fn new(
-        background_session: Option<Arc<dyn BackgroundSessionPort>>,
+        subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
     ) -> Self {
-        Self { background_session }
+        Self { subagent_sessions }
     }
 }
 
@@ -66,12 +66,14 @@ impl ToolExecutor for CheckSubagentProgress {
             ));
         }
         match self
-            .background_session
+            .subagent_sessions
             .as_deref()
-            .ok_or(ToolError::MissingPort("background_session"))?
-            .progress(&parsed.subagent_session_id, parsed.last_n_messages)
-            .await?
-        {
+            .ok_or(ToolError::MissingPort("subagent_sessions"))?
+            .subagent_session_snapshot(&parsed.subagent_session_id)
+            .await
+            .unwrap_or(SubagentProgress::Missing {
+                subagent_session_id: parsed.subagent_session_id.clone(),
+            }) {
             SubagentProgress::Found {
                 subagent_session_id,
                 status,
@@ -120,7 +122,7 @@ fn render_progress(
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
 ) {
     let check = config.get(ToolName::CheckSubagentProgress);
     super::super::register_tool(
@@ -133,6 +135,6 @@ pub(super) fn register(
             schema_for!(CheckSubagentProgressInput),
         ),
         OutputShape::Text,
-        Arc::new(CheckSubagentProgress::new(background_session)),
+        Arc::new(CheckSubagentProgress::new(subagent_sessions)),
     );
 }

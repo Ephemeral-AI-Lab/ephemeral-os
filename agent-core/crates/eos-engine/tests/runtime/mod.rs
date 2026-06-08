@@ -10,7 +10,7 @@ use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
 use eos_audit::NoopAuditSink;
 use eos_engine::{
     run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, AgentRunResult,
-    BackgroundSessionFactory, EngineRunHandles, EventCallback, EventSourceFactory,
+    BackgroundTeardownPort, CommandService, EngineRunHandles, EventCallback, EventSourceFactory,
     ForegroundExecutorFactory, StreamEvent, ToolRegistryExtender,
 };
 use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
@@ -21,13 +21,11 @@ use eos_testkit::{
     FakeTransport,
 };
 use eos_tools::{
-    BackgroundSessionCounts, BackgroundSessionPort, CancelPort, CancelledSubagent,
-    ExecutionMetadata, NotificationSink, OutputShape, RegisteredTool, SandboxToolService,
-    SkillToolService, SpawnedSubagent, StartedSubagent, StartedWorkflowSession, SubagentLaunch,
-    SubagentProgress, SystemNotification, ToolConfigSet, ToolError, ToolExecutor, ToolIntent,
-    ToolName, ToolRegistry, ToolResult, WorkflowControlPort,
+    BackgroundSessionCounts, CancelPort, ExecutionMetadata, NotificationSink, OutputShape,
+    RegisteredTool, SandboxToolService, SkillToolService, SystemNotification, ToolConfigSet,
+    ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry, ToolResult,
 };
-use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
+use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
 
 #[derive(Debug)]
@@ -198,8 +196,6 @@ impl RecordingBackgroundSession {
     }
 }
 
-impl eos_tools::ports::Sealed for RecordingBackgroundSession {}
-
 fn empty_report() -> BackgroundSessionCounts {
     BackgroundSessionCounts {
         total: 0,
@@ -210,60 +206,8 @@ fn empty_report() -> BackgroundSessionCounts {
 }
 
 #[async_trait]
-impl BackgroundSessionPort for RecordingBackgroundSession {
-    async fn spawn(
-        &self,
-        _ctx: &ExecutionMetadata,
-        _launch: SubagentLaunch,
-    ) -> Result<SpawnedSubagent, ToolError> {
-        Ok(SpawnedSubagent::Launched(StartedSubagent {
-            subagent_session_id: "subagent_1".parse().expect("subagent id"),
-        }))
-    }
-
-    async fn progress(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-        _last_n_messages: u8,
-    ) -> Result<SubagentProgress, ToolError> {
-        Ok(SubagentProgress::Missing {
-            subagent_session_id: subagent_session_id.clone(),
-        })
-    }
-
-    async fn cancel(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-        _reason: &str,
-    ) -> Result<CancelledSubagent, ToolError> {
-        Ok(CancelledSubagent::MissingOrSettled {
-            subagent_session_id: subagent_session_id.clone(),
-        })
-    }
-
-    async fn running_background_tasks(&self) -> BackgroundSessionCounts {
-        empty_report()
-    }
-
-    async fn cancel_subagents(&self) -> BackgroundSessionCounts {
-        empty_report()
-    }
-
-    async fn register_workflow(&self, _workflow: &StartedWorkflowSession) {}
-
-    async fn mark_workflow_cancelled(
-        &self,
-        _workflow_task_id: &WorkflowSessionId,
-        _reason: &str,
-    ) -> bool {
-        false
-    }
-
-    async fn teardown(
-        &self,
-        _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        reason: &str,
-    ) -> BackgroundSessionCounts {
+impl BackgroundTeardownPort for RecordingBackgroundSession {
+    async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {
         self.cancels.lock().unwrap().push(CancelRecord {
             reason: reason.to_owned(),
         });
@@ -344,7 +288,7 @@ fn input(
     agent_run_id: AgentRunId,
     task_id: TaskId,
     request_id: &str,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    background_session: Option<Arc<dyn BackgroundTeardownPort>>,
 ) -> AgentRunInput {
     let mut tool_metadata = metadata();
     tool_metadata.agent_name = agent.name.as_str().to_owned();
@@ -361,7 +305,10 @@ fn input(
         agent_run_id,
         tool_metadata,
         attempt_submission: None,
-        workflow_control: None,
+        agent_run_service: None,
+        subagent_sessions: None,
+        workflow_service: None,
+        workflow_sessions: None,
         background_session,
         command_session_port: None,
         notifier: eos_engine::NotificationService::new(),
@@ -731,12 +678,10 @@ fn control_factory_for(handles: EngineRunHandles) -> AgentRunControlFactory {
         ForegroundExecutorFactory,
         // A long interval keeps the per-run heartbeat idle for the duration of
         // the test (no command sessions → no RPC); the control's drop aborts it.
-        BackgroundSessionFactory::new(
-            handles,
-            Arc::new(FakeTransport),
-            std::time::Duration::from_secs(3600),
-            Arc::new(std::sync::OnceLock::new()),
-        ),
+        handles,
+        Arc::new(CommandService::new(Arc::new(FakeTransport))),
+        std::time::Duration::from_secs(3600),
+        Arc::new(std::sync::OnceLock::<Arc<dyn eos_tools::WorkflowServicePort>>::new()),
     )
 }
 
@@ -803,11 +748,7 @@ async fn concurrent_cancel_and_run_finalize_exactly_once() {
     let control = factory.persisted(run_id.clone(), Some(task_id.clone()));
     registry.insert(control.clone());
 
-    let cancel_port = eos_engine::EngineCancelPort::new(
-        registry.clone(),
-        Arc::new(NoopTaskStore),
-        Arc::new(std::sync::OnceLock::new()),
-    );
+    let cancel_port = eos_engine::EngineCancelPort::new(registry.clone(), Arc::new(NoopTaskStore));
 
     let input = AgentRunInput {
         agent: agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]),
@@ -816,7 +757,10 @@ async fn concurrent_cancel_and_run_finalize_exactly_once() {
         agent_run_id: run_id.clone(),
         tool_metadata: metadata(),
         attempt_submission: None,
-        workflow_control: None,
+        agent_run_service: None,
+        subagent_sessions: None,
+        workflow_service: None,
+        workflow_sessions: None,
         background_session: None,
         command_session_port: None,
         notifier: control.notifications(),

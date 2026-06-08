@@ -15,7 +15,7 @@ time.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { workspace = true, features = ["process", "signal"] }
-rustix = { workspace = true, features = ["pty"] }
+rustix = { workspace = true, features = ["pty", "event"] }
 
 [lints]
 workspace = true

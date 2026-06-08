@@ -6,7 +6,7 @@
 //! It denies a planner terminal that carries a nonblank
 //! `deferred_goal_for_next_iteration` when the submitting workflow's delegation
 //! depth exceeds the configured `max_depth`. Depth is inferred from the workflow
-//! context at hook execution via [`WorkflowControlPort::workflow_depth`]. A
+//! context at hook execution via `WorkflowServicePort::workflow_depth`. A
 //! too-deep planner cannot extend its iteration chain, bounding nesting.
 
 use eos_types::JsonObject;
@@ -22,7 +22,7 @@ const NESTED_PLANNER_DEFERRAL_MESSAGE: &str = "BLOCKED: nested workflow planners
 /// `DisallowNestedPlannerDeferral.run`: deny when a nonblank deferred goal is set
 /// and the submitting workflow's depth exceeds `max_depth`. Passes when no
 /// deferred goal is set, or when the workflow context (`workflow_id` +
-/// `workflow_control`) is unavailable to infer depth.
+/// `workflow_service`) is unavailable to infer depth.
 pub(crate) async fn run_disallow_nested_planner_deferral(
     max_depth: u32,
     raw_input: &JsonObject,
@@ -32,10 +32,10 @@ pub(crate) async fn run_disallow_nested_planner_deferral(
     if deferred_goal(raw_input).is_none() {
         return Ok(HookOutcome::pass());
     }
-    let (Some(workflow_id), Some(control)) = (&ctx.workflow_id, &services.workflow_control) else {
+    let (Some(workflow_id), Some(service)) = (&ctx.workflow_id, &services.workflow_service) else {
         return Ok(HookOutcome::pass());
     };
-    if control.workflow_depth(workflow_id).await? > max_depth {
+    if service.workflow_depth(workflow_id).await? > max_depth {
         Ok(HookOutcome::Deny(
             HookDenial::new(NESTED_PLANNER_DEFERRAL_MESSAGE, "nested_planner_deferral")
                 .with_reason("nested_workflow"),
@@ -53,7 +53,10 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::ports::{OutstandingWorkflow, Sealed, StartedWorkflowSession, WorkflowControlPort};
+    use crate::ports::{
+        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
+        WorkflowServicePort,
+    };
     use crate::support::metadata;
     use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
@@ -61,17 +64,15 @@ mod tests {
     impl Sealed for FixedDepth {}
 
     #[async_trait]
-    impl WorkflowControlPort for FixedDepth {
-        async fn start(
+    impl WorkflowServicePort for FixedDepth {
+        async fn start_workflow(
             &self,
-            _: &TaskId,
-            _: &AgentRunId,
-            _: &str,
-        ) -> Result<StartedWorkflowSession, ToolError> {
+            _: StartWorkflowRequest,
+        ) -> Result<StartedWorkflow, ToolError> {
             unreachable!("depth hook never starts workflows")
         }
 
-        async fn status(
+        async fn check_workflow_status(
             &self,
             _: &WorkflowId,
             _: Option<&WorkflowSessionId>,
@@ -79,11 +80,23 @@ mod tests {
             unreachable!("depth hook never reads status")
         }
 
-        async fn cancel(&self, _: &WorkflowSessionId, _: &str) -> Result<String, ToolError> {
+        async fn cancel_workflow_session(
+            &self,
+            _: &WorkflowSessionId,
+            _: &str,
+        ) -> Result<String, ToolError> {
             unreachable!("depth hook never cancels workflows")
         }
 
-        async fn find_outstanding(
+        async fn poll_terminal_workflow(
+            &self,
+            _: &WorkflowId,
+            _: &WorkflowSessionId,
+        ) -> Result<Option<TerminalWorkflow>, ToolError> {
+            unreachable!("depth hook never polls workflows")
+        }
+
+        async fn find_outstanding_workflows(
             &self,
             _: &TaskId,
             _: &AgentRunId,

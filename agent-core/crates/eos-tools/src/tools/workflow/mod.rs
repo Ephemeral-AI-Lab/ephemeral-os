@@ -7,20 +7,20 @@ mod lib;
 
 use std::sync::Arc;
 
-use crate::ports::{BackgroundSessionPort, WorkflowControlPort};
+use crate::ports::{WorkflowServicePort, WorkflowSessionPort};
 
 pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
 ) {
     delegate_workflow::register(
         registry,
         config,
-        workflow_control.clone(),
-        background_session.clone(),
+        workflow_service.clone(),
+        workflow_sessions.clone(),
     );
-    check_workflow_status::register(registry, config, workflow_control.clone());
-    cancel_workflow::register(registry, config, workflow_control, background_session);
+    check_workflow_status::register(registry, config, workflow_service.clone());
+    cancel_workflow::register(registry, config, workflow_service);
 }

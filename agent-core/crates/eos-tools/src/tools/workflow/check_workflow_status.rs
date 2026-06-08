@@ -11,7 +11,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::WorkflowControlPort;
+use crate::ports::WorkflowServicePort;
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
@@ -28,14 +28,14 @@ struct CheckWorkflowStatusInput {
 }
 
 pub(in crate::tools::workflow) struct CheckWorkflowStatus {
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
 }
 
 impl CheckWorkflowStatus {
     pub(in crate::tools::workflow) fn new(
-        workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
     ) -> Self {
-        Self { workflow_control }
+        Self { workflow_service }
     }
 }
 
@@ -68,10 +68,10 @@ impl ToolExecutor for CheckWorkflowStatus {
             ));
         }
         let output = self
-            .workflow_control
+            .workflow_service
             .as_deref()
-            .ok_or(ToolError::MissingPort("workflow_control"))?
-            .status(&parsed.workflow_id, parsed.workflow_task_id.as_ref())
+            .ok_or(ToolError::MissingPort("workflow_service"))?
+            .check_workflow_status(&parsed.workflow_id, parsed.workflow_task_id.as_ref())
             .await?;
         Ok(ToolResult::ok(output))
     }
@@ -80,7 +80,7 @@ impl ToolExecutor for CheckWorkflowStatus {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
 ) {
     let check = config.get(ToolName::CheckWorkflowStatus);
     super::super::register_tool(
@@ -93,6 +93,6 @@ pub(super) fn register(
             schema_for!(CheckWorkflowStatusInput),
         ),
         OutputShape::Text,
-        Arc::new(CheckWorkflowStatus::new(workflow_control)),
+        Arc::new(CheckWorkflowStatus::new(workflow_service)),
     );
 }

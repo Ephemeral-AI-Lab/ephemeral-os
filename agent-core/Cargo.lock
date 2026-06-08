@@ -495,6 +495,7 @@ dependencies = [
  "eos-agent-message-records",
  "eos-audit",
  "eos-llm-client",
+ "eos-ports",
  "eos-sandbox-port",
  "eos-skills",
  "eos-state",
@@ -549,6 +550,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-ports"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "eos-llm-client",
+ "eos-sandbox-port",
+ "eos-state",
+ "eos-types",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "eos-runtime"
 version = "0.1.0"
 dependencies = [
@@ -563,6 +578,7 @@ dependencies = [
  "eos-engine",
  "eos-llm-client",
  "eos-plugin-catalog",
+ "eos-ports",
  "eos-sandbox-port",
  "eos-skills",
  "eos-state",
@@ -640,6 +656,7 @@ dependencies = [
  "async-trait",
  "eos-config",
  "eos-llm-client",
+ "eos-ports",
  "eos-sandbox-port",
  "eos-skills",
  "eos-state",
@@ -673,6 +690,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
+ "eos-ports",
  "eos-state",
  "eos-tools",
  "eos-types",

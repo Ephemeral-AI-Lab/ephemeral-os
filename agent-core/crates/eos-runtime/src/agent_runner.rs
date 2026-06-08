@@ -19,11 +19,13 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use eos_agent_def::AgentRole;
 use eos_agent_message_records::{AgentRunRecordKind, WorkflowTaskRole};
-use eos_engine::{run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry};
+use eos_engine::{
+    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundTeardownPort,
+};
 use eos_llm_client::Message;
 use eos_tools::{
-    AttemptSubmissionPort, AttemptSubmissionService, BackgroundSessionPort, CommandSessionPort,
-    WorkflowControlPort,
+    AgentRunServicePort, AttemptSubmissionPort, AttemptSubmissionService, CommandSessionPort,
+    SubagentSessionPort, WorkflowServicePort, WorkflowSessionPort,
 };
 use eos_types::AgentRunId;
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
@@ -42,7 +44,7 @@ pub(crate) struct RuntimeAgentRunner {
     /// downstream of this runner via the `starter→attempt_deps→runner` chain).
     /// `get()` is `Some` by the time any run starts, so workflow agents' hooks
     /// can read `workflow_depth` (deferral) and `find_outstanding` (no-inflight).
-    workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
+    workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
     /// Request-scoped factory that mints one fresh `AgentRunControl` (notifier,
     /// foreground, background supervisor, heartbeat, cancellation) per run — the
     /// runner stores no per-agent mutable supervisor or notifier.
@@ -62,7 +64,7 @@ impl RuntimeAgentRunner {
         services: RuntimeServices,
         workspace_root: impl Into<String>,
         attempt_submission: Arc<dyn AttemptSubmissionPort>,
-        workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
+        workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
         control_factory: Arc<AgentRunControlFactory>,
         agent_run_registry: AgentRunRegistry,
     ) -> Self {
@@ -70,7 +72,7 @@ impl RuntimeAgentRunner {
             services,
             workspace_root: workspace_root.into(),
             attempt_submission,
-            workflow_control,
+            workflow_service,
             control_factory,
             agent_run_registry,
         }
@@ -89,7 +91,10 @@ impl AgentRunner for RuntimeAgentRunner {
             .persisted(agent_run_id.clone(), Some(launch.task_id().clone()));
         self.agent_run_registry.insert(control.clone());
         let background = control.background();
-        let background_session: Arc<dyn BackgroundSessionPort> = Arc::new(background.clone());
+        let agent_run_service: Arc<dyn AgentRunServicePort> = Arc::new(background.clone());
+        let subagent_sessions: Arc<dyn SubagentSessionPort> = Arc::new(background.clone());
+        let workflow_sessions: Arc<dyn WorkflowSessionPort> = Arc::new(background.clone());
+        let background_session: Arc<dyn BackgroundTeardownPort> = Arc::new(background.clone());
         let command_session_port: Arc<dyn CommandSessionPort> = Arc::new(background);
         let metadata = build_metadata(
             &self.workspace_root,
@@ -126,7 +131,10 @@ impl AgentRunner for RuntimeAgentRunner {
                 attempt_submission: Some(AttemptSubmissionService::new(
                     self.attempt_submission.clone(),
                 )),
-                workflow_control: self.workflow_control.get().cloned(),
+                agent_run_service: Some(agent_run_service),
+                subagent_sessions: Some(subagent_sessions),
+                workflow_service: self.workflow_service.get().cloned(),
+                workflow_sessions: Some(workflow_sessions),
                 background_session: Some(background_session),
                 command_session_port: Some(command_session_port),
                 notifier: control.notifications(),
