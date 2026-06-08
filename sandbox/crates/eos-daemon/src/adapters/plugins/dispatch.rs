@@ -7,9 +7,10 @@ use super::{
     connected::{dispatch_connected_read_only_route, dispatch_connected_self_managed_route},
     ensure_plugin_family_allowed,
     overlay::dispatch_oneshot_overlay_route,
-    state::{lock_state, PluginOperationRoute},
+    state::lock_state,
 };
 use crate::{dispatcher::DispatchContext, error::DaemonError};
+use eos_plugin::host::route::PluginOperationRoute;
 
 pub(super) fn dispatch_registered_op(
     op: &str,

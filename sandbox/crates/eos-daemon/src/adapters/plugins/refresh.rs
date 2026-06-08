@@ -21,7 +21,7 @@ use super::{
 };
 use crate::error::DaemonError;
 
-use super::state::PluginOperationRoute;
+use eos_plugin::host::route::PluginOperationRoute;
 
 pub(super) const WORKSPACE_SNAPSHOT_REFRESH_OP: &str = "daemon.workspace_snapshot_refresh";
 
@@ -245,7 +245,7 @@ fn refresh_connected_service(
 }
 
 fn send_refresh_sequence(
-    client: &eos_plugin_host::PpcClient,
+    client: &eos_plugin::host::PpcClient,
     service_key: &PluginServiceKey,
     service_instance_id: &str,
     invocation_id: &str,
@@ -334,7 +334,7 @@ fn service_process_pid(service_instance_id: &str) -> Result<u32, DaemonError> {
 }
 
 fn send_refresh_request(
-    client: &eos_plugin_host::PpcClient,
+    client: &eos_plugin::host::PpcClient,
     invocation_id: &str,
     index: usize,
     request: &RefreshRequest,

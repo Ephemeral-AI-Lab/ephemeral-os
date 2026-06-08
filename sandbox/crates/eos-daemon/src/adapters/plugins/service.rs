@@ -10,7 +10,8 @@ use crate::error::DaemonError;
 #[cfg(all(target_os = "linux", not(test)))]
 use crate::adapters::overlay::overlay_run_dirs;
 
-use super::process::{PluginProcessSpec, PluginServiceOverlay};
+use super::process::PluginServiceOverlay;
+use eos_plugin::host::route::PluginProcessSpec;
 use super::{
     plugin_runtime_config,
     state::{DaemonPluginState, SharedPpcClient},
@@ -53,7 +54,8 @@ pub(super) fn spawn_service_processes(
     let mut started = Vec::with_capacity(specs.len());
     for spec in specs {
         let snapshot = acquire_service_snapshot(spec.key(), "start")?;
-        let (process, client) = match spec.spawn_connected_with_overlay(
+        let (process, client) = match super::process::spawn_connected_with_overlay(
+            spec,
             snapshot.overlay.as_ref(),
             Duration::from_millis(plugin_runtime_config().service_probe_timeout_ms),
         ) {

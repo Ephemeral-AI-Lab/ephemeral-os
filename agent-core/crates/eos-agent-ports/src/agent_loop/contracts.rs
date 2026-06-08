@@ -1,8 +1,7 @@
 //! Agent-loop DTOs.
 
-use eos_llm_client::Message;
 use eos_tool_ports::ToolResult;
-use eos_types::AgentRunId;
+use eos_types::{AgentRunId, Message};
 
 /// Thin request to start one agent loop.
 #[derive(Debug, Clone)]

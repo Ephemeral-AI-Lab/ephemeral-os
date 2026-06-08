@@ -34,8 +34,8 @@ fn retired_crate_names_are_declared_in_guard() {
         );
     }
     assert!(
-        retired.contains("eos-agent-api"),
-        "crate_inventory rule violated: phase 00 retired facade name eos-agent-api is missing"
+        !retired.contains("eos-agent-api"),
+        "crate_inventory rule violated: eos-agent-api never existed; retired crate list must name real crates"
     );
 }
 

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>55</b><span>items</span></div>
-  <div><b>40</b><span>fields</span></div>
-  <div><b>17</b><span>methods</span></div>
+  <div><b>37</b><span>items</span></div>
+  <div><b>25</b><span>fields</span></div>
+  <div><b>3</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="loader crates/eos-agent-def/src/loader.rs load_agents_dir load_agents_tree read_dir collect_markdown is_markdown is_private_include load_files load_one file_stem main_role_contract_text split_frontmatter Scratch impl Scratch impl Drop for Scratch loader_rejects_missing_role loader_skips_includes_and_prepends_contract loader_defaults_name_and_description_from_stem loader_resolves_and_requires_skill non_directory_yields_empty split_frontmatter_handles_absent_and_present non_main_profile_uses_body_only">
   <div class="module-head">
     <div>
@@ -100,7 +100,7 @@
     <h3>load_agents_dir</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a> (directory : &amp; Path) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> &gt; , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a> (directory : &amp; Path) -&gt; Result &lt; Vec &lt; AgentDefinition &gt; , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
   <p class="docstring">Load agent definitions from `.md` files directly in `directory` (one level).<br>Returns an empty vec when `directory` is not a directory (parity with<br>`loader.py:load_agents_dir`).<br># Errors<br>Propagates [`AgentDefError`] from any individual profile that fails to read,<br>parse, or validate.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -113,7 +113,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Propagates [`AgentDefError`] from any individual profile that fails to read,</span>
 <span class="rs-comment">/// parse, or validate.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentDefinition</span>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">if</span> !directory.is_dir() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>());
     }
@@ -136,7 +136,7 @@
     <h3>load_agents_tree</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a> (directory : &amp; Path) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> &gt; , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a> (directory : &amp; Path) -&gt; Result &lt; Vec &lt; AgentDefinition &gt; , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
   <p class="docstring">Load agent definitions from all `.md` files under `directory` (recursive).<br>Returns an empty vec when `directory` is not a directory (parity with<br>`loader.py:load_agents_tree`).<br># Errors<br>Propagates [`AgentDefError`] from any individual profile that fails to read,<br>parse, or validate.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -149,7 +149,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Propagates [`AgentDefError`] from any individual profile that fails to read,</span>
 <span class="rs-comment">/// parse, or validate.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentDefinition</span>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">if</span> !directory.is_dir() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>());
     }
@@ -255,11 +255,11 @@
     <h3>load_files</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-files-94">load_files</a> (mut paths : Vec &lt; PathBuf &gt;) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> &gt; , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-files-94">load_files</a> (mut paths : Vec &lt; PathBuf &gt;) -&gt; Result &lt; Vec &lt; AgentDefinition &gt; , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-files-94">load_files</a>(<span class="rs-kw">mut</span> paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-files-94">load_files</a>(<span class="rs-kw">mut</span> paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentDefinition</span>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     paths.sort();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> definitions = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>();
     <span class="rs-kw">for</span> path <span class="rs-kw">in</span> paths {
@@ -282,11 +282,11 @@
     <h3>load_one</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-one-108">load_one</a> (path : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#item-fn-load-one-108">load_one</a> (path : &amp; Path) -&gt; Result &lt; AgentDefinition , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-one-108">load_one</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-one-108">load_one</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentDefinition</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">let</span> content = fs::read_to_string(path).map_err(|cause| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">Read</span> {
         path: path.to_owned(),
         cause,
@@ -295,7 +295,7 @@
     <span class="rs-comment">// An empty / absent frontmatter block deserializes as the all-default DTO</span>
     <span class="rs-comment">// (role = None), which becomes a clean `MissingRole` below.</span>
     <span class="rs-kw">let</span> frontmatter = frontmatter.filter(|f| !f.trim().is_empty());
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> = serde_yaml::from_str(frontmatter.as_deref().unwrap_or(&quot;{}&quot;))
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> = serde_yaml::from_str(frontmatter.as_deref().unwrap_or(&quot;{}&quot;))
         .map_err(|cause| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">Frontmatter</span> {
             path: path.to_owned(),
             cause,
@@ -342,7 +342,7 @@
         }
     }
 
-    <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(raw, path)
+    <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(raw, path)
 }
 </code></pre>
 </details>
@@ -485,7 +485,7 @@
         <span class="rs-comment">// The `_main_role_contract.md` include is skipped — only `worker` loads.</span>
         assert_eq!(defs.len(), 1);
         <span class="rs-kw">let</span> worker = &amp;defs[0];
-        assert_eq!(worker.name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), &quot;worker&quot;);
+        assert_eq!(worker.name.as_str(), &quot;worker&quot;);
         assert_eq!(
             worker.system_prompt.as_deref(),
             <span class="rs-type">Some</span>(&quot;<span class="rs-type">CONTRACT</span> <span class="rs-type">TEXT</span>\n\nBODY <span class="rs-type">TEXT</span>&quot;)
@@ -514,7 +514,7 @@
             &quot;---\ntool_call_limit: 5\nrole: subagent\nagent_type: subagent\nterminals: [submit_x]\n---\nbody\n&quot;,
         );
         <span class="rs-kw">let</span> defs = <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a>(&amp;s.0).unwrap();
-        assert_eq!(defs[0].name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), &quot;explorer&quot;);
+        assert_eq!(defs[0].name.as_str(), &quot;explorer&quot;);
         assert_eq!(defs[0].description, &quot;<span class="rs-type">Agent</span>: explorer&quot;);
     }
 </code></pre>
@@ -624,7 +624,7 @@
             &quot;---\nname: advisor\ndescription: d\ntool_call_limit: 5\nrole: helper\nterminals: [submit_x]\n---\nADVISOR <span class="rs-type">BODY</span>\n&quot;,
         );
         <span class="rs-kw">let</span> defs = <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a>(&amp;s.0).unwrap();
-        assert_eq!(defs[0].role, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>);
+        assert_eq!(defs[0].role, <span class="rs-type">AgentRole</span>::<span class="rs-type">Helper</span>);
         assert_eq!(defs[0].system_prompt.as_deref(), <span class="rs-type">Some</span>(&quot;<span class="rs-type">ADVISOR</span> <span class="rs-type">BODY</span>&quot;));
     }
 </code></pre>
@@ -652,7 +652,7 @@
 <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{definition_from_frontmatter, <span class="rs-type">AgentDefinition</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>};
 
 <span class="rs-kw">const</span> <span class="rs-type">MAIN_PROFILE_DIRNAME</span>: &amp;str = &quot;main&quot;;
 <span class="rs-kw">const</span> <span class="rs-type">MAIN_ROLE_CONTRACT_NAME</span>: &amp;str = &quot;_main_role_contract.md&quot;;
@@ -665,7 +665,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Propagates [`AgentDefError`] from any individual profile that fails to read,</span>
 <span class="rs-comment">/// parse, or validate.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentDefinition</span>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">if</span> !directory.is_dir() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>());
     }
@@ -687,7 +687,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Propagates [`AgentDefError`] from any individual profile that fails to read,</span>
 <span class="rs-comment">/// parse, or validate.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a>(directory: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentDefinition</span>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">if</span> !directory.is_dir() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>());
     }
@@ -732,7 +732,7 @@
         .is_some_and(|n| n.starts_with(&#x27;_&#x27;))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-files-94">load_files</a>(<span class="rs-kw">mut</span> paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-files-94">load_files</a>(<span class="rs-kw">mut</span> paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentDefinition</span>&gt;, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     paths.sort();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> definitions = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>();
     <span class="rs-kw">for</span> path <span class="rs-kw">in</span> paths {
@@ -746,7 +746,7 @@
     <span class="rs-type">Ok</span>(definitions)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-one-108">load_one</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-one-108">load_one</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentDefinition</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">let</span> content = fs::read_to_string(path).map_err(|cause| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">Read</span> {
         path: path.to_owned(),
         cause,
@@ -755,7 +755,7 @@
     <span class="rs-comment">// An empty / absent frontmatter block deserializes as the all-default DTO</span>
     <span class="rs-comment">// (role = None), which becomes a clean `MissingRole` below.</span>
     <span class="rs-kw">let</span> frontmatter = frontmatter.filter(|f| !f.trim().is_empty());
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> = serde_yaml::from_str(frontmatter.as_deref().unwrap_or(&quot;{}&quot;))
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> = serde_yaml::from_str(frontmatter.as_deref().unwrap_or(&quot;{}&quot;))
         .map_err(|cause| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">Frontmatter</span> {
             path: path.to_owned(),
             cause,
@@ -802,7 +802,7 @@
         }
     }
 
-    <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(raw, path)
+    <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(raw, path)
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-file-stem-167">file_stem</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
@@ -859,7 +859,7 @@
 <span class="rs-kw">mod</span> tests {
     #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<span class="rs-type">AgentRole</span>;
 
     <span class="rs-comment">/// A throwaway directory under the system temp dir, unique per test name and</span>
     <span class="rs-comment">/// recreated empty. Removed on drop.</span>
@@ -914,7 +914,7 @@
         <span class="rs-comment">// The `_main_role_contract.md` include is skipped — only `worker` loads.</span>
         assert_eq!(defs.len(), 1);
         <span class="rs-kw">let</span> worker = &amp;defs[0];
-        assert_eq!(worker.name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), &quot;worker&quot;);
+        assert_eq!(worker.name.as_str(), &quot;worker&quot;);
         assert_eq!(
             worker.system_prompt.as_deref(),
             <span class="rs-type">Some</span>(&quot;<span class="rs-type">CONTRACT</span> <span class="rs-type">TEXT</span>\n\nBODY <span class="rs-type">TEXT</span>&quot;)
@@ -930,7 +930,7 @@
             &quot;---\ntool_call_limit: 5\nrole: subagent\nagent_type: subagent\nterminals: [submit_x]\n---\nbody\n&quot;,
         );
         <span class="rs-kw">let</span> defs = <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-dir-19">load_agents_dir</a>(&amp;s.0).unwrap();
-        assert_eq!(defs[0].name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), &quot;explorer&quot;);
+        assert_eq!(defs[0].name.as_str(), &quot;explorer&quot;);
         assert_eq!(defs[0].description, &quot;<span class="rs-type">Agent</span>: explorer&quot;);
     }
 
@@ -990,7 +990,7 @@
             &quot;---\nname: advisor\ndescription: d\ntool_call_limit: 5\nrole: helper\nterminals: [submit_x]\n---\nADVISOR <span class="rs-type">BODY</span>\n&quot;,
         );
         <span class="rs-kw">let</span> defs = <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#item-fn-load-agents-tree-41">load_agents_tree</a>(&amp;s.0).unwrap();
-        assert_eq!(defs[0].role, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>);
+        assert_eq!(defs[0].role, <span class="rs-type">AgentRole</span>::<span class="rs-type">Helper</span>);
         assert_eq!(defs[0].system_prompt.as_deref(), <span class="rs-type">Some</span>(&quot;<span class="rs-type">ADVISOR</span> <span class="rs-type">BODY</span>&quot;));
     }
 }

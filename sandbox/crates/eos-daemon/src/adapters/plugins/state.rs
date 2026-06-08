@@ -1,18 +1,18 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
-use eos_plugin::{PluginServiceKey, PluginServiceStatus, ServiceMode};
-use eos_protocol::Intent;
+use eos_plugin::host::ensure_args::ParsedEnsure;
+use eos_plugin::host::route::{PluginOperationRoute, PluginProcessSpec};
+use eos_plugin::PluginServiceStatus;
 use serde_json::{json, Value};
 
 use super::{
-    process::{PluginProcessSpec, PluginServiceProcess},
+    process::{process_spec_to_json, PluginServiceProcess},
     service::PluginServiceSnapshot,
 };
 use crate::error::DaemonError;
 
-pub(super) type SharedPpcClient = Arc<eos_plugin_host::PpcClient>;
-pub(super) const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;
+pub(super) type SharedPpcClient = Arc<eos_plugin::host::PpcClient>;
 
 #[derive(Debug, Clone)]
 pub(super) struct LoadedPluginRuntime {
@@ -24,49 +24,22 @@ pub(super) struct LoadedPluginRuntime {
     pub(super) runtime_loaded: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct PluginOperationRoute {
-    pub(super) plugin_id: String,
-    pub(super) op_name: String,
-    pub(super) public_op: String,
-    pub(super) layer_stack_root: Option<String>,
-    pub(super) intent: Intent,
-    pub(super) auto_workspace_overlay: bool,
-    pub(super) service_id: Option<String>,
-    pub(super) service_instance_id: Option<String>,
-    pub(super) service_key: Option<PluginServiceKey>,
-    pub(super) service_mode: Option<ServiceMode>,
-    pub(super) service_command: Vec<String>,
-    pub(super) service_ppc_protocol_version: Option<u32>,
-    pub(super) timeout_ms: Option<u64>,
-}
-
-impl PluginOperationRoute {
-    pub(super) const fn dispatch_mode(&self) -> &'static str {
-        match self.intent {
-            Intent::ReadOnly => "read_only_service",
-            Intent::WriteAllowed if self.auto_workspace_overlay => "write_allowed_oneshot_overlay",
-            Intent::WriteAllowed => "self_managed_callback",
-            Intent::Lifecycle => "invalid_lifecycle",
-        }
-    }
-
-    fn to_json(&self) -> Value {
-        json!({
-            "plugin": self.plugin_id,
-            "op_name": self.op_name,
-            "public_op": self.public_op,
-            "layer_stack_root": self.layer_stack_root,
-            "intent": self.intent,
-            "auto_workspace_overlay": self.auto_workspace_overlay,
-            "service_id": self.service_id,
-            "service_instance_id": self.service_instance_id,
-            "service_mode": self.service_mode,
-            "service_command": self.service_command,
-            "timeout_ms": self.timeout_ms,
-            "dispatch_mode": self.dispatch_mode(),
-        })
-    }
+/// Wire-shape one resolved route. Daemon-owned (the route data lives host-side).
+fn route_to_json(route: &PluginOperationRoute) -> Value {
+    json!({
+        "plugin": route.plugin_id,
+        "op_name": route.op_name,
+        "public_op": route.public_op,
+        "layer_stack_root": route.layer_stack_root,
+        "intent": route.intent,
+        "auto_workspace_overlay": route.auto_workspace_overlay,
+        "service_id": route.service_id,
+        "service_instance_id": route.service_instance_id,
+        "service_mode": route.service_mode,
+        "service_command": route.service_command,
+        "timeout_ms": route.timeout_ms,
+        "dispatch_mode": route.dispatch_mode(),
+    })
 }
 
 #[derive(Debug, Default)]
@@ -110,11 +83,11 @@ pub(super) fn reset_state_for_tests() -> Vec<PluginServiceSnapshot> {
 }
 
 pub(super) fn route_values(routes: &BTreeMap<String, PluginOperationRoute>) -> Vec<Value> {
-    routes.values().map(PluginOperationRoute::to_json).collect()
+    routes.values().map(route_to_json).collect()
 }
 
 pub(super) fn process_values(processes: &[PluginProcessSpec]) -> Vec<Value> {
-    processes.iter().map(PluginProcessSpec::to_json).collect()
+    processes.iter().map(process_spec_to_json).collect()
 }
 
 pub(super) fn connected_ppc_routes(state: &DaemonPluginState) -> Vec<String> {
@@ -173,4 +146,15 @@ pub(super) fn loaded_plugin_values(state: &DaemonPluginState) -> Vec<Value> {
             })
         })
         .collect()
+}
+
+/// Whether the live runtime already matches a freshly parsed ensure — lets
+/// `op_ensure` skip re-registering. Compares the daemon's `LoadedPluginRuntime`
+/// against the host-parsed [`ParsedEnsure`].
+pub(super) fn loaded_matches_parsed(loaded: &LoadedPluginRuntime, parsed: &ParsedEnsure) -> bool {
+    loaded.digest == parsed.plugin_digest
+        && loaded.registered_ops == parsed.registered_ops
+        && loaded.operation_routes == parsed.operation_routes
+        && loaded.service_processes == parsed.service_processes
+        && loaded.runtime_loaded == parsed.runtime_loaded
 }

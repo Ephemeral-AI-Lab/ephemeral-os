@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>133</b><span>items</span></div>
+  <div><b>134</b><span>items</span></div>
   <div><b>125</b><span>fields</span></div>
-  <div><b>139</b><span>methods</span></div>
+  <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -42,7 +42,7 @@
 </section>
 <main class="crate-layout">
   <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link active" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-workflow--src-service-rs.html"><span>service.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><span class="folder">state</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-state-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-state-projections-rs.html"><span>projections.rs</span><small>0/3</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-submission-rs.html"><span>submission.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-workflow/src/error.rs Result WorkflowError impl WorkflowError impl From &lt; eos_agent_def :: AgentDefError &gt; for WorkflowError">
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-workflow/src/error.rs Result WorkflowError impl WorkflowError impl From &lt; eos_agent_def :: AgentDefError &gt; for WorkflowError impl From &lt; eos_types :: AgentNameError &gt; for WorkflowError">
   <div class="module-head">
     <div>
       <h2>src/error.rs</h2>
@@ -51,9 +51,9 @@
     <div class="module-stats">
       <span>file owns</span>
       <span>1 types</span>
-      <span>2 impls</span>
+      <span>3 impls</span>
       <span>0 fns</span>
-      <span>3 methods</span>
+      <span>4 methods</span>
     </div>
   </div>
   <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-WorkflowError-6" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum WorkflowError pub pub enum WorkflowError crates/eos-workflow/src/error.rs  ">
@@ -83,6 +83,12 @@
 </details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; eos_agent_def :: AgentDefError &gt; for <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a></code></summary><table><tbody><tr id="method-from-58"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-workflow--src-error-rs.html#method-from-58">from</a> (value : eos_agent_def :: AgentDefError) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-from-58">from</a>(value: eos_agent_def::<span class="rs-type">AgentDefError</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">AgentDefinition</span>(value.to_string())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; eos_types :: AgentNameError &gt; for <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a></code></summary><table><tbody><tr id="method-from-64"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-workflow--src-error-rs.html#method-from-58">from</a> (value : eos_types :: AgentNameError) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-from-58">from</a>(value: eos_types::<span class="rs-type">AgentNameError</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<span class="rs-type">AgentDefinition</span>(value.to_string())
     }
 </code></pre>
@@ -166,6 +172,12 @@
 
 <span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;eos_agent_def::<span class="rs-type">AgentDefError</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-from-58">from</a>(value: eos_agent_def::<span class="rs-type">AgentDefError</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">AgentDefinition</span>(value.to_string())
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;eos_types::<span class="rs-type">AgentNameError</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-from-58">from</a>(value: eos_types::<span class="rs-type">AgentNameError</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<span class="rs-type">AgentDefinition</span>(value.to_string())
     }
 }

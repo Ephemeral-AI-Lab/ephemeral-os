@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use eos_config::parse_markdown_frontmatter;
+use eos_types::parse_markdown_frontmatter;
 use serde_yaml::{Mapping, Value};
 use thiserror::Error;
 

@@ -17,12 +17,12 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
+use crate::{PluginError, PpcDirection, PpcEnvelope};
 use serde_json::json;
 
 use self::frame_io::FrameWriter;
 use self::pending::{CallbackHandler, PendingCalls};
-use crate::PpcError;
+use crate::host::PpcError;
 
 pub use self::frame_io::read_frame;
 

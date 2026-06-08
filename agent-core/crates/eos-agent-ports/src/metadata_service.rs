@@ -2,9 +2,8 @@
 
 use async_trait::async_trait;
 use eos_audit::AuditNode;
-use eos_llm_client::Message;
 use eos_tool_ports::{ExecutionMetadata, ToolName};
-use eos_types::{AgentRunId, ToolUseId};
+use eos_types::{AgentRunId, Message, ToolUseId};
 use std::sync::Arc;
 
 use crate::{AgentPortError, AgentState};

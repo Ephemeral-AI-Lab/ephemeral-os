@@ -3,11 +3,10 @@
 //!
 //! Provider-specific wire projection lives under `clients/`, never here.
 
-use eos_types::JsonObject;
+use eos_types::Message;
+pub use eos_types::ToolSpec;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::message::Message;
 
 /// Token usage reported by a model provider.
 ///
@@ -24,44 +23,6 @@ impl UsageSnapshot {
     #[must_use]
     pub fn total_tokens(&self) -> u32 {
         self.input_tokens.saturating_add(self.output_tokens)
-    }
-}
-
-/// A neutral tool declaration sent to the model.
-///
-/// Owned here; `eos-tools` depends on this crate to author it from
-/// `schemars`-generated input/output schemas. The provider encoders project it
-/// into each upstream wire shape.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[non_exhaustive]
-pub struct ToolSpec {
-    /// The tool name the model calls.
-    pub name: String,
-    /// The model-facing description.
-    pub description: String,
-    /// The JSON Schema of the tool's input (a JSON object).
-    pub input_schema: JsonObject,
-    /// The JSON Schema of the tool's output, when authored. Anthropic encode
-    /// drops this; `OpenAI` encode maps it.
-    pub output_schema: Option<JsonObject>,
-}
-
-impl ToolSpec {
-    /// Construct a tool declaration. (`ToolSpec` is `#[non_exhaustive]`, so
-    /// downstream `eos-tools` constructs it through this constructor.)
-    #[must_use]
-    pub fn new(
-        name: impl Into<String>,
-        description: impl Into<String>,
-        input_schema: JsonObject,
-        output_schema: Option<JsonObject>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            description: description.into(),
-            input_schema,
-            output_schema,
-        }
     }
 }
 

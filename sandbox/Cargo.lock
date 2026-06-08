@@ -199,7 +199,6 @@ dependencies = [
  "eos-occ-layerstack",
  "eos-overlay",
  "eos-plugin",
- "eos-plugin-host",
  "eos-protocol",
  "eos-runner",
  "eos-workspace-api",
@@ -316,16 +315,6 @@ version = "0.1.0"
 dependencies = [
  "eos-protocol",
  "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-plugin-host"
-version = "0.1.0"
-dependencies = [
- "eos-plugin",
- "eos-protocol",
  "serde_json",
  "sha2",
  "thiserror 2.0.18",

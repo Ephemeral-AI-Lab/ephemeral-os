@@ -3,14 +3,14 @@
 //! Each skill is a subdirectory of the configured root containing a `SKILL.md`
 //! (with optional `---` YAML frontmatter) and an optional `references/` directory
 //! of `*.md` files. The `---` split itself is **not** re-implemented here: it is
-//! the shared [`eos_config::parse_markdown_frontmatter`] helper. Only the
+//! the shared [`eos_types::parse_markdown_frontmatter`] helper. Only the
 //! skills-specific `name`/`description` fallback lives in this module.
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use eos_config::parse_markdown_frontmatter;
+use eos_types::parse_markdown_frontmatter;
 use serde_yaml::Value;
 
 use crate::definition::{ReferenceName, SkillDefinition, SkillName, SkillSource};

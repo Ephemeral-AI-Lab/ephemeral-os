@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>55</b><span>items</span></div>
-  <div><b>40</b><span>fields</span></div>
-  <div><b>17</b><span>methods</span></div>
+  <div><b>37</b><span>items</span></div>
+  <div><b>25</b><span>fields</span></div>
+  <div><b>3</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link active" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="model crates/eos-agent-def/src/model.rs AgentType impl Default for AgentType AgentRole impl AgentRole impl fmt :: Display for AgentRole AgentName impl AgentName impl fmt :: Display for AgentName RawAgentDefinition AgentDefinition impl AgentDefinition valid_raw definition_rejects_unknown_field definition_enforces_terminals_and_limit from_frontmatter_strips_blank_triggers_and_terminals role_and_type_serde_values agent_name_trims_and_rejects_empty">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link active" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="model crates/eos-agent-def/src/model.rs RawAgentDefinition definition_from_frontmatter valid_raw definition_rejects_unknown_field definition_enforces_terminals_and_limit from_frontmatter_strips_blank_triggers_and_terminals blank_name_maps_to_agent_def_error">
   <div class="module-head">
     <div>
       <h2>src/model.rs</h2>
@@ -50,343 +50,211 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>5 types</span>
-      <span>6 impls</span>
+      <span>1 types</span>
+      <span>0 impls</span>
       <span>6 fns</span>
-      <span>7 methods</span>
+      <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AgentName-80" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentName pub pub struct AgentName crates/eos-agent-def/src/model.rs 0 String ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>AgentName</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a></code>
-  <p class="docstring">A registry key / dispatchable name, validated non-empty after trimming.<br>Format-only newtype (`type-newtype-ids`): it does **not** check membership<br>against any catalog. Empty-rejection is a Rust hardening of the Rust model<br>(which has no name validator); the loader applies the `path.stem` default<br>before construction so the newtype only ever sees a resolved stem on the<br>file-parse path.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>schemars: transparent</span><span>serde</span><span>serde: transparent</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-95"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a> (raw : impl Into &lt; String &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code><p class="docstring">Construct a name, trimming surrounding whitespace.<br># Errors<br>Returns [`AgentDefError::EmptyName`] when the trimmed value is empty.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Construct a name, trimming surrounding whitespace.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns [`AgentDefError::EmptyName`] when the trimmed value is empty.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
-        <span class="rs-kw">let</span> trimmed = raw.into().trim().to_owned();
-        <span class="rs-kw">if</span> trimmed.is_empty() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyName</span>);
-        }
-        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(trimmed))
-    }
-</code></pre>
-</details></td></tr><tr id="method-as-str-107"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the name as a string slice.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Borrow the name as a string slice.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
-        &amp;<span class="rs-self">self</span>.0
-    }
-</code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a></code></summary><table><tbody><tr id="method-fmt-115"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#method-fmt-75">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-fmt-75">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.write_str(&amp;<span class="rs-self">self</span>.0)
-    }
-</code></pre>
-</details></td></tr></tbody></table></details></div>
-
-  <p class="source">crates/eos-agent-def/src/model.rs:80</p>
-</article><article id="item-struct-AgentDefinition-157" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentDefinition pub pub struct AgentDefinition crates/eos-agent-def/src/model.rs name AgentName description String system_prompt Option &lt; String &gt; model Option &lt; String &gt; tool_call_limit NonZeroU32 role AgentRole agent_type AgentType allowed_tools Vec &lt; String &gt; terminals Vec &lt; String &gt; notification_triggers Vec &lt; String &gt; skill Option &lt; PathBuf &gt; context_recipe Option &lt; String &gt; ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>AgentDefinition</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a></code>
-  <p class="docstring">Full agent definition with all configuration fields (`model.py`).<br>Construction enforces invariants so an invalid value is unrepresentable:<br>`tool_call_limit` is [`NonZeroU32`], `terminals` is non-empty after stripping<br>blanks, and blank `notification_triggers` are dropped. No `Default` impl:<br>`name`/`description`/`tool_call_limit`/`terminals` have no sensible default<br>(`api-default-impl`).</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code><a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a></code></td></tr><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>system_prompt</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>model</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tool_call_limit</td><td><code>NonZeroU32</code></td></tr><tr><td>pub</td><td>role</td><td><code><a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a></code></td></tr><tr><td>pub</td><td>agent_type</td><td><code><a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a></code></td></tr><tr><td>pub</td><td>allowed_tools</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminals</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>notification_triggers</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>context_recipe</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-frontmatter-201"><td>constructor</td><td>from_frontmatter</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a> (raw : <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> , path : &amp; Path ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code><p class="docstring">Validate a post-processed frontmatter DTO into a definition.<br>The loader supplies `path` for path-bearing errors and has already<br>applied the name/description defaults and resolved the skill path.<br># Errors<br>Returns [`AgentDefError`] when `role` is absent ([`AgentDefError::MissingRole`]),<br>the resolved name is empty ([`AgentDefError::EmptyName`]), `terminals` is<br>empty after stripping blanks ([`AgentDefError::EmptyTerminals`]), or<br>`tool_call_limit` is not positive ([`AgentDefError::NonPositiveToolCallLimit`]).</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Validate a post-processed frontmatter DTO into a definition.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// The loader supplies `path` for path-bearing errors and has already</span>
-    <span class="rs-comment">/// applied the name/description defaults and resolved the skill path.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns [`AgentDefError`] when `role` is absent ([`AgentDefError::MissingRole`]),</span>
-    <span class="rs-comment">/// the resolved name is empty ([`AgentDefError::EmptyName`]), `terminals` is</span>
-    <span class="rs-comment">/// empty after stripping blanks ([`AgentDefError::EmptyTerminals`]), or</span>
-    <span class="rs-comment">/// `tool_call_limit` is not positive ([`AgentDefError::NonPositiveToolCallLimit`]).</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(
-        raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>,
-        path: &amp;<span class="rs-type">Path</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
-        <span class="rs-kw">let</span> role = raw.role.ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">MissingRole</span> {
-            path: path.to_owned(),
-        })?;
-        <span class="rs-kw">let</span> name = <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.name.unwrap_or_default())?;
-        <span class="rs-kw">let</span> tool_call_limit =
-            <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.tool_call_limit).ok_or(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">NonPositiveToolCallLimit</span>)?;
-        <span class="rs-kw">let</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = raw
-            .terminals
-            .into_iter()
-            .filter(|t| !t.trim().is_empty())
-            .collect();
-        <span class="rs-kw">if</span> terminals.is_empty() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>);
-        }
-        <span class="rs-kw">let</span> notification_triggers = raw
-            .notification_triggers
-            .into_iter()
-            .filter(|t| !t.trim().is_empty())
-            .collect();
-        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
-            name,
-            description: raw.description.unwrap_or_default(),
-            system_prompt: raw.system_prompt,
-            model: raw.model,
-            tool_call_limit,
-            role,
-            agent_type: raw.agent_type,
-            allowed_tools: raw.allowed_tools,
-            terminals,
-            notification_triggers,
-            skill: raw.skill,
-            context_recipe: raw.context_recipe,
-        })
-    }
-</code></pre>
-</details></td></tr></tbody></table>
-
-  <p class="source">crates/eos-agent-def/src/model.rs:157</p>
-</article><article id="item-enum-AgentType-19" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AgentType pub pub enum AgentType crates/eos-agent-def/src/model.rs  ">
-  <div class="item-head">
-    <span class="kind">enum</span>
-    <h3>AgentType</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a></code>
-  <p class="docstring">Runtime class of an agent profile (`model.py:AgentType`).</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Agent</td><td><code></code></td></tr><tr><td>Subagent</td><td><code></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a></code></summary><table><tbody><tr id="method-default-30"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#method-default-30">default</a> () -&gt; Self</code><p class="docstring">Matches `model.py`'s `agent_type: AgentType = AGENT`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Matches `model.py`'s `agent_type: AgentType = AGENT`.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-default-30">default</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<span class="rs-type">Agent</span>
-    }
-</code></pre>
-</details></td></tr></tbody></table></details></div>
-
-  <p class="source">crates/eos-agent-def/src/model.rs:19</p>
-</article><article id="item-enum-AgentRole-36" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AgentRole pub pub enum AgentRole crates/eos-agent-def/src/model.rs  ">
-  <div class="item-head">
-    <span class="kind">enum</span>
-    <h3>AgentRole</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a></code>
-  <p class="docstring">Canonical category of an agent profile (`model.py:AgentRole`).<br>Closed vocabulary (deliberately **not** `#[non_exhaustive]`): the<br>planner-submission gate and audit tag rely on an exhaustive `match`. The<br>`executor` profile carries `role: generator`; `executor` never enters this<br>state (anchor §4).</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Root</td><td><code></code></td></tr><tr><td>Planner</td><td><code></code></td></tr><tr><td>Generator</td><td><code></code></td></tr><tr><td>Reducer</td><td><code></code></td></tr><tr><td>Helper</td><td><code></code></td></tr><tr><td>Subagent</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-60"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a> (&amp; self) -&gt; &amp; &#x27;static str</code><p class="docstring">The canonical `snake_case` token (matches the serde value).</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// The canonical `snake_case` token (matches the serde value).</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Root</span> =&gt; &quot;root&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;planner&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Generator</span> =&gt; &quot;generator&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Reducer</span> =&gt; &quot;reducer&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Helper</span> =&gt; &quot;helper&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> =&gt; &quot;subagent&quot;,
-        }
-    }
-</code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a></code></summary><table><tbody><tr id="method-fmt-75"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#method-fmt-75">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-fmt-75">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>())
-    }
-</code></pre>
-</details></td></tr></tbody></table></details></div>
-
-  <p class="source">crates/eos-agent-def/src/model.rs:36</p>
-</article><article id="item-struct-RawAgentDefinition-120" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RawAgentDefinition pub(crate) pub(crate) struct RawAgentDefinition crates/eos-agent-def/src/model.rs name Option &lt; String &gt; description Option &lt; String &gt; system_prompt Option &lt; String &gt; model Option &lt; String &gt; tool_call_limit u32 role Option &lt; AgentRole &gt; agent_type AgentType allowed_tools Vec &lt; String &gt; terminals Vec &lt; String &gt; notification_triggers Vec &lt; String &gt; skill Option &lt; PathBuf &gt; context_recipe Option &lt; String &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RawAgentDefinition-11" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RawAgentDefinition pub(crate) pub(crate) struct RawAgentDefinition crates/eos-agent-def/src/model.rs name Option &lt; String &gt; description Option &lt; String &gt; system_prompt Option &lt; String &gt; model Option &lt; String &gt; tool_call_limit u32 role Option &lt; AgentRole &gt; agent_type AgentType allowed_tools Vec &lt; String &gt; terminals Vec &lt; String &gt; notification_triggers Vec &lt; String &gt; skill Option &lt; PathBuf &gt; context_recipe Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RawAgentDefinition</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a></code>
-  <p class="docstring">The serde DTO for the YAML frontmatter block (`extra="forbid"` →<br>`#[serde(deny_unknown_fields)]`, GC-eos-agent-def-02).<br>The loader post-processes this (name/description defaults, contract prepend,<br>skill resolution) and then funnels it through<br>[`AgentDefinition::from_frontmatter`]. `role` is `Option` so a missing value<br>becomes a path-bearing [`AgentDefError::MissingRole`] rather than an opaque<br>serde "missing field" error.</p>
-  <div class="tags"><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>error</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>description</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>system_prompt</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>model</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tool_call_limit</td><td><code>u32</code></td></tr><tr><td>pub</td><td>role</td><td><code>Option &lt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a> &gt;</code></td></tr><tr><td>pub</td><td>agent_type</td><td><code><a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a></code></td></tr><tr><td>pub</td><td>allowed_tools</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminals</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>notification_triggers</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>context_recipe</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a></code>
+  <p class="docstring">The serde DTO for the YAML frontmatter block (`extra="forbid"` →<br>`#[serde(deny_unknown_fields)]`, GC-eos-agent-def-02).<br>The loader post-processes this (name/description defaults, contract prepend,<br>skill resolution) and then funnels it through [`definition_from_frontmatter`].</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>description</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>system_prompt</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>model</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>tool_call_limit</td><td><code>u32</code></td></tr><tr><td>pub</td><td>role</td><td><code>Option &lt; AgentRole &gt;</code></td></tr><tr><td>pub</td><td>agent_type</td><td><code>AgentType</code></td></tr><tr><td>pub</td><td>allowed_tools</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminals</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>notification_triggers</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>context_recipe</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-agent-def/src/model.rs:120</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-valid-raw-256" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn valid_raw private fn valid_raw () -&gt; RawAgentDefinition crates/eos-agent-def/src/model.rs  ">
+  <p class="source">crates/eos-agent-def/src/model.rs:11</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-definition-from-frontmatter-45" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_from_frontmatter pub(crate) pub(crate) fn definition_from_frontmatter (raw : RawAgentDefinition , path : &amp; Path ,) -&gt; Result &lt; AgentDefinition , AgentDefError &gt; crates/eos-agent-def/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>definition_from_frontmatter</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a> (raw : <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> , path : &amp; Path ,) -&gt; Result &lt; AgentDefinition , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <p class="docstring">Validate a post-processed frontmatter DTO into an agent definition.<br>The loader supplies `path` for path-bearing errors and has already applied<br>the name/description defaults and resolved the skill path.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Validate a post-processed frontmatter DTO into an agent definition.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The loader supplies `path` for path-bearing errors and has already applied</span>
+<span class="rs-comment">/// the name/description defaults and resolved the skill path.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(
+    raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>,
+    path: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentDefinition</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+    <span class="rs-kw">let</span> role = raw.role.ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">MissingRole</span> {
+        path: path.to_owned(),
+    })?;
+    <span class="rs-kw">let</span> name =
+        <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.name.unwrap_or_default()).map_err(|_| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyName</span>)?;
+    <span class="rs-kw">let</span> tool_call_limit =
+        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.tool_call_limit).ok_or(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">NonPositiveToolCallLimit</span>)?;
+    <span class="rs-kw">let</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = raw
+        .terminals
+        .into_iter()
+        .filter(|terminal| !terminal.trim().is_empty())
+        .collect();
+    <span class="rs-kw">if</span> terminals.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>);
+    }
+    <span class="rs-kw">let</span> notification_triggers = raw
+        .notification_triggers
+        .into_iter()
+        .filter(|trigger| !trigger.trim().is_empty())
+        .collect();
+    <span class="rs-type">Ok</span>(<span class="rs-type">AgentDefinition</span> {
+        name,
+        description: raw.description.unwrap_or_default(),
+        system_prompt: raw.system_prompt,
+        model: raw.model,
+        tool_call_limit,
+        role,
+        agent_type: raw.agent_type,
+        allowed_tools: raw.allowed_tools,
+        terminals,
+        notification_triggers,
+        skill: raw.skill,
+        context_recipe: raw.context_recipe,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-agent-def/src/model.rs:45</p>
+</article><article id="item-fn-valid-raw-95" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn valid_raw private fn valid_raw () -&gt; RawAgentDefinition crates/eos-agent-def/src/model.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>valid_raw</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a> () -&gt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a> () -&gt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>() -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> {
-        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>() -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> {
+        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> {
             name: <span class="rs-type">Some</span>(&quot;worker&quot;.to_owned()),
             description: <span class="rs-type">Some</span>(&quot;a worker&quot;.to_owned()),
             tool_call_limit: 10,
-            role: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>),
+            role: <span class="rs-type">Some</span>(<span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>),
             terminals: vec![&quot;submit_generator_outcome&quot;.to_owned()],
-            ..<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-default-30">default</a>()
+            ..<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>::default()
         }
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-def/src/model.rs:256</p>
-</article><article id="item-fn-definition-rejects-unknown-field-268" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_rejects_unknown_field private fn definition_rejects_unknown_field () crates/eos-agent-def/src/model.rs  ">
+  <p class="source">crates/eos-agent-def/src/model.rs:95</p>
+</article><article id="item-fn-definition-rejects-unknown-field-106" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_rejects_unknown_field private fn definition_rejects_unknown_field () crates/eos-agent-def/src/model.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>definition_rejects_unknown_field</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-definition-rejects-unknown-field-268">definition_rejects_unknown_field</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-definition-rejects-unknown-field-106">definition_rejects_unknown_field</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-rejects-unknown-field-268">definition_rejects_unknown_field</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-rejects-unknown-field-106">definition_rejects_unknown_field</a>() {
         <span class="rs-kw">let</span> yaml = &quot;name: x\ndescription: y\ntool_call_limit: 1\nrole: generator\nterminals: [t]\nbogus_key: 1\n&quot;;
-        <span class="rs-kw">let</span> parsed = serde_yaml::from_str::&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>&gt;(yaml);
+        <span class="rs-kw">let</span> parsed = serde_yaml::from_str::&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>&gt;(yaml);
         assert!(parsed.is_err(), &quot;deny_unknown_fields must reject bogus_key&quot;);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-def/src/model.rs:268</p>
-</article><article id="item-fn-definition-enforces-terminals-and-limit-276" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_enforces_terminals_and_limit private fn definition_enforces_terminals_and_limit () crates/eos-agent-def/src/model.rs  ">
+  <p class="source">crates/eos-agent-def/src/model.rs:106</p>
+</article><article id="item-fn-definition-enforces-terminals-and-limit-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn definition_enforces_terminals_and_limit private fn definition_enforces_terminals_and_limit () crates/eos-agent-def/src/model.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>definition_enforces_terminals_and_limit</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-definition-enforces-terminals-and-limit-276">definition_enforces_terminals_and_limit</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-definition-enforces-terminals-and-limit-113">definition_enforces_terminals_and_limit</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-enforces-terminals-and-limit-276">definition_enforces_terminals_and_limit</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-enforces-terminals-and-limit-113">definition_enforces_terminals_and_limit</a>() {
         <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;test.md&quot;);
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> empty = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> empty = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         empty.terminals = vec![];
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(empty, path),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(empty, path),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>)
         ));
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> blank = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> blank = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         blank.terminals = vec![&quot;   &quot;.to_owned(), &quot;&quot;.to_owned()];
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(blank, path),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(blank, path),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>)
         ));
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> zero = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> zero = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         zero.tool_call_limit = 0;
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(zero, path),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(zero, path),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">NonPositiveToolCallLimit</span>)
         ));
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-def/src/model.rs:276</p>
-</article><article id="item-fn-from-frontmatter-strips-blank-triggers-and-terminals-302" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn from_frontmatter_strips_blank_triggers_and_terminals private fn from_frontmatter_strips_blank_triggers_and_terminals () crates/eos-agent-def/src/model.rs  ">
+  <p class="source">crates/eos-agent-def/src/model.rs:113</p>
+</article><article id="item-fn-from-frontmatter-strips-blank-triggers-and-terminals-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn from_frontmatter_strips_blank_triggers_and_terminals private fn from_frontmatter_strips_blank_triggers_and_terminals () crates/eos-agent-def/src/model.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>from_frontmatter_strips_blank_triggers_and_terminals</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-from-frontmatter-strips-blank-triggers-and-terminals-302">from_frontmatter_strips_blank_triggers_and_terminals</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-from-frontmatter-strips-blank-triggers-and-terminals-139">from_frontmatter_strips_blank_triggers_and_terminals</a> ()</code>
   <div class="tags"><span>constructor</span><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-from-frontmatter-strips-blank-triggers-and-terminals-302">from_frontmatter_strips_blank_triggers_and_terminals</a>() {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-from-frontmatter-strips-blank-triggers-and-terminals-139">from_frontmatter_strips_blank_triggers_and_terminals</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         raw.terminals = vec![&quot;  &quot;.to_owned(), &quot;submit_x&quot;.to_owned()];
         raw.notification_triggers = vec![&quot;keep&quot;.to_owned(), &quot;  &quot;.to_owned()];
-        <span class="rs-kw">let</span> def = <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(raw, <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;t.md&quot;)).unwrap();
+        <span class="rs-kw">let</span> def = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(raw, <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;t.md&quot;)).unwrap();
         assert_eq!(def.terminals, vec![&quot;submit_x&quot;.to_owned()]);
         assert_eq!(def.notification_triggers, vec![&quot;keep&quot;.to_owned()]);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-def/src/model.rs:302</p>
-</article><article id="item-fn-role-and-type-serde-values-313" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn role_and_type_serde_values private fn role_and_type_serde_values () crates/eos-agent-def/src/model.rs  ">
+  <p class="source">crates/eos-agent-def/src/model.rs:139</p>
+</article><article id="item-fn-blank-name-maps-to-agent-def-error-149" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn blank_name_maps_to_agent_def_error private fn blank_name_maps_to_agent_def_error () crates/eos-agent-def/src/model.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>role_and_type_serde_values</h3>
+    <h3>blank_name_maps_to_agent_def_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-role-and-type-serde-values-313">role_and_type_serde_values</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-blank-name-maps-to-agent-def-error-149">blank_name_maps_to_agent_def_error</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-role-and-type-serde-values-313">role_and_type_serde_values</a>() {
-        <span class="rs-kw">let</span> role = serde_json::to_value(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>).unwrap();
-        assert_eq!(role, serde_json::json!(&quot;generator&quot;));
-        <span class="rs-kw">let</span> ty = serde_json::to_value(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>::<span class="rs-type">Subagent</span>).unwrap();
-        assert_eq!(ty, serde_json::json!(&quot;subagent&quot;));
-        <span class="rs-comment">// round-trip every variant token.</span>
-        <span class="rs-kw">for</span> (variant, token) <span class="rs-kw">in</span> [
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Root</span>, &quot;root&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span>, &quot;planner&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>, &quot;generator&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>, &quot;reducer&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, &quot;helper&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Subagent</span>, &quot;subagent&quot;),
-        ] {
-            assert_eq!(
-                serde_json::to_value(variant).unwrap(),
-                serde_json::json!(token)
-            );
-            assert_eq!(variant.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), token);
-        }
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-agent-def/src/model.rs:313</p>
-</article><article id="item-fn-agent-name-trims-and-rejects-empty-336" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_name_trims_and_rejects_empty private fn agent_name_trims_and_rejects_empty () crates/eos-agent-def/src/model.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>agent_name_trims_and_rejects_empty</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-fn-agent-name-trims-and-rejects-empty-336">agent_name_trims_and_rejects_empty</a> ()</code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-agent-name-trims-and-rejects-empty-336">agent_name_trims_and_rejects_empty</a>() {
-        assert_eq!(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;  root  &quot;).unwrap().<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), &quot;root&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-blank-name-maps-to-agent-def-error-149">blank_name_maps_to_agent_def_error</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
+        raw.name = <span class="rs-type">Some</span>(&quot;   &quot;.to_owned());
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;   &quot;),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(raw, <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;t.md&quot;)),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyName</span>)
         ));
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-def/src/model.rs:336</p>
+  <p class="source">crates/eos-agent-def/src/model.rs:149</p>
 </article></div>
 </section></div>
 </main>
@@ -395,136 +263,24 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-agent-def/src/model.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! The static identity of an agent profile: the `AgentType` / `AgentRole`</span>
-<span class="rs-comment">//! vocabularies, the `AgentName` newtype, and the `AgentDefinition` value type</span>
-<span class="rs-comment">//! with its construction-time invariants.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! typed schema-era validators become parse-don't-validate construction (`api-parse-dont-validate`):</span>
-<span class="rs-comment">//! the serde DTO [`RawAgentDefinition`] funnels through</span>
-<span class="rs-comment">//! [`AgentDefinition::from_frontmatter`], so an invalid definition is</span>
-<span class="rs-comment">//! unrepresentable.</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Loader-local raw frontmatter DTO and validation into `eos-types` agent DTOs.</span>
 
-<span class="rs-kw">use</span> std::fmt;
 <span class="rs-kw">use</span> std::num::<span class="rs-type">NonZeroU32</span>;
 <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
 
-<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
-<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRole</span>, <span class="rs-type">AgentType</span>};
+<span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>;
-
-<span class="rs-comment">/// Runtime class of an agent profile (`model.py:AgentType`).</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
-#[serde(rename_all = &quot;snake_case&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a> {
-    <span class="rs-comment">/// A regular agent.</span>
-    <span class="rs-type">Agent</span>,
-    <span class="rs-comment">/// A worker subagent targetable by `run_subagent`.</span>
-    <span class="rs-type">Subagent</span>,
-}
-
-<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a> {
-    <span class="rs-comment">/// Matches `model.py`'s `agent_type: AgentType = AGENT`.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-default-30">default</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<span class="rs-type">Agent</span>
-    }
-}
-
-<span class="rs-comment">/// Canonical category of an agent profile (`model.py:AgentRole`).</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Closed vocabulary (deliberately **not** `#[non_exhaustive]`): the</span>
-<span class="rs-comment">/// planner-submission gate and audit tag rely on an exhaustive `match`. The</span>
-<span class="rs-comment">/// `executor` profile carries `role: generator`; `executor` never enters this</span>
-<span class="rs-comment">/// state (anchor §4).</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
-#[serde(rename_all = &quot;snake_case&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a> {
-    <span class="rs-comment">/// The root request agent.</span>
-    <span class="rs-type">Root</span>,
-    <span class="rs-comment">/// Authors the attempt DAG.</span>
-    <span class="rs-type">Planner</span>,
-    <span class="rs-comment">/// Does the work; the `executor` profile maps here.</span>
-    <span class="rs-type">Generator</span>,
-    <span class="rs-comment">/// Digests dependency outputs; the attempt exit gate.</span>
-    <span class="rs-type">Reducer</span>,
-    <span class="rs-comment">/// The advisor helper.</span>
-    <span class="rs-type">Helper</span>,
-    <span class="rs-comment">/// The read-only explorer subagent.</span>
-    <span class="rs-type">Subagent</span>,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a> {
-    <span class="rs-comment">/// The canonical `snake_case` token (matches the serde value).</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Root</span> =&gt; &quot;root&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;planner&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Generator</span> =&gt; &quot;generator&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Reducer</span> =&gt; &quot;reducer&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Helper</span> =&gt; &quot;helper&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> =&gt; &quot;subagent&quot;,
-        }
-    }
-}
-
-<span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-fmt-75">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>())
-    }
-}
-
-<span class="rs-comment">/// A registry key / dispatchable name, validated non-empty after trimming.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Format-only newtype (`type-newtype-ids`): it does **not** check membership</span>
-<span class="rs-comment">/// against any catalog. Empty-rejection is a Rust hardening of the Rust model</span>
-<span class="rs-comment">/// (which has no name validator); the loader applies the `path.stem` default</span>
-<span class="rs-comment">/// before construction so the newtype only ever sees a resolved stem on the</span>
-<span class="rs-comment">/// file-parse path.</span>
-#[derive(
-    <span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>,
-)]
-#[serde(transparent)]
-#[schemars(transparent)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>(<span class="rs-type">String</span>);
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a> {
-    <span class="rs-comment">/// Construct a name, trimming surrounding whitespace.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns [`AgentDefError::EmptyName`] when the trimmed value is empty.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
-        <span class="rs-kw">let</span> trimmed = raw.into().trim().to_owned();
-        <span class="rs-kw">if</span> trimmed.is_empty() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyName</span>);
-        }
-        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(trimmed))
-    }
-
-    <span class="rs-comment">/// Borrow the name as a string slice.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
-        &amp;<span class="rs-self">self</span>.0
-    }
-}
-
-<span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-fmt-75">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.write_str(&amp;<span class="rs-self">self</span>.0)
-    }
-}
 
 <span class="rs-comment">/// The serde DTO for the YAML frontmatter block (`extra="forbid"` →</span>
 <span class="rs-comment">/// `#[serde(deny_unknown_fields)]`, GC-eos-agent-def-02).</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// The loader post-processes this (name/description defaults, contract prepend,</span>
-<span class="rs-comment">/// skill resolution) and then funnels it through</span>
-<span class="rs-comment">/// [`AgentDefinition::from_frontmatter`]. `role` is `Option` so a missing value</span>
-<span class="rs-comment">/// becomes a path-bearing [`AgentDefError::MissingRole`] rather than an opaque</span>
-<span class="rs-comment">/// serde "missing field" error.</span>
+<span class="rs-comment">/// skill resolution) and then funnels it through [`definition_from_frontmatter`].</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>, <span class="rs-type">Deserialize</span>)]
 #[serde(deny_unknown_fields)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> {
     #[serde(default)]
     <span class="rs-kw">pub</span> name: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     #[serde(default)]
@@ -536,9 +292,9 @@
     #[serde(default)]
     <span class="rs-kw">pub</span> tool_call_limit: u32,
     #[serde(default)]
-    <span class="rs-kw">pub</span> role: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>&gt;,
+    <span class="rs-kw">pub</span> role: <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRole</span>&gt;,
     #[serde(default)]
-    <span class="rs-kw">pub</span> agent_type: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>,
+    <span class="rs-kw">pub</span> agent_type: <span class="rs-type">AgentType</span>,
     #[serde(default)]
     <span class="rs-kw">pub</span> allowed_tools: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     #[serde(default)]
@@ -551,190 +307,116 @@
     <span class="rs-kw">pub</span> context_recipe: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
 }
 
-<span class="rs-comment">/// Full agent definition with all configuration fields (`model.py`).</span>
+<span class="rs-comment">/// Validate a post-processed frontmatter DTO into an agent definition.</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// Construction enforces invariants so an invalid value is unrepresentable:</span>
-<span class="rs-comment">/// `tool_call_limit` is [`NonZeroU32`], `terminals` is non-empty after stripping</span>
-<span class="rs-comment">/// blanks, and blank `notification_triggers` are dropped. No `Default` impl:</span>
-<span class="rs-comment">/// `name`/`description`/`tool_call_limit`/`terminals` have no sensible default</span>
-<span class="rs-comment">/// (`api-default-impl`).</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
-#[serde(deny_unknown_fields)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
-    <span class="rs-comment">/// Registry key and dispatchable name.</span>
-    <span class="rs-kw">pub</span> name: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>,
-    <span class="rs-comment">/// Human-readable description.</span>
-    <span class="rs-kw">pub</span> description: <span class="rs-type">String</span>,
-    <span class="rs-comment">/// Composed system prompt; `None` when the profile declares none.</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> system_prompt: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    <span class="rs-comment">/// Raw model id; the `"inherit"` sentinel is resolved downstream, kept verbatim here.</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> model: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    <span class="rs-comment">/// Per-run cap on tool dispatches (positive by construction).</span>
-    <span class="rs-kw">pub</span> tool_call_limit: <span class="rs-type">NonZeroU32</span>,
-    <span class="rs-comment">/// Canonical role; required on the file-parse path (GC-eos-agent-def-06).</span>
-    <span class="rs-kw">pub</span> role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>,
-    <span class="rs-comment">/// Regular agent or worker subagent.</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> agent_type: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>,
-    <span class="rs-comment">/// Tools the agent may call (plain names; resolved to specs in `eos-engine`).</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> allowed_tools: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    <span class="rs-comment">/// Terminal tools that end the query loop (non-empty by construction).</span>
-    <span class="rs-kw">pub</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    <span class="rs-comment">/// Declarative notification-trigger ids (blanks stripped).</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> notification_triggers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    <span class="rs-comment">/// Absolute path to the agent's workflow skill, resolved by the loader.</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> skill: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
-    <span class="rs-comment">/// Context-engine recipe id resolved at compose time.</span>
-    #[serde(default)]
-    <span class="rs-kw">pub</span> context_recipe: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
-    <span class="rs-comment">/// Validate a post-processed frontmatter DTO into a definition.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// The loader supplies `path` for path-bearing errors and has already</span>
-    <span class="rs-comment">/// applied the name/description defaults and resolved the skill path.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns [`AgentDefError`] when `role` is absent ([`AgentDefError::MissingRole`]),</span>
-    <span class="rs-comment">/// the resolved name is empty ([`AgentDefError::EmptyName`]), `terminals` is</span>
-    <span class="rs-comment">/// empty after stripping blanks ([`AgentDefError::EmptyTerminals`]), or</span>
-    <span class="rs-comment">/// `tool_call_limit` is not positive ([`AgentDefError::NonPositiveToolCallLimit`]).</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(
-        raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>,
-        path: &amp;<span class="rs-type">Path</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
-        <span class="rs-kw">let</span> role = raw.role.ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">MissingRole</span> {
-            path: path.to_owned(),
-        })?;
-        <span class="rs-kw">let</span> name = <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.name.unwrap_or_default())?;
-        <span class="rs-kw">let</span> tool_call_limit =
-            <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.tool_call_limit).ok_or(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">NonPositiveToolCallLimit</span>)?;
-        <span class="rs-kw">let</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = raw
-            .terminals
-            .into_iter()
-            .filter(|t| !t.trim().is_empty())
-            .collect();
-        <span class="rs-kw">if</span> terminals.is_empty() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>);
-        }
-        <span class="rs-kw">let</span> notification_triggers = raw
-            .notification_triggers
-            .into_iter()
-            .filter(|t| !t.trim().is_empty())
-            .collect();
-        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
-            name,
-            description: raw.description.unwrap_or_default(),
-            system_prompt: raw.system_prompt,
-            model: raw.model,
-            tool_call_limit,
-            role,
-            agent_type: raw.agent_type,
-            allowed_tools: raw.allowed_tools,
-            terminals,
-            notification_triggers,
-            skill: raw.skill,
-            context_recipe: raw.context_recipe,
-        })
+<span class="rs-comment">/// The loader supplies `path` for path-bearing errors and has already applied</span>
+<span class="rs-comment">/// the name/description defaults and resolved the skill path.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(
+    raw: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>,
+    path: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentDefinition</span>, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+    <span class="rs-kw">let</span> role = raw.role.ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">MissingRole</span> {
+        path: path.to_owned(),
+    })?;
+    <span class="rs-kw">let</span> name =
+        <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.name.unwrap_or_default()).map_err(|_| <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyName</span>)?;
+    <span class="rs-kw">let</span> tool_call_limit =
+        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(raw.tool_call_limit).ok_or(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">NonPositiveToolCallLimit</span>)?;
+    <span class="rs-kw">let</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = raw
+        .terminals
+        .into_iter()
+        .filter(|terminal| !terminal.trim().is_empty())
+        .collect();
+    <span class="rs-kw">if</span> terminals.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>);
     }
+    <span class="rs-kw">let</span> notification_triggers = raw
+        .notification_triggers
+        .into_iter()
+        .filter(|trigger| !trigger.trim().is_empty())
+        .collect();
+    <span class="rs-type">Ok</span>(<span class="rs-type">AgentDefinition</span> {
+        name,
+        description: raw.description.unwrap_or_default(),
+        system_prompt: raw.system_prompt,
+        model: raw.model,
+        tool_call_limit,
+        role,
+        agent_type: raw.agent_type,
+        allowed_tools: raw.allowed_tools,
+        terminals,
+        notification_triggers,
+        skill: raw.skill,
+        context_recipe: raw.context_recipe,
+    })
 }
 
 #[cfg(test)]
 <span class="rs-kw">mod</span> tests {
-    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
+    #![allow(clippy::unwrap_used)]
+
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>() -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> {
-        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>() -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> {
+        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a> {
             name: <span class="rs-type">Some</span>(&quot;worker&quot;.to_owned()),
             description: <span class="rs-type">Some</span>(&quot;a worker&quot;.to_owned()),
             tool_call_limit: 10,
-            role: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>),
+            role: <span class="rs-type">Some</span>(<span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>),
             terminals: vec![&quot;submit_generator_outcome&quot;.to_owned()],
-            ..<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-default-30">default</a>()
+            ..<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>::default()
         }
     }
 
-    <span class="rs-comment">// AC-eos-agent-def-02: an unknown frontmatter key is rejected at deserialize.</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-rejects-unknown-field-268">definition_rejects_unknown_field</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-rejects-unknown-field-106">definition_rejects_unknown_field</a>() {
         <span class="rs-kw">let</span> yaml = &quot;name: x\ndescription: y\ntool_call_limit: 1\nrole: generator\nterminals: [t]\nbogus_key: 1\n&quot;;
-        <span class="rs-kw">let</span> parsed = serde_yaml::from_str::&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-120">RawAgentDefinition</a>&gt;(yaml);
+        <span class="rs-kw">let</span> parsed = serde_yaml::from_str::&lt;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-RawAgentDefinition-11">RawAgentDefinition</a>&gt;(yaml);
         assert!(parsed.is_err(), &quot;deny_unknown_fields must reject bogus_key&quot;);
     }
 
-    <span class="rs-comment">// AC-eos-agent-def-03: empty/blank terminals and non-positive limit fail.</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-enforces-terminals-and-limit-276">definition_enforces_terminals_and_limit</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-enforces-terminals-and-limit-113">definition_enforces_terminals_and_limit</a>() {
         <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;test.md&quot;);
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> empty = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> empty = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         empty.terminals = vec![];
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(empty, path),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(empty, path),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>)
         ));
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> blank = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> blank = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         blank.terminals = vec![&quot;   &quot;.to_owned(), &quot;&quot;.to_owned()];
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(blank, path),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(blank, path),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyTerminals</span>)
         ));
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> zero = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> zero = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         zero.tool_call_limit = 0;
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(zero, path),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(zero, path),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">NonPositiveToolCallLimit</span>)
         ));
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-from-frontmatter-strips-blank-triggers-and-terminals-302">from_frontmatter_strips_blank_triggers_and_terminals</a>() {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-256">valid_raw</a>();
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-from-frontmatter-strips-blank-triggers-and-terminals-139">from_frontmatter_strips_blank_triggers_and_terminals</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
         raw.terminals = vec![&quot;  &quot;.to_owned(), &quot;submit_x&quot;.to_owned()];
         raw.notification_triggers = vec![&quot;keep&quot;.to_owned(), &quot;  &quot;.to_owned()];
-        <span class="rs-kw">let</span> def = <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-from-frontmatter-201">from_frontmatter</a>(raw, <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;t.md&quot;)).unwrap();
+        <span class="rs-kw">let</span> def = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(raw, <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;t.md&quot;)).unwrap();
         assert_eq!(def.terminals, vec![&quot;submit_x&quot;.to_owned()]);
         assert_eq!(def.notification_triggers, vec![&quot;keep&quot;.to_owned()]);
     }
 
-    <span class="rs-comment">// AC-eos-agent-def-06 (enum-value half): serde values match the Rust schema.</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-role-and-type-serde-values-313">role_and_type_serde_values</a>() {
-        <span class="rs-kw">let</span> role = serde_json::to_value(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>).unwrap();
-        assert_eq!(role, serde_json::json!(&quot;generator&quot;));
-        <span class="rs-kw">let</span> ty = serde_json::to_value(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>::<span class="rs-type">Subagent</span>).unwrap();
-        assert_eq!(ty, serde_json::json!(&quot;subagent&quot;));
-        <span class="rs-comment">// round-trip every variant token.</span>
-        <span class="rs-kw">for</span> (variant, token) <span class="rs-kw">in</span> [
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Root</span>, &quot;root&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span>, &quot;planner&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>, &quot;generator&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>, &quot;reducer&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, &quot;helper&quot;),
-            (<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Subagent</span>, &quot;subagent&quot;),
-        ] {
-            assert_eq!(
-                serde_json::to_value(variant).unwrap(),
-                serde_json::json!(token)
-            );
-            assert_eq!(variant.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), token);
-        }
-    }
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-agent-name-trims-and-rejects-empty-336">agent_name_trims_and_rejects_empty</a>() {
-        assert_eq!(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;  root  &quot;).unwrap().<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>(), &quot;root&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-blank-name-maps-to-agent-def-error-149">blank_name_maps_to_agent_def_error</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> raw = <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-valid-raw-95">valid_raw</a>();
+        raw.name = <span class="rs-type">Some</span>(&quot;   &quot;.to_owned());
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;   &quot;),
+            <a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#item-fn-definition-from-frontmatter-45">definition_from_frontmatter</a>(raw, <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;t.md&quot;)),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">EmptyName</span>)
         ));
     }

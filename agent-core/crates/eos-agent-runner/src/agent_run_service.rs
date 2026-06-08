@@ -221,16 +221,14 @@ impl AgentRunApi for AgentRunService {
         let Some(agent_def) = self.agent_registry.get(&agent_name) else {
             return Err(AgentRunError::AgentNotRegistered(requested_agent_name));
         };
-        if matches!(
-            request.record_kind,
-            AgentRunMessageRecordKind::Subagent { .. }
-        ) && agent_def.agent_type != AgentType::Subagent
-        {
-            return Err(AgentRunError::WrongAgentType {
-                agent_name: requested_agent_name,
-                expected: "subagent",
-                actual: agent_type_value(agent_def.agent_type),
-            });
+        if let Some(expected) = expected_agent_type(&request.record_kind) {
+            if agent_def.agent_type != expected {
+                return Err(AgentRunError::WrongAgentType {
+                    agent_name: requested_agent_name,
+                    expected: agent_type_value(expected),
+                    actual: agent_type_value(agent_def.agent_type),
+                });
+            }
         }
 
         let agent_def = (**agent_def).clone();
@@ -446,5 +444,47 @@ const fn agent_type_value(agent_type: AgentType) -> &'static str {
     match agent_type {
         AgentType::Agent => "agent",
         AgentType::Subagent => "subagent",
+        AgentType::Advisor => "advisor",
+    }
+}
+
+const fn expected_agent_type(record_kind: &AgentRunMessageRecordKind) -> Option<AgentType> {
+    match record_kind {
+        AgentRunMessageRecordKind::Root
+        | AgentRunMessageRecordKind::WorkflowTask { .. }
+        | AgentRunMessageRecordKind::Agent => Some(AgentType::Agent),
+        AgentRunMessageRecordKind::Subagent { .. } => Some(AgentType::Subagent),
+        AgentRunMessageRecordKind::Advisor { .. } => Some(AgentType::Advisor),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn record_kind_declares_required_agent_type() {
+        let parent_agent_run_id = AgentRunId::new_v4();
+        assert_eq!(
+            expected_agent_type(&AgentRunMessageRecordKind::Root),
+            Some(AgentType::Agent)
+        );
+        assert_eq!(
+            expected_agent_type(&AgentRunMessageRecordKind::Agent),
+            Some(AgentType::Agent)
+        );
+        assert_eq!(
+            expected_agent_type(&AgentRunMessageRecordKind::Subagent {
+                parent_agent_run_id: parent_agent_run_id.clone(),
+            }),
+            Some(AgentType::Subagent)
+        );
+        assert_eq!(
+            expected_agent_type(&AgentRunMessageRecordKind::Advisor {
+                parent_agent_run_id,
+            }),
+            Some(AgentType::Advisor)
+        );
     }
 }

@@ -331,8 +331,7 @@ fn encode_anthropic_body_with_options(
             let content: Vec<Value> = message
                 .content
                 .iter()
-                .filter(|block| !matches!(block, ContentBlock::Reasoning { .. }))
-                .map(serialize_anthropic_block)
+                .filter_map(serialize_anthropic_block)
                 .collect();
             json!({ "role": message.role.as_wire(), "content": content })
         })
@@ -369,33 +368,34 @@ fn encode_anthropic_body_with_options(
 }
 
 /// Project one neutral block to the Anthropic wire shape. `Reasoning` is
-/// filtered before this is called; `tool_result` omits `metadata`/`is_terminal`
-/// (§8.6).
-fn serialize_anthropic_block(block: &ContentBlock) -> Value {
+/// provider-managed and skipped; `tool_result` omits `metadata`/`is_terminal`
+/// (§8.6). Future neutral blocks are skipped until the provider projection owns
+/// an explicit mapping.
+fn serialize_anthropic_block(block: &ContentBlock) -> Option<Value> {
     match block {
-        ContentBlock::Text { text } => json!({ "type": "text", "text": text }),
+        ContentBlock::Text { text } => Some(json!({ "type": "text", "text": text })),
         ContentBlock::ToolUse {
             tool_use_id,
             name,
             input,
-        } => json!({ "type": "tool_use", "id": tool_use_id, "name": name, "input": input }),
+        } => Some(json!({ "type": "tool_use", "id": tool_use_id, "name": name, "input": input })),
         ContentBlock::ToolResult {
             tool_use_id,
             content,
             is_error,
             ..
-        } => json!({
+        } => Some(json!({
             "type": "tool_result",
             "tool_use_id": tool_use_id,
             "content": content,
             "is_error": is_error,
-        }),
-        ContentBlock::SystemNotification { text } => json!({
+        })),
+        ContentBlock::SystemNotification { text } => Some(json!({
             "type": "text",
             "text": format!("<system-reminder>\n{text}\n</system-reminder>"),
-        }),
-        // Filtered out before this call; encoded defensively for totality.
-        ContentBlock::Reasoning { text } => json!({ "type": "thinking", "text": text }),
+        })),
+        ContentBlock::Reasoning { .. } => None,
+        _ => None,
     }
 }
 

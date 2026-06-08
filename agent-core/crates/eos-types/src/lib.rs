@@ -12,20 +12,34 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod agent;
+mod contracts;
 mod error;
+mod frontmatter;
 mod ids;
 mod json;
+mod llm;
 pub mod ports;
 pub mod state;
 mod time;
-mod workflow_api;
 
+pub use agent::{
+    AgentDefinition, AgentName, AgentNameError, AgentRegistry, AgentRegistryBuilder, AgentRole,
+    AgentType,
+};
+pub use contracts::{
+    AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus,
+    OutstandingWorkflow, SpawnAgentRequest, StartWorkflowRequest, StartedWorkflow,
+    TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowTaskRole, WorkflowTerminalStatus,
+};
 pub use error::CoreError;
+pub use frontmatter::parse_markdown_frontmatter;
 pub use ids::{
     AgentRunId, AttemptId, CommandSessionId, InvocationId, IterationId, RequestId, SandboxId,
     TaskId, ToolUseId, WorkflowId,
 };
 pub use json::JsonObject;
+pub use llm::{ContentBlock, Message, MessageRole, ToolSpec};
 pub use ports::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
     TaskStore, WorkflowStore,
@@ -40,7 +54,3 @@ pub use state::{
     TaskRole, TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};
-pub use workflow_api::{
-    OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow, WorkflowApi,
-    WorkflowApiError, WorkflowTerminalStatus,
-};

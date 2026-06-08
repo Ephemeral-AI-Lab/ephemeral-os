@@ -5,9 +5,9 @@ use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use eos_plugin::{PluginError, PpcEnvelope};
+use crate::{PluginError, PpcEnvelope};
 
-use crate::PpcError;
+use crate::host::PpcError;
 
 const MAX_PPC_FRAME_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
 

@@ -1,11 +1,10 @@
-//! Plugin service process specifications.
+//! Plugin service process *lifecycle* — the daemon's impure half over the
+//! host-neutral [`PluginProcessSpec`] launch contract (`eos_plugin::host::route`).
 //!
-//! The daemon is the impure owner for service process lifecycle. This module
-//! keeps the launch contract explicit and keyed by `PluginServiceKey`: every
-//! service process gets a stable `/eos/plugin/ppc/*.sock` endpoint plus the
-//! environment a small generic harness needs to connect back to the daemon.
+//! The daemon owns spawning the live child (overlay/namespace runner included),
+//! the PPC accept handshake, and teardown (`Drop` = `killpg`). The spec data,
+//! env construction, and socket-path derivation live host-side.
 
-use std::collections::BTreeMap;
 use std::io::ErrorKind;
 #[cfg(all(target_os = "linux", not(test)))]
 use std::io::Write;
@@ -14,30 +13,18 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use eos_plugin::{PluginError, PluginServiceKey};
+use eos_plugin::host::route::PluginProcessSpec;
+#[cfg(all(target_os = "linux", not(test)))]
+use eos_plugin::host::route::ENV_PLUGIN_WORKSPACE_MOUNTED;
+use eos_plugin::host::PpcClient;
+use eos_plugin::PluginError;
 #[cfg(all(target_os = "linux", not(test)))]
 use eos_protocol::Intent;
 #[cfg(all(target_os = "linux", not(test)))]
 use eos_runner::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 
-#[cfg(test)]
-use super::plugin_runtime_config;
 use crate::error::DaemonError;
-use eos_plugin_host::PpcClient;
-
-pub(super) const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
-pub(super) const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";
-pub(super) const ENV_PLUGIN_WORKSPACE_ROOT: &str = "EOS_PLUGIN_WORKSPACE_ROOT";
-pub(super) const ENV_PLUGIN_PACKAGE_ROOT: &str = "EOS_PLUGIN_PACKAGE_ROOT";
-pub(super) const ENV_PLUGIN_DEPENDENCY_ROOT: &str = "EOS_PLUGIN_DEPENDENCY_ROOT";
-pub(super) const ENV_PLUGIN_ID: &str = "EOS_PLUGIN_ID";
-pub(super) const ENV_PLUGIN_DIGEST: &str = "EOS_PLUGIN_DIGEST";
-pub(super) const ENV_PLUGIN_SERVICE_ID: &str = "EOS_PLUGIN_SERVICE_ID";
-pub(super) const ENV_PLUGIN_SERVICE_PROFILE_DIGEST: &str = "EOS_PLUGIN_SERVICE_PROFILE_DIGEST";
-pub(super) const ENV_PLUGIN_PPC_PROTOCOL_VERSION: &str = "EOS_PLUGIN_PPC_PROTOCOL_VERSION";
-pub(super) const ENV_PLUGIN_WORKSPACE_MOUNTED: &str = "EOS_PLUGIN_WORKSPACE_MOUNTED";
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginServiceOverlay {
@@ -47,293 +34,144 @@ pub(super) struct PluginServiceOverlay {
     pub(super) workdir: PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct PluginProcessSpec {
-    key: PluginServiceKey,
-    command: Vec<String>,
-    package_root: PathBuf,
-    dependency_root: PathBuf,
-    working_dir: PathBuf,
-    ppc_protocol_version: u32,
-    socket_path: PathBuf,
-}
-
-impl PluginProcessSpec {
-    #[cfg(test)]
-    pub(crate) fn new(
-        key: PluginServiceKey,
-        command: Vec<String>,
-        ppc_protocol_version: u32,
-    ) -> Result<Self, PluginError> {
-        let package_root = default_package_root(&key);
-        let dependency_root = default_dependency_root(&key);
-        let socket_root = plugin_runtime_config().ppc_root;
-        Self::new_with_package_paths(
-            key,
-            command,
-            package_root.clone(),
-            dependency_root,
-            PathBuf::from("."),
-            ppc_protocol_version,
-            socket_root,
-        )
-    }
-
-    #[cfg(test)]
-    pub(crate) fn new_with_socket_root(
-        key: PluginServiceKey,
-        command: Vec<String>,
-        ppc_protocol_version: u32,
-        socket_root: impl AsRef<Path>,
-    ) -> Result<Self, PluginError> {
-        let package_root = default_package_root(&key);
-        let dependency_root = default_dependency_root(&key);
-        Self::new_with_package_paths(
-            key,
-            command,
-            package_root.clone(),
-            dependency_root,
-            PathBuf::from("."),
-            ppc_protocol_version,
-            socket_root,
-        )
-    }
-
-    pub(crate) fn new_with_package_paths(
-        key: PluginServiceKey,
-        command: Vec<String>,
-        package_root: PathBuf,
-        dependency_root: PathBuf,
-        working_dir: PathBuf,
-        ppc_protocol_version: u32,
-        socket_root: impl AsRef<Path>,
-    ) -> Result<Self, PluginError> {
-        if command.is_empty() || command[0].trim().is_empty() {
-            return Err(PluginError::Manifest(format!(
-                "service {} requires a launch command",
-                key.service_id
-            )));
+pub(super) fn spawn_connected_with_overlay(
+    spec: &PluginProcessSpec,
+    overlay: Option<&PluginServiceOverlay>,
+    timeout: Duration,
+) -> Result<(PluginServiceProcess, PpcClient), DaemonError> {
+    let listener = bind_ppc_listener(&spec.socket_path)?;
+    let mut process = spawn_for_overlay(spec, overlay)?;
+    match accept_ppc_client(&listener, &mut process, timeout) {
+        Ok(client) => Ok((process, client)),
+        Err(err) => {
+            process.teardown();
+            Err(err)
         }
-        if ppc_protocol_version == 0 {
-            return Err(PluginError::Manifest(
-                "ppc_protocol_version must be positive".to_owned(),
-            ));
-        }
-        let socket_path = socket_path_for_key(&key, socket_root.as_ref());
-        Ok(Self {
-            key,
-            command,
-            package_root,
-            dependency_root,
-            working_dir,
-            ppc_protocol_version,
-            socket_path,
-        })
-    }
-
-    pub(crate) fn environment(&self) -> BTreeMap<&'static str, String> {
-        BTreeMap::from([
-            (
-                ENV_PLUGIN_PPC_SOCKET,
-                self.socket_path.to_string_lossy().into_owned(),
-            ),
-            (
-                ENV_PLUGIN_LAYER_STACK_ROOT,
-                self.key.layer_stack_root.clone(),
-            ),
-            (ENV_PLUGIN_WORKSPACE_ROOT, self.key.workspace_root.clone()),
-            (
-                ENV_PLUGIN_PACKAGE_ROOT,
-                self.package_root.to_string_lossy().into_owned(),
-            ),
-            (
-                ENV_PLUGIN_DEPENDENCY_ROOT,
-                self.dependency_root.to_string_lossy().into_owned(),
-            ),
-            (ENV_PLUGIN_ID, self.key.plugin_id.clone()),
-            (ENV_PLUGIN_DIGEST, self.key.plugin_digest.clone()),
-            (ENV_PLUGIN_SERVICE_ID, self.key.service_id.clone()),
-            (
-                ENV_PLUGIN_SERVICE_PROFILE_DIGEST,
-                self.key.service_profile_digest.clone(),
-            ),
-            (
-                ENV_PLUGIN_PPC_PROTOCOL_VERSION,
-                self.ppc_protocol_version.to_string(),
-            ),
-            (ENV_PLUGIN_WORKSPACE_MOUNTED, "0".to_owned()),
-        ])
-    }
-
-    pub(crate) fn service_instance_id(&self) -> String {
-        self.key.service_instance_id()
-    }
-
-    pub(crate) const fn key(&self) -> &PluginServiceKey {
-        &self.key
-    }
-
-    pub(crate) fn spawn(&self) -> Result<PluginServiceProcess, DaemonError> {
-        let env = self.environment();
-        self.spawn_command(&self.command, env)
-    }
-
-    fn spawn_command(
-        &self,
-        argv: &[String],
-        env: BTreeMap<&'static str, String>,
-    ) -> Result<PluginServiceProcess, DaemonError> {
-        let mut command = Command::new(&argv[0]);
-        command.args(&argv[1..]);
-        if self.working_dir.is_dir() {
-            command.current_dir(&self.working_dir);
-        }
-        command
-            .envs(env)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::CommandExt;
-            command.process_group(0);
-        }
-        let child = command.spawn()?;
-        let process_group_id = i32::try_from(child.id()).ok();
-        Ok(PluginServiceProcess {
-            spec: self.clone(),
-            child,
-            process_group_id,
-            torn_down: false,
-        })
-    }
-
-    pub(crate) fn spawn_connected_with_overlay(
-        &self,
-        overlay: Option<&PluginServiceOverlay>,
-        timeout: Duration,
-    ) -> Result<(PluginServiceProcess, PpcClient), DaemonError> {
-        let listener = bind_ppc_listener(&self.socket_path)?;
-        let mut process = self.spawn_for_overlay(overlay)?;
-        match accept_ppc_client(&listener, &mut process, timeout) {
-            Ok(client) => Ok((process, client)),
-            Err(err) => {
-                process.teardown();
-                Err(err)
-            }
-        }
-    }
-
-    fn spawn_for_overlay(
-        &self,
-        overlay: Option<&PluginServiceOverlay>,
-    ) -> Result<PluginServiceProcess, DaemonError> {
-        if let Some(overlay) = overlay {
-            return self.spawn_overlay_runner(overlay);
-        }
-        self.spawn()
-    }
-
-    #[cfg(all(target_os = "linux", not(test)))]
-    fn spawn_overlay_runner(
-        &self,
-        overlay: &PluginServiceOverlay,
-    ) -> Result<PluginServiceProcess, DaemonError> {
-        let request = self.overlay_run_request(overlay);
-        let payload = serde_json::to_vec(&request)
-            .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
-        let mut command = Command::new(std::env::current_exe()?);
-        command
-            .arg("ns-runner")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::CommandExt;
-            command.process_group(0);
-        }
-        let mut child = command.spawn()?;
-        child
-            .stdin
-            .as_mut()
-            .ok_or_else(|| DaemonError::InvalidEnvelope("ns-runner stdin unavailable".to_owned()))?
-            .write_all(&payload)?;
-        drop(child.stdin.take());
-        let process_group_id = i32::try_from(child.id()).ok();
-        Ok(PluginServiceProcess {
-            spec: self.clone(),
-            child,
-            process_group_id,
-            torn_down: false,
-        })
-    }
-
-    #[cfg(any(not(target_os = "linux"), test))]
-    fn spawn_overlay_runner(
-        &self,
-        overlay: &PluginServiceOverlay,
-    ) -> Result<PluginServiceProcess, DaemonError> {
-        let _ = (&overlay.layer_paths, &overlay.upperdir, &overlay.workdir);
-        self.spawn()
-    }
-
-    #[cfg(all(target_os = "linux", not(test)))]
-    fn overlay_run_request(&self, overlay: &PluginServiceOverlay) -> RunRequest {
-        let mut env = self.environment();
-        env.insert(ENV_PLUGIN_WORKSPACE_MOUNTED, "1".to_owned());
-        RunRequest {
-            mode: RunMode::FreshNs,
-            tool_call: ToolCall {
-                invocation_id: format!("plugin-service:{}", self.key.service_instance_id()),
-                caller_id: "plugin-service".to_owned(),
-                verb: "plugin_service".into(),
-                intent: Intent::ReadOnly,
-                args: json!({
-                    "command": self.command.clone(),
-                    "cwd": ".",
-                    "env": env,
-                }),
-                background: false,
-            },
-            workspace_root: WorkspaceRoot(PathBuf::from(&self.key.workspace_root)),
-            layer_paths: overlay.layer_paths.clone(),
-            upperdir: Some(overlay.upperdir.clone()),
-            workdir: Some(overlay.workdir.clone()),
-            ns_fds: None,
-            cgroup_path: None,
-            timeout_seconds: None,
-        }
-    }
-
-    pub(crate) fn to_json(&self) -> Value {
-        json!({
-            "service_id": self.key.service_id,
-            "service_instance_id": self.key.service_instance_id(),
-            "command": self.command,
-            "package_root": self.package_root,
-            "dependency_root": self.dependency_root,
-            "working_dir": self.working_dir,
-            "socket_path": self.socket_path,
-            "env": self.environment(),
-            "ppc_protocol_version": self.ppc_protocol_version,
-            "process_started": false,
-        })
     }
 }
 
-#[cfg(test)]
-fn default_package_root(key: &PluginServiceKey) -> PathBuf {
-    PathBuf::from("/eos/runtime/plugins/catalog")
-        .join(&key.plugin_id)
-        .join(&key.plugin_digest)
+pub(super) fn spawn(spec: &PluginProcessSpec) -> Result<PluginServiceProcess, DaemonError> {
+    let env = spec.environment();
+    let mut command = Command::new(&spec.command[0]);
+    command.args(&spec.command[1..]);
+    if spec.working_dir.is_dir() {
+        command.current_dir(&spec.working_dir);
+    }
+    command
+        .envs(env)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let child = command.spawn()?;
+    let process_group_id = i32::try_from(child.id()).ok();
+    Ok(PluginServiceProcess {
+        spec: spec.clone(),
+        child,
+        process_group_id,
+        torn_down: false,
+    })
 }
 
-#[cfg(test)]
-fn default_dependency_root(key: &PluginServiceKey) -> PathBuf {
-    PathBuf::from("/eos/runtime/packages")
-        .join(&key.plugin_id)
-        .join(&key.plugin_digest)
+fn spawn_for_overlay(
+    spec: &PluginProcessSpec,
+    overlay: Option<&PluginServiceOverlay>,
+) -> Result<PluginServiceProcess, DaemonError> {
+    if let Some(overlay) = overlay {
+        return spawn_overlay_runner(spec, overlay);
+    }
+    spawn(spec)
+}
+
+#[cfg(all(target_os = "linux", not(test)))]
+fn spawn_overlay_runner(
+    spec: &PluginProcessSpec,
+    overlay: &PluginServiceOverlay,
+) -> Result<PluginServiceProcess, DaemonError> {
+    let request = overlay_run_request(spec, overlay);
+    let payload = serde_json::to_vec(&request)
+        .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
+    let mut command = Command::new(std::env::current_exe()?);
+    command
+        .arg("ns-runner")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let mut child = command.spawn()?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| DaemonError::InvalidEnvelope("ns-runner stdin unavailable".to_owned()))?
+        .write_all(&payload)?;
+    drop(child.stdin.take());
+    let process_group_id = i32::try_from(child.id()).ok();
+    Ok(PluginServiceProcess {
+        spec: spec.clone(),
+        child,
+        process_group_id,
+        torn_down: false,
+    })
+}
+
+#[cfg(any(not(target_os = "linux"), test))]
+fn spawn_overlay_runner(
+    spec: &PluginProcessSpec,
+    overlay: &PluginServiceOverlay,
+) -> Result<PluginServiceProcess, DaemonError> {
+    let _ = (&overlay.layer_paths, &overlay.upperdir, &overlay.workdir);
+    spawn(spec)
+}
+
+#[cfg(all(target_os = "linux", not(test)))]
+fn overlay_run_request(spec: &PluginProcessSpec, overlay: &PluginServiceOverlay) -> RunRequest {
+    let mut env = spec.environment();
+    env.insert(ENV_PLUGIN_WORKSPACE_MOUNTED, "1".to_owned());
+    RunRequest {
+        mode: RunMode::FreshNs,
+        tool_call: ToolCall {
+            invocation_id: format!("plugin-service:{}", spec.key.service_instance_id()),
+            caller_id: "plugin-service".to_owned(),
+            verb: "plugin_service".into(),
+            intent: Intent::ReadOnly,
+            args: json!({
+                "command": spec.command.clone(),
+                "cwd": ".",
+                "env": env,
+            }),
+            background: false,
+        },
+        workspace_root: WorkspaceRoot(PathBuf::from(&spec.key.workspace_root)),
+        layer_paths: overlay.layer_paths.clone(),
+        upperdir: Some(overlay.upperdir.clone()),
+        workdir: Some(overlay.workdir.clone()),
+        ns_fds: None,
+        cgroup_path: None,
+        timeout_seconds: None,
+    }
+}
+
+pub(super) fn process_spec_to_json(spec: &PluginProcessSpec) -> Value {
+    json!({
+        "service_id": spec.key.service_id,
+        "service_instance_id": spec.key.service_instance_id(),
+        "command": spec.command,
+        "package_root": spec.package_root,
+        "dependency_root": spec.dependency_root,
+        "working_dir": spec.working_dir,
+        "socket_path": spec.socket_path,
+        "env": spec.environment(),
+        "ppc_protocol_version": spec.ppc_protocol_version,
+        "process_started": false,
+    })
 }
 
 #[derive(Debug)]
@@ -374,6 +212,12 @@ impl PluginServiceProcess {
         terminate_process_group(self.process_group_id);
         let _ = self.child.kill();
         let _ = self.child.wait();
+    }
+}
+
+impl Drop for PluginServiceProcess {
+    fn drop(&mut self) {
+        self.teardown();
     }
 }
 
@@ -487,12 +331,6 @@ fn wait_for_helper(
     }
 }
 
-impl Drop for PluginServiceProcess {
-    fn drop(&mut self) {
-        self.teardown();
-    }
-}
-
 #[cfg(target_os = "linux")]
 fn terminate_process_group(process_group_id: Option<i32>) {
     use nix::sys::signal::{killpg, Signal};
@@ -509,25 +347,6 @@ fn terminate_process_group(process_group_id: Option<i32>) {
 
 #[cfg(not(target_os = "linux"))]
 const fn terminate_process_group(_process_group_id: Option<i32>) {}
-
-fn socket_path_for_key(key: &PluginServiceKey, socket_root: &Path) -> PathBuf {
-    let mut hasher = Sha256::new();
-    hasher.update(key.service_instance_id().as_bytes());
-    hasher.update(b"\0");
-    hasher.update(key.plugin_digest.as_bytes());
-    let digest = hasher.finalize();
-    socket_root.join(format!("{}.sock", lower_hex(&digest[..16])))
-}
-
-fn lower_hex(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        out.push(char::from(HEX[usize::from(byte >> 4)]));
-        out.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
-    out
-}
 
 fn bind_ppc_listener(socket_path: &Path) -> Result<UnixListener, DaemonError> {
     if let Some(parent) = socket_path.parent() {
@@ -575,6 +394,50 @@ fn accept_ppc_client(
         }
         std::thread::sleep(Duration::from_millis(10));
     }
+}
+
+#[cfg(test)]
+pub(crate) fn new_spec_for_test(
+    key: eos_plugin::PluginServiceKey,
+    command: Vec<String>,
+    ppc_protocol_version: u32,
+) -> Result<PluginProcessSpec, PluginError> {
+    let socket_root = super::plugin_runtime_config().ppc_root;
+    new_spec_with_socket_root(key, command, ppc_protocol_version, socket_root)
+}
+
+#[cfg(test)]
+pub(crate) fn new_spec_with_socket_root(
+    key: eos_plugin::PluginServiceKey,
+    command: Vec<String>,
+    ppc_protocol_version: u32,
+    socket_root: impl AsRef<Path>,
+) -> Result<PluginProcessSpec, PluginError> {
+    let package_root = default_package_root(&key);
+    let dependency_root = default_dependency_root(&key);
+    PluginProcessSpec::new_with_package_paths(
+        key,
+        command,
+        package_root,
+        dependency_root,
+        PathBuf::from("."),
+        ppc_protocol_version,
+        socket_root,
+    )
+}
+
+#[cfg(test)]
+fn default_package_root(key: &eos_plugin::PluginServiceKey) -> PathBuf {
+    PathBuf::from("/eos/runtime/plugins/catalog")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest)
+}
+
+#[cfg(test)]
+fn default_dependency_root(key: &eos_plugin::PluginServiceKey) -> PathBuf {
+    PathBuf::from("/eos/runtime/packages")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest)
 }
 
 #[cfg(test)]

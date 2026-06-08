@@ -7,14 +7,14 @@
       "path": "crates/eos-agent-def",
       "stats": {
         "modules": 6,
-        "items": 55,
-        "structs": 6,
-        "enums": 3,
+        "items": 37,
+        "structs": 2,
+        "enums": 1,
         "traits": 0,
-        "functions": 35,
-        "impls": 11,
-        "fields": 40,
-        "methods": 17
+        "functions": 32,
+        "impls": 2,
+        "fields": 25,
+        "methods": 3
       },
       "modules": [
         {
@@ -547,272 +547,6 @@
           "module": "model",
           "items": [
             {
-              "kind": "enum",
-              "name": "AgentType",
-              "visibility": "pub",
-              "signature": "pub enum AgentType",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Agent",
-                  "fields": []
-                },
-                {
-                  "name": "Subagent",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Runtime class of an agent profile (`model.py:AgentType`).",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde",
-                "serde: rename_all"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 19
-            },
-            {
-              "kind": "impl",
-              "name": "impl Default for AgentType",
-              "visibility": "private",
-              "signature": "impl Default for AgentType",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "default",
-                  "signature": "fn default () -> Self",
-                  "kind": "constructor",
-                  "docs": "Matches `model.py`'s `agent_type: AgentType = AGENT`.",
-                  "line": 30
-                }
-              ],
-              "impl_target": "AgentType",
-              "trait_name": "Default",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 29
-            },
-            {
-              "kind": "enum",
-              "name": "AgentRole",
-              "visibility": "pub",
-              "signature": "pub enum AgentRole",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Root",
-                  "fields": []
-                },
-                {
-                  "name": "Planner",
-                  "fields": []
-                },
-                {
-                  "name": "Generator",
-                  "fields": []
-                },
-                {
-                  "name": "Reducer",
-                  "fields": []
-                },
-                {
-                  "name": "Helper",
-                  "fields": []
-                },
-                {
-                  "name": "Subagent",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Canonical category of an agent profile (`model.py:AgentRole`).\n\nClosed vocabulary (deliberately **not** `#[non_exhaustive]`): the\nplanner-submission gate and audit tag rely on an exhaustive `match`. The\n`executor` profile carries `role: generator`; `executor` never enters this\nstate (anchor §4).",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde",
-                "serde: rename_all"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 36
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRole",
-              "visibility": "private",
-              "signature": "impl AgentRole",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "as_str",
-                  "signature": "pub fn as_str (& self) -> & 'static str",
-                  "kind": "method",
-                  "docs": "The canonical `snake_case` token (matches the serde value).",
-                  "line": 60
-                }
-              ],
-              "impl_target": "AgentRole",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 59
-            },
-            {
-              "kind": "impl",
-              "name": "impl fmt :: Display for AgentRole",
-              "visibility": "private",
-              "signature": "impl fmt :: Display for AgentRole",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 75
-                }
-              ],
-              "impl_target": "AgentRole",
-              "trait_name": "fmt :: Display",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 74
-            },
-            {
-              "kind": "struct",
-              "name": "AgentName",
-              "visibility": "pub",
-              "signature": "pub struct AgentName",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A registry key / dispatchable name, validated non-empty after trimming.\n\nFormat-only newtype (`type-newtype-ids`): it does **not** check membership\nagainst any catalog. Empty-rejection is a Rust hardening of the Rust model\n(which has no name validator); the loader applies the `path.stem` default\nbefore construction so the newtype only ever sees a resolved stem on the\nfile-parse path.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: JsonSchema",
-                "derive: Ord",
-                "derive: PartialEq",
-                "derive: PartialOrd",
-                "derive: Serialize",
-                "schemars: transparent",
-                "serde",
-                "serde: transparent"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 80
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentName",
-              "visibility": "private",
-              "signature": "impl AgentName",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (raw : impl Into < String >) -> Result < Self , AgentDefError >",
-                  "kind": "constructor",
-                  "docs": "Construct a name, trimming surrounding whitespace.\n\n# Errors\nReturns [`AgentDefError::EmptyName`] when the trimmed value is empty.",
-                  "line": 95
-                },
-                {
-                  "name": "as_str",
-                  "signature": "pub fn as_str (& self) -> & str",
-                  "kind": "method",
-                  "docs": "Borrow the name as a string slice.",
-                  "line": 107
-                }
-              ],
-              "impl_target": "AgentName",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 94
-            },
-            {
-              "kind": "impl",
-              "name": "impl fmt :: Display for AgentName",
-              "visibility": "private",
-              "signature": "impl fmt :: Display for AgentName",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 115
-                }
-              ],
-              "impl_target": "AgentName",
-              "trait_name": "fmt :: Display",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 114
-            },
-            {
               "kind": "struct",
               "name": "RawAgentDefinition",
               "visibility": "pub(crate)",
@@ -883,130 +617,33 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The serde DTO for the YAML frontmatter block (`extra=\"forbid\"` →\n`#[serde(deny_unknown_fields)]`, GC-eos-agent-def-02).\n\nThe loader post-processes this (name/description defaults, contract prepend,\nskill resolution) and then funnels it through\n[`AgentDefinition::from_frontmatter`]. `role` is `Option` so a missing value\nbecomes a path-bearing [`AgentDefError::MissingRole`] rather than an opaque\nserde \"missing field\" error.",
+              "docs": "The serde DTO for the YAML frontmatter block (`extra=\"forbid\"` →\n`#[serde(deny_unknown_fields)]`, GC-eos-agent-def-02).\n\nThe loader post-processes this (name/description defaults, contract prepend,\nskill resolution) and then funnels it through [`definition_from_frontmatter`].",
               "tags": [
                 "derive: Debug",
                 "derive: Default",
                 "derive: Deserialize",
-                "error",
                 "serde",
                 "serde: deny_unknown_fields"
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model",
-              "line": 120
+              "line": 11
             },
             {
-              "kind": "struct",
-              "name": "AgentDefinition",
-              "visibility": "pub",
-              "signature": "pub struct AgentDefinition",
-              "fields": [
-                {
-                  "name": "name",
-                  "visibility": "pub",
-                  "ty": "AgentName"
-                },
-                {
-                  "name": "description",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "system_prompt",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                },
-                {
-                  "name": "model",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                },
-                {
-                  "name": "tool_call_limit",
-                  "visibility": "pub",
-                  "ty": "NonZeroU32"
-                },
-                {
-                  "name": "role",
-                  "visibility": "pub",
-                  "ty": "AgentRole"
-                },
-                {
-                  "name": "agent_type",
-                  "visibility": "pub",
-                  "ty": "AgentType"
-                },
-                {
-                  "name": "allowed_tools",
-                  "visibility": "pub",
-                  "ty": "Vec < String >"
-                },
-                {
-                  "name": "terminals",
-                  "visibility": "pub",
-                  "ty": "Vec < String >"
-                },
-                {
-                  "name": "notification_triggers",
-                  "visibility": "pub",
-                  "ty": "Vec < String >"
-                },
-                {
-                  "name": "skill",
-                  "visibility": "pub",
-                  "ty": "Option < PathBuf >"
-                },
-                {
-                  "name": "context_recipe",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                }
-              ],
+              "kind": "fn",
+              "name": "definition_from_frontmatter",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn definition_from_frontmatter (raw : RawAgentDefinition , path : & Path ,) -> Result < AgentDefinition , AgentDefError >",
+              "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Full agent definition with all configuration fields (`model.py`).\n\nConstruction enforces invariants so an invalid value is unrepresentable:\n`tool_call_limit` is [`NonZeroU32`], `terminals` is non-empty after stripping\nblanks, and blank `notification_triggers` are dropped. No `Default` impl:\n`name`/`description`/`tool_call_limit`/`terminals` have no sensible default\n(`api-default-impl`).",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde",
-                "serde: deny_unknown_fields"
-              ],
+              "docs": "Validate a post-processed frontmatter DTO into an agent definition.\n\nThe loader supplies `path` for path-bearing errors and has already applied\nthe name/description defaults and resolved the skill path.",
+              "tags": [],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model",
-              "line": 157
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentDefinition",
-              "visibility": "private",
-              "signature": "impl AgentDefinition",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "from_frontmatter",
-                  "signature": "pub(crate) fn from_frontmatter (raw : RawAgentDefinition , path : & Path ,) -> Result < Self , AgentDefError >",
-                  "kind": "constructor",
-                  "docs": "Validate a post-processed frontmatter DTO into a definition.\n\nThe loader supplies `path` for path-bearing errors and has already\napplied the name/description defaults and resolved the skill path.\n\n# Errors\nReturns [`AgentDefError`] when `role` is absent ([`AgentDefError::MissingRole`]),\nthe resolved name is empty ([`AgentDefError::EmptyName`]), `terminals` is\nempty after stripping blanks ([`AgentDefError::EmptyTerminals`]), or\n`tool_call_limit` is not positive ([`AgentDefError::NonPositiveToolCallLimit`]).",
-                  "line": 201
-                }
-              ],
-              "impl_target": "AgentDefinition",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model",
-              "line": 200
+              "line": 45
             },
             {
               "kind": "fn",
@@ -1022,7 +659,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 256
+              "line": 95
             },
             {
               "kind": "fn",
@@ -1040,7 +677,7 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 268
+              "line": 106
             },
             {
               "kind": "fn",
@@ -1058,7 +695,7 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 276
+              "line": 113
             },
             {
               "kind": "fn",
@@ -1077,13 +714,13 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 302
+              "line": 139
             },
             {
               "kind": "fn",
-              "name": "role_and_type_serde_values",
+              "name": "blank_name_maps_to_agent_def_error",
               "visibility": "private",
-              "signature": "fn role_and_type_serde_values ()",
+              "signature": "fn blank_name_maps_to_agent_def_error ()",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -1095,242 +732,14 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 313
-            },
-            {
-              "kind": "fn",
-              "name": "agent_name_trims_and_rejects_empty",
-              "visibility": "private",
-              "signature": "fn agent_name_trims_and_rejects_empty ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-agent-def/src/model.rs",
-              "module": "model::tests",
-              "line": 336
+              "line": 149
             }
           ]
         },
         {
           "path": "crates/eos-agent-def/src/registry.rs",
           "module": "registry",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AgentRegistryBuilder",
-              "visibility": "pub",
-              "signature": "pub struct AgentRegistryBuilder",
-              "fields": [
-                {
-                  "name": "definitions",
-                  "visibility": "private",
-                  "ty": "HashMap < AgentName , Arc < AgentDefinition > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Accumulates definitions, then finalizes an immutable [`AgentRegistry`].\n\n`add` overwrites a same-named entry, preserving Rust's \"register or\nreplace\" semantics (`registry.py:register_definition`).",
-              "tags": [
-                "derive: Debug",
-                "derive: Default",
-                "must_use"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry",
-              "line": 13
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRegistryBuilder",
-              "visibility": "private",
-              "signature": "impl AgentRegistryBuilder",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new () -> Self",
-                  "kind": "constructor",
-                  "docs": "Start an empty builder.",
-                  "line": 24
-                },
-                {
-                  "name": "add",
-                  "signature": "pub fn add (& mut self , definition : AgentDefinition) -> & mut Self",
-                  "kind": "method",
-                  "docs": "Register (or replace) a definition by its name.",
-                  "line": 29
-                },
-                {
-                  "name": "build",
-                  "signature": "pub fn build (self) -> AgentRegistry",
-                  "kind": "method",
-                  "docs": "Finalize the immutable registry.",
-                  "line": 36
-                }
-              ],
-              "impl_target": "AgentRegistryBuilder",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry",
-              "line": 23
-            },
-            {
-              "kind": "impl",
-              "name": "impl FromIterator < AgentDefinition > for AgentRegistry",
-              "visibility": "private",
-              "signature": "impl FromIterator < AgentDefinition > for AgentRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "from_iter",
-                  "signature": "fn from_iter < I : IntoIterator < Item = AgentDefinition > > (iter : I) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 45
-                }
-              ],
-              "impl_target": "AgentRegistry",
-              "trait_name": "FromIterator < AgentDefinition >",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry",
-              "line": 44
-            },
-            {
-              "kind": "struct",
-              "name": "AgentRegistry",
-              "visibility": "pub",
-              "signature": "pub struct AgentRegistry",
-              "fields": [
-                {
-                  "name": "definitions",
-                  "visibility": "private",
-                  "ty": "HashMap < AgentName , Arc < AgentDefinition > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Immutable name → definition lookup, shared as `Arc<AgentRegistry>`.",
-              "tags": [
-                "derive: Debug"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry",
-              "line": 54
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRegistry",
-              "visibility": "private",
-              "signature": "impl AgentRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "get",
-                  "signature": "pub fn get (& self , name : & AgentName) -> Option < & Arc < AgentDefinition > >",
-                  "kind": "method",
-                  "docs": "Look up a definition by name.",
-                  "line": 61
-                },
-                {
-                  "name": "list",
-                  "signature": "pub fn list (& self) -> impl Iterator < Item = & Arc < AgentDefinition > >",
-                  "kind": "method",
-                  "docs": "Iterate every registered definition (unordered).",
-                  "line": 67
-                },
-                {
-                  "name": "dispatchable_subagent_names",
-                  "signature": "pub fn dispatchable_subagent_names (& self) -> Vec < AgentName >",
-                  "kind": "method",
-                  "docs": "Subagent names targetable by `run_subagent`, sorted\n(`registry.py:list_dispatchable_subagent_names`).",
-                  "line": 72
-                }
-              ],
-              "impl_target": "AgentRegistry",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry",
-              "line": 60
-            },
-            {
-              "kind": "fn",
-              "name": "def",
-              "visibility": "private",
-              "signature": "fn def (name : & str , agent_type : AgentType) -> AgentDefinition",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry::tests",
-              "line": 95
-            },
-            {
-              "kind": "fn",
-              "name": "registry_lists_dispatchable_subagents",
-              "visibility": "private",
-              "signature": "fn registry_lists_dispatchable_subagents ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry::tests",
-              "line": 117
-            },
-            {
-              "kind": "fn",
-              "name": "registry_get_and_replace",
-              "visibility": "private",
-              "signature": "fn registry_get_and_replace ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-agent-def/src/registry.rs",
-              "module": "registry::tests",
-              "line": 135
-            }
-          ]
+          "items": []
         },
         {
           "path": "crates/eos-agent-def/src/validation.rs",
@@ -3886,11 +3295,11 @@
       "path": "crates/eos-agent-runner",
       "stats": {
         "modules": 6,
-        "items": 30,
+        "items": 32,
         "structs": 5,
         "enums": 0,
         "traits": 0,
-        "functions": 16,
+        "functions": 18,
         "impls": 7,
         "fields": 16,
         "methods": 21
@@ -4573,21 +3982,21 @@
                   "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 277
+                  "line": 275
                 },
                 {
                   "name": "poll_agent_run_outcome",
                   "signature": "async fn poll_agent_run_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunOutcome > , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 295
+                  "line": 293
                 },
                 {
                   "name": "cancel_agent_run",
                   "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 313
+                  "line": 311
                 }
               ],
               "impl_target": "AgentRunService",
@@ -4618,7 +4027,7 @@
               ],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 345
+              "line": 343
             },
             {
               "kind": "fn",
@@ -4634,7 +4043,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 383
+              "line": 381
             },
             {
               "kind": "fn",
@@ -4650,7 +4059,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 411
+              "line": 409
             },
             {
               "kind": "fn",
@@ -4666,7 +4075,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 422
+              "line": 420
             },
             {
               "kind": "fn",
@@ -4682,7 +4091,41 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 445
+              "line": 443
+            },
+            {
+              "kind": "fn",
+              "name": "expected_agent_type",
+              "visibility": "private",
+              "signature": "const fn expected_agent_type (record_kind : & AgentRunMessageRecordKind) -> Option < AgentType >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-agent-runner/src/agent_run_service.rs",
+              "module": "agent_run_service",
+              "line": 451
+            },
+            {
+              "kind": "fn",
+              "name": "record_kind_declares_required_agent_type",
+              "visibility": "private",
+              "signature": "fn record_kind_declares_required_agent_type ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-agent-runner/src/agent_run_service.rs",
+              "module": "agent_run_service::tests",
+              "line": 466
             }
           ]
         },
@@ -18120,14 +17563,14 @@
       "path": "crates/eos-llm-client",
       "stats": {
         "modules": 14,
-        "items": 140,
-        "structs": 21,
-        "enums": 10,
+        "items": 129,
+        "structs": 19,
+        "enums": 8,
         "traits": 1,
-        "functions": 82,
-        "impls": 25,
-        "fields": 94,
-        "methods": 53
+        "functions": 78,
+        "impls": 22,
+        "fields": 77,
+        "methods": 47
       },
       "modules": [
         {
@@ -19176,17 +18619,17 @@
               "kind": "fn",
               "name": "serialize_anthropic_block",
               "visibility": "private",
-              "signature": "fn serialize_anthropic_block (block : & ContentBlock) -> Value",
+              "signature": "fn serialize_anthropic_block (block : & ContentBlock) -> Option < Value >",
               "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Project one neutral block to the Anthropic wire shape. `Reasoning` is\nfiltered before this is called; `tool_result` omits `metadata`/`is_terminal`\n(§8.6).",
+              "docs": "Project one neutral block to the Anthropic wire shape. `Reasoning` is\nprovider-managed and skipped; `tool_result` omits `metadata`/`is_terminal`\n(§8.6). Future neutral blocks are skipped until the provider projection owns\nan explicit mapping.",
               "tags": [],
               "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
               "module": "clients::anthropic_api_client",
-              "line": 371
+              "line": 370
             },
             {
               "kind": "fn",
@@ -19887,7 +19330,7 @@
               "tags": [],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client",
-              "line": 361
+              "line": 362
             },
             {
               "kind": "fn",
@@ -19903,7 +19346,7 @@
               "tags": [],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client",
-              "line": 376
+              "line": 377
             },
             {
               "kind": "fn",
@@ -19919,7 +19362,7 @@
               "tags": [],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client::tests",
-              "line": 395
+              "line": 396
             },
             {
               "kind": "fn",
@@ -19937,7 +19380,7 @@
               ],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client::tests",
-              "line": 404
+              "line": 405
             },
             {
               "kind": "fn",
@@ -19956,7 +19399,7 @@
               ],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client::tests",
-              "line": 423
+              "line": 424
             },
             {
               "kind": "fn",
@@ -19975,7 +19418,7 @@
               ],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client::tests",
-              "line": 446
+              "line": 447
             },
             {
               "kind": "fn",
@@ -19993,7 +19436,7 @@
               ],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client::tests",
-              "line": 501
+              "line": 502
             },
             {
               "kind": "fn",
@@ -20011,7 +19454,7 @@
               ],
               "file": "crates/eos-llm-client/src/clients/openai_api_client.rs",
               "module": "clients::openai_api_client::tests",
-              "line": 531
+              "line": 532
             }
           ]
         },
@@ -20394,331 +19837,7 @@
         {
           "path": "crates/eos-llm-client/src/message.rs",
           "module": "message",
-          "items": [
-            {
-              "kind": "enum",
-              "name": "MessageRole",
-              "visibility": "pub",
-              "signature": "pub enum MessageRole",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "User",
-                  "fields": []
-                },
-                {
-                  "name": "Assistant",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "The role of a conversation message.\n\nThere is deliberately no `System` variant: the system prompt is the\n`LlmRequest.system_prompt` request field, never a message. Deserializing\n`\"system\"` therefore fails.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde",
-                "serde: rename_all"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message",
-              "line": 10
-            },
-            {
-              "kind": "impl",
-              "name": "impl MessageRole",
-              "visibility": "private",
-              "signature": "impl MessageRole",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "as_wire",
-                  "signature": "pub(crate) fn as_wire (self) -> & 'static str",
-                  "kind": "method",
-                  "docs": "The wire string the provider encoders emit (`\"user\"` / `\"assistant\"`).",
-                  "line": 25
-                }
-              ],
-              "impl_target": "MessageRole",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message",
-              "line": 24
-            },
-            {
-              "kind": "enum",
-              "name": "ContentBlock",
-              "visibility": "pub",
-              "signature": "pub enum ContentBlock",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Text",
-                  "fields": [
-                    {
-                      "name": "text",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolUse",
-                  "fields": [
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    },
-                    {
-                      "name": "name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "input",
-                      "visibility": "private",
-                      "ty": "JsonObject"
-                    }
-                  ]
-                },
-                {
-                  "name": "Reasoning",
-                  "fields": [
-                    {
-                      "name": "text",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolResult",
-                  "fields": [
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    },
-                    {
-                      "name": "content",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "is_error",
-                      "visibility": "private",
-                      "ty": "bool"
-                    },
-                    {
-                      "name": "metadata",
-                      "visibility": "private",
-                      "ty": "JsonObject"
-                    },
-                    {
-                      "name": "is_terminal",
-                      "visibility": "private",
-                      "ty": "bool"
-                    }
-                  ]
-                },
-                {
-                  "name": "SystemNotification",
-                  "fields": [
-                    {
-                      "name": "text",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A single content block within a [`Message`].\n\nThe `#[serde(alias = \"thinking\")]` compatibility alias keeps older JSONL\ntranscripts decodable while serialization always emits the `\"reasoning\"` tag.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "non_exhaustive",
-                "serde",
-                "serde: rename_all",
-                "serde: tag"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message",
-              "line": 34
-            },
-            {
-              "kind": "struct",
-              "name": "Message",
-              "visibility": "pub",
-              "signature": "pub struct Message",
-              "fields": [
-                {
-                  "name": "role",
-                  "visibility": "pub",
-                  "ty": "MessageRole"
-                },
-                {
-                  "name": "content",
-                  "visibility": "pub",
-                  "ty": "Vec < ContentBlock >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A single assistant or user message.\n\nSource: `message.py::Message`.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message",
-              "line": 88
-            },
-            {
-              "kind": "impl",
-              "name": "impl Message",
-              "visibility": "private",
-              "signature": "impl Message",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "from_user_text",
-                  "signature": "pub fn from_user_text (text : impl Into < String >) -> Self",
-                  "kind": "constructor",
-                  "docs": "Construct a user message from raw text (`Message.from_user_text`).",
-                  "line": 101
-                },
-                {
-                  "name": "assistant_text",
-                  "signature": "pub fn assistant_text (& self) -> String",
-                  "kind": "method",
-                  "docs": "Concatenated text blocks (excludes reasoning and notifications).",
-                  "line": 110
-                },
-                {
-                  "name": "reasoning_text",
-                  "signature": "pub fn reasoning_text (& self) -> String",
-                  "kind": "method",
-                  "docs": "Concatenated reasoning blocks (`Message.thinking`).",
-                  "line": 122
-                },
-                {
-                  "name": "tool_uses",
-                  "signature": "pub fn tool_uses (& self) -> impl Iterator < Item = & ContentBlock >",
-                  "kind": "method",
-                  "docs": "Iterate the tool-use blocks in the message.",
-                  "line": 134
-                }
-              ],
-              "impl_target": "Message",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message",
-              "line": 100
-            },
-            {
-              "kind": "fn",
-              "name": "reasoning_compat_decode_maps_thinking",
-              "visibility": "private",
-              "signature": "fn reasoning_compat_decode_maps_thinking ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message::tests",
-              "line": 150
-            },
-            {
-              "kind": "fn",
-              "name": "message_role_has_no_system",
-              "visibility": "private",
-              "signature": "fn message_role_has_no_system ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message::tests",
-              "line": 169
-            },
-            {
-              "kind": "fn",
-              "name": "tool_result_defaults_and_wire_irrelevant_fields_round_trip",
-              "visibility": "private",
-              "signature": "fn tool_result_defaults_and_wire_irrelevant_fields_round_trip ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message::tests",
-              "line": 180
-            },
-            {
-              "kind": "fn",
-              "name": "message_helpers",
-              "visibility": "private",
-              "signature": "fn message_helpers ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/message.rs",
-              "module": "message::tests",
-              "line": 208
-            }
-          ]
+          "items": []
         },
         {
           "path": "crates/eos-llm-client/src/retry.rs",
@@ -21391,7 +20510,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 12
+              "line": 11
             },
             {
               "kind": "impl",
@@ -21406,7 +20525,7 @@
                   "signature": "pub fn total_tokens (& self) -> u32",
                   "kind": "method",
                   "docs": "Total accounted tokens (`input + output`).",
-                  "line": 23
+                  "line": 22
                 }
               ],
               "impl_target": "UsageSnapshot",
@@ -21417,80 +20536,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 22
-            },
-            {
-              "kind": "struct",
-              "name": "ToolSpec",
-              "visibility": "pub",
-              "signature": "pub struct ToolSpec",
-              "fields": [
-                {
-                  "name": "name",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "description",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "input_schema",
-                  "visibility": "pub",
-                  "ty": "JsonObject"
-                },
-                {
-                  "name": "output_schema",
-                  "visibility": "pub",
-                  "ty": "Option < JsonObject >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A neutral tool declaration sent to the model.\n\nOwned here; `eos-tools` depends on this crate to author it from\n`schemars`-generated input/output schemas. The provider encoders project it\ninto each upstream wire shape.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "non_exhaustive",
-                "serde"
-              ],
-              "file": "crates/eos-llm-client/src/types.rs",
-              "module": "types",
-              "line": 30
-            },
-            {
-              "kind": "impl",
-              "name": "impl ToolSpec",
-              "visibility": "private",
-              "signature": "impl ToolSpec",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (name : impl Into < String > , description : impl Into < String > , input_schema : JsonObject , output_schema : Option < JsonObject > ,) -> Self",
-                  "kind": "constructor",
-                  "docs": "Construct a tool declaration. (`ToolSpec` is `#[non_exhaustive]`, so\ndownstream `eos-tools` constructs it through this constructor.)",
-                  "line": 50
-                }
-              ],
-              "impl_target": "ToolSpec",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-llm-client/src/types.rs",
-              "module": "types",
-              "line": 49
+              "line": 21
             },
             {
               "kind": "enum",
@@ -21535,7 +20581,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 68
+              "line": 29
             },
             {
               "kind": "enum",
@@ -21579,7 +20625,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 85
+              "line": 46
             },
             {
               "kind": "impl",
@@ -21594,7 +20640,7 @@
                   "signature": "pub const fn as_wire (self) -> & 'static str",
                   "kind": "method",
                   "docs": "Wire token used by provider request bodies.",
-                  "line": 101
+                  "line": 62
                 }
               ],
               "impl_target": "ReasoningEffort",
@@ -21605,7 +20651,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 100
+              "line": 61
             },
             {
               "kind": "struct",
@@ -21666,7 +20712,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 113
+              "line": 74
             },
             {
               "kind": "impl",
@@ -21681,7 +20727,7 @@
                   "signature": "pub fn builder (model : impl Into < String >) -> LlmRequestBuilder",
                   "kind": "associated-fn",
                   "docs": "Start building a request for `model`.",
-                  "line": 140
+                  "line": 101
                 }
               ],
               "impl_target": "LlmRequest",
@@ -21692,7 +20738,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 139
+              "line": 100
             },
             {
               "kind": "struct",
@@ -21749,7 +20795,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 154
+              "line": 115
             },
             {
               "kind": "impl",
@@ -21764,56 +20810,56 @@
                   "signature": "pub fn messages (mut self , messages : Vec < Message >) -> Self",
                   "kind": "method",
                   "docs": "Set the full conversation.",
-                  "line": 168
+                  "line": 129
                 },
                 {
                   "name": "message",
                   "signature": "pub fn message (mut self , message : Message) -> Self",
                   "kind": "method",
                   "docs": "Append one message.",
-                  "line": 174
+                  "line": 135
                 },
                 {
                   "name": "system_prompt",
                   "signature": "pub fn system_prompt (mut self , system_prompt : impl Into < String >) -> Self",
                   "kind": "method",
                   "docs": "Set the system prompt.",
-                  "line": 180
+                  "line": 141
                 },
                 {
                   "name": "max_tokens",
                   "signature": "pub fn max_tokens (mut self , max_tokens : u32) -> Self",
                   "kind": "method",
                   "docs": "Override the completion-token cap.",
-                  "line": 186
+                  "line": 147
                 },
                 {
                   "name": "tools",
                   "signature": "pub fn tools (mut self , tools : Vec < ToolSpec >) -> Self",
                   "kind": "method",
                   "docs": "Set the offered tools.",
-                  "line": 192
+                  "line": 153
                 },
                 {
                   "name": "tool_choice",
                   "signature": "pub fn tool_choice (mut self , tool_choice : ToolChoice) -> Self",
                   "kind": "method",
                   "docs": "Force a tool-choice control.",
-                  "line": 198
+                  "line": 159
                 },
                 {
                   "name": "reasoning_effort",
                   "signature": "pub fn reasoning_effort (mut self , effort : ReasoningEffort) -> Self",
                   "kind": "method",
                   "docs": "Set a provider reasoning-effort hint.",
-                  "line": 204
+                  "line": 165
                 },
                 {
                   "name": "build",
                   "signature": "pub fn build (self) -> LlmRequest",
                   "kind": "method",
                   "docs": "Finish building the request.",
-                  "line": 210
+                  "line": 171
                 }
               ],
               "impl_target": "LlmRequestBuilder",
@@ -21824,7 +20870,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types",
-              "line": 167
+              "line": 128
             },
             {
               "kind": "fn",
@@ -21842,7 +20888,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types::tests",
-              "line": 229
+              "line": 190
             },
             {
               "kind": "fn",
@@ -21860,7 +20906,7 @@
               ],
               "file": "crates/eos-llm-client/src/types.rs",
               "module": "types::tests",
-              "line": 239
+              "line": 200
             }
           ]
         }
@@ -41785,17 +40831,654 @@
       "name": "eos-types",
       "path": "crates/eos-types",
       "stats": {
-        "modules": 28,
-        "items": 104,
-        "structs": 26,
-        "enums": 20,
+        "modules": 31,
+        "items": 142,
+        "structs": 32,
+        "enums": 25,
         "traits": 10,
-        "functions": 16,
-        "impls": 30,
-        "fields": 133,
-        "methods": 110
+        "functions": 32,
+        "impls": 41,
+        "fields": 165,
+        "methods": 129
       },
       "modules": [
+        {
+          "path": "crates/eos-types/src/agent.rs",
+          "module": "agent",
+          "items": [
+            {
+              "kind": "enum",
+              "name": "AgentType",
+              "visibility": "pub",
+              "signature": "pub enum AgentType",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Agent",
+                  "fields": []
+                },
+                {
+                  "name": "Subagent",
+                  "fields": []
+                },
+                {
+                  "name": "Advisor",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Runtime class of an agent profile.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: Hash",
+                "derive: JsonSchema",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde",
+                "serde: rename_all"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 12
+            },
+            {
+              "kind": "impl",
+              "name": "impl Default for AgentType",
+              "visibility": "private",
+              "signature": "impl Default for AgentType",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "default",
+                  "signature": "fn default () -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 25
+                }
+              ],
+              "impl_target": "AgentType",
+              "trait_name": "Default",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 24
+            },
+            {
+              "kind": "enum",
+              "name": "AgentRole",
+              "visibility": "pub",
+              "signature": "pub enum AgentRole",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Root",
+                  "fields": []
+                },
+                {
+                  "name": "Planner",
+                  "fields": []
+                },
+                {
+                  "name": "Generator",
+                  "fields": []
+                },
+                {
+                  "name": "Reducer",
+                  "fields": []
+                },
+                {
+                  "name": "Helper",
+                  "fields": []
+                },
+                {
+                  "name": "Subagent",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Canonical category of an agent profile.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: Hash",
+                "derive: JsonSchema",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde",
+                "serde: rename_all"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 30
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentRole",
+              "visibility": "private",
+              "signature": "impl AgentRole",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "as_str",
+                  "signature": "pub const fn as_str (& self) -> & 'static str",
+                  "kind": "method",
+                  "docs": "The canonical `snake_case` token.",
+                  "line": 49
+                }
+              ],
+              "impl_target": "AgentRole",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 48
+            },
+            {
+              "kind": "impl",
+              "name": "impl fmt :: Display for AgentRole",
+              "visibility": "private",
+              "signature": "impl fmt :: Display for AgentRole",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , formatter : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 64
+                }
+              ],
+              "impl_target": "AgentRole",
+              "trait_name": "fmt :: Display",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 63
+            },
+            {
+              "kind": "struct",
+              "name": "AgentName",
+              "visibility": "pub",
+              "signature": "pub struct AgentName",
+              "fields": [
+                {
+                  "name": "0",
+                  "visibility": "private",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A registry key / dispatchable agent profile name.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: Hash",
+                "derive: JsonSchema",
+                "derive: Ord",
+                "derive: PartialEq",
+                "derive: PartialOrd",
+                "derive: Serialize",
+                "schemars: transparent",
+                "serde",
+                "serde: transparent"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 69
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentName",
+              "visibility": "private",
+              "signature": "impl AgentName",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (raw : impl Into < String >) -> Result < Self , AgentNameError >",
+                  "kind": "constructor",
+                  "docs": "Construct a name, trimming surrounding whitespace.\n\n# Errors\nReturns [`AgentNameError::Empty`] when the trimmed value is empty.",
+                  "line": 78
+                },
+                {
+                  "name": "as_str",
+                  "signature": "pub fn as_str (& self) -> & str",
+                  "kind": "method",
+                  "docs": "Borrow the name as a string slice.",
+                  "line": 90
+                }
+              ],
+              "impl_target": "AgentName",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 77
+            },
+            {
+              "kind": "impl",
+              "name": "impl fmt :: Display for AgentName",
+              "visibility": "private",
+              "signature": "impl fmt :: Display for AgentName",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , formatter : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 98
+                }
+              ],
+              "impl_target": "AgentName",
+              "trait_name": "fmt :: Display",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 97
+            },
+            {
+              "kind": "enum",
+              "name": "AgentNameError",
+              "visibility": "pub",
+              "signature": "pub enum AgentNameError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Empty",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Agent-name validation error.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: thiserror::Error",
+                "error",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 103
+            },
+            {
+              "kind": "struct",
+              "name": "AgentDefinition",
+              "visibility": "pub",
+              "signature": "pub struct AgentDefinition",
+              "fields": [
+                {
+                  "name": "name",
+                  "visibility": "pub",
+                  "ty": "AgentName"
+                },
+                {
+                  "name": "description",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "system_prompt",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                },
+                {
+                  "name": "model",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                },
+                {
+                  "name": "tool_call_limit",
+                  "visibility": "pub",
+                  "ty": "NonZeroU32"
+                },
+                {
+                  "name": "role",
+                  "visibility": "pub",
+                  "ty": "AgentRole"
+                },
+                {
+                  "name": "agent_type",
+                  "visibility": "pub",
+                  "ty": "AgentType"
+                },
+                {
+                  "name": "allowed_tools",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "terminals",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "notification_triggers",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "skill",
+                  "visibility": "pub",
+                  "ty": "Option < PathBuf >"
+                },
+                {
+                  "name": "context_recipe",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Full agent definition with all configuration fields.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: JsonSchema",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde",
+                "serde: deny_unknown_fields"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 112
+            },
+            {
+              "kind": "struct",
+              "name": "AgentRegistryBuilder",
+              "visibility": "pub",
+              "signature": "pub struct AgentRegistryBuilder",
+              "fields": [
+                {
+                  "name": "definitions",
+                  "visibility": "private",
+                  "ty": "HashMap < AgentName , Arc < AgentDefinition > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Accumulates definitions, then finalizes an immutable [`AgentRegistry`].",
+              "tags": [
+                "derive: Debug",
+                "derive: Default",
+                "must_use"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 149
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentRegistryBuilder",
+              "visibility": "private",
+              "signature": "impl AgentRegistryBuilder",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new () -> Self",
+                  "kind": "constructor",
+                  "docs": "Start an empty builder.",
+                  "line": 157
+                },
+                {
+                  "name": "add",
+                  "signature": "pub fn add (& mut self , definition : AgentDefinition) -> & mut Self",
+                  "kind": "method",
+                  "docs": "Register or replace a definition by its name.",
+                  "line": 163
+                },
+                {
+                  "name": "build",
+                  "signature": "pub fn build (self) -> AgentRegistry",
+                  "kind": "method",
+                  "docs": "Finalize the immutable registry.",
+                  "line": 170
+                }
+              ],
+              "impl_target": "AgentRegistryBuilder",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 156
+            },
+            {
+              "kind": "impl",
+              "name": "impl FromIterator < AgentDefinition > for AgentRegistry",
+              "visibility": "private",
+              "signature": "impl FromIterator < AgentDefinition > for AgentRegistry",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "from_iter",
+                  "signature": "fn from_iter < I : IntoIterator < Item = AgentDefinition > > (iter : I) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 180
+                }
+              ],
+              "impl_target": "AgentRegistry",
+              "trait_name": "FromIterator < AgentDefinition >",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 179
+            },
+            {
+              "kind": "struct",
+              "name": "AgentRegistry",
+              "visibility": "pub",
+              "signature": "pub struct AgentRegistry",
+              "fields": [
+                {
+                  "name": "definitions",
+                  "visibility": "private",
+                  "ty": "HashMap < AgentName , Arc < AgentDefinition > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Immutable name-to-definition lookup shared by runtime and workflow.",
+              "tags": [
+                "derive: Debug"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 189
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentRegistry",
+              "visibility": "private",
+              "signature": "impl AgentRegistry",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "get",
+                  "signature": "pub fn get (& self , name : & AgentName) -> Option < & Arc < AgentDefinition > >",
+                  "kind": "method",
+                  "docs": "Look up a definition by name.",
+                  "line": 196
+                },
+                {
+                  "name": "list",
+                  "signature": "pub fn list (& self) -> impl Iterator < Item = & Arc < AgentDefinition > >",
+                  "kind": "method",
+                  "docs": "Iterate every registered definition.",
+                  "line": 202
+                },
+                {
+                  "name": "dispatchable_subagent_names",
+                  "signature": "pub fn dispatchable_subagent_names (& self) -> Vec < AgentName >",
+                  "kind": "method",
+                  "docs": "Subagent names targetable by `run_subagent`, sorted.",
+                  "line": 207
+                }
+              ],
+              "impl_target": "AgentRegistry",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent",
+              "line": 195
+            },
+            {
+              "kind": "fn",
+              "name": "def",
+              "visibility": "private",
+              "signature": "fn def (name : & str , agent_type : AgentType) -> AgentDefinition",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent::tests",
+              "line": 229
+            },
+            {
+              "kind": "fn",
+              "name": "role_and_type_serde_values",
+              "visibility": "private",
+              "signature": "fn role_and_type_serde_values ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent::tests",
+              "line": 250
+            },
+            {
+              "kind": "fn",
+              "name": "agent_name_trims_and_rejects_empty",
+              "visibility": "private",
+              "signature": "fn agent_name_trims_and_rejects_empty ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent::tests",
+              "line": 274
+            },
+            {
+              "kind": "fn",
+              "name": "registry_lists_dispatchable_subagents",
+              "visibility": "private",
+              "signature": "fn registry_lists_dispatchable_subagents ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent::tests",
+              "line": 280
+            },
+            {
+              "kind": "fn",
+              "name": "registry_get_and_replace",
+              "visibility": "private",
+              "signature": "fn registry_get_and_replace ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/agent.rs",
+              "module": "agent::tests",
+              "line": 298
+            }
+          ]
+        },
         {
           "path": "crates/eos-types/src/error.rs",
           "module": "error",
@@ -41886,6 +41569,136 @@
               ],
               "file": "crates/eos-types/src/error.rs",
               "module": "error::tests",
+              "line": 73
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-types/src/frontmatter.rs",
+          "module": "frontmatter",
+          "items": [
+            {
+              "kind": "fn",
+              "name": "parse_markdown_frontmatter",
+              "visibility": "pub",
+              "signature": "pub fn parse_markdown_frontmatter (content : & str) -> (Mapping , String)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Split a Markdown document into its YAML frontmatter mapping and body text.\n\nReturns `(empty, full_content)` when the document has no leading\n`---`-delimited block or the closing delimiter is missing. Malformed YAML is\nswallowed the same way for compatibility with the legacy loader.",
+              "tags": [
+                "must_use"
+              ],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter",
+              "line": 5
+            },
+            {
+              "kind": "fn",
+              "name": "name",
+              "visibility": "private",
+              "signature": "fn name (mapping : & Mapping) -> Option < & str >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter::tests",
+              "line": 39
+            },
+            {
+              "kind": "fn",
+              "name": "no_frontmatter_returns_empty_and_full_content",
+              "visibility": "private",
+              "signature": "fn no_frontmatter_returns_empty_and_full_content ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter::tests",
+              "line": 43
+            },
+            {
+              "kind": "fn",
+              "name": "parses_frontmatter_and_strips_body",
+              "visibility": "private",
+              "signature": "fn parses_frontmatter_and_strips_body ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter::tests",
+              "line": 50
+            },
+            {
+              "kind": "fn",
+              "name": "unterminated_frontmatter_returns_empty_and_full_content",
+              "visibility": "private",
+              "signature": "fn unterminated_frontmatter_returns_empty_and_full_content ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter::tests",
+              "line": 57
+            },
+            {
+              "kind": "fn",
+              "name": "malformed_yaml_is_swallowed",
+              "visibility": "private",
+              "signature": "fn malformed_yaml_is_swallowed ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter::tests",
+              "line": 65
+            },
+            {
+              "kind": "fn",
+              "name": "non_mapping_frontmatter_coerces_to_empty",
+              "visibility": "private",
+              "signature": "fn non_mapping_frontmatter_coerces_to_empty ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/frontmatter.rs",
+              "module": "frontmatter::tests",
               "line": 73
             }
           ]
@@ -42012,6 +41825,408 @@
           "path": "crates/eos-types/src/lib.rs",
           "module": "lib",
           "items": []
+        },
+        {
+          "path": "crates/eos-types/src/llm.rs",
+          "module": "llm",
+          "items": [
+            {
+              "kind": "enum",
+              "name": "MessageRole",
+              "visibility": "pub",
+              "signature": "pub enum MessageRole",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "User",
+                  "fields": []
+                },
+                {
+                  "name": "Assistant",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "The role of a conversation message.\n\nThere is deliberately no `System` variant: the system prompt is the model\nrequest's `system_prompt` field, never a message. Deserializing `\"system\"`\ntherefore fails.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde",
+                "serde: rename_all"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 11
+            },
+            {
+              "kind": "impl",
+              "name": "impl MessageRole",
+              "visibility": "private",
+              "signature": "impl MessageRole",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "as_wire",
+                  "signature": "pub const fn as_wire (self) -> & 'static str",
+                  "kind": "method",
+                  "docs": "The canonical token emitted by provider encoders (`\"user\"` /\n`\"assistant\"`).",
+                  "line": 26
+                }
+              ],
+              "impl_target": "MessageRole",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 25
+            },
+            {
+              "kind": "enum",
+              "name": "ContentBlock",
+              "visibility": "pub",
+              "signature": "pub enum ContentBlock",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Text",
+                  "fields": [
+                    {
+                      "name": "text",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolUse",
+                  "fields": [
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    },
+                    {
+                      "name": "name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "input",
+                      "visibility": "private",
+                      "ty": "JsonObject"
+                    }
+                  ]
+                },
+                {
+                  "name": "Reasoning",
+                  "fields": [
+                    {
+                      "name": "text",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolResult",
+                  "fields": [
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    },
+                    {
+                      "name": "content",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "is_error",
+                      "visibility": "private",
+                      "ty": "bool"
+                    },
+                    {
+                      "name": "metadata",
+                      "visibility": "private",
+                      "ty": "JsonObject"
+                    },
+                    {
+                      "name": "is_terminal",
+                      "visibility": "private",
+                      "ty": "bool"
+                    }
+                  ]
+                },
+                {
+                  "name": "SystemNotification",
+                  "fields": [
+                    {
+                      "name": "text",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A single content block within a [`Message`].\n\nThe `#[serde(alias = \"thinking\")]` compatibility alias keeps older JSONL\ntranscripts decodable while serialization always emits the `\"reasoning\"` tag.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "non_exhaustive",
+                "serde",
+                "serde: rename_all",
+                "serde: tag"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 37
+            },
+            {
+              "kind": "struct",
+              "name": "Message",
+              "visibility": "pub",
+              "signature": "pub struct Message",
+              "fields": [
+                {
+                  "name": "role",
+                  "visibility": "pub",
+                  "ty": "MessageRole"
+                },
+                {
+                  "name": "content",
+                  "visibility": "pub",
+                  "ty": "Vec < ContentBlock >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A single assistant or user message.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 89
+            },
+            {
+              "kind": "impl",
+              "name": "impl Message",
+              "visibility": "private",
+              "signature": "impl Message",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "from_user_text",
+                  "signature": "pub fn from_user_text (text : impl Into < String >) -> Self",
+                  "kind": "constructor",
+                  "docs": "Construct a user message from raw text.",
+                  "line": 100
+                },
+                {
+                  "name": "assistant_text",
+                  "signature": "pub fn assistant_text (& self) -> String",
+                  "kind": "method",
+                  "docs": "Concatenated text blocks, excluding reasoning and notifications.",
+                  "line": 109
+                },
+                {
+                  "name": "reasoning_text",
+                  "signature": "pub fn reasoning_text (& self) -> String",
+                  "kind": "method",
+                  "docs": "Concatenated reasoning blocks.",
+                  "line": 121
+                },
+                {
+                  "name": "tool_uses",
+                  "signature": "pub fn tool_uses (& self) -> impl Iterator < Item = & ContentBlock >",
+                  "kind": "method",
+                  "docs": "Iterate the tool-use blocks in the message.",
+                  "line": 133
+                }
+              ],
+              "impl_target": "Message",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 99
+            },
+            {
+              "kind": "struct",
+              "name": "ToolSpec",
+              "visibility": "pub",
+              "signature": "pub struct ToolSpec",
+              "fields": [
+                {
+                  "name": "name",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "description",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "input_schema",
+                  "visibility": "pub",
+                  "ty": "JsonObject"
+                },
+                {
+                  "name": "output_schema",
+                  "visibility": "pub",
+                  "ty": "Option < JsonObject >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A neutral tool declaration sent to the model.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: JsonSchema",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "non_exhaustive",
+                "serde"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 141
+            },
+            {
+              "kind": "impl",
+              "name": "impl ToolSpec",
+              "visibility": "private",
+              "signature": "impl ToolSpec",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (name : impl Into < String > , description : impl Into < String > , input_schema : JsonObject , output_schema : Option < JsonObject > ,) -> Self",
+                  "kind": "constructor",
+                  "docs": "Construct a tool declaration.",
+                  "line": 156
+                }
+              ],
+              "impl_target": "ToolSpec",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm",
+              "line": 155
+            },
+            {
+              "kind": "fn",
+              "name": "reasoning_compat_decode_maps_thinking",
+              "visibility": "private",
+              "signature": "fn reasoning_compat_decode_maps_thinking ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm::tests",
+              "line": 180
+            },
+            {
+              "kind": "fn",
+              "name": "message_role_has_no_system",
+              "visibility": "private",
+              "signature": "fn message_role_has_no_system ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm::tests",
+              "line": 195
+            },
+            {
+              "kind": "fn",
+              "name": "tool_result_defaults_and_wire_irrelevant_fields_round_trip",
+              "visibility": "private",
+              "signature": "fn tool_result_defaults_and_wire_irrelevant_fields_round_trip ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm::tests",
+              "line": 206
+            },
+            {
+              "kind": "fn",
+              "name": "message_helpers",
+              "visibility": "private",
+              "signature": "fn message_helpers ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-types/src/llm.rs",
+              "module": "llm::tests",
+              "line": 232
+            }
+          ]
         },
         {
           "path": "crates/eos-types/src/ports/engine.rs",
@@ -45946,14 +46161,14 @@
       "path": "crates/eos-workflow",
       "stats": {
         "modules": 23,
-        "items": 133,
+        "items": 134,
         "structs": 26,
         "enums": 5,
         "traits": 1,
         "functions": 62,
-        "impls": 36,
+        "impls": 37,
         "fields": 125,
-        "methods": 139
+        "methods": 140
       },
       "modules": [
         {
@@ -48915,6 +49130,33 @@
               "file": "crates/eos-workflow/src/error.rs",
               "module": "error",
               "line": 57
+            },
+            {
+              "kind": "impl",
+              "name": "impl From < eos_types :: AgentNameError > for WorkflowError",
+              "visibility": "private",
+              "signature": "impl From < eos_types :: AgentNameError > for WorkflowError",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "from",
+                  "signature": "fn from (value : eos_types :: AgentNameError) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 64
+                }
+              ],
+              "impl_target": "WorkflowError",
+              "trait_name": "From < eos_types :: AgentNameError >",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-workflow/src/error.rs",
+              "module": "error",
+              "line": 63
             }
           ]
         },

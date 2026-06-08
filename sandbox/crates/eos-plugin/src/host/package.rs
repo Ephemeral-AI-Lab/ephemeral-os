@@ -6,11 +6,11 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use eos_plugin::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER};
+use crate::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::PpcError;
+use crate::host::PpcError;
 
 /// Outcome of a package ensure: whether the package contract is active, whether
 /// the caller must upload, and the resolved roots / publish + setup status.

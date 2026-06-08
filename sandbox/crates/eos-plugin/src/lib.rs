@@ -35,6 +35,7 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
+pub mod host;
 pub mod manifest;
 pub mod ppc;
 pub mod refresh;

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>55</b><span>items</span></div>
-  <div><b>40</b><span>fields</span></div>
-  <div><b>17</b><span>methods</span></div>
+  <div><b>37</b><span>items</span></div>
+  <div><b>25</b><span>fields</span></div>
+  <div><b>3</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>2/3</small></a></li><li><a class="file-link active" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="validation crates/eos-agent-def/src/validation.rs role_has_context_builder check_context_recipe_role scan_skill_file find_submit_tokens def_with recipe_role_precheck skill_lint_detects_terminals skill_lint_dedupes_and_ignores_bare_prefix">
   <div class="module-head">
     <div>
@@ -62,7 +62,7 @@
     <h3>check_context_recipe_role</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a> (definition : &amp; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a> (definition : &amp; AgentDefinition) -&gt; Result &lt; () , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
   <p class="docstring">Reject a `context_recipe` declared by a role outside<br>`{planner, generator, reducer}` (the pure precheck only).<br>The catalog-validity check (`validate_context_recipe`) is owned by<br>`eos-workflow` and runs at the composition root after the registry is built.<br># Errors<br>Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a<br>role that has no context builder.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -76,7 +76,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a</span>
 <span class="rs-comment">/// role that has no context builder.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(definition: &amp;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(definition: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(recipe) = &amp;definition.context_recipe <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     };
@@ -84,7 +84,7 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> {
-        agent: definition.name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>().to_owned(),
+        agent: definition.name.as_str().to_owned(),
         recipe: recipe.clone(),
         role: definition.role,
     })
@@ -147,16 +147,16 @@
     <h3>role_has_context_builder</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a> (role : <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a> (role : AgentRole) -&gt; bool</code>
   <p class="docstring">Roles that own a context builder; a `context_recipe` is only valid on these.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Roles that own a context builder; a `context_recipe` is only valid on these.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(role: <span class="rs-type">AgentRole</span>) -&gt; bool {
     matches!(
         role,
-        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>
+        <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> | <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> | <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>
     )
 }
 </code></pre>
@@ -209,19 +209,19 @@
     <h3>def_with</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a> (role : <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a> , recipe : Option &lt; &amp; str &gt;) -&gt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a> (role : AgentRole , recipe : Option &lt; &amp; str &gt;) -&gt; AgentDefinition</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>, recipe: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
-        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
-            name: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;a&quot;).unwrap(),
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role: <span class="rs-type">AgentRole</span>, recipe: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">AgentDefinition</span> {
+        <span class="rs-type">AgentDefinition</span> {
+            name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;a&quot;).unwrap(),
             description: &quot;d&quot;.to_owned(),
             system_prompt: <span class="rs-type">None</span>,
             model: <span class="rs-type">None</span>,
             tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(10).unwrap(),
             role,
-            agent_type: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>::<span class="rs-type">Agent</span>,
+            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
             allowed_tools: vec![],
             terminals: vec![&quot;submit_x&quot;.to_owned()],
             notification_triggers: vec![],
@@ -246,13 +246,13 @@
   <pre><code>    #[test]
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-recipe-role-precheck-134">recipe_role_precheck</a>() {
         <span class="rs-comment">// No recipe -&gt; ok regardless of role.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <span class="rs-type">None</span>)).is_ok());
+        assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(<span class="rs-type">AgentRole</span>::<span class="rs-type">Helper</span>, <span class="rs-type">None</span>)).is_ok());
         <span class="rs-comment">// In-scope roles pass the precheck.</span>
-        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>] {
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>] {
             assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).is_ok());
         }
         <span class="rs-comment">// Out-of-scope role with a recipe -&gt; RecipeRoleMismatch.</span>
-        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Root</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Subagent</span>] {
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<span class="rs-type">AgentRole</span>::<span class="rs-type">Root</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Helper</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Subagent</span>] {
             <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).unwrap_err();
             assert!(
                 matches!(err, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> { .. }),
@@ -332,13 +332,13 @@
 <span class="rs-comment">//! rather than imported from `eos-tools`.</span>
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentRole</span>};
 
 <span class="rs-comment">/// Roles that own a context builder; a `context_recipe` is only valid on these.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(role: <span class="rs-type">AgentRole</span>) -&gt; bool {
     matches!(
         role,
-        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>
+        <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> | <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> | <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>
     )
 }
 
@@ -351,7 +351,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a</span>
 <span class="rs-comment">/// role that has no context builder.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(definition: &amp;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(definition: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(recipe) = &amp;definition.context_recipe <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     };
@@ -359,7 +359,7 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> {
-        agent: definition.name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>().to_owned(),
+        agent: definition.name.as_str().to_owned(),
         recipe: recipe.clone(),
         role: definition.role,
     })
@@ -435,17 +435,17 @@
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::skill_lint::scan_skill_file;
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<span class="rs-type">AgentName</span>, <span class="rs-type">AgentType</span>};
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>, recipe: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
-        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
-            name: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;a&quot;).unwrap(),
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role: <span class="rs-type">AgentRole</span>, recipe: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">AgentDefinition</span> {
+        <span class="rs-type">AgentDefinition</span> {
+            name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;a&quot;).unwrap(),
             description: &quot;d&quot;.to_owned(),
             system_prompt: <span class="rs-type">None</span>,
             model: <span class="rs-type">None</span>,
             tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(10).unwrap(),
             role,
-            agent_type: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>::<span class="rs-type">Agent</span>,
+            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
             allowed_tools: vec![],
             terminals: vec![&quot;submit_x&quot;.to_owned()],
             notification_triggers: vec![],
@@ -458,13 +458,13 @@
     #[test]
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-recipe-role-precheck-134">recipe_role_precheck</a>() {
         <span class="rs-comment">// No recipe -&gt; ok regardless of role.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <span class="rs-type">None</span>)).is_ok());
+        assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(<span class="rs-type">AgentRole</span>::<span class="rs-type">Helper</span>, <span class="rs-type">None</span>)).is_ok());
         <span class="rs-comment">// In-scope roles pass the precheck.</span>
-        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>] {
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>] {
             assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).is_ok());
         }
         <span class="rs-comment">// Out-of-scope role with a recipe -&gt; RecipeRoleMismatch.</span>
-        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Root</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Subagent</span>] {
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<span class="rs-type">AgentRole</span>::<span class="rs-type">Root</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Helper</span>, <span class="rs-type">AgentRole</span>::<span class="rs-type">Subagent</span>] {
             <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).unwrap_err();
             assert!(
                 matches!(err, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> { .. }),

@@ -9,12 +9,12 @@ Owner: eos-engine / eos-agent-run
 This phase makes `eos-engine` execution-only and `eos-agent-run` lifecycle-only.
 
 The engine keeps the agent loop, turn execution, event emission, midflight
-printing, message records, and background accounting. The run crate keeps
+printing, records, and background accounting. The run crate keeps
 spawn/wait/poll/cancel/finalization and durable agent-run state updates.
 
 Prerequisite: Phase 03B must define and implement the durable
 request/task/workflow/agent-run lineage contract before this phase moves
-message-record writing into `eos-engine` or splits run lifecycle from loop
+record writing into `eos-engine` or splits run lifecycle from loop
 execution. Phase 04 consumes `AgentRunRecordIndex` and
 `AgentRunRecordTargetFile`; it does not redesign DB materialization.
 
@@ -30,7 +30,7 @@ execution. Phase 04 consumes `AgentRunRecordIndex` and
 - batch tool dispatch,
 - engine events,
 - midflight event printing,
-- message record writing for loop-visible events,
+- record writing for loop-visible events,
 - background session accounting and notifications.
 
 `eos-engine` does not own:
@@ -134,7 +134,7 @@ logic.
 | `agent_loop/state.rs` | in-memory state for one active loop | DB writes, active-run registry |
 | `agent_loop/turn.rs` | assistant turn execution and tool-call turn semantics | concrete tool families |
 | `tool_call.rs` | engine-side tool-call dispatch routing and execution glue | concrete tool families, tool registry definitions |
-| `records.rs` | loop-visible message-record interpretation and write/read helpers | final agent-run state transitions |
+| `records.rs` | loop-visible record interpretation and write/read helpers | final agent-run state transitions |
 | `printer.rs` | midflight event printing/sink behavior | durable record writes |
 | `notifications.rs` | notification rule evaluation and loop-local notification sink | external notification facade or run finalization |
 | `background.rs` | background module routing and aggregate exports | concrete family-specific protocols |
@@ -203,7 +203,7 @@ Names to avoid:
 ```text
 NotificationService       # engine-internal queue, rename if private
 BackgroundTeardownService # engine-internal finalizer, rename if private
-MessageRecordService      # engine-internal records, unless sibling-consumed
+RecordService             # avoid for private internals; use only as sibling-consumed facade
 EventPrinterService       # event printer type, not service unless sibling-consumed
 ```
 
@@ -275,7 +275,7 @@ Handoff rules:
 | background sessions are cancelled or reported before final state is persisted | `eos-engine` reports; `eos-agent-run` persists |
 | final outcome is visible to waiters and pollers after persistence succeeds | `eos-agent-run` |
 
-## Message Records and Midflight Printing
+## Records and Midflight Printing
 
 Target ownership:
 
@@ -283,9 +283,9 @@ Target ownership:
 | --- | --- |
 | event emission during loop | `eos-engine` |
 | midflight printing | `eos-engine/printer.rs` |
-| message-record interpretation | `eos-engine/records.rs` |
+| record interpretation | `eos-engine/records.rs` |
 | durable run finalization | `eos-agent-run` |
-| external message-record contract | `eos-agent-core`, if externally exposed |
+| external record contract | `eos-agent-core`, if externally exposed |
 
 Reason: the engine sees stream events, tool calls, assistant messages, and
 terminal transitions as they happen. The runner only sees the final outcome.
@@ -300,6 +300,12 @@ Record and print rules:
 | record write failure is an engine error and appears in `AgentLoopOutcome` | `records.rs`, `agent_loop/executor.rs` |
 | externally exposed record DTOs are re-exported by `eos-agent-core` only if needed | `eos-agent-core` |
 
+Naming rule: target API names must not combine `Message` and `Record`. Use
+`AgentRunRecordKind`, sibling-facing `RecordService`, `records_root`, or
+`record_kind` for temporary compatibility names. Do not introduce
+`AgentRunMessageRecordKind`, `MessageRecordService`, or `message_records` in the
+target engine/run surface. The literal file name `messages.jsonl` is unchanged.
+
 ## Progress Tracker
 
 | Item | Status |
@@ -309,7 +315,7 @@ Record and print rules:
 | Add exact run file ownership contracts | Not started |
 | Add execution invariants for stream/tool/terminal behavior | Not started |
 | Add `BackgroundSessionRuntime` aggregate contract | Not started |
-| Move message records into engine internals | Not started |
+| Move records into engine internals | Not started |
 | Add engine midflight printer/sink | Not started |
 | Remove concrete tool ownership from engine | Not started |
 | Rename private `*Service` internals where needed | Not started |
@@ -327,7 +333,7 @@ Record and print rules:
 - `eos-engine` does not own tool registry definitions or hook contracts.
 - `eos-engine/services.rs` exports only sibling-facing execution surfaces.
 - `eos-engine` has no first-target `services/` folder.
-- Engine message records and midflight printing work during loop execution.
+- Engine records and midflight printing work during loop execution.
 - `eos-agent-run` does not import concrete tool modules.
 - `eos-agent-run` has no dependency on `eos-tool`, `eos-tool-ports`, or
   `ToolResult`; model-facing rendering happens above the lifecycle layer.
@@ -349,6 +355,6 @@ Record and print rules:
 - `cargo test -p eos-engine` passes.
 - `cargo test -p eos-agent-run` passes.
 - Focused tests cover loop outcome handoff, cancellation races, background
-  accounting, message records, and midflight printing.
+  accounting, records, and midflight printing.
 - `eos-engine` final module count is at or below 22.
 - `eos-agent-run` final module count is at or below 10.

@@ -4,7 +4,12 @@
 //! reach the `pub(super)` spec/process types and `ENV_*` constants.
 
 use super::*;
-use eos_plugin::{PluginServiceKeyParts, RefreshStrategy, ServiceMode};
+use eos_plugin::host::route::{
+    ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_ID, ENV_PLUGIN_LAYER_STACK_ROOT, ENV_PLUGIN_PACKAGE_ROOT,
+    ENV_PLUGIN_PPC_PROTOCOL_VERSION, ENV_PLUGIN_PPC_SOCKET, ENV_PLUGIN_SERVICE_ID,
+    ENV_PLUGIN_WORKSPACE_ROOT,
+};
+use eos_plugin::{PluginServiceKey, PluginServiceKeyParts, RefreshStrategy, ServiceMode};
 
 type TestResult = std::result::Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -23,7 +28,7 @@ fn key(profile: &str) -> std::result::Result<PluginServiceKey, PluginError> {
 
 #[test]
 fn process_spec_uses_stable_eos_plugin_socket_and_env() -> TestResult {
-    let spec = PluginProcessSpec::new(
+    let spec = new_spec_for_test(
         key("profile-a")?,
         vec!["demo-indexer".to_owned(), "--stdio".to_owned()],
         1,
@@ -52,8 +57,8 @@ fn process_spec_uses_stable_eos_plugin_socket_and_env() -> TestResult {
 
 #[test]
 fn process_spec_key_changes_socket_path() -> TestResult {
-    let first = PluginProcessSpec::new(key("profile-a")?, vec!["svc".to_owned()], 1)?;
-    let second = PluginProcessSpec::new(key("profile-b")?, vec!["svc".to_owned()], 1)?;
+    let first = new_spec_for_test(key("profile-a")?, vec!["svc".to_owned()], 1)?;
+    let second = new_spec_for_test(key("profile-b")?, vec!["svc".to_owned()], 1)?;
 
     assert_ne!(
         first.environment()[ENV_PLUGIN_PPC_SOCKET],
@@ -66,7 +71,7 @@ fn process_spec_key_changes_socket_path() -> TestResult {
 fn process_spec_rejects_empty_command() -> TestResult {
     let service_key = key("profile-a")?;
     assert!(matches!(
-        PluginProcessSpec::new(service_key, Vec::new(), 1),
+        new_spec_for_test(service_key, Vec::new(), 1),
         Err(PluginError::Manifest(message)) if message.contains("launch command")
     ));
     Ok(())
@@ -74,7 +79,7 @@ fn process_spec_rejects_empty_command() -> TestResult {
 
 #[test]
 fn spawned_process_reports_running_then_tears_down() -> TestResult {
-    let spec = PluginProcessSpec::new(
+    let spec = new_spec_for_test(
         key("profile-a")?,
         vec![
             "/bin/sh".to_owned(),
@@ -83,7 +88,7 @@ fn spawned_process_reports_running_then_tears_down() -> TestResult {
         ],
         1,
     )?;
-    let mut process = spec.spawn()?;
+    let mut process = spawn(&spec)?;
 
     let status = process.status_json();
     assert_eq!(status["service_id"], "indexer");
@@ -102,7 +107,7 @@ fn spawned_process_reports_running_then_tears_down() -> TestResult {
 #[test]
 fn spawn_connected_accepts_ppc_socket() -> TestResult {
     let root = test_socket_root("spawn-connected");
-    let spec = PluginProcessSpec::new_with_socket_root(
+    let spec = new_spec_with_socket_root(
         key("profile-a")?,
         vec!["/bin/sh".to_owned(), "-c".to_owned(), "sleep 30".to_owned()],
         1,
@@ -115,7 +120,7 @@ fn spawn_connected_accepts_ppc_socket() -> TestResult {
     });
 
     let (mut process, _client) =
-        match spec.spawn_connected_with_overlay(None, Duration::from_secs(5)) {
+        match spawn_connected_with_overlay(&spec, None, Duration::from_secs(5)) {
             Ok(pair) => pair,
             Err(err) => {
                 let _ = connector.join();

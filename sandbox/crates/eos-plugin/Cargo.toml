@@ -13,6 +13,16 @@ eos-protocol.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
+# `host` package publish/setup: content-hash markers + staged-upload ids.
+sha2.workspace = true
+uuid.workspace = true
+
+[features]
+# Test-only seam: lets a caller redirect the managed package roots to temp dirs.
+# Production builds MUST leave this off so the roots stay the fixed `/eos/...`
+# managed paths and an untrusted plugin caller cannot redirect package publishing.
+# The daemon enables it from its `[dev-dependencies]` so only its test build sees it.
+test-root-override = []
 
 [lints]
 workspace = true

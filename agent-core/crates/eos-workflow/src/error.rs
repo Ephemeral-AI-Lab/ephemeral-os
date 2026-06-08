@@ -59,3 +59,9 @@ impl From<eos_agent_def::AgentDefError> for WorkflowError {
         Self::AgentDefinition(value.to_string())
     }
 }
+
+impl From<eos_types::AgentNameError> for WorkflowError {
+    fn from(value: eos_types::AgentNameError) -> Self {
+        Self::AgentDefinition(value.to_string())
+    }
+}

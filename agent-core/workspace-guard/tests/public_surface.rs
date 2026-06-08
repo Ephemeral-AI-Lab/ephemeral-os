@@ -220,13 +220,16 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
             &[
                 "mod:ports",
                 "mod:state",
+                "use:agent",
+                "use:contracts",
                 "use:error",
+                "use:frontmatter",
                 "use:ids",
                 "use:json",
+                "use:llm",
                 "use:ports",
                 "use:state",
                 "use:time",
-                "use:workflow_api",
             ],
         ),
         (

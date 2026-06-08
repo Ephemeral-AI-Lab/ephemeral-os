@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>55</b><span>items</span></div>
-  <div><b>40</b><span>fields</span></div>
-  <div><b>17</b><span>methods</span></div>
+  <div><b>37</b><span>items</span></div>
+  <div><b>25</b><span>fields</span></div>
+  <div><b>3</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-agent-def/src/error.rs AgentDefError">
   <div class="module-head">
     <div>
@@ -65,7 +65,7 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a></code>
   <p class="docstring">Failures raised when loading, parsing, or validating an agent profile.<br>`#[non_exhaustive]` because the set may grow (`api-non-exhaustive`); messages<br>are lowercase with no trailing punctuation (`err-lowercase-msg`) and chain the<br>underlying cause via `#[source]` (`err-source-chain`).</p>
   <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>MissingRole</td><td><code>path: PathBuf</code></td></tr><tr><td>EmptyName</td><td><code></code></td></tr><tr><td>EmptyTerminals</td><td><code></code></td></tr><tr><td>NonPositiveToolCallLimit</td><td><code></code></td></tr><tr><td>Read</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>Frontmatter</td><td><code>path: PathBuf, cause: serde_yaml :: Error</code></td></tr><tr><td>SkillNotFound</td><td><code>path: PathBuf, declared: String, resolved: PathBuf</code></td></tr><tr><td>RecipeRoleMismatch</td><td><code>agent: String, recipe: String, role: <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a></code></td></tr><tr><td>SkillLint</td><td><code>violations: Vec &lt; String &gt;</code></td></tr></tbody></table>
+  <h4>Variants</h4><table><tbody><tr><td>MissingRole</td><td><code>path: PathBuf</code></td></tr><tr><td>EmptyName</td><td><code></code></td></tr><tr><td>EmptyTerminals</td><td><code></code></td></tr><tr><td>NonPositiveToolCallLimit</td><td><code></code></td></tr><tr><td>Read</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>Frontmatter</td><td><code>path: PathBuf, cause: serde_yaml :: Error</code></td></tr><tr><td>SkillNotFound</td><td><code>path: PathBuf, declared: String, resolved: PathBuf</code></td></tr><tr><td>RecipeRoleMismatch</td><td><code>agent: String, recipe: String, role: AgentRole</code></td></tr><tr><td>SkillLint</td><td><code>violations: Vec &lt; String &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-agent-def/src/error.rs:8</p>
 </article></div>
@@ -81,7 +81,7 @@
 
 <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<span class="rs-type">AgentRole</span>;
 
 <span class="rs-comment">/// Failures raised when loading, parsing, or validating an agent profile.</span>
 <span class="rs-comment">///</span>
@@ -153,7 +153,7 @@
         <span class="rs-comment">/// The declared recipe id.</span>
         recipe: <span class="rs-type">String</span>,
         <span class="rs-comment">/// The agent's role, which has no context builder.</span>
-        role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>,
+        role: <span class="rs-type">AgentRole</span>,
     },
 
     <span class="rs-comment">/// One or more declared skill files violated the terminal-silence contract.</span>

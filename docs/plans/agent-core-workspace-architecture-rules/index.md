@@ -142,9 +142,9 @@ Retired or folded crates:
 | `eos-tools` | rename/consolidate as singular `eos-tool` |
 | `eos-agent-runner` | rename/consolidate as `eos-agent-run` |
 | `eos-skills` | fold skill registry/package loading into `eos-tool` |
-| `eos-plugin-catalog` | fold into `eos-tool` or private `eos-agent-core/runtime/plugins.rs` |
-| `eos-agent-def` | fold agent definitions into `eos-agent-core/src/agents.rs`; passive DTOs go to `eos-types` only when shared |
-| `eos-config` | fold config structs into owning crates; no generic config crate |
+| `eos-plugin-catalog` | fold into private `eos-agent-core/runtime/plugins.rs` |
+| `eos-agent-def` | passive DTOs go to `eos-types`; loader/validation goes to `eos-agent-core/src/agents.rs` |
+| `eos-config` | config structs go to owning crates; pure frontmatter parser goes to `eos-types`; file loader goes to `eos-agent-core/runtime/config.rs` |
 | `eos-audit` | fold runtime audit sink into `eos-agent-core/src/runtime/audit.rs` |
 
 ## Target Architecture
@@ -163,8 +163,11 @@ flowchart LR
     Engine --> Llm
     Engine --> Sandbox
     Tool --> Sandbox
-    Workflow --> AgentRun
+    Workflow --> Tool
+    Workflow --> Types
     Db --> Types["eos-types"]
+    Llm --> Types
+    Sandbox --> Types
     AgentRun --> Types
     Engine --> Types
     Tool --> Types
@@ -178,13 +181,22 @@ Rules behind the graph:
 - `eos-engine` owns the loop, turns, event emission, record writing, and
   midflight printing.
 - `eos-tool` owns the tool framework, concrete model-callable tools, and skills.
-- `eos-workflow` owns workflow lifecycle and workflow state transitions.
+- `eos-workflow` owns workflow lifecycle and workflow state transitions. It has
+  no crate edge to `eos-agent-run`; run spawning crosses the `AgentRunApi`
+  contract from `eos-types`, and `eos-agent-core` wires the concrete run
+  lifecycle.
 - `eos-llm-client` owns outbound provider clients; it does not need a
-  `services.rs` module.
+  `services.rs` module, and neutral transcript DTOs shared by lower crates live
+  in `eos-types`.
 - Config structs live with their owner: provider config in `eos-llm-client`,
   agent profiles in `eos-agent-core`, workflow config in `eos-workflow`, DB
-  config in `eos-db`.
-- `eos-types` owns passive contracts only.
+  config in `eos-db`. The pure frontmatter parser lives in `eos-types`; the
+  file-merge loader lives in `eos-agent-core/runtime/config.rs`.
+- `eos-types` owns passive contracts only: trait ports, typed DTOs, store
+  traits, neutral LLM DTOs, agent DTOs, and pure parsers. `AgentType` is the
+  only profile launch axis (`agent`, `subagent`, `advisor`); there is no
+  `AgentRole`, and a run's workflow role is the `TaskRole` on its lineage row.
+  Advisor profiles use `agent_type: advisor`.
 - `eos-sandbox-port` is the only crate allowed to be called a port.
 
 ## Resulting Folder Structure
@@ -337,7 +349,8 @@ agent-core/
   target.
 - No crate named `eos-runtime`, `eos-agent-ports`, `eos-tool-ports`, or
   `eos-agent-message-records` remains.
-- No standalone `eos-config`, `eos-agent-def`, or `eos-audit` crate remains.
+- No standalone `eos-config`, `eos-agent-def`, `eos-audit`, `eos-skills`, or
+  `eos-plugin-catalog` crate remains.
 - No crate except `eos-sandbox-port` uses `port` in crate, module, or type names
   unless explicitly allowlisted for protocol text.
 - `api` is not used as a crate or module name unless Phase 0 explicitly allows
@@ -355,9 +368,14 @@ agent-core/
 - `eos-engine` contains no concrete model-facing tool family modules.
 - `eos-tool` owns tool model, registry, hooks, concrete tool behavior, and
   skills.
+- `eos-workflow` depends on `eos-types` and `eos-tool`, not `eos-agent-run`.
 - `eos-agent-core` owns external facade plus hidden request runtime wiring.
 - `eos-llm-client` uses `client` and `providers`, not `services`.
-- `eos-types` has no runtime, I/O, provider, DB, or service logic.
+- `eos-types` has no runtime, I/O, provider, DB, or service logic, and holds the
+  cross-crate contract floor.
+- Agent profiles and `AgentDefinition` use `AgentType` only. The target code has
+  no `AgentRole` enum, no `AgentDefinition.role`, and no `role:` agent-profile
+  frontmatter; workflow scheduling roles live only as `TaskRole` lineage data.
 - `cargo test -p workspace-guard` passes.
 - `cargo check --workspace --all-targets` passes.
 - The class inventory reports 150-170 modules.

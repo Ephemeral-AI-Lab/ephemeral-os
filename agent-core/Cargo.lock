@@ -428,6 +428,7 @@ checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 name = "eos-agent-def"
 version = "0.1.0"
 dependencies = [
+ "eos-types",
  "schemars",
  "serde",
  "serde_json",
@@ -454,7 +455,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-audit",
- "eos-llm-client",
  "eos-tool-ports",
  "eos-types",
  "thiserror",
@@ -622,7 +622,7 @@ dependencies = [
 name = "eos-skills"
 version = "0.1.0"
 dependencies = [
- "eos-config",
+ "eos-types",
  "insta",
  "serde",
  "serde_yaml",
@@ -666,7 +666,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-ports",
- "eos-config",
  "eos-llm-client",
  "eos-sandbox-port",
  "eos-skills",
@@ -690,6 +689,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror",
  "time",
  "uuid",

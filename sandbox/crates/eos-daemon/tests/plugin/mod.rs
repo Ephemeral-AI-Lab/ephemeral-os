@@ -605,7 +605,7 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
         )?
     };
     let service_instance_id = spec.service_instance_id();
-    let mut process = spec.spawn()?;
+    let mut process = super::process::spawn(&spec)?;
     let deadline = Instant::now() + Duration::from_secs(1);
     while process.status_json()["running"].as_bool().unwrap_or(true) && Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(10));
@@ -745,19 +745,19 @@ fn plugin_response_payload_rejects_over_8_mib_body() {
 fn plugin_caller_fields_reject_nul_long_and_non_string_values() {
     assert!(matches!(
         validate_plugin_caller_fields(&json!({"caller_id": "agent\0plugin"})),
-        Err(DaemonError::Plugin(PluginError::Ppc(message)))
+        Err(PluginError::Ppc(message))
             if message.contains("contains NUL")
     ));
 
     assert!(matches!(
         validate_plugin_caller_fields(&json!({"caller": {"source_id": "x".repeat(MAX_PLUGIN_CALLER_FIELD_CHARS + 1)}})),
-        Err(DaemonError::Plugin(PluginError::Ppc(message)))
+        Err(PluginError::Ppc(message))
             if message.contains("exceeds")
     ));
 
     assert!(matches!(
         validate_plugin_caller_fields(&json!({"caller": {"request_id": 42}})),
-        Err(DaemonError::Plugin(PluginError::Ppc(message)))
+        Err(PluginError::Ppc(message))
             if message.contains("must be a string")
     ));
 }

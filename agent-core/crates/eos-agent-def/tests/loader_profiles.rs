@@ -49,6 +49,12 @@ fn loads_bundled_profiles() {
     let skill = executor.skill.as_ref().expect("executor skill resolved");
     assert!(skill.is_absolute());
 
+    let advisor = registry
+        .get(&AgentName::new("advisor").unwrap())
+        .expect("advisor present");
+    assert_eq!(advisor.role, AgentRole::Helper);
+    assert_eq!(advisor.agent_type, AgentType::Advisor);
+
     // The explorer is the only dispatchable subagent in the bundled set.
     let dispatchable: Vec<String> = registry
         .dispatchable_subagent_names()

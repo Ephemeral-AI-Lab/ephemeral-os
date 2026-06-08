@@ -1,7 +1,7 @@
 # eos-daemon SRP Optimization Plan
 
 Drafted: 2026-06-09
-Revised: 2026-06-09 (corrected Phase 2/3 — see "Correction Note")
+Revised: 2026-06-09 (ultra-aggressive cleanup pass — see "What This Revision Changes")
 
 ## Problem Statement
 
@@ -11,145 +11,175 @@ envelope, dispatches the operation, owns server-local runtime state, and injects
 host resources into narrower crates.
 
 It should not continue to be the main home for command-run lifecycle logic,
-plugin runtime lifecycle logic, isolated namespace runtime plumbing, and
-workspace mutation adapters. Those are different responsibilities from "run the
-daemon server". This plan assumes "single rsp rule" means the single
-responsibility principle (SRP).
+plugin runtime mechanics, isolated namespace plumbing, and workspace mutation
+adapters. Those are different responsibilities from "run the daemon server."
+"SRP" here means the single responsibility principle: **responsibility cohesion,
+not consumer count.** A crate consumed only by the daemon can still be a correct
+boundary when it isolates one responsibility and enforces a dependency
+direction.
 
-**SRP is responsibility cohesion, not consumer count.** A crate consumed only by
-the daemon can still be a correct boundary: it isolates one responsibility,
-enforces a dependency direction, and (for `eos-workspace-run-host`) provides the
-build-time `eos-occ`-free no-publish guard. This revision therefore *renames*
-single-consumer crates to honest names instead of dissolving them into the
-daemon — dissolving a crate into the daemon re-centralizes responsibility into
-the very crate we are slimming.
+This pass goes as aggressive as *correctness* allows: maximal real deletion,
+crate consolidation up to the structural floor, honest names, and host-neutral
+extraction — while refusing any change that introduces a Cargo cycle, leaks a
+guarded dependency edge, or produces an oversized multi-concept file.
 
-## Correction Note (what changed from the first draft)
+## What This Revision Changes
 
-The first draft aimed to (a) rename `eos-workspace-api` → `eos-workspace` and
-**absorb `eos-workspace-run-host` into it**, and (b) **fold `eos-checkpoint-host`
-into the daemon**. Both are unreachable / counterproductive:
+Corrections from the earlier draft and from review, all verified against source:
 
-| First-draft step | Why it fails | Corrected step |
+| Earlier draft said | Reality | This revision |
 |---|---|---|
-| `eos-workspace` (= renamed leaf) absorbs the run tier | **Hard Cargo cycle.** Both mode crates depend on the leaf; the run tier (`WorkspaceRunManager`/`registry`) references concrete types from both mode crates, so the leaf would depend back on them: `eos-workspace → eos-ephemeral-workspace → eos-workspace`. | Rename the **run tier** to `eos-workspace-runtime` and keep it. Rename the **leaf** to `eos-workspace`. Move only the mode-neutral `CommandHandle` up into the leaf. |
-| Fold `commit_to_git` into daemon adapters | It is the **only** step that *grows* the daemon (+350–500 LOC) — anti-SRP for the crate being slimmed. `commit_to_git` is a layerstack/overlay-bound git pipeline, a distinct responsibility. | Rename `eos-checkpoint-host` → `eos-checkpoint` and keep it. Daemon keeps only the thin op facade. |
+| Move `CommandHandle` up into the leaf | No mode crate references it; it is daemon/run-tier plumbing, in **no** seam signature; it is a raw-fd OS handle, not a pure DTO. Nothing forces the move. | **`CommandHandle` stays in `eos-workspace-run`.** Drop the move entirely. |
+| Rename run tier → `eos-workspace-runtime` | Collides with `eos-daemon/src/runtime/` (server runtime state) at the prose/doc level. | Rename run tier → **`eos-workspace-run`**. |
+| Flatten daemon adapters into one file per seam | `adapters/plugin.rs` would be 1,220–1,920 LOC and `adapters/isolated_runtime.rs` ~1,003 LOC — both breach the repo's own 800–1000 split smell — and the collapse triggers duplicate `mod tests;` (E0428) plus stale `#[path]` depths. | **Keep right-sized module trees.** Split oversized files *toward* 300–600 LOC; never collapse cohesive trees into mega-files. |
+| Phase 5 plugin extraction = −1,300 to −2,000 LOC | The honest host-neutral surface is ~580–840 LOC; most of `adapters/plugins` (3,220 LOC) is live-process / OCC / overlay that the plan's own rules keep daemon-side. | Right-size the extraction to **~500–700 LOC**; move DTO *data* + parse/spec, keep wire-shaping daemon-side. |
+| Keep `eos-ephemeral-workspace` and `eos-isolated-workspace` as separate crates | No crate depends on ephemeral-without-nix today (only the daemon and the run tier consume ephemeral, and both already carry the nix surface transitively). The separate-crate boundary protects no current consumer. | **Merge both into `eos-workspace-modes`** (modules `ephemeral/` + `isolated/`). The leaf stays pure; `command-session` keeps a thin leaf-only dep. |
+| Target daemon ~6,800–7,700 LOC | Inflated: the only true deletion is the 574-LOC dead file; the rest is relocation, and Phase-5 was 2–3× over-claimed. | Drop the LOC target as an acceptance gate. Realistic daemon lands **~8,000–8,400 LOC**; gate on **dependency direction**, not counts. |
 
-The run tier is also forbidden from living in the daemon (C5: "no broad lifecycle
-state machines") or in either mode crate (per-mode ownership rules). With the
-leaf, the daemon, and both mode crates all excluded, the run tier has **no legal
-home except its own crate** — so it must stay a crate. The corrected plan keeps
-it, renamed.
-
-## Observed Baseline
+## Observed Baseline (verified)
 
 Live source under `sandbox/crates/eos-daemon/src`: **54 Rust files, 10,471 LOC**.
-The generated inventory at `sandbox/docs/class_inventory/html` is **stale** (it
-still renders `src/services/*`; the live tree uses `src/adapters/*`). Regenerate
-it in Phase 0 before trusting any count.
-
-Largest relevant live areas:
+The generated inventory at `sandbox/docs/class_inventory/html` is stale (renders
+`src/services/*`; the live tree uses `src/adapters/*`). Regenerate it in Phase 0
+before trusting any count.
 
 | Area | Live LOC | Disposition |
 |---|---:|---|
-| `adapters/plugins` | 3,220 | Move host-neutral package/PPC/service mechanics into `eos-plugin::host`; keep daemon op facade, live process registry, OCC callback body. |
-| `adapters/workspace_run` | 2,402 | Delete orphan `manager.rs` (Phase 1). Keep RPC facade + daemon-injected ports; the run lifecycle stays in the renamed `eos-workspace-runtime`. |
-| `eos-checkpoint-host` | 473 | Rename → `eos-checkpoint`. Keep as a crate; do not fold into daemon. |
-| `eos-plugin-host` | 1,100 | Remove crate; move host-neutral support under `eos-plugin/src/host`. |
-| `eos-workspace-run-host` | 1,002 | Rename → `eos-workspace-runtime`. Keep as the both-modes composition sink. |
-| `audit` | 920 | Keep. Server-local audit ring. |
-| `runtime` | 856 | Keep. Server errors, invocation registry, timings, request helpers. |
-| `ops` | 841 | Keep thin. Wire op registry/facade. |
-| `transport` | 567 | Keep. The live server. |
+| `adapters/plugins` | 3,220 | ~2,350 daemon-owned (live process registry, OCC callback body, overlay exec) **stays**; ~500–700 host-neutral (DTO data + parse/spec) **moves** to `eos-plugin/src/host`. |
+| `adapters/workspace_run` | 2,402 | Delete dead `manager.rs` (Phase 1, 574 LOC). Keep RPC facade + injected ports; lifecycle lives in `eos-workspace-run`. |
+| `eos-plugin-host` (crate) | 1,100 | Dissolve into `eos-plugin/src/host`. |
+| `eos-workspace-run-host` (crate) | 1,002 | Rename → `eos-workspace-run`. Keeps `CommandHandle`. |
+| `eos-checkpoint-host` (crate) | 473 | Rename → `eos-checkpoint`. |
+| `audit` / `runtime` / `ops` / `transport` | 920 / 856 / 841 / 567 | Keep. Server-local infra + the wire op registry/facade. |
 
-## Target Ownership
+`manager.rs` is provably dead: it is **not** declared in
+`adapters/workspace_run/mod.rs`, it references a `super::registry` sibling that
+does not exist as a module, and the live `WorkspaceRunManager` is imported from
+the run-tier crate (`commands.rs`). It compiles into nothing today.
+
+## Target Crate Family
 
 ```mermaid
 flowchart TD
-    D["eos-daemon — server / composition root"]
-    RT["eos-workspace-runtime — run lifecycle sink"]
-    PL["eos-plugin (+host) — contracts + PPC transport"]
+    D["eos-daemon — server / composition root<br/>(only eos-occ consumer)"]
+    RUN["eos-workspace-run — run lifecycle sink<br/>(owns CommandHandle)"]
+    MODES["eos-workspace-modes — ephemeral/ + isolated/<br/>(owns nix/netfilter/rtnl/unsafe)"]
+    PL["eos-plugin (+ src/host) — contracts + PPC transport"]
     CK["eos-checkpoint — git pipeline"]
-    EPH["eos-ephemeral-workspace"]
-    ISO["eos-isolated-workspace"]
-    CMD["eos-command-session"]
+    CMD["eos-command-session — PTY/process substrate"]
     OCC["eos-occ-layerstack"]
-    WS["eos-workspace — leaf DTOs + ports + CommandHandle"]
+    WS["eos-workspace — leaf DTOs/traits/ports (serde only)"]
 
-    D -- "impls WorkspaceRunHostPorts" --> RT
-    D -- "injects OCC callback into PpcClient" --> PL
-    D -- "commit_to_git(&CommitRequest)" --> CK
-    D --> OCC
-    D --> WS
-    RT --> EPH & ISO & CMD & WS
-    EPH --> WS
-    ISO --> WS
+    D --> RUN & PL & CK & MODES & OCC & WS
+    RUN --> MODES & CMD & WS
+    MODES --> WS
+    CMD --> WS
+    PL --> WS
 ```
 
-Dependency direction is strictly `daemon → {runtime, plugin, checkpoint, modes,
-occ-layerstack} → workspace(leaf)`. `eos-workspace` references **zero** mode-crate
-types, so it stays the anchor everything points into — no cycle, no daemon
-back-edge.
+Dependency direction is strictly `daemon → {run, modes, plugin, checkpoint,
+occ-layerstack} → workspace(leaf)`. The leaf references **zero** internal crates,
+so it stays the anchor everything points into — no cycle, no daemon back-edge.
+`command-session` depends on the leaf **only**, so it never inherits the
+overlay/protocol/nix surface.
 
 | Crate | Owns | Must not own |
 |---|---|---|
-| `eos-daemon` | RPC transport, op registry, server-local runtime state, audit ring, daemon-owned single-writer OCC cache, daemon-only port **impls** + injection. | Run lifecycle state machine, plugin package/PPC mechanics, git-commit pipeline body, namespace process supervision logic. |
-| `eos-workspace` (leaf, was `eos-workspace-api`) | Workspace mode enum, command/file DTOs, read/mutation contracts (`WorkspaceReadView`/`WorkspaceMutationSink`/`WorkspaceFileOps` traits), path resolution, `SnapshotLease`, response helpers, and the mode-neutral `CommandHandle`. | Any mode-crate type, OCC writer, daemon globals, run lifecycle, plugin state. |
-| `eos-workspace-runtime` (was `eos-workspace-run-host`) | `WorkspaceRunManager`, `WorkspaceRunRegistry`, `StartTarget`, `WorkspaceRunHostPorts` (daemon-injected seam). The both-modes composition sink. `eos-occ`-free by construction. | OCC writer ownership, daemon `DispatchContext`/`DaemonError`, RPC facade. |
-| `eos-ephemeral-workspace` | Ephemeral snapshot, fresh overlay dirs, capture/finalize/discard policy. | Isolated namespace/session policy, daemon runtime state. |
-| `eos-isolated-workspace` | Isolated session lifecycle, namespace/caps/network policy, audit collection. (Owns the `nix`/netfilter/rtnl surface — stays separate so that surface never leaks to other workspace consumers.) | Ephemeral publish policy, daemon RPC facade, OCC publish path. |
+| `eos-daemon` | RPC transport, op registry, server-local runtime state, audit ring, the daemon-owned **single-writer** OCC cache, thin op facades, daemon-only port **impls** + injection. | Run lifecycle state machine, plugin package/PPC mechanics, git-commit pipeline body, namespace process supervision body. |
+| `eos-workspace` (leaf, was `eos-workspace-api`) | Workspace mode enum, command/file DTOs, read/mutation contracts (`WorkspaceReadView` / `WorkspaceMutationSink` / `WorkspaceFileOps`), path resolution, `SnapshotLease`, response helpers. Deps: `serde, serde_json, thiserror` only. | Any mode implementation, OCC writer, daemon globals, run lifecycle, plugin state, `CommandHandle`. |
+| `eos-workspace-modes` (NEW = `eos-ephemeral-workspace` + `eos-isolated-workspace`) | `ephemeral/`: snapshot, fresh overlay dirs, capture/finalize/discard policy. `isolated/`: session lifecycle, namespace/caps/network policy, audit collection, the `nix`/netfilter/rtnl surface. | OCC writer ownership, daemon RPC facade, run lifecycle orchestration. |
+| `eos-workspace-run` (was `eos-workspace-run-host`) | `WorkspaceRunManager`, `WorkspaceRunRegistry`, `StartTarget`, `WorkspaceRunHostPorts` (daemon-injected seam), and **`CommandHandle`**. The both-modes composition sink. `eos-occ`-free by construction. | OCC writer, daemon `DispatchContext` / `DaemonError`, RPC facade. |
 | `eos-command-session` | PTY/process/session substrate. | Workspace-mode policy, daemon op parsing. |
-| `eos-checkpoint` (was `eos-checkpoint-host`) | `commit_to_git` git/worktree pipeline, `CommitRequest`/`CommitOutcome`/`CheckpointError`. | Daemon runtime state, OCC writer. |
-| `eos-plugin` | Plugin contracts plus host-neutral package/PPC support under `src/host`. | Daemon runtime state, OCC writer, LayerStack/overlay/`eos-occ`/`tokio` edges. |
+| `eos-checkpoint` (was `eos-checkpoint-host`) | `commit_to_git` git/worktree pipeline, `CommitRequest` / `CommitOutcome` / `CheckpointError`. | Daemon runtime state, OCC writer. |
+| `eos-plugin` (+ `src/host`) | Plugin contracts plus host-neutral package/PPC support and the moved plugin DTO *data* + parse/spec under `src/host`. | Daemon runtime state, OCC writer, live process registry, LayerStack/overlay/`eos-occ`/`tokio` edges, daemon wire-response shaping. |
 
-## Resulting Crate Family
+### Resulting workspace members
+
+`9` affected members → `7`: `eos-plugin-host` dissolves into `eos-plugin`;
+`eos-ephemeral-workspace` + `eos-isolated-workspace` merge into
+`eos-workspace-modes`. Total `[workspace] members`: **20 → 17**.
 
 | Today | After | Change |
 |---|---|---|
-| `eos-workspace-api` | `eos-workspace` | rename; gains `CommandHandle` |
-| `eos-workspace-run-host` | `eos-workspace-runtime` | rename; loses `CommandHandle`; gains path-dep on `eos-workspace` |
-| `eos-checkpoint-host` | `eos-checkpoint` | pure rename (no symbol movement) |
+| `eos-workspace-api` | `eos-workspace` | rename (leaf stays pure; no `CommandHandle`) |
+| `eos-ephemeral-workspace` + `eos-isolated-workspace` | `eos-workspace-modes` | **merge** (modules `ephemeral/` + `isolated/`) |
+| `eos-workspace-run-host` | `eos-workspace-run` | rename (keeps `CommandHandle`) |
+| `eos-checkpoint-host` | `eos-checkpoint` | rename |
 | `eos-plugin` + `eos-plugin-host` | `eos-plugin` (with `src/host/`) | merge; gains `sha2` + `uuid` |
-| `eos-daemon` | `eos-daemon` | slims (manager/PPC/git bodies leave); deps swap host crates for the renamed ones |
-| `eos-ephemeral` / `eos-isolated` / `eos-command-session` / `eos-occ-layerstack` | unchanged | retarget the leaf rename only |
+| `eos-daemon` | `eos-daemon` | −574 dead LOC; ~500–700 LOC host-neutral extracted; deps swapped |
+| `eos-command-session` / `eos-occ-layerstack` | unchanged | retarget the leaf rename only |
 
-9 workspace members → 8 (`eos-plugin-host` dissolves; nothing folds into the daemon).
+## Cycle / Guard Safety (the constraints that bound the aggression)
 
-## Resulting File Shape
+- **No cycle.** `eos-workspace-modes → eos-workspace` (leaf has zero internal
+  deps, never points back). The run tier depends on modes; nothing the modes
+  crate imports depends on the run tier. One-line proof: leaf out-edges = ∅;
+  modes out-edges = {leaf, overlay, protocol, config, nix}; run out-edges =
+  {modes, command-session, leaf, layerstack, overlay}; daemon → all → DAG.
+- **Leaf↔run merge is forbidden** (would cycle): the run tier *depends on*
+  isolated while the leaf is *depended on by* isolated, so one crate cannot hold
+  both. This is why `eos-workspace-run` stays its own crate.
+- **No nix leak past intended consumers.** `eos-workspace-modes` carries the
+  `nix`/netfilter/rtnl surface, but its only consumers are `eos-daemon`,
+  `eos-workspace-run`, and `eos-e2e-test` — all of which already pull that
+  surface transitively. `eos-command-session` and any future leaf-only consumer
+  stay clean because they depend on the leaf, not on modes. (Accepted tradeoff of
+  Option 3: the unsafe/syscall surface is no longer in a single dedicated crate;
+  it is contained to the `isolated/` module of `eos-workspace-modes` and must
+  keep its tight safety invariants + safe wrappers there.)
+- **No-publish guard.** `eos-workspace-run` stays `eos-occ`-free by
+  construction; the OCC writer lives only in the daemon.
+- **Single-writer OCC.** The per-root OCC cache and `handle_callback_for_root`
+  body stay daemon-owned; plugin callbacks still route through the one writer.
 
-### `eos-workspace` (leaf)
+## Resulting File/Folder Structure
+
+### `eos-workspace` (leaf — pure, unchanged internals)
 
 ```text
 src/
-  lib.rs
-  mode.rs             # WorkspaceMode
-  command_session.rs  # PrepareCommandRequest, PreparedCommandWorkspace, FinalizeCommandRequest, WorkspaceCommandOutcome
-  file_ops.rs         # Read/Write/EditFileRequest+Outcome, SearchReplaceEdit, WorkspaceFileOps (trait)
-  read_view.rs        # ResolvedWorkspacePath, WorkspaceReadView (trait)
-  mutation.rs         # WorkspaceMutationRequest/Outcome/Kind, WorkspaceMutationSink (trait)
-  lease.rs            # SnapshotLease
-  response.rs         # WorkspaceTimings, ChangedPathKinds, WorkspaceConflict, WorkspaceApiError
-  command_handle.rs   # CommandHandle  <- moved IN from run-host
+  lib.rs  mode.rs  command_session.rs  file_ops.rs
+  lease.rs  mutation.rs  read_view.rs  response.rs
 ```
-Deps: `{ serde, serde_json, thiserror }` — no internal crate deps (the no-cycle anchor).
+Deps: `{ serde, serde_json, thiserror }`. No `command_handle.rs` (stays in the run tier).
 
-### `eos-workspace-runtime` (composition sink)
+### `eos-workspace-modes` (NEW — ephemeral + isolated, relocated under subdirs)
 
 ```text
 src/
-  lib.rs       # pub use manager::{StartTarget, WorkspaceRunManager}; pub use ports::WorkspaceRunHostPorts
-  manager.rs   # WorkspaceRunManager, StartTarget   (#[cfg(target_os = "linux")])
-  ports.rs     # WorkspaceRunHostPorts (trait)
-  registry.rs  # WorkspaceRun, EphemeralRun, IsolatedRun, WorkspaceRunRegistry  (pub(crate))
+  lib.rs                 # pub mod ephemeral; pub mod isolated;
+  ephemeral/             # was crates/eos-ephemeral-workspace/src/*
+    mod.rs               # was ephemeral/lib.rs
+    capture.rs  command.rs  dirs.rs  error.rs
+    finalize.rs  ops.rs  ports.rs  timings.rs  types.rs
+  isolated/              # was crates/eos-isolated-workspace/src/*
+    mod.rs               # was isolated/lib.rs
+    audit.rs  caps.rs  command.rs  error.rs  network.rs  ops.rs  session.rs
+    network/netfilter/{exprs.rs, mod.rs, wire.rs}
+    network/rtnl.rs
+    session/{capacity.rs, gc.rs, lifecycle.rs, persistence.rs, ports.rs, support.rs, types.rs}
 ```
-Deps: previous set **+ `eos-workspace`** (for `CommandHandle`). Stays `eos-occ`-free.
+Deps: union of both crates — `{ eos-workspace, eos-overlay, eos-protocol,
+eos-config, nix, serde, serde_json, thiserror }`. `ephemeral/command.rs` and
+`isolated/command.rs` coexist (distinct module paths). Consumers rewrite
+`eos_ephemeral_workspace::X` → `eos_workspace_modes::ephemeral::X` and
+`eos_isolated_workspace::Y` → `eos_workspace_modes::isolated::Y`.
+
+### `eos-workspace-run` (run tier — keeps CommandHandle)
+
+```text
+src/
+  lib.rs  manager.rs  ports.rs  registry.rs
+  command_handle.rs      # STAYS (lifecycle plumbing; fd alias-semantics documented)
+```
+Deps: previous set, with the two mode deps collapsed to `eos-workspace-modes`.
+Stays `eos-occ`-free.
 
 ### `eos-checkpoint`
 
 ```text
 src/
-  lib.rs     # CommitRequest<'a>, CommitOutcome, CheckpointError + pub use commit::commit_to_git
-  commit.rs  # commit_to_git + private helpers (PreparedWorktree, normalize/git/worktree fns)
+  lib.rs  commit.rs
 ```
 Deps: `{ eos-layerstack, eos-overlay, uuid, thiserror }` — no daemon edge.
 
@@ -158,348 +188,209 @@ Deps: `{ eos-layerstack, eos-overlay, uuid, thiserror }` — no daemon edge.
 ```text
 src/
   lib.rs error.rs manifest.rs ppc.rs refresh.rs registry.rs service.rs service_registry.rs
-  host/                       # moved IN (was eos-plugin-host)
-    mod.rs                    # pub enum PpcError; host re-exports
-    package.rs                # ensure_package, needs_upload_response, package_roots, PackageEnsureReport, PackageRoots
-    ppc_client.rs             # PpcClient, read_frame   (was ppc_router.rs)
+  host/                       # absorbed from eos-plugin-host + extracted plugin DTO data/parse
+    mod.rs                    # was eos-plugin-host/src/lib.rs; pub enum PpcError; host re-exports
+    package.rs                # ensure_package, needs_upload_response, PackageEnsureReport, PackageRoots
+    ppc_client.rs             # PpcClient, read_frame (was ppc_router.rs)
     ppc_client/
       frame_io.rs             # FrameWriter (pub(super))
       pending.rs              # PendingCalls, CallbackHandler, PendingRequest
+    route.rs                  # PluginOperationRoute (data only — NO to_json), PluginProcessSpec (data)
+    ensure_args.rs            # ParsedEnsure::from_args, route/spec construction, validation
 ```
-Deps: `{ eos-protocol, serde, serde_json, thiserror, sha2, uuid }` — none of
-`eos-daemon`/`eos-occ`/`eos-layerstack`/`eos-overlay`/`tokio`. The
-`test-root-override` feature migrates onto `eos-plugin`.
+Deps: `{ eos-protocol, eos-workspace, serde, serde_json, thiserror, sha2, uuid }`
+— none of `eos-daemon` / `eos-occ` / `eos-layerstack` / `eos-overlay` / `tokio`.
+The `test-root-override` feature migrates onto `eos-plugin`. Wire-shaping
+(`to_json`, `route_values`, `loaded_plugin_values`) stays **daemon-side**,
+operating on these moved data types.
 
-### `eos-daemon` (server, slimmer)
+### `eos-daemon/src` (slimmer; module trees preserved — no mega-files)
 
 ```text
 src/
   lib.rs
-  audit/      { buffer.rs, events.rs, mod.rs }
-  dispatch/   { dispatcher.rs, mod.rs }
-  runtime/    { error.rs, invocation_registry.rs, mod.rs, request_args.rs, response_timings.rs }
-  transport/  { framing.rs, mod.rs, server.rs, tool_call_events.rs }
-  ops/        { audit, checkpoint, command_sessions, control, files, isolated_workspace, mod, plugins, registry, workspace_run }.rs
+  transport/  { framing.rs, mod.rs, server.rs, tool_call_events.rs }      # unchanged
+  dispatch/   { dispatcher.rs, mod.rs }                                   # unchanged
+  runtime/    { error.rs, invocation_registry.rs, mod.rs,                 # unchanged
+                request_args.rs, response_timings.rs }
+  audit/      { buffer.rs, events.rs, mod.rs }                            # unchanged
+  ops/        { audit, checkpoint, command_sessions, control, files,      # KEEP — the Handler-ABI
+                isolated_workspace, mod, plugins, registry, workspace_run }.rs  #  seam stays
   adapters/
     mod.rs
-    checkpoint.rs        # thin op facade only (collapses checkpoint/{mod,base,commit}.rs)
-    occ_cache.rs         # OccServiceCache (single writer) + DaemonPublisherPort (was occ/* + overlay publisher)
-    plugin.rs            # live process registry + OCC callback body (collapses plugins/*)
-    workspace.rs         # daemon port IMPLs (was workspace/* + workspace_run/{host_ports,config})
-    workspace_run.rs     # RPC facade + target selection + cancel only (was workspace_run/{commands,cancel,wire})
-    isolated_runtime.rs  # isolated singleton + ns child plumbing + run_ns_runner_child
+    checkpoint/  { base.rs, commit.rs, mod.rs }      # keep tree (~190 LOC; optional → 1 file)
+    occ/         { mod.rs, service_cache.rs }        # single-writer OCC cache — unchanged
+    overlay/     { mod.rs }                          # DaemonPublisherPort — unchanged
+    workspace/   { file_ports.rs, mod.rs }           # OCC-backed file ports — daemon-owned
+    workspace_run/
+      mod.rs  commands.rs  cancel.rs  wire.rs  config.rs  host_ports.rs
+      # manager.rs                                   # DELETED (Phase 1, 574 LOC dead)
+      isolated/  { mod.rs, ns_runner.rs, runtime.rs } # keep tree (do NOT merge to one file)
+    plugins/                                          # keep tree; slimmer after extraction
+      mod.rs  state.rs  connected.rs  dispatch.rs
+      occ_callbacks.rs  overlay.rs  refresh.rs  service.rs
+      process.rs                                      # live PluginServiceProcess only (spec half → eos-plugin/host)
+      # PluginOperationRoute/PluginProcessSpec data + ensure_args parse  -> eos-plugin/src/host
+      # to_json / route_values / loaded_plugin_values stay here (wire shaping)
 ```
+
+The two-tier `ops/<domain>.rs` (uniform `Handler = fn(&Value, DispatchContext)
+-> Result<Value, DaemonError>`) over `adapters/<domain>` is **kept** — `ops/` is
+the dispatch-table signature-normalization seam, not duplication, and
+`ops/{files,audit,control}` carry real logic with no adapter sibling.
 
 ## Class–Field Contract (the seams ARE the architecture)
 
-Four trait/DTO seams carry every cross-crate call; daemon supplies the
+Four trait/DTO seams carry every cross-crate call; the daemon supplies the
 implementations, never a back-edge.
 
-| Seam | Defined in | Daemon impl / injection | Signature |
+| Seam | Defined in | Daemon impl / injection | Notes |
 |---|---|---|---|
-| `WorkspaceRunHostPorts` (object-safe trait) | `eos-workspace-runtime/ports.rs` | `DaemonRunHostPorts` (zero-sized) in `adapters/workspace.rs` | `base_timings(&self,&Path)->Result<WorkspaceTimings,WorkspaceApiError>`; `finalize_ephemeral(&self,&Path,EphemeralWorkspace,WorkspaceTimings,FinalizeCommandRequest)->Result<WorkspaceCommandOutcome,_>`; `record_tool_call(&self,&str,Value)` |
-| `WorkspaceReadView` + `WorkspaceMutationSink` | `eos-workspace` | `EphemeralFilePorts`, `IsolatedFilePorts` in `adapters/workspace.rs` | `resolve_path`/`read_bytes`; `commit_or_record(&self,WorkspaceMutationRequest)->Result<WorkspaceMutationOutcome,_>` |
-| `PpcClient::round_trip_with_callbacks<F>` | `eos-plugin/host` | closure over `handle_callback_for_root` in `adapters/plugin.rs` | `F: FnMut(PpcEnvelope)->Result<PpcEnvelope,PpcError> + Send + 'static` |
-| `commit_to_git(&CommitRequest)` | `eos-checkpoint` | thin `adapters/checkpoint.rs` facade | `fn commit_to_git(&CommitRequest<'_>)->Result<CommitOutcome,CheckpointError>` |
+| `WorkspaceRunHostPorts` (object-safe trait) | `eos-workspace-run/ports.rs` | `DaemonRunHostPorts` in `adapters/workspace.rs` | `base_timings`, `finalize_ephemeral`, `record_tool_call`. |
+| `WorkspaceReadView` + `WorkspaceMutationSink` | `eos-workspace` (leaf) | `EphemeralFilePorts`, `IsolatedFilePorts` in `adapters/workspace.rs` | `resolve_path` / `read_bytes`; `commit_or_record`. |
+| `PpcClient::round_trip_with_callbacks<F>` | `eos-plugin/host` | closure over `handle_callback_for_root` in `adapters/plugins` | writer stays daemon-side. |
+| `commit_to_git(&CommitRequest)` | `eos-checkpoint` | thin `adapters/checkpoint` facade | concrete request, no `dyn`. |
 
-Key relocated types (verbatim fields):
-
-- `CommandHandle` → `eos-workspace/command_handle.rs`: `caller_id: String`,
-  `workspace_handle_id: String`, `layer_stack_root: PathBuf`,
-  `manifest_version: i64`, `manifest_root_hash: String`, `workspace_root: PathBuf`,
-  `scratch_dir: PathBuf`, `upperdir: PathBuf`, `workdir: PathBuf`,
-  `layer_paths: Vec<PathBuf>`, `ns_fds: HashMap<String,i32>`,
-  `cgroup_path: Option<PathBuf>`. Derives **only `Debug + Clone` (no serde — do
-  not add it)**. Verified mode-neutral (std types only). Its doc-link
-  `[crate::registry]` goes stale after the move; fix the doc, the type is
-  unchanged.
-- `StartTarget` (stays in runtime): `Ephemeral { root, workspace_root,
-  scratch_root: PathBuf }`, `Isolated { handle: Box<CommandHandle> }` — the
-  `Isolated` arm becomes a cross-crate reference (`use eos_workspace::CommandHandle`).
+`CommandHandle` (`eos-workspace-run/command_handle.rs`) stays put. It holds
+`ns_fds: HashMap<String,i32>` raw-fd **aliases** (not owners); `Clone` mirrors the
+documented alias semantics of `eos-workspace-modes::isolated::session::types`
+(`WorkspaceHandle` is itself `Clone` with no `Drop`; fds close exactly once in
+`close_handle_fds`). Derives `Debug + Clone`, **no serde**. It appears in no seam
+signature — only in run-tier registry/manager fields and daemon adapter bodies.
 
 Daemon-owned singletons that **stay** (the impure resource owners):
 
 | Type | File | Role |
 |---|---|---|
-| `OccServiceCache` (+ `OccServiceLookup`, `OccServiceCacheStats`) | `occ_cache.rs` | per-root **single-writer** OCC cache (no-second-writer invariant) |
-| `DaemonPublisherPort` | `occ_cache.rs` | impls `eos_ephemeral_workspace::WorkspacePublisherPort` (publish side) |
-| `DaemonPluginState`, `PluginServiceProcess` (Drop=killpg), `PluginProcessSpec`, `LoadedPluginRuntime`, `PluginOperationRoute` | `plugin.rs` | live plugin child-process + service registry |
-| `handle_callback_for_root` | `plugin.rs` | the OCC callback **body** injected into `PpcClient` |
-| `DaemonLayerStackPort`, `DaemonNamespaceRuntime`, `DaemonIsolatedState` | `isolated_runtime.rs` | impl isolated `LayerStackSnapshotPort` / `NamespaceRuntimePort`; isolated singleton |
+| `OccServiceCache`, `DaemonPublisherPort` | `adapters/occ`, `adapters/overlay` | per-root single-writer OCC cache + publish port |
+| `DaemonPluginState`, `PluginServiceProcess` (Drop=killpg), `LoadedPluginRuntime` | `adapters/plugins/state.rs`, `process.rs` | live plugin child-process + service registry |
+| `handle_callback_for_root` | `adapters/plugins/occ_callbacks.rs` | the OCC callback body injected into `PpcClient` |
+| `DaemonNamespaceRuntime`, `DaemonIsolatedState` | `adapters/workspace_run/isolated/` | isolated singleton + ns child plumbing |
 
-## Cargo Diffs
+## Reduction Reality
 
-`sandbox/Cargo.toml` — `[workspace] members`:
+Counts are informational and only after the inventory is regenerated; the
+acceptance gate is **dependency direction**, not LOC. The only code that leaves
+the system entirely is the 574-LOC dead file; everything else is **relocation**
+into the owning crate.
 
-```diff
--    "crates/eos-checkpoint-host",
-+    "crates/eos-checkpoint",
-     "crates/eos-occ-layerstack",
--    "crates/eos-plugin-host",
--    "crates/eos-workspace-run-host",
-+    "crates/eos-workspace-runtime",
- ...
--    "crates/eos-workspace-api",
-+    "crates/eos-workspace",
-```
+| Phase | Main change | Daemon LOC delta | Kind |
+|---|---|---:|---|
+| 0 | Regenerate inventory; lock true baseline | 0 | — |
+| 1 | Delete dead `adapters/workspace_run/manager.rs` | −574 | true deletion |
+| 2 | Dissolve `eos-plugin-host` → `eos-plugin/src/host` | ~0 | crate merge |
+| 3 | Extract host-neutral plugin DTO data + parse/spec → `eos-plugin/host`; split `process.rs` | −500 to −700 | relocation |
+| 4 | Move mode-neutral file/run helpers into the leaf; keep OCC-backed adapters daemon-side | −300 to −500 | relocation |
+| 5 | Merge `ephemeral` + `isolated` → `eos-workspace-modes`; retarget consumers | ~0 | crate merge |
+| 6 | Batch renames: leaf, run tier, checkpoint | ~0 | rename |
+| 7 | Right-size daemon adapter modules (no mega-files); fix moved `#[path]` only | small | reorg |
 
-`sandbox/Cargo.toml` — `[workspace.dependencies]` internal path deps:
-
-```diff
--eos-workspace-api = { path = "crates/eos-workspace-api" }
-+eos-workspace = { path = "crates/eos-workspace" }
- ...
--eos-checkpoint-host = { path = "crates/eos-checkpoint-host" }
-+eos-checkpoint = { path = "crates/eos-checkpoint" }
- eos-occ-layerstack = { path = "crates/eos-occ-layerstack" }
--eos-plugin-host = { path = "crates/eos-plugin-host" }
--eos-workspace-run-host = { path = "crates/eos-workspace-run-host" }
-+eos-workspace-runtime = { path = "crates/eos-workspace-runtime" }
-```
-
-Directory renames: `git mv crates/eos-workspace-api crates/eos-workspace`;
-`git mv crates/eos-checkpoint-host crates/eos-checkpoint`;
-`git mv crates/eos-workspace-run-host crates/eos-workspace-runtime`; merge
-`crates/eos-plugin-host/src/*` into `crates/eos-plugin/src/host/` (renaming
-`ppc_router*` → `ppc_client*`) and delete `crates/eos-plugin-host`.
-
-Consumer `[package] name` + each renamed crate's own `Cargo.toml`:
-
-```diff
-# crates/eos-workspace/Cargo.toml
--name = "eos-workspace-api"
-+name = "eos-workspace"
-
-# crates/eos-checkpoint/Cargo.toml
--name = "eos-checkpoint-host"
-+name = "eos-checkpoint"
-
-# crates/eos-workspace-runtime/Cargo.toml
--name = "eos-workspace-run-host"
-+name = "eos-workspace-runtime"
-+# add: eos-workspace.workspace = true   (CommandHandle now lives in the leaf)
-```
-
-Consumers that import the renamed crates (rename `eos-workspace-api` →
-`eos-workspace` and `eos_workspace_api::` → `eos_workspace::`):
-`eos-command-session`, `eos-ephemeral-workspace`, `eos-isolated-workspace`,
-`eos-workspace-runtime`, `eos-daemon`.
-
-`eos-daemon/Cargo.toml`:
-
-```diff
--eos-workspace-api.workspace = true
-+eos-workspace.workspace = true
--eos-plugin-host.workspace = true
--eos-checkpoint-host.workspace = true
--eos-workspace-run-host.workspace = true
-+eos-checkpoint.workspace = true
-+eos-workspace-runtime.workspace = true
- # eos-plugin already present; host symbols now reached via eos_plugin::host::*
-
- [dev-dependencies]
--eos-plugin-host = { workspace = true, features = ["test-root-override"] }
-+eos-plugin = { workspace = true, features = ["test-root-override"] }
-```
-
-`eos-plugin/Cargo.toml`:
-
-```diff
- [dependencies]
- eos-protocol.workspace = true
- serde.workspace = true
- thiserror.workspace = true
- serde_json.workspace = true
-+sha2.workspace = true
-+uuid.workspace = true
-+
-+[features]
-+test-root-override = []   # migrated from eos-plugin-host; gates package.rs root override
-```
-
-## Reduction Targets
-
-Planning estimates only; remeasure by regenerating
-`sandbox/docs/class_inventory/html` after each phase. Note the corrected
-**Phase 3 no longer grows the daemon** — that was the first draft's regression.
-
-| Metric | Baseline | Target | Reduction |
-|---|---:|---:|---:|
-| Daemon `src` LOC | 10,471 | 6,800–7,700 | 2,700–3,700 fewer |
-| Modules | 53 (regen first) | 36–41 | 12–17 fewer |
-| Items | 472 | 335–375 | 97–137 fewer |
-| Fields | 205 | 135–165 | 40–70 fewer |
-| Methods | 120 | 78–96 | 24–42 fewer |
-
-| Phase | Main change | Daemon LOC delta |
-|---|---|---:|
-| 0 | Regenerate inventory; lock true baseline | 0 |
-| 1 | Delete orphan `adapters/workspace_run/manager.rs` | -574 |
-| 2 | Rename `eos-workspace-api`→`eos-workspace`; move `CommandHandle` up; rename run-host→`eos-workspace-runtime` | ~0 (rename) |
-| 3 | Rename `eos-checkpoint-host`→`eos-checkpoint`; daemon keeps thin facade | ~0 (rename) |
-| 4 | Remove `eos-plugin-host`; move host-neutral support into `eos-plugin/src/host` | ~0 daemon (crate-level) |
-| 5 | Move host-neutral plugin service/runtime support out of `adapters/plugins` into `eos-plugin::host` | -1,300 to -2,000 |
-| 6 | Move mode-neutral workspace file/run helpers into `eos-workspace`; keep daemon-only OCC/ports | -600 to -900 |
-| 7 | Flatten remaining daemon adapters into single seam files | -300 to -600 |
+Realistic daemon `src` after: **~8,000–8,400 LOC** (not the earlier 6,800–7,700).
 
 ## Phase Plan
 
+Content moves run first with names stable; structural renames/merges land late in
+atomic commits to minimize cross-agent merge conflict in this concurrently-edited
+repo.
+
 ### Phase 0 — Measurement and Guardrails
+- Regenerate: `cd sandbox && cargo run --manifest-path scripts/class-inventory/Cargo.toml`.
+- Confirm `eos-daemon` is the only server/composition root and the only `eos-occ` consumer.
+- Confirm no workspace-family back-edge onto `eos-daemon`.
 
-- Regenerate the inventory: `cd sandbox && cargo run --manifest-path scripts/class-inventory/Cargo.toml`.
-- Record refreshed `eos-daemon` counts before code changes.
-- Confirm `eos-daemon` is the only server/composition root.
-- Confirm no workspace-family back-edge: `eos-workspace`, `eos-ephemeral-workspace`,
-  `eos-isolated-workspace`, `eos-workspace-runtime` must not depend on `eos-daemon`.
+### Phase 1 — Delete Dead Code (ship standalone first)
+- Delete `sandbox/crates/eos-daemon/src/adapters/workspace_run/manager.rs` (574 LOC, orphaned).
+- Verify: `cargo check -p eos-daemon --all-targets`; `cargo test -p eos-daemon command -- --nocapture`.
 
-### Phase 1 — Remove Completed Extraction Debris
-
-- Delete `sandbox/crates/eos-daemon/src/adapters/workspace_run/manager.rs`
-  (574 LOC, orphaned). Verified: `commands.rs` imports
-  `eos_workspace_run_host::WorkspaceRunManager`; the local `manager.rs` is **not**
-  declared in `mod.rs`.
-- Keep `host_ports.rs`, `commands.rs`, `cancel.rs`, `config.rs`, `wire.rs` (RPC
-  facade + injected daemon seams).
-
-Verify: `cargo check -p eos-daemon --all-targets`;
-`cargo test -p eos-daemon command -- --nocapture`.
-
-### Phase 2 — Workspace Crate Rename + CommandHandle Relocation
-
-- `git mv crates/eos-workspace-api crates/eos-workspace`; set `name = "eos-workspace"`;
-  update the workspace `members` + path-dep; rename `eos_workspace_api::` →
-  `eos_workspace::` across the five consumers.
-- `git mv crates/eos-workspace-run-host crates/eos-workspace-runtime`; set
-  `name = "eos-workspace-runtime"`; add `eos-workspace.workspace = true`.
-- Move `command_handle.rs` from the runtime crate into `eos-workspace`; delete its
-  `mod command_handle;` / `pub use` from the runtime `lib.rs`; rewrite
-  `use crate::CommandHandle` → `use eos_workspace::CommandHandle` in `manager.rs`
-  and `registry.rs`. Do **not** add serde to `CommandHandle`.
-- Do **not** absorb the run tier into the leaf (cycle). `WorkspaceRunManager`,
-  `WorkspaceRunRegistry`, `StartTarget`, `WorkspaceRunHostPorts` stay in
-  `eos-workspace-runtime`.
-
-Dispatch strategy: concrete types + the closed `StartTarget`/`WorkspaceRun` enums
-for the ephemeral-vs-isolated set; `WorkspaceRunHostPorts` stays object-safe
-(`Arc<dyn WorkspaceRunHostPorts>`) for the daemon-injected resources.
-
-Verify:
-- `cargo check -p eos-workspace -p eos-workspace-runtime -p eos-ephemeral-workspace -p eos-isolated-workspace -p eos-daemon --all-targets`
-- `cargo tree -p eos-workspace | rg 'ephemeral|isolated|daemon|occ'` stays **empty** (no cycle).
-- `cargo tree -p eos-workspace-runtime | rg 'eos-occ'` stays empty (no-publish guard).
-
-### Phase 3 — Rename Checkpoint Crate (do not fold into daemon)
-
-- `git mv crates/eos-checkpoint-host crates/eos-checkpoint`; set
-  `name = "eos-checkpoint"`; update `members`, path-dep, and the daemon dep.
-- Rewrite `eos_checkpoint_host::` → `eos_checkpoint::` in daemon checkpoint adapters.
-- `CommitRequest`/`CommitOutcome`/`CheckpointError`/`commit_to_git` stay in the crate.
-  Daemon `adapters/checkpoint.rs` stays a thin facade: parse envelope →
-  `eos_checkpoint::commit_to_git` → map `CommitOutcome`/`CheckpointError` onto wire/`DaemonError`.
-
-Dispatch strategy: concrete `CommitRequest<'a>`/`CommitOutcome`; no trait/`dyn`
-boundary (request-specific, not runtime-selected).
-
-Verify: `cargo test -p eos-daemon checkpoint -- --nocapture`;
-`cargo tree --workspace -i eos-checkpoint-host` fails (old name gone).
-
-### Phase 4 — Absorb Plugin Host Into eos-plugin
-
-- Merge `crates/eos-plugin-host/src/*` into `crates/eos-plugin/src/host/`:
-  `lib.rs`→`host/mod.rs`, `package.rs`, `ppc_router.rs`→`ppc_client.rs`,
-  `ppc_router/{frame_io,pending}.rs`→`ppc_client/{frame_io,pending}.rs`. Delete
-  `eos-plugin-host`.
-- Internal rewrites in moved files: `use eos_plugin::{…}` → `use crate::{…}`;
-  `use crate::PpcError` → `use crate::host::PpcError`; `#[from] eos_plugin::PluginError`
-  → `#[from] crate::PluginError`. Add `pub mod host;` to `eos-plugin/lib.rs`.
-- Re-export the small surface daemon needs: `host::{ensure_package,
-  needs_upload_response, package_roots, PackageEnsureReport, PackageRoots,
-  PpcClient, PpcError, read_frame}`.
-- Add `sha2` + `uuid` to `eos-plugin`; migrate `test-root-override` onto `eos-plugin`.
+### Phase 2 — Dissolve `eos-plugin-host` into `eos-plugin`
+- Merge `crates/eos-plugin-host/src/*` into `crates/eos-plugin/src/host/`
+  (`lib.rs`→`host/mod.rs`, `package.rs`, `ppc_router*`→`ppc_client*`). Delete `eos-plugin-host`.
+- Internal rewrites: `use eos_plugin::{…}` → `use crate::{…}`; `crate::PpcError` →
+  `crate::host::PpcError`. Add `pub mod host;` to `eos-plugin/lib.rs`. Add `sha2`+`uuid`;
+  migrate `test-root-override` onto `eos-plugin`.
 - Keep forbidden deps out: no `eos-daemon`/`eos-occ`/`eos-layerstack`/`eos-overlay`/`tokio`.
+- Verify: `cargo test -p eos-plugin`; `cargo test -p eos-daemon plugin -- --nocapture`;
+  `cargo tree -p eos-plugin | rg 'eos-daemon|eos-occ|eos-layerstack|eos-overlay|tokio'` empty.
 
-Dispatch strategy: concrete `PpcClient`; the daemon OCC callback stays a closure
-injected into `round_trip_with_callbacks` (the writer stays daemon-side).
+### Phase 3 — Host-Neutral Plugin Extraction (right-sized)
+- Move `PluginOperationRoute` / `PluginProcessSpec` **data** (fields, ctors,
+  `dispatch_mode`) and the parse/spec/validation in `ensure_args.rs` into
+  `eos-plugin/src/host/{route.rs, ensure_args.rs}`. Split `adapters/plugins/process.rs`
+  so the spec/env half moves and the live `PluginServiceProcess` (Drop=killpg) stays.
+- **Keep daemon-side:** `to_json`/`route_values`/`loaded_plugin_values` (wire shaping),
+  `DaemonPluginState`, OCC callback body, per-op overlay execution, `DispatchContext`
+  mapping, and any helper that reads the `plugin_runtime_config` global.
+- Verify: `cargo test -p eos-plugin`; `cargo test -p eos-daemon plugin -- --nocapture`;
+  live plugin E2E if service launch changes.
 
-Verify: `cargo test -p eos-plugin`;
-`cargo test -p eos-daemon plugin -- --nocapture`;
-`cargo tree -p eos-plugin | rg 'eos-daemon|eos-occ|eos-layerstack|eos-overlay|tokio'` stays empty.
+### Phase 4 — Workspace Adapter Slimming (modest)
+- Move only genuinely mode-neutral file/run helpers into `eos-workspace`. Do not add
+  new host crates. Keep OCC-backed `EphemeralFilePorts` / `IsolatedFilePorts` daemon-side.
+  Keep `ops/{files,command_sessions,isolated_workspace}.rs` as thin shims.
+- Verify: `cargo check -p eos-workspace -p eos-daemon --all-targets`;
+  `cargo test -p eos-daemon phase2_read_paths phase3_write_paths -- --nocapture`.
 
-### Phase 5 — Plugin Adapter Slimming
+### Phase 5 — Merge `ephemeral` + `isolated` → `eos-workspace-modes`
+- `git mv crates/eos-ephemeral-workspace/src` → `crates/eos-workspace-modes/src/ephemeral`,
+  `git mv crates/eos-isolated-workspace/src` → `.../src/isolated`; each `lib.rs` → `mod.rs`.
+  New `lib.rs`: `pub mod ephemeral; pub mod isolated;`. Union the two `Cargo.toml` dep sets.
+- Update workspace `members` + path-deps; delete the two old members.
+- Rewrite consumers (`eos-daemon`, `eos-workspace-run-host`, `eos-e2e-test`):
+  `eos_ephemeral_workspace::X` → `eos_workspace_modes::ephemeral::X`;
+  `eos_isolated_workspace::Y` → `eos_workspace_modes::isolated::Y`.
+- Verify: `cargo check --workspace --all-targets`;
+  `cargo tree -p eos-workspace-modes | rg 'eos-occ'` empty;
+  `cargo tree -p eos-command-session | rg 'eos-overlay|eos-protocol'` **empty** (leaf stays pure).
 
-- Move host-neutral plugin support out of `adapters/plugins` into
-  `eos-plugin/src/host` only when it stays host-neutral: service process specs +
-  validated environment construction, package-root resolution, connected PPC
-  helpers, health-response shaping that does not touch daemon globals.
-- Keep in daemon: op handlers, `DispatchContext` mapping, `DaemonPluginState` +
-  the live `PluginServiceProcess` child lifetime, per-op overlay execution that
-  touches LayerStack/overlay/OCC, and `handle_callback_for_root` + single-writer access.
+### Phase 6 — Honest Renames (atomic, late)
+- `git mv crates/eos-workspace-api crates/eos-workspace`;
+  `git mv crates/eos-workspace-run-host crates/eos-workspace-run`;
+  `git mv crates/eos-checkpoint-host crates/eos-checkpoint`. Set each `[package] name`,
+  update `members` + path-deps, and rewrite `eos_workspace_api::`→`eos_workspace::`,
+  `eos_workspace_run_host::`→`eos_workspace_run::`, `eos_checkpoint_host::`→`eos_checkpoint::`
+  across consumers. **Do not move `CommandHandle`.**
+- Verify: `cargo check --workspace --all-targets`;
+  `cargo tree --workspace -i eos-workspace-api` fails (old names gone).
 
-Dispatch strategy: closed concrete plugin runtime state; callback injection as
-`dyn`/closure only where runtime callback bodies are heterogeneous/test-substituted.
-
-Verify: `cargo test -p eos-plugin`;
-`cargo test -p eos-daemon plugin -- --nocapture`; live plugin E2E if service launch changes.
-
-### Phase 6 — Workspace Adapter Slimming
-
-- Move only mode-neutral file/run helpers into `eos-workspace`. Do not add
-  `eos-workspace-file-host` or `eos-isolated-runtime-host`.
-- Keep direct OCC-backed read/write adapters (`EphemeralFilePorts`,
-  `IsolatedFilePorts`) in daemon unless expressible through existing
-  `eos-occ-layerstack` APIs without a second writer.
-- Keep namespace child supervision with `eos-isolated-workspace` + the daemon
-  singleton (`DaemonNamespaceRuntime`).
-- Keep `ops/files.rs`, `ops/command_sessions.rs`, `ops/isolated_workspace.rs` as
-  thin request/response shims.
-
-Verify: `cargo check -p eos-workspace -p eos-daemon --all-targets`;
-`cargo test -p eos-daemon phase2_read_paths phase3_write_paths -- --nocapture`.
-
-### Phase 7 — Flatten Remaining Daemon Adapters
-
-- `adapters/checkpoint/{base,commit,mod}.rs` → `adapters/checkpoint.rs`.
-- `adapters/occ/{mod,service_cache}.rs` → `adapters/occ_cache.rs`; relocate the
-  overlay publisher (`DaemonPublisherPort`) here and `run_ns_runner_child` into
-  `adapters/isolated_runtime.rs`.
-- Remaining plugin/workspace-run facades → one file per seam where practical.
-- Keep `ops/registry.rs` aligned with `eos_protocol::ops::BUILTIN_DAEMON_OPS`.
-
-Verify: `cargo check -p eos-daemon --all-targets`;
-`cargo test -p eos-daemon ops::registry`;
-`cargo clippy -p eos-daemon --all-targets -- -D warnings`.
+### Phase 7 — Right-Size Daemon Adapter Modules
+- Reorganize remaining daemon adapters into cohesive 300–600 LOC modules; **do not**
+  collapse `plugins/` or `isolated/` into single files. Optional: fold
+  `adapters/checkpoint/{base,commit,mod}` (~190 LOC) into one file.
+- Fix `#[path]` test depths and any duplicate `mod tests;` **only** for files that
+  actually move. Keep `ops/registry.rs` aligned with `eos_protocol::ops::BUILTIN_DAEMON_OPS`.
+- Verify: `cargo check -p eos-daemon --all-targets`; `cargo test -p eos-daemon ops::registry`;
+  `cargo clippy -p eos-daemon --all-targets -- -D warnings`.
 
 ## Acceptance Criteria
 
-Dependency-direction and cohesion gates come first; raw counts are informational
-(and only after the inventory is regenerated):
+Dependency-direction and cohesion gates come first; raw counts are informational.
 
-- **No back-edge:** `cargo tree -p eos-workspace -p eos-workspace-runtime
-  -p eos-ephemeral-workspace -p eos-isolated-workspace -p eos-plugin
-  -p eos-checkpoint -i eos-daemon` is empty for each.
-- **No cycle anchor:** `cargo tree -p eos-workspace | rg 'ephemeral|isolated|occ|daemon'` empty.
-- **No-publish guard:** `cargo tree -p eos-workspace-runtime | rg 'eos-occ'` empty.
+- **No back-edge:** `cargo tree -p eos-workspace -p eos-workspace-modes
+  -p eos-workspace-run -p eos-plugin -p eos-checkpoint -i eos-daemon` empty for each.
+- **No cycle anchor:** `cargo tree -p eos-workspace | rg 'modes|run|occ|daemon|overlay|protocol'` empty.
+- **Leaf stays pure:** `cargo tree -p eos-command-session | rg 'eos-overlay|eos-protocol'` empty.
+- **No-publish guard:** `cargo tree -p eos-workspace-run | rg 'eos-occ'` empty.
 - **Plugin isolation:** `cargo tree -p eos-plugin | rg 'eos-daemon|eos-occ|eos-layerstack|eos-overlay|tokio'` empty.
 - `eos-daemon` owns only: transport/server, dispatcher/op registry, server-local
-  runtime state, audit ring, the daemon-owned single-writer OCC cache, thin op
-  facades, and injected host port impls.
-- The run lifecycle lives in `eos-workspace-runtime`; the git pipeline in
-  `eos-checkpoint`; PPC transport in `eos-plugin/host`. None re-homed into the daemon.
-- `eos-plugin-host` removed; `eos-checkpoint-host`/`eos-workspace-run-host`/`eos-workspace-api`
-  renamed (no `*-host`/`*-api` survivors in `members`).
+  runtime state, audit ring, the single-writer OCC cache, thin op facades, and
+  injected host port impls.
+- Run lifecycle in `eos-workspace-run`; both mode implementations in
+  `eos-workspace-modes`; git pipeline in `eos-checkpoint`; PPC transport + plugin
+  DTO data/parse in `eos-plugin/host`. None re-homed into the daemon.
+- No `*-host` / `*-api` survivors in `members`; `eos-plugin-host`,
+  `eos-ephemeral-workspace`, `eos-isolated-workspace` gone. `[workspace] members` = 17.
+- No daemon implementation file exceeds ~800 LOC.
 - Cancellation still never publishes; plugin callbacks still route through the one OCC writer.
-- Inventory remeasured at or below 41 modules / 375 items / 165 fields / 96 methods;
-  `eos-daemon/src` near 7,700 LOC or lower.
 
 ## Progress Tracker
 
 | Phase | Status | Notes |
 |---|---|---|
-| 0 — Measurement and guardrails | Not started | Regenerate inventory before code changes. |
-| 1 — Remove completed extraction debris | Not started | Delete orphan `adapters/workspace_run/manager.rs`. |
-| 2 — Workspace rename + CommandHandle move | Not started | Rename leaf→`eos-workspace`, run-host→`eos-workspace-runtime`; move `CommandHandle` up; no cycle. |
-| 3 — Rename checkpoint crate | Not started | `eos-checkpoint-host`→`eos-checkpoint`; keep crate, thin daemon facade. |
-| 4 — Absorb plugin host into eos-plugin | Not started | Move package/PPC support to `eos-plugin/src/host`. |
-| 5 — Plugin adapter slimming | Not started | Move only host-neutral support; keep OCC callback body daemon-owned. |
-| 6 — Workspace adapter slimming | Not started | No new host crates; preserve daemon single-writer ownership. |
-| 7 — Flatten daemon adapters | Not started | After extractions compile and tests pass. |
+| 0 — Measurement and guardrails | Done | Baseline confirmed: daemon sole `eos-occ` root, no back-edge. Linux typecheck gate established (`--target x86_64-unknown-linux-musl`). |
+| 1 — Delete dead `manager.rs` | Done | 574 LOC orphan deleted; daemon all-targets green on macOS + Linux. |
+| 2 — Dissolve `eos-plugin-host` | Done | Moved to `eos-plugin/src/host` (`ppc_router`→`ppc_client`); crate deleted; `members` −1; plugin isolation acceptance clean. |
+| 3 — Host-neutral plugin extraction | Not started | DTO data + parse/spec out; wire-shaping + live process stay. ~−500..−700. |
+| 4 — Workspace adapter slimming | Not started | Mode-neutral helpers into leaf; OCC ports stay daemon-side. |
+| 5 — Merge ephemeral + isolated | Not started | → `eos-workspace-modes` (`ephemeral/` + `isolated/`). Leaf stays pure. |
+| 6 — Honest renames (atomic) | Not started | leaf / run tier / checkpoint. `CommandHandle` stays put. |
+| 7 — Right-size daemon adapters | Not started | Module trees, no mega-files; fix moved `#[path]`. |

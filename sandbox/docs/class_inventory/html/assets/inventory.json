@@ -5648,15 +5648,15 @@
       "name": "eos-daemon",
       "path": "crates/eos-daemon",
       "stats": {
-        "modules": 54,
-        "items": 469,
-        "structs": 42,
-        "enums": 3,
+        "modules": 53,
+        "items": 457,
+        "structs": 41,
+        "enums": 2,
         "traits": 0,
-        "functions": 382,
-        "impls": 35,
-        "fields": 205,
-        "methods": 121
+        "functions": 374,
+        "impls": 33,
+        "fields": 199,
+        "methods": 101
       },
       "modules": [
         {
@@ -8622,7 +8622,7 @@
               "kind": "fn",
               "name": "send_refresh_sequence",
               "visibility": "private",
-              "signature": "fn send_refresh_sequence (client : & eos_plugin_host :: PpcClient , service_key : & PluginServiceKey , service_instance_id : & str , invocation_id : & str , snapshot : & PluginServiceSnapshot , timeout : Duration ,) -> Result < () , DaemonError >",
+              "signature": "fn send_refresh_sequence (client : & eos_plugin :: host :: PpcClient , service_key : & PluginServiceKey , service_instance_id : & str , invocation_id : & str , snapshot : & PluginServiceSnapshot , timeout : Duration ,) -> Result < () , DaemonError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -8670,7 +8670,7 @@
               "kind": "fn",
               "name": "send_refresh_request",
               "visibility": "private",
-              "signature": "fn send_refresh_request (client : & eos_plugin_host :: PpcClient , invocation_id : & str , index : usize , request : & RefreshRequest , snapshot : & PluginServiceSnapshot , timeout : Duration ,) -> Result < () , DaemonError >",
+              "signature": "fn send_refresh_request (client : & eos_plugin :: host :: PpcClient , invocation_id : & str , index : usize , request : & RefreshRequest , snapshot : & PluginServiceSnapshot , timeout : Duration ,) -> Result < () , DaemonError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -9188,7 +9188,7 @@
               "kind": "type",
               "name": "SharedPpcClient",
               "visibility": "pub(super)",
-              "signature": "pub(super) type SharedPpcClient = Arc < eos_plugin_host :: PpcClient >",
+              "signature": "pub(super) type SharedPpcClient = Arc < eos_plugin :: host :: PpcClient >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11632,393 +11632,6 @@
               "file": "crates/eos-daemon/src/adapters/workspace_run/isolated/runtime.rs",
               "module": "adapters::workspace_run::isolated::runtime",
               "line": 320
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-          "module": "adapters::workspace_run::manager",
-          "items": [
-            {
-              "kind": "enum",
-              "name": "StartTarget",
-              "visibility": "pub",
-              "signature": "pub enum StartTarget",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Ephemeral",
-                  "fields": [
-                    {
-                      "name": "root",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    },
-                    {
-                      "name": "workspace_root",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    },
-                    {
-                      "name": "scratch_root",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    }
-                  ]
-                },
-                {
-                  "name": "Isolated",
-                  "fields": [
-                    {
-                      "name": "handle",
-                      "visibility": "private",
-                      "ty": "Box < CommandHandle >"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Which workspace a starting command session belongs to. The daemon picks the\nkind from the caller's current mode and supplies the inputs the manager needs\nto lay out the run: the LayerStack roots (ephemeral) or the caller's isolated\nnamespace handle (isolated).",
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 42
-            },
-            {
-              "kind": "struct",
-              "name": "WorkspaceRunManager",
-              "visibility": "pub",
-              "signature": "pub struct WorkspaceRunManager",
-              "fields": [
-                {
-                  "name": "config",
-                  "visibility": "private",
-                  "ty": "CommandSessionConfig"
-                },
-                {
-                  "name": "registry",
-                  "visibility": "private",
-                  "ty": "Arc < WorkspaceRunRegistry >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 59
-            },
-            {
-              "kind": "impl",
-              "name": "impl Default for WorkspaceRunManager",
-              "visibility": "private",
-              "signature": "impl Default for WorkspaceRunManager",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "default",
-                  "signature": "fn default () -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 65
-                }
-              ],
-              "impl_target": "WorkspaceRunManager",
-              "trait_name": "Default",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 64
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkspaceRunManager",
-              "visibility": "private",
-              "signature": "impl WorkspaceRunManager",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (config : CommandSessionConfig) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 71
-                },
-                {
-                  "name": "start",
-                  "signature": "pub fn start (& self , request : StartCommandSession , target : StartTarget ,) -> Result < CommandResponse , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 79
-                },
-                {
-                  "name": "start_ephemeral",
-                  "signature": "fn start_ephemeral (& self , spec : CommandSessionSpec , prepare_request : eos_workspace_api :: PrepareCommandRequest , root : PathBuf , workspace_root : PathBuf , scratch_root : PathBuf , yield_time_ms : u64 ,) -> Result < CommandResponse , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 117
-                },
-                {
-                  "name": "start_isolated",
-                  "signature": "fn start_isolated (& self , spec : CommandSessionSpec , prepare_request : eos_workspace_api :: PrepareCommandRequest , handle : Box < CommandHandle > , yield_time_ms : u64 ,) -> Result < CommandResponse , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 171
-                },
-                {
-                  "name": "spawn_session",
-                  "signature": "fn spawn_session (& self , spec : CommandSessionSpec , prepared : eos_workspace_api :: PreparedCommandWorkspace ,) -> Result < CommandSession , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 196
-                },
-                {
-                  "name": "register_and_wait",
-                  "signature": "fn register_and_wait (& self , session : CommandSession , yield_time_ms : u64 , make_run : impl FnOnce (CommandSession) -> WorkspaceRun ,) -> CommandResponse",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 220
-                },
-                {
-                  "name": "write_stdin",
-                  "signature": "pub fn write_stdin (& self , request : WriteStdin) -> Result < CommandResponse , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 235
-                },
-                {
-                  "name": "read_progress",
-                  "signature": "pub fn read_progress (& self , request : ReadCommandProgress ,) -> Result < CommandResponse , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 263
-                },
-                {
-                  "name": "cancel",
-                  "signature": "pub fn cancel (& self , request : CancelCommandSession ,) -> Result < CommandResponse , CommandSessionError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 290
-                },
-                {
-                  "name": "count_by_caller",
-                  "signature": "pub fn count_by_caller (& self , caller_id : Option < & str >) -> usize",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 313
-                },
-                {
-                  "name": "collect_completed",
-                  "signature": "pub fn collect_completed (& self , request : & CollectCompleted) -> CollectCompletedResponse",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 318
-                },
-                {
-                  "name": "push_completed",
-                  "signature": "pub fn push_completed (& self , completion : CommandSessionCompletion)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 323
-                },
-                {
-                  "name": "cleanup_caller",
-                  "signature": "pub fn cleanup_caller (& self , caller_id : & str , grace_s : Option < f64 >) -> usize",
-                  "kind": "method",
-                  "docs": "Cancel and discard every command session owned by `caller_id` (the\nper-caller workspace-run teardown). Cancelled sessions discard their\noverlay and push no completion (the caller initiated the cancel).",
-                  "line": 327
-                },
-                {
-                  "name": "cancel_all",
-                  "signature": "pub fn cancel_all (& self , grace_s : Option < f64 >) -> usize",
-                  "kind": "method",
-                  "docs": "Cancel and discard every live command session in the sandbox (the\nwhole-sandbox sweep backstop). Cancelled sessions discard and push no\ncompletion.",
-                  "line": 339
-                },
-                {
-                  "name": "cancel_and_drain",
-                  "signature": "fn cancel_and_drain (& self , runs : Vec < Arc < WorkspaceRun > > , grace_s : Option < f64 >) -> usize",
-                  "kind": "method",
-                  "docs": "Cancel every run, then reap+discard within `grace`, finalizing any\nstragglers. Returns the number of runs that were live at entry.",
-                  "line": 347
-                },
-                {
-                  "name": "force_discard",
-                  "signature": "fn force_discard (& self , run : & Arc < WorkspaceRun >)",
-                  "kind": "method",
-                  "docs": "Reap-independent teardown for a run the cancel grace could not reap.\nReleases an ephemeral run's overlay lease + dirs (best-effort: a still-live\nprocess may leave its dirs for the orphan reaper, but the lease is freed);\nan isolated session only needs its registry entry dropped, since the\nnamespace + lease are torn down by `exit_isolated`.",
-                  "line": 389
-                },
-                {
-                  "name": "sweep_expired",
-                  "signature": "pub fn sweep_expired (& self , now : Instant)",
-                  "kind": "method",
-                  "docs": "Periodic reaper: enforce the per-session timeout backstop and finalize any\nsession whose child has exited without a live poller, parking the\ncompletion for the heartbeat.\n\nA past-deadline session is killed as a **timeout** (not a user cancel), so\nits completion is still parked — a fire-and-forget session that hits its\ntimeout must reach the heartbeat, or its agent-core background session is\nstuck Running forever. Only a caller-initiated cancel parks nothing.",
-                  "line": 408
-                },
-                {
-                  "name": "finish_reaped",
-                  "signature": "fn finish_reaped (& self , run : Arc < WorkspaceRun > , reaped : ReapedCommand , publish_completion : bool ,) -> CommandResponse",
-                  "kind": "method",
-                  "docs": "Turn a reaped command into its final response: the run publishes (normal\ncompletion) or discards (cancel) via the workspace lifecycle helpers, then\npersists the final response. Routing cancel to the discard branch is the\nstructural guarantee that a cancelled command never reaches the OCC merge.",
-                  "line": 428
-                },
-                {
-                  "name": "finalize_run",
-                  "signature": "fn finalize_run (& self , run : Arc < WorkspaceRun > , request : FinalizeCommandRequest , cancelled : bool , publish_completion : bool ,) -> CommandResponse",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 452
-                }
-              ],
-              "impl_target": "WorkspaceRunManager",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 70
-            },
-            {
-              "kind": "fn",
-              "name": "settle_ephemeral",
-              "visibility": "private",
-              "signature": "fn settle_ephemeral (run : & EphemeralRun , request : FinalizeCommandRequest , cancelled : bool ,) -> Result < WorkspaceCommandOutcome , WorkspaceApiError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths\nremove the run dirs and release the snapshot lease; only the complete path\ncaptures + publishes the upperdir, so a cancelled command never OCC-merges.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 484
-            },
-            {
-              "kind": "fn",
-              "name": "settle_isolated",
-              "visibility": "private",
-              "signature": "fn settle_isolated (run : & IsolatedRun , request : FinalizeCommandRequest , cancelled : bool ,) -> Result < WorkspaceCommandOutcome , WorkspaceApiError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Complete (capture for audit) or discard (cancel) one isolated command\nsession. Isolated writes are never published; the upperdir is torn down with\nthe namespace on exit, so discard is a no-op beyond the cancelled outcome.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 517
-            },
-            {
-              "kind": "fn",
-              "name": "base_timings",
-              "visibility": "private",
-              "signature": "fn base_timings (root : & Path) -> Result < WorkspaceTimings , WorkspaceApiError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 546
-            },
-            {
-              "kind": "fn",
-              "name": "release_lease",
-              "visibility": "private",
-              "signature": "fn release_lease (root : & Path , lease_id : & str)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 553
-            },
-            {
-              "kind": "fn",
-              "name": "layerstack_error",
-              "visibility": "private",
-              "signature": "fn layerstack_error (error : impl std :: fmt :: Display) -> CommandSessionError",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 557
-            },
-            {
-              "kind": "fn",
-              "name": "workspace_api_error",
-              "visibility": "private",
-              "signature": "fn workspace_api_error (error : impl std :: fmt :: Display) -> WorkspaceApiError",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 564
-            },
-            {
-              "kind": "fn",
-              "name": "is_teardown_control",
-              "visibility": "private",
-              "signature": "fn is_teardown_control (chars : & str) -> bool",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 568
-            },
-            {
-              "kind": "fn",
-              "name": "contains_teardown_control",
-              "visibility": "private",
-              "signature": "fn contains_teardown_control (chars : & str) -> bool",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/adapters/workspace_run/manager.rs",
-              "module": "adapters::workspace_run::manager",
-              "line": 572
             }
           ]
         },
@@ -14749,22 +14362,22 @@
             },
             {
               "kind": "impl",
-              "name": "impl From < eos_plugin_host :: PpcError > for DaemonError",
+              "name": "impl From < eos_plugin :: host :: PpcError > for DaemonError",
               "visibility": "private",
-              "signature": "impl From < eos_plugin_host :: PpcError > for DaemonError",
+              "signature": "impl From < eos_plugin :: host :: PpcError > for DaemonError",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "from",
-                  "signature": "fn from (err : eos_plugin_host :: PpcError) -> Self",
+                  "signature": "fn from (err : eos_plugin :: host :: PpcError) -> Self",
                   "kind": "constructor",
                   "docs": "Fold a plugin-host PPC / package failure onto the matching daemon\nvariant. `Plugin` keeps the inner [`eos_plugin::PluginError`] so\n`wire_kind` still classifies `ForbiddenInIsolatedWorkspace`; `Callback`\ncarries an already-formatted message that re-wraps as a PPC error.",
                   "line": 97
                 }
               ],
               "impl_target": "DaemonError",
-              "trait_name": "From < eos_plugin_host :: PpcError >",
+              "trait_name": "From < eos_plugin :: host :: PpcError >",
               "docs": null,
               "tags": [
                 "impl",
@@ -30480,15 +30093,15 @@
       "name": "eos-plugin",
       "path": "crates/eos-plugin",
       "stats": {
-        "modules": 8,
-        "items": 72,
-        "structs": 10,
-        "enums": 7,
+        "modules": 15,
+        "items": 142,
+        "structs": 20,
+        "enums": 8,
         "traits": 0,
-        "functions": 39,
-        "impls": 11,
-        "fields": 71,
-        "methods": 19
+        "functions": 87,
+        "impls": 19,
+        "fields": 122,
+        "methods": 44
       },
       "modules": [
         {
@@ -30596,6 +30209,1698 @@
               "file": "crates/eos-plugin/src/error.rs",
               "module": "error",
               "line": 49
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/ensure_args.rs",
+          "module": "host::ensure_args",
+          "items": [
+            {
+              "kind": "fn",
+              "name": "validate_plugin_caller_fields",
+              "visibility": "pub",
+              "signature": "pub fn validate_plugin_caller_fields (args : & Value) -> Result < () , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 20
+            },
+            {
+              "kind": "fn",
+              "name": "validate_plugin_audit_field",
+              "visibility": "private",
+              "signature": "fn validate_plugin_audit_field (field : & str , value : Option < & Value >) -> Result < () , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 34
+            },
+            {
+              "kind": "struct",
+              "name": "ParsedEnsure",
+              "visibility": "pub",
+              "signature": "pub struct ParsedEnsure",
+              "fields": [
+                {
+                  "name": "plugin_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "plugin_digest",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "manifest",
+                  "visibility": "pub",
+                  "ty": "Option < PluginManifest >"
+                },
+                {
+                  "name": "registered_ops",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "operation_routes",
+                  "visibility": "pub",
+                  "ty": "BTreeMap < String , PluginOperationRoute >"
+                },
+                {
+                  "name": "services",
+                  "visibility": "pub",
+                  "ty": "Vec < PluginServiceStatus >"
+                },
+                {
+                  "name": "service_processes",
+                  "visibility": "pub",
+                  "ty": "Vec < PluginProcessSpec >"
+                },
+                {
+                  "name": "runtime_loaded",
+                  "visibility": "pub",
+                  "ty": "bool"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Result of parsing one `api.plugin.ensure` call: routes + service specs the\ndaemon registers into its live `LoadedPluginRuntime`.",
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 56
+            },
+            {
+              "kind": "impl",
+              "name": "impl ParsedEnsure",
+              "visibility": "private",
+              "signature": "impl ParsedEnsure",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "from_args",
+                  "signature": "pub fn from_args (args : & Value , ppc_socket_root : & str) -> Result < Self , PluginError >",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 70
+                },
+                {
+                  "name": "from_manifest",
+                  "signature": "fn from_manifest (args : & Value , manifest : PluginManifest , ppc_socket_root : & str ,) -> Result < Self , PluginError >",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 103
+                }
+              ],
+              "impl_target": "ParsedEnsure",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 69
+            },
+            {
+              "kind": "fn",
+              "name": "operation_routes_for_manifest",
+              "visibility": "private",
+              "signature": "fn operation_routes_for_manifest (manifest : & PluginManifest , service_keys : & BTreeMap < String , PluginServiceKey > , layer_stack_root : Option < & str > , package_roots : & PackageRoots ,) -> BTreeMap < String , PluginOperationRoute >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 144
+            },
+            {
+              "kind": "fn",
+              "name": "services_for_manifest",
+              "visibility": "private",
+              "signature": "fn services_for_manifest (manifest : & PluginManifest , service_keys : & BTreeMap < String , PluginServiceKey > , registered_ops : & [String] , ppc_socket_root : & str , package_roots : & PackageRoots ,) -> Result < (Vec < PluginServiceStatus > , Vec < PluginProcessSpec >) , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 193
+            },
+            {
+              "kind": "fn",
+              "name": "service_initial_status_message",
+              "visibility": "private",
+              "signature": "fn service_initial_status_message (service_mode : ServiceMode) -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 232
+            },
+            {
+              "kind": "fn",
+              "name": "process_spec",
+              "visibility": "private",
+              "signature": "fn process_spec (key : & PluginServiceKey , service : & PluginServiceManifest , ppc_socket_root : & str , package_roots : & PackageRoots ,) -> Result < PluginProcessSpec , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 242
+            },
+            {
+              "kind": "fn",
+              "name": "resolved_service_command",
+              "visibility": "private",
+              "signature": "fn resolved_service_command (service : & PluginServiceManifest , package_roots : & PackageRoots ,) -> Vec < String >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 260
+            },
+            {
+              "kind": "fn",
+              "name": "service_working_dir",
+              "visibility": "private",
+              "signature": "fn service_working_dir (service : & PluginServiceManifest , package_roots : & PackageRoots) -> PathBuf",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 276
+            },
+            {
+              "kind": "fn",
+              "name": "resolve_package_relative_executable",
+              "visibility": "private",
+              "signature": "fn resolve_package_relative_executable (program : & str , working_dir : & Path) -> Option < PathBuf >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 283
+            },
+            {
+              "kind": "fn",
+              "name": "service_keys_for_manifest",
+              "visibility": "private",
+              "signature": "fn service_keys_for_manifest (args : & Value , manifest : & PluginManifest ,) -> Result < BTreeMap < String , PluginServiceKey > , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 302
+            },
+            {
+              "kind": "fn",
+              "name": "require_string",
+              "visibility": "private",
+              "signature": "fn require_string (args : & Value , key : & str) -> Result < String , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 330
+            },
+            {
+              "kind": "fn",
+              "name": "validate_public_identifier",
+              "visibility": "private",
+              "signature": "fn validate_public_identifier (field : & str , value : & str) -> Result < () , PluginError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ensure_args.rs",
+              "module": "host::ensure_args",
+              "line": 345
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/mod.rs",
+          "module": "host",
+          "items": [
+            {
+              "kind": "enum",
+              "name": "PpcError",
+              "visibility": "pub",
+              "signature": "pub enum PpcError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Plugin",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "crate :: PluginError"
+                    }
+                  ]
+                },
+                {
+                  "name": "Protocol",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "eos_protocol :: ProtocolError"
+                    }
+                  ]
+                },
+                {
+                  "name": "Io",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "std :: io :: Error"
+                    }
+                  ]
+                },
+                {
+                  "name": "LockPoisoned",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "& 'static str"
+                    }
+                  ]
+                },
+                {
+                  "name": "Callback",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Failures surfaced by the plugin PPC transport and package pipeline.\n\nThis is the local error the moved transport/package code raises in place of\nthe daemon's `DaemonError`; the daemon re-maps each variant back onto its own\nerror (preserving the inner [`crate::PluginError`], so the dispatcher\nstill classifies `ForbiddenInIsolatedWorkspace` correctly).",
+              "tags": [
+                "derive: Debug",
+                "derive: thiserror::Error",
+                "error"
+              ],
+              "file": "crates/eos-plugin/src/host/mod.rs",
+              "module": "host",
+              "line": 28
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/package.rs",
+          "module": "host::package",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "PackageEnsureReport",
+              "visibility": "pub",
+              "signature": "pub struct PackageEnsureReport",
+              "fields": [
+                {
+                  "name": "active",
+                  "visibility": "pub",
+                  "ty": "bool"
+                },
+                {
+                  "name": "needs_upload",
+                  "visibility": "pub",
+                  "ty": "bool"
+                },
+                {
+                  "name": "package_root",
+                  "visibility": "pub",
+                  "ty": "Option < PathBuf >"
+                },
+                {
+                  "name": "dependency_root",
+                  "visibility": "pub",
+                  "ty": "Option < PathBuf >"
+                },
+                {
+                  "name": "package_published",
+                  "visibility": "pub",
+                  "ty": "bool"
+                },
+                {
+                  "name": "setup_ran",
+                  "visibility": "pub",
+                  "ty": "bool"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Outcome of a package ensure: whether the package contract is active, whether\nthe caller must upload, and the resolved roots / publish + setup status.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Default",
+                "port/service"
+              ],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 15
+            },
+            {
+              "kind": "struct",
+              "name": "PackageRoots",
+              "visibility": "pub",
+              "signature": "pub struct PackageRoots",
+              "fields": [
+                {
+                  "name": "package_root",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "dependency_root",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Resolved package + dependency roots for a plugin digest.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 27
+            },
+            {
+              "kind": "fn",
+              "name": "package_roots",
+              "visibility": "pub",
+              "signature": "pub fn package_roots (args : & Value , manifest : & PluginManifest) -> Result < PackageRoots , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 34
+            },
+            {
+              "kind": "fn",
+              "name": "package_contract_active",
+              "visibility": "private",
+              "signature": "fn package_contract_active (args : & Value) -> bool",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 42
+            },
+            {
+              "kind": "fn",
+              "name": "ensure_package",
+              "visibility": "pub",
+              "signature": "pub fn ensure_package (args : & Value , manifest : Option < & PluginManifest > ,) -> Result < PackageEnsureReport , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 49
+            },
+            {
+              "kind": "fn",
+              "name": "needs_upload_response",
+              "visibility": "pub",
+              "signature": "pub fn needs_upload_response (manifest : & PluginManifest , report : & PackageEnsureReport) -> Value",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 81
+            },
+            {
+              "kind": "fn",
+              "name": "warm_probe",
+              "visibility": "private",
+              "signature": "fn warm_probe (manifest : & PluginManifest , paths : & PackagePaths) -> PackageEnsureReport",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 94
+            },
+            {
+              "kind": "struct",
+              "name": "PackagePaths",
+              "visibility": "private",
+              "signature": "struct PackagePaths",
+              "fields": [
+                {
+                  "name": "package_root",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "dependency_root",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "upload_digest_root",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "setup_tmp_root",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug"
+              ],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 112
+            },
+            {
+              "kind": "impl",
+              "name": "impl PackagePaths",
+              "visibility": "private",
+              "signature": "impl PackagePaths",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "fn new (args : & Value , manifest : & PluginManifest) -> Result < Self , PpcError >",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 121
+                }
+              ],
+              "impl_target": "PackagePaths",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 120
+            },
+            {
+              "kind": "fn",
+              "name": "root_arg",
+              "visibility": "private",
+              "signature": "fn root_arg (args : & Value , key : & str , default : & str) -> PathBuf",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 144
+            },
+            {
+              "kind": "fn",
+              "name": "staged_package_root",
+              "visibility": "private",
+              "signature": "fn staged_package_root (args : & Value) -> Result < Option < PathBuf > , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 158
+            },
+            {
+              "kind": "fn",
+              "name": "validate_staged_package_root",
+              "visibility": "private",
+              "signature": "fn validate_staged_package_root (staged_package_root : & Path , upload_digest_root : & Path ,) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 175
+            },
+            {
+              "kind": "fn",
+              "name": "validate_staged_package",
+              "visibility": "private",
+              "signature": "fn validate_staged_package (manifest : & PluginManifest , staged_package_root : & Path ,) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 201
+            },
+            {
+              "kind": "fn",
+              "name": "publish_package",
+              "visibility": "private",
+              "signature": "fn publish_package (staged_package_root : & Path , paths : & PackagePaths) -> Result < bool , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 228
+            },
+            {
+              "kind": "fn",
+              "name": "prepare_package_publish_root",
+              "visibility": "private",
+              "signature": "fn prepare_package_publish_root (staged_package_root : & Path , package_root : & Path ,) -> Result < PathBuf , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 245
+            },
+            {
+              "kind": "fn",
+              "name": "replace_package_root",
+              "visibility": "private",
+              "signature": "fn replace_package_root (prepared_root : & Path , package_root : & Path) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 262
+            },
+            {
+              "kind": "fn",
+              "name": "package_sibling_temp_root",
+              "visibility": "private",
+              "signature": "fn package_sibling_temp_root (package_root : & Path , label : & str) -> Result < PathBuf , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 293
+            },
+            {
+              "kind": "fn",
+              "name": "copy_package_tree",
+              "visibility": "private",
+              "signature": "fn copy_package_tree (source_root : & Path , target_root : & Path) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 311
+            },
+            {
+              "kind": "fn",
+              "name": "copy_package_dir",
+              "visibility": "private",
+              "signature": "fn copy_package_dir (source_root : & Path , source_dir : & Path , target_root : & Path ,) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 316
+            },
+            {
+              "kind": "fn",
+              "name": "ensure_setup",
+              "visibility": "private",
+              "signature": "fn ensure_setup (manifest : & PluginManifest , paths : & PackagePaths) -> Result < bool , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 349
+            },
+            {
+              "kind": "fn",
+              "name": "reject_forbidden_setup_roots",
+              "visibility": "private",
+              "signature": "fn reject_forbidden_setup_roots (command : & [String] , cwd : & Path) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 395
+            },
+            {
+              "kind": "fn",
+              "name": "setup_script_path",
+              "visibility": "private",
+              "signature": "fn setup_script_path (arg : & str , cwd : & Path) -> Option < PathBuf >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 412
+            },
+            {
+              "kind": "fn",
+              "name": "reject_forbidden_text",
+              "visibility": "private",
+              "signature": "fn reject_forbidden_text (context : & str , text : & str) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 423
+            },
+            {
+              "kind": "fn",
+              "name": "marker_matches",
+              "visibility": "private",
+              "signature": "fn marker_matches (marker : & Path , expected : & str) -> bool",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 435
+            },
+            {
+              "kind": "fn",
+              "name": "staged_marker",
+              "visibility": "private",
+              "signature": "fn staged_marker (staged_package_root : & Path) -> Option < String >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 439
+            },
+            {
+              "kind": "fn",
+              "name": "cleanup_upload_root",
+              "visibility": "private",
+              "signature": "fn cleanup_upload_root (staged_package_root : & Path , upload_digest_root : & Path)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 445
+            },
+            {
+              "kind": "fn",
+              "name": "canonical_tree_digest",
+              "visibility": "private",
+              "signature": "fn canonical_tree_digest (root : & Path) -> Result < String , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 453
+            },
+            {
+              "kind": "fn",
+              "name": "collect_files",
+              "visibility": "private",
+              "signature": "fn collect_files (root : & Path , dir : & Path , files : & mut Vec < (String , PathBuf) > ,) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package",
+              "line": 472
+            },
+            {
+              "kind": "type",
+              "name": "TestResult",
+              "visibility": "private",
+              "signature": "type TestResult = Result < () , Box < dyn std :: error :: Error + Send + Sync > >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package::tests",
+              "line": 515
+            },
+            {
+              "kind": "fn",
+              "name": "copy_package_tree_preserves_nested_files_and_modes",
+              "visibility": "private",
+              "signature": "fn copy_package_tree_preserves_nested_files_and_modes () -> TestResult",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package::tests",
+              "line": 517
+            },
+            {
+              "kind": "fn",
+              "name": "publish_package_replaces_existing_root_without_leaving_temps",
+              "visibility": "private",
+              "signature": "fn publish_package_replaces_existing_root_without_leaving_temps () -> TestResult",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package::tests",
+              "line": 547
+            },
+            {
+              "kind": "fn",
+              "name": "unique_temp_dir",
+              "visibility": "private",
+              "signature": "fn unique_temp_dir (label : & str) -> PathBuf",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/package.rs",
+              "module": "host::package::tests",
+              "line": 587
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/ppc_client.rs",
+          "module": "host::ppc_client",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "PpcClient",
+              "visibility": "pub",
+              "signature": "pub struct PpcClient",
+              "fields": [
+                {
+                  "name": "writer",
+                  "visibility": "private",
+                  "ty": "FrameWriter"
+                },
+                {
+                  "name": "pending",
+                  "visibility": "private",
+                  "ty": "PendingCalls"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A connected plugin service's PPC client: a synchronous request/reply façade\nover the service socket, multiplexed by a background reader thread.",
+              "tags": [
+                "port/service"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 29
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for PpcClient",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for PpcClient",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , formatter : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 37
+                }
+              ],
+              "impl_target": "PpcClient",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 36
+            },
+            {
+              "kind": "impl",
+              "name": "impl PpcClient",
+              "visibility": "private",
+              "signature": "impl PpcClient",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (stream : UnixStream) -> Result < Self , PpcError >",
+                  "kind": "constructor",
+                  "docs": "Wrap a connected service `stream`, spawning the reply-routing reader.",
+                  "line": 43
+                },
+                {
+                  "name": "round_trip",
+                  "signature": "pub fn round_trip (& self , request : & PpcEnvelope , timeout : Duration ,) -> Result < PpcEnvelope , PpcError >",
+                  "kind": "method",
+                  "docs": "Send a request and await its reply (no callbacks serviced).",
+                  "line": 52
+                },
+                {
+                  "name": "round_trip_with_callbacks",
+                  "signature": "pub fn round_trip_with_callbacks < F > (& self , request : & PpcEnvelope , timeout : Duration , handle_callback : F ,) -> Result < PpcEnvelope , PpcError > where F : FnMut (PpcEnvelope) -> Result < PpcEnvelope , PpcError > + Send + 'static ,",
+                  "kind": "method",
+                  "docs": "Send a request and await its reply, servicing plugin-originated callback\nrequests with `handle_callback` until the final reply arrives.",
+                  "line": 61
+                },
+                {
+                  "name": "send_request",
+                  "signature": "fn send_request (& self , request : & PpcEnvelope , timeout : Duration , callback_handler : Option < CallbackHandler > ,) -> Result < PpcEnvelope , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 82
+                }
+              ],
+              "impl_target": "PpcClient",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 42
+            },
+            {
+              "kind": "fn",
+              "name": "spawn_reader_thread",
+              "visibility": "private",
+              "signature": "fn spawn_reader_thread (mut stream : UnixStream , writer : FrameWriter , pending : PendingCalls ,) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 122
+            },
+            {
+              "kind": "fn",
+              "name": "reader_loop",
+              "visibility": "private",
+              "signature": "fn reader_loop (stream : & mut UnixStream , writer : & FrameWriter , pending : & PendingCalls)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 133
+            },
+            {
+              "kind": "fn",
+              "name": "handle_callback",
+              "visibility": "private",
+              "signature": "fn handle_callback (frame : PpcEnvelope , writer : & FrameWriter , pending : & PendingCalls)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 150
+            },
+            {
+              "kind": "fn",
+              "name": "write_callback_error",
+              "visibility": "private",
+              "signature": "fn write_callback_error (writer : & FrameWriter , callback_message_id : & str , message : & str ,) -> Result < () , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client.rs",
+              "module": "host::ppc_client",
+              "line": 191
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/ppc_client/frame_io.rs",
+          "module": "host::ppc_client::frame_io",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "FrameWriter",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct FrameWriter",
+              "fields": [
+                {
+                  "name": "stream",
+                  "visibility": "private",
+                  "ty": "Arc < Mutex < UnixStream > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client/frame_io.rs",
+              "module": "host::ppc_client::frame_io",
+              "line": 14
+            },
+            {
+              "kind": "impl",
+              "name": "impl FrameWriter",
+              "visibility": "private",
+              "signature": "impl FrameWriter",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub(super) fn new (stream : UnixStream) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 20
+                },
+                {
+                  "name": "write_with_timeout",
+                  "signature": "pub(super) fn write_with_timeout (& self , frame : & PpcEnvelope , timeout : Duration ,) -> Result < () , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 26
+                },
+                {
+                  "name": "write",
+                  "signature": "pub(super) fn write (& self , frame : & PpcEnvelope) -> Result < () , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 34
+                },
+                {
+                  "name": "write_inner",
+                  "signature": "fn write_inner (& self , frame : & PpcEnvelope , timeout : Option < Duration >) -> Result < () , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 38
+                }
+              ],
+              "impl_target": "FrameWriter",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client/frame_io.rs",
+              "module": "host::ppc_client::frame_io",
+              "line": 19
+            },
+            {
+              "kind": "fn",
+              "name": "read_envelope",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn read_envelope (stream : & mut UnixStream) -> Result < PpcEnvelope , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client/frame_io.rs",
+              "module": "host::ppc_client::frame_io",
+              "line": 52
+            },
+            {
+              "kind": "fn",
+              "name": "read_frame",
+              "visibility": "pub",
+              "signature": "pub fn read_frame (stream : & mut UnixStream) -> Result < Vec < u8 > , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Read one newline-terminated PPC frame from `stream`, capped at the protocol\nrequest-byte ceiling.",
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client/frame_io.rs",
+              "module": "host::ppc_client::frame_io",
+              "line": 57
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+          "module": "host::ppc_client::pending",
+          "items": [
+            {
+              "kind": "type",
+              "name": "CallbackHandler",
+              "visibility": "pub(super)",
+              "signature": "pub(super) type CallbackHandler = Arc < dyn Fn (PpcEnvelope) -> Result < PpcEnvelope , PpcError > + Send + Sync >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+              "module": "host::ppc_client::pending",
+              "line": 10
+            },
+            {
+              "kind": "type",
+              "name": "PpcResult",
+              "visibility": "pub(super)",
+              "signature": "pub(super) type PpcResult = Result < PpcEnvelope , PpcError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+              "module": "host::ppc_client::pending",
+              "line": 12
+            },
+            {
+              "kind": "struct",
+              "name": "PendingCalls",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct PendingCalls",
+              "fields": [
+                {
+                  "name": "inner",
+                  "visibility": "private",
+                  "ty": "Arc < Mutex < HashMap < String , PendingRequest > > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone",
+                "derive: Default"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+              "module": "host::ppc_client::pending",
+              "line": 14
+            },
+            {
+              "kind": "struct",
+              "name": "PendingRequest",
+              "visibility": "private",
+              "signature": "struct PendingRequest",
+              "fields": [
+                {
+                  "name": "reply_tx",
+                  "visibility": "private",
+                  "ty": "mpsc :: Sender < PpcResult >"
+                },
+                {
+                  "name": "callback_handler",
+                  "visibility": "private",
+                  "ty": "Option < CallbackHandler >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "dto"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+              "module": "host::ppc_client::pending",
+              "line": 19
+            },
+            {
+              "kind": "impl",
+              "name": "impl PendingCalls",
+              "visibility": "private",
+              "signature": "impl PendingCalls",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "register",
+                  "signature": "pub(super) fn register (& self , message_id : String , callback_handler : Option < CallbackHandler > ,) -> Result < mpsc :: Receiver < PpcResult > , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 25
+                },
+                {
+                  "name": "discard",
+                  "signature": "pub(super) fn discard (& self , message_id : & str) -> Result < () , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 48
+                },
+                {
+                  "name": "complete_reply",
+                  "signature": "pub(super) fn complete_reply (& self , frame : PpcEnvelope)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 53
+                },
+                {
+                  "name": "fail_one",
+                  "signature": "pub(super) fn fail_one (& self , message_id : & str , message : String)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 69
+                },
+                {
+                  "name": "fail_all",
+                  "signature": "pub(super) fn fail_all (& self , message : String)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 80
+                },
+                {
+                  "name": "callback_handler_for_frame",
+                  "signature": "pub(super) fn callback_handler_for_frame (& self , frame : & PpcEnvelope ,) -> Result < (String , CallbackHandler) , String >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 95
+                },
+                {
+                  "name": "lock",
+                  "signature": "fn lock (& self ,) -> Result < std :: sync :: MutexGuard < '_ , HashMap < String , PendingRequest > > , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 142
+                },
+                {
+                  "name": "take",
+                  "signature": "fn take (& self , message_id : & str) -> Result < Option < PendingRequest > , PpcError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 150
+                }
+              ],
+              "impl_target": "PendingCalls",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+              "module": "host::ppc_client::pending",
+              "line": 24
+            },
+            {
+              "kind": "fn",
+              "name": "callback_parent_message_id",
+              "visibility": "private",
+              "signature": "fn callback_parent_message_id (frame : & PpcEnvelope) -> Option < String >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/ppc_client/pending.rs",
+              "module": "host::ppc_client::pending",
+              "line": 155
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-plugin/src/host/route.rs",
+          "module": "host::route",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "PluginOperationRoute",
+              "visibility": "pub",
+              "signature": "pub struct PluginOperationRoute",
+              "fields": [
+                {
+                  "name": "plugin_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "op_name",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "public_op",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "layer_stack_root",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                },
+                {
+                  "name": "intent",
+                  "visibility": "pub",
+                  "ty": "Intent"
+                },
+                {
+                  "name": "auto_workspace_overlay",
+                  "visibility": "pub",
+                  "ty": "bool"
+                },
+                {
+                  "name": "service_id",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                },
+                {
+                  "name": "service_instance_id",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                },
+                {
+                  "name": "service_key",
+                  "visibility": "pub",
+                  "ty": "Option < PluginServiceKey >"
+                },
+                {
+                  "name": "service_mode",
+                  "visibility": "pub",
+                  "ty": "Option < ServiceMode >"
+                },
+                {
+                  "name": "service_command",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "service_ppc_protocol_version",
+                  "visibility": "pub",
+                  "ty": "Option < u32 >"
+                },
+                {
+                  "name": "timeout_ms",
+                  "visibility": "pub",
+                  "ty": "Option < u64 >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "How one resolved public op dispatches: read-only service, overlay one-shot,\nor self-managed write callback. Wire shaping (`to_json`) is daemon-side.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-plugin/src/host/route.rs",
+              "module": "host::route",
+              "line": 28
+            },
+            {
+              "kind": "impl",
+              "name": "impl PluginOperationRoute",
+              "visibility": "private",
+              "signature": "impl PluginOperationRoute",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "dispatch_mode",
+                  "signature": "pub const fn dispatch_mode (& self) -> & 'static str",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 48
+                }
+              ],
+              "impl_target": "PluginOperationRoute",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/route.rs",
+              "module": "host::route",
+              "line": 47
+            },
+            {
+              "kind": "struct",
+              "name": "PluginProcessSpec",
+              "visibility": "pub",
+              "signature": "pub struct PluginProcessSpec",
+              "fields": [
+                {
+                  "name": "key",
+                  "visibility": "pub",
+                  "ty": "PluginServiceKey"
+                },
+                {
+                  "name": "command",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "package_root",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "dependency_root",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "working_dir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "ppc_protocol_version",
+                  "visibility": "pub",
+                  "ty": "u32"
+                },
+                {
+                  "name": "socket_path",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "What a `WorkspaceSnapshotRefresh` service process launches. The daemon\nspawns it (`adapters/plugins/process.rs`); this is the launch contract only.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-plugin/src/host/route.rs",
+              "module": "host::route",
+              "line": 58
+            },
+            {
+              "kind": "impl",
+              "name": "impl PluginProcessSpec",
+              "visibility": "private",
+              "signature": "impl PluginProcessSpec",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new_with_package_paths",
+                  "signature": "pub fn new_with_package_paths (key : PluginServiceKey , command : Vec < String > , package_root : PathBuf , dependency_root : PathBuf , working_dir : PathBuf , ppc_protocol_version : u32 , socket_root : impl AsRef < Path > ,) -> Result < Self , PluginError >",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 72
+                },
+                {
+                  "name": "environment",
+                  "signature": "pub fn environment (& self) -> BTreeMap < & 'static str , String >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 104
+                },
+                {
+                  "name": "service_instance_id",
+                  "signature": "pub fn service_instance_id (& self) -> String",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 135
+                },
+                {
+                  "name": "key",
+                  "signature": "pub const fn key (& self) -> & PluginServiceKey",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 139
+                }
+              ],
+              "impl_target": "PluginProcessSpec",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-plugin/src/host/route.rs",
+              "module": "host::route",
+              "line": 71
+            },
+            {
+              "kind": "fn",
+              "name": "socket_path_for_key",
+              "visibility": "private",
+              "signature": "fn socket_path_for_key (key : & PluginServiceKey , socket_root : & Path) -> PathBuf",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/route.rs",
+              "module": "host::route",
+              "line": 144
+            },
+            {
+              "kind": "fn",
+              "name": "lower_hex",
+              "visibility": "private",
+              "signature": "fn lower_hex (bytes : & [u8]) -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-plugin/src/host/route.rs",
+              "module": "host::route",
+              "line": 153
             }
           ]
         },
@@ -32563,1172 +33868,6 @@
               "file": "crates/eos-plugin/src/service_registry.rs",
               "module": "service_registry::tests",
               "line": 100
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "eos-plugin-host",
-      "path": "crates/eos-plugin-host",
-      "stats": {
-        "modules": 5,
-        "items": 50,
-        "structs": 7,
-        "enums": 1,
-        "traits": 0,
-        "functions": 34,
-        "impls": 5,
-        "fields": 23,
-        "methods": 18
-      },
-      "modules": [
-        {
-          "path": "crates/eos-plugin-host/src/lib.rs",
-          "module": "lib",
-          "items": [
-            {
-              "kind": "enum",
-              "name": "PpcError",
-              "visibility": "pub",
-              "signature": "pub enum PpcError",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Plugin",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "eos_plugin :: PluginError"
-                    }
-                  ]
-                },
-                {
-                  "name": "Protocol",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "eos_protocol :: ProtocolError"
-                    }
-                  ]
-                },
-                {
-                  "name": "Io",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "std :: io :: Error"
-                    }
-                  ]
-                },
-                {
-                  "name": "LockPoisoned",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "& 'static str"
-                    }
-                  ]
-                },
-                {
-                  "name": "Callback",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Failures surfaced by the plugin PPC transport and package pipeline.\n\nThis is the local error the moved transport/package code raises in place of\nthe daemon's `DaemonError`; the daemon re-maps each variant back onto its own\nerror (preserving the inner [`eos_plugin::PluginError`], so the dispatcher\nstill classifies `ForbiddenInIsolatedWorkspace` correctly).",
-              "tags": [
-                "derive: Debug",
-                "derive: thiserror::Error",
-                "error"
-              ],
-              "file": "crates/eos-plugin-host/src/lib.rs",
-              "module": "lib",
-              "line": 28
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-plugin-host/src/package.rs",
-          "module": "package",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "PackageEnsureReport",
-              "visibility": "pub",
-              "signature": "pub struct PackageEnsureReport",
-              "fields": [
-                {
-                  "name": "active",
-                  "visibility": "pub",
-                  "ty": "bool"
-                },
-                {
-                  "name": "needs_upload",
-                  "visibility": "pub",
-                  "ty": "bool"
-                },
-                {
-                  "name": "package_root",
-                  "visibility": "pub",
-                  "ty": "Option < PathBuf >"
-                },
-                {
-                  "name": "dependency_root",
-                  "visibility": "pub",
-                  "ty": "Option < PathBuf >"
-                },
-                {
-                  "name": "package_published",
-                  "visibility": "pub",
-                  "ty": "bool"
-                },
-                {
-                  "name": "setup_ran",
-                  "visibility": "pub",
-                  "ty": "bool"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Outcome of a package ensure: whether the package contract is active, whether\nthe caller must upload, and the resolved roots / publish + setup status.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Default",
-                "port/service"
-              ],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 15
-            },
-            {
-              "kind": "struct",
-              "name": "PackageRoots",
-              "visibility": "pub",
-              "signature": "pub struct PackageRoots",
-              "fields": [
-                {
-                  "name": "package_root",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "dependency_root",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Resolved package + dependency roots for a plugin digest.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 27
-            },
-            {
-              "kind": "fn",
-              "name": "package_roots",
-              "visibility": "pub",
-              "signature": "pub fn package_roots (args : & Value , manifest : & PluginManifest) -> Result < PackageRoots , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 34
-            },
-            {
-              "kind": "fn",
-              "name": "package_contract_active",
-              "visibility": "private",
-              "signature": "fn package_contract_active (args : & Value) -> bool",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 42
-            },
-            {
-              "kind": "fn",
-              "name": "ensure_package",
-              "visibility": "pub",
-              "signature": "pub fn ensure_package (args : & Value , manifest : Option < & PluginManifest > ,) -> Result < PackageEnsureReport , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 49
-            },
-            {
-              "kind": "fn",
-              "name": "needs_upload_response",
-              "visibility": "pub",
-              "signature": "pub fn needs_upload_response (manifest : & PluginManifest , report : & PackageEnsureReport) -> Value",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 81
-            },
-            {
-              "kind": "fn",
-              "name": "warm_probe",
-              "visibility": "private",
-              "signature": "fn warm_probe (manifest : & PluginManifest , paths : & PackagePaths) -> PackageEnsureReport",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 94
-            },
-            {
-              "kind": "struct",
-              "name": "PackagePaths",
-              "visibility": "private",
-              "signature": "struct PackagePaths",
-              "fields": [
-                {
-                  "name": "package_root",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "dependency_root",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "upload_digest_root",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "setup_tmp_root",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Debug"
-              ],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 112
-            },
-            {
-              "kind": "impl",
-              "name": "impl PackagePaths",
-              "visibility": "private",
-              "signature": "impl PackagePaths",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "fn new (args : & Value , manifest : & PluginManifest) -> Result < Self , PpcError >",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 121
-                }
-              ],
-              "impl_target": "PackagePaths",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 120
-            },
-            {
-              "kind": "fn",
-              "name": "root_arg",
-              "visibility": "private",
-              "signature": "fn root_arg (args : & Value , key : & str , default : & str) -> PathBuf",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 144
-            },
-            {
-              "kind": "fn",
-              "name": "staged_package_root",
-              "visibility": "private",
-              "signature": "fn staged_package_root (args : & Value) -> Result < Option < PathBuf > , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 158
-            },
-            {
-              "kind": "fn",
-              "name": "validate_staged_package_root",
-              "visibility": "private",
-              "signature": "fn validate_staged_package_root (staged_package_root : & Path , upload_digest_root : & Path ,) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 175
-            },
-            {
-              "kind": "fn",
-              "name": "validate_staged_package",
-              "visibility": "private",
-              "signature": "fn validate_staged_package (manifest : & PluginManifest , staged_package_root : & Path ,) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 201
-            },
-            {
-              "kind": "fn",
-              "name": "publish_package",
-              "visibility": "private",
-              "signature": "fn publish_package (staged_package_root : & Path , paths : & PackagePaths) -> Result < bool , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 228
-            },
-            {
-              "kind": "fn",
-              "name": "prepare_package_publish_root",
-              "visibility": "private",
-              "signature": "fn prepare_package_publish_root (staged_package_root : & Path , package_root : & Path ,) -> Result < PathBuf , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 245
-            },
-            {
-              "kind": "fn",
-              "name": "replace_package_root",
-              "visibility": "private",
-              "signature": "fn replace_package_root (prepared_root : & Path , package_root : & Path) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 262
-            },
-            {
-              "kind": "fn",
-              "name": "package_sibling_temp_root",
-              "visibility": "private",
-              "signature": "fn package_sibling_temp_root (package_root : & Path , label : & str) -> Result < PathBuf , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 293
-            },
-            {
-              "kind": "fn",
-              "name": "copy_package_tree",
-              "visibility": "private",
-              "signature": "fn copy_package_tree (source_root : & Path , target_root : & Path) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 311
-            },
-            {
-              "kind": "fn",
-              "name": "copy_package_dir",
-              "visibility": "private",
-              "signature": "fn copy_package_dir (source_root : & Path , source_dir : & Path , target_root : & Path ,) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 316
-            },
-            {
-              "kind": "fn",
-              "name": "ensure_setup",
-              "visibility": "private",
-              "signature": "fn ensure_setup (manifest : & PluginManifest , paths : & PackagePaths) -> Result < bool , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 349
-            },
-            {
-              "kind": "fn",
-              "name": "reject_forbidden_setup_roots",
-              "visibility": "private",
-              "signature": "fn reject_forbidden_setup_roots (command : & [String] , cwd : & Path) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 395
-            },
-            {
-              "kind": "fn",
-              "name": "setup_script_path",
-              "visibility": "private",
-              "signature": "fn setup_script_path (arg : & str , cwd : & Path) -> Option < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 412
-            },
-            {
-              "kind": "fn",
-              "name": "reject_forbidden_text",
-              "visibility": "private",
-              "signature": "fn reject_forbidden_text (context : & str , text : & str) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 423
-            },
-            {
-              "kind": "fn",
-              "name": "marker_matches",
-              "visibility": "private",
-              "signature": "fn marker_matches (marker : & Path , expected : & str) -> bool",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 435
-            },
-            {
-              "kind": "fn",
-              "name": "staged_marker",
-              "visibility": "private",
-              "signature": "fn staged_marker (staged_package_root : & Path) -> Option < String >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 439
-            },
-            {
-              "kind": "fn",
-              "name": "cleanup_upload_root",
-              "visibility": "private",
-              "signature": "fn cleanup_upload_root (staged_package_root : & Path , upload_digest_root : & Path)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 445
-            },
-            {
-              "kind": "fn",
-              "name": "canonical_tree_digest",
-              "visibility": "private",
-              "signature": "fn canonical_tree_digest (root : & Path) -> Result < String , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 453
-            },
-            {
-              "kind": "fn",
-              "name": "collect_files",
-              "visibility": "private",
-              "signature": "fn collect_files (root : & Path , dir : & Path , files : & mut Vec < (String , PathBuf) > ,) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package",
-              "line": 472
-            },
-            {
-              "kind": "type",
-              "name": "TestResult",
-              "visibility": "private",
-              "signature": "type TestResult = Result < () , Box < dyn std :: error :: Error + Send + Sync > >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package::tests",
-              "line": 515
-            },
-            {
-              "kind": "fn",
-              "name": "copy_package_tree_preserves_nested_files_and_modes",
-              "visibility": "private",
-              "signature": "fn copy_package_tree_preserves_nested_files_and_modes () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package::tests",
-              "line": 517
-            },
-            {
-              "kind": "fn",
-              "name": "publish_package_replaces_existing_root_without_leaving_temps",
-              "visibility": "private",
-              "signature": "fn publish_package_replaces_existing_root_without_leaving_temps () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package::tests",
-              "line": 547
-            },
-            {
-              "kind": "fn",
-              "name": "unique_temp_dir",
-              "visibility": "private",
-              "signature": "fn unique_temp_dir (label : & str) -> PathBuf",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/package.rs",
-              "module": "package::tests",
-              "line": 587
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-plugin-host/src/ppc_router.rs",
-          "module": "ppc_router",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "PpcClient",
-              "visibility": "pub",
-              "signature": "pub struct PpcClient",
-              "fields": [
-                {
-                  "name": "writer",
-                  "visibility": "private",
-                  "ty": "FrameWriter"
-                },
-                {
-                  "name": "pending",
-                  "visibility": "private",
-                  "ty": "PendingCalls"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A connected plugin service's PPC client: a synchronous request/reply façade\nover the service socket, multiplexed by a background reader thread.",
-              "tags": [
-                "port/service"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 29
-            },
-            {
-              "kind": "impl",
-              "name": "impl std :: fmt :: Debug for PpcClient",
-              "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for PpcClient",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , formatter : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 37
-                }
-              ],
-              "impl_target": "PpcClient",
-              "trait_name": "std :: fmt :: Debug",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 36
-            },
-            {
-              "kind": "impl",
-              "name": "impl PpcClient",
-              "visibility": "private",
-              "signature": "impl PpcClient",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (stream : UnixStream) -> Result < Self , PpcError >",
-                  "kind": "constructor",
-                  "docs": "Wrap a connected service `stream`, spawning the reply-routing reader.",
-                  "line": 43
-                },
-                {
-                  "name": "round_trip",
-                  "signature": "pub fn round_trip (& self , request : & PpcEnvelope , timeout : Duration ,) -> Result < PpcEnvelope , PpcError >",
-                  "kind": "method",
-                  "docs": "Send a request and await its reply (no callbacks serviced).",
-                  "line": 52
-                },
-                {
-                  "name": "round_trip_with_callbacks",
-                  "signature": "pub fn round_trip_with_callbacks < F > (& self , request : & PpcEnvelope , timeout : Duration , handle_callback : F ,) -> Result < PpcEnvelope , PpcError > where F : FnMut (PpcEnvelope) -> Result < PpcEnvelope , PpcError > + Send + 'static ,",
-                  "kind": "method",
-                  "docs": "Send a request and await its reply, servicing plugin-originated callback\nrequests with `handle_callback` until the final reply arrives.",
-                  "line": 61
-                },
-                {
-                  "name": "send_request",
-                  "signature": "fn send_request (& self , request : & PpcEnvelope , timeout : Duration , callback_handler : Option < CallbackHandler > ,) -> Result < PpcEnvelope , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 82
-                }
-              ],
-              "impl_target": "PpcClient",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 42
-            },
-            {
-              "kind": "fn",
-              "name": "spawn_reader_thread",
-              "visibility": "private",
-              "signature": "fn spawn_reader_thread (mut stream : UnixStream , writer : FrameWriter , pending : PendingCalls ,) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 122
-            },
-            {
-              "kind": "fn",
-              "name": "reader_loop",
-              "visibility": "private",
-              "signature": "fn reader_loop (stream : & mut UnixStream , writer : & FrameWriter , pending : & PendingCalls)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 133
-            },
-            {
-              "kind": "fn",
-              "name": "handle_callback",
-              "visibility": "private",
-              "signature": "fn handle_callback (frame : PpcEnvelope , writer : & FrameWriter , pending : & PendingCalls)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 150
-            },
-            {
-              "kind": "fn",
-              "name": "write_callback_error",
-              "visibility": "private",
-              "signature": "fn write_callback_error (writer : & FrameWriter , callback_message_id : & str , message : & str ,) -> Result < () , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router.rs",
-              "module": "ppc_router",
-              "line": 191
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-plugin-host/src/ppc_router/frame_io.rs",
-          "module": "ppc_router::frame_io",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "FrameWriter",
-              "visibility": "pub(super)",
-              "signature": "pub(super) struct FrameWriter",
-              "fields": [
-                {
-                  "name": "stream",
-                  "visibility": "private",
-                  "ty": "Arc < Mutex < UnixStream > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Clone"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router/frame_io.rs",
-              "module": "ppc_router::frame_io",
-              "line": 14
-            },
-            {
-              "kind": "impl",
-              "name": "impl FrameWriter",
-              "visibility": "private",
-              "signature": "impl FrameWriter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub(super) fn new (stream : UnixStream) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 20
-                },
-                {
-                  "name": "write_with_timeout",
-                  "signature": "pub(super) fn write_with_timeout (& self , frame : & PpcEnvelope , timeout : Duration ,) -> Result < () , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 26
-                },
-                {
-                  "name": "write",
-                  "signature": "pub(super) fn write (& self , frame : & PpcEnvelope) -> Result < () , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 34
-                },
-                {
-                  "name": "write_inner",
-                  "signature": "fn write_inner (& self , frame : & PpcEnvelope , timeout : Option < Duration >) -> Result < () , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 38
-                }
-              ],
-              "impl_target": "FrameWriter",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router/frame_io.rs",
-              "module": "ppc_router::frame_io",
-              "line": 19
-            },
-            {
-              "kind": "fn",
-              "name": "read_envelope",
-              "visibility": "pub(super)",
-              "signature": "pub(super) fn read_envelope (stream : & mut UnixStream) -> Result < PpcEnvelope , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router/frame_io.rs",
-              "module": "ppc_router::frame_io",
-              "line": 52
-            },
-            {
-              "kind": "fn",
-              "name": "read_frame",
-              "visibility": "pub",
-              "signature": "pub fn read_frame (stream : & mut UnixStream) -> Result < Vec < u8 > , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Read one newline-terminated PPC frame from `stream`, capped at the protocol\nrequest-byte ceiling.",
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router/frame_io.rs",
-              "module": "ppc_router::frame_io",
-              "line": 57
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-          "module": "ppc_router::pending",
-          "items": [
-            {
-              "kind": "type",
-              "name": "CallbackHandler",
-              "visibility": "pub(super)",
-              "signature": "pub(super) type CallbackHandler = Arc < dyn Fn (PpcEnvelope) -> Result < PpcEnvelope , PpcError > + Send + Sync >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-              "module": "ppc_router::pending",
-              "line": 10
-            },
-            {
-              "kind": "type",
-              "name": "PpcResult",
-              "visibility": "pub(super)",
-              "signature": "pub(super) type PpcResult = Result < PpcEnvelope , PpcError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-              "module": "ppc_router::pending",
-              "line": 12
-            },
-            {
-              "kind": "struct",
-              "name": "PendingCalls",
-              "visibility": "pub(super)",
-              "signature": "pub(super) struct PendingCalls",
-              "fields": [
-                {
-                  "name": "inner",
-                  "visibility": "private",
-                  "ty": "Arc < Mutex < HashMap < String , PendingRequest > > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Clone",
-                "derive: Default"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-              "module": "ppc_router::pending",
-              "line": 14
-            },
-            {
-              "kind": "struct",
-              "name": "PendingRequest",
-              "visibility": "private",
-              "signature": "struct PendingRequest",
-              "fields": [
-                {
-                  "name": "reply_tx",
-                  "visibility": "private",
-                  "ty": "mpsc :: Sender < PpcResult >"
-                },
-                {
-                  "name": "callback_handler",
-                  "visibility": "private",
-                  "ty": "Option < CallbackHandler >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "dto"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-              "module": "ppc_router::pending",
-              "line": 19
-            },
-            {
-              "kind": "impl",
-              "name": "impl PendingCalls",
-              "visibility": "private",
-              "signature": "impl PendingCalls",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "register",
-                  "signature": "pub(super) fn register (& self , message_id : String , callback_handler : Option < CallbackHandler > ,) -> Result < mpsc :: Receiver < PpcResult > , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 25
-                },
-                {
-                  "name": "discard",
-                  "signature": "pub(super) fn discard (& self , message_id : & str) -> Result < () , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 48
-                },
-                {
-                  "name": "complete_reply",
-                  "signature": "pub(super) fn complete_reply (& self , frame : PpcEnvelope)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 53
-                },
-                {
-                  "name": "fail_one",
-                  "signature": "pub(super) fn fail_one (& self , message_id : & str , message : String)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 69
-                },
-                {
-                  "name": "fail_all",
-                  "signature": "pub(super) fn fail_all (& self , message : String)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 80
-                },
-                {
-                  "name": "callback_handler_for_frame",
-                  "signature": "pub(super) fn callback_handler_for_frame (& self , frame : & PpcEnvelope ,) -> Result < (String , CallbackHandler) , String >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 95
-                },
-                {
-                  "name": "lock",
-                  "signature": "fn lock (& self ,) -> Result < std :: sync :: MutexGuard < '_ , HashMap < String , PendingRequest > > , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 142
-                },
-                {
-                  "name": "take",
-                  "signature": "fn take (& self , message_id : & str) -> Result < Option < PendingRequest > , PpcError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 150
-                }
-              ],
-              "impl_target": "PendingCalls",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-              "module": "ppc_router::pending",
-              "line": 24
-            },
-            {
-              "kind": "fn",
-              "name": "callback_parent_message_id",
-              "visibility": "private",
-              "signature": "fn callback_parent_message_id (frame : & PpcEnvelope) -> Option < String >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-plugin-host/src/ppc_router/pending.rs",
-              "module": "ppc_router::pending",
-              "line": 155
             }
           ]
         }

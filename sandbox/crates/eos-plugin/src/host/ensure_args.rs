@@ -1,21 +1,23 @@
+//! Host-neutral `api.plugin.ensure` argument parsing: a manifest + caller args
+//! become a [`ParsedEnsure`] (operation routes + service process specs). Reading
+//! the PPC socket root from the daemon runtime config stays daemon-side and is
+//! threaded in as `ppc_socket_root`; everything here is pure on its inputs.
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use eos_plugin::{
+use serde_json::Value;
+
+use crate::host::route::{PluginOperationRoute, PluginProcessSpec};
+use crate::host::{package_roots, PackageRoots, PpcError};
+use crate::{
     public_op_name, PluginError, PluginManifest, PluginServiceKey, PluginServiceKeyParts,
     PluginServiceManifest, PluginServiceState, PluginServiceStatus, ServiceMode,
 };
-use serde_json::Value;
 
-use super::{
-    plugin_runtime_config,
-    process::PluginProcessSpec,
-    state::{LoadedPluginRuntime, PluginOperationRoute, MAX_PLUGIN_CALLER_FIELD_CHARS},
-};
-use crate::error::DaemonError;
-use eos_plugin_host::{package_roots, PackageRoots};
+pub const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;
 
-pub(super) fn validate_plugin_caller_fields(args: &Value) -> Result<(), DaemonError> {
+pub fn validate_plugin_caller_fields(args: &Value) -> Result<(), PluginError> {
     const TOP_LEVEL_FIELDS: &[&str] = &["caller_id", "invocation_id"];
 
     for field in TOP_LEVEL_FIELDS {
@@ -29,54 +31,48 @@ pub(super) fn validate_plugin_caller_fields(args: &Value) -> Result<(), DaemonEr
     Ok(())
 }
 
-fn validate_plugin_audit_field(field: &str, value: Option<&Value>) -> Result<(), DaemonError> {
+fn validate_plugin_audit_field(field: &str, value: Option<&Value>) -> Result<(), PluginError> {
     let Some(value) = value else {
         return Ok(());
     };
     let Some(text) = value.as_str() else {
-        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+        return Err(PluginError::Ppc(format!(
             "plugin caller field {field} must be a string"
-        ))));
+        )));
     };
     if text.contains('\0') {
-        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+        return Err(PluginError::Ppc(format!(
             "plugin caller field {field} contains NUL"
-        ))));
+        )));
     }
     if text.chars().count() > MAX_PLUGIN_CALLER_FIELD_CHARS {
-        return Err(DaemonError::Plugin(PluginError::Ppc(format!(
+        return Err(PluginError::Ppc(format!(
             "plugin caller field {field} exceeds {MAX_PLUGIN_CALLER_FIELD_CHARS} characters"
-        ))));
+        )));
     }
     Ok(())
 }
 
-pub(super) struct ParsedEnsure {
-    pub(super) plugin_id: String,
-    pub(super) plugin_digest: String,
-    pub(super) manifest: Option<PluginManifest>,
-    pub(super) registered_ops: Vec<String>,
-    pub(super) operation_routes: BTreeMap<String, PluginOperationRoute>,
-    pub(super) services: Vec<PluginServiceStatus>,
-    pub(super) service_processes: Vec<PluginProcessSpec>,
-    pub(super) runtime_loaded: bool,
-}
-
-pub(super) fn loaded_matches_parsed(loaded: &LoadedPluginRuntime, parsed: &ParsedEnsure) -> bool {
-    loaded.digest == parsed.plugin_digest
-        && loaded.registered_ops == parsed.registered_ops
-        && loaded.operation_routes == parsed.operation_routes
-        && loaded.service_processes == parsed.service_processes
-        && loaded.runtime_loaded == parsed.runtime_loaded
+/// Result of parsing one `api.plugin.ensure` call: routes + service specs the
+/// daemon registers into its live `LoadedPluginRuntime`.
+pub struct ParsedEnsure {
+    pub plugin_id: String,
+    pub plugin_digest: String,
+    pub manifest: Option<PluginManifest>,
+    pub registered_ops: Vec<String>,
+    pub operation_routes: BTreeMap<String, PluginOperationRoute>,
+    pub services: Vec<PluginServiceStatus>,
+    pub service_processes: Vec<PluginProcessSpec>,
+    pub runtime_loaded: bool,
 }
 
 impl ParsedEnsure {
-    pub(super) fn from_args(args: &Value) -> Result<Self, DaemonError> {
+    pub fn from_args(args: &Value, ppc_socket_root: &str) -> Result<Self, PpcError> {
         if let Some(manifest_value) = args.get("manifest") {
             let manifest: PluginManifest = serde_json::from_value(manifest_value.clone())
                 .map_err(|err| PluginError::Manifest(err.to_string()))?;
             manifest.validate()?;
-            return Self::from_manifest(args, manifest);
+            return Self::from_manifest(args, manifest, ppc_socket_root);
         }
 
         let plugin_id = args
@@ -104,9 +100,12 @@ impl ParsedEnsure {
         })
     }
 
-    fn from_manifest(args: &Value, manifest: PluginManifest) -> Result<Self, DaemonError> {
+    fn from_manifest(
+        args: &Value,
+        manifest: PluginManifest,
+        ppc_socket_root: &str,
+    ) -> Result<Self, PpcError> {
         let manifest_for_package = manifest.clone();
-        let ppc_socket_root = ppc_socket_root(args);
         let package_roots = package_roots(args, &manifest)?;
         let layer_stack_root = args
             .get("layer_stack_root")
@@ -126,7 +125,7 @@ impl ParsedEnsure {
             &manifest,
             &service_keys,
             &registered_ops,
-            &ppc_socket_root,
+            ppc_socket_root,
             &package_roots,
         )?;
         Ok(Self {
@@ -236,7 +235,6 @@ fn service_initial_status_message(service_mode: ServiceMode) -> String {
             "process-backed PPC execution is not started".to_owned()
         }
         ServiceMode::OneshotOverlay => "oneshot overlay worker starts per operation".to_owned(),
-        _ => "unsupported plugin service mode".to_owned(),
     }
 }
 
@@ -303,7 +301,7 @@ fn resolve_package_relative_executable(program: &str, working_dir: &Path) -> Opt
 fn service_keys_for_manifest(
     args: &Value,
     manifest: &PluginManifest,
-) -> Result<BTreeMap<String, PluginServiceKey>, DaemonError> {
+) -> Result<BTreeMap<String, PluginServiceKey>, PluginError> {
     if manifest.services.is_empty() {
         return Ok(BTreeMap::new());
     }
@@ -326,24 +324,9 @@ fn service_keys_for_manifest(
             Ok((service.service_id.clone(), key))
         })
         .collect::<Result<BTreeMap<_, _>, PluginError>>()
-        .map_err(DaemonError::from)
 }
 
-fn ppc_socket_root(args: &Value) -> String {
-    #[cfg(test)]
-    {
-        if let Some(root) = args.get("ppc_socket_root").and_then(Value::as_str) {
-            return root.to_owned();
-        }
-    }
-    let _ = args;
-    plugin_runtime_config()
-        .ppc_root
-        .to_string_lossy()
-        .into_owned()
-}
-
-fn require_string(args: &Value, key: &str) -> Result<String, DaemonError> {
+fn require_string(args: &Value, key: &str) -> Result<String, PluginError> {
     let value = args
         .get(key)
         .and_then(Value::as_str)
@@ -351,33 +334,33 @@ fn require_string(args: &Value, key: &str) -> Result<String, DaemonError> {
         .trim()
         .to_owned();
     if value.is_empty() {
-        return Err(DaemonError::Plugin(PluginError::Ensure(format!(
+        return Err(PluginError::Ensure(format!(
             "api.plugin.ensure requires {key}"
-        ))));
+        )));
     }
     Ok(value)
 }
 
-fn validate_public_identifier(field: &str, value: &str) -> Result<(), DaemonError> {
+fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginError> {
     if value.is_empty() {
-        return Err(DaemonError::Plugin(PluginError::Ensure(format!(
+        return Err(PluginError::Ensure(format!(
             "api.plugin.ensure requires {field} name"
-        ))));
+        )));
     }
     let mut chars = value.chars();
     match chars.next() {
         Some(c) if c == '_' || c.is_ascii_alphabetic() => {}
         _ => {
-            return Err(DaemonError::Plugin(PluginError::Ensure(format!(
+            return Err(PluginError::Ensure(format!(
                 "{field} must start with an ASCII letter or underscore"
-            ))));
+            )));
         }
     }
     if chars.all(|c| c == '_' || c.is_ascii_alphanumeric()) {
         Ok(())
     } else {
-        Err(DaemonError::Plugin(PluginError::Ensure(format!(
+        Err(PluginError::Ensure(format!(
             "{field} contains unsupported characters"
-        ))))
+        )))
     }
 }

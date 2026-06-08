@@ -1,11 +1,9 @@
 //! eos-agent-def — agent profile definitions, the Markdown+frontmatter loader,
 //! the read-only agent registry, and the pure fragments of profile validation.
 //!
-//! This near-leaf crate owns the static identity of an agent profile: the
-//! [`AgentType`] / [`AgentRole`] vocabularies, the [`AgentName`] newtype, the
-//! [`AgentDefinition`] value type (all fields from `agents/definition/model.py`),
-//! the [`load_agents_dir`] / [`load_agents_tree`] loaders, and the
-//! [`AgentRegistry`] lookup built via [`AgentRegistryBuilder`].
+//! This near-leaf crate owns filesystem loading and validation for agent
+//! profiles. Passive agent DTOs and the read-only registry are contract-floor
+//! types in `eos-types` and are re-exported here during the migration.
 //!
 //! It deliberately does **not** build `ToolSpec`s, resolve the `model: inherit`
 //! sentinel, materialize the effective visible tool set, own the

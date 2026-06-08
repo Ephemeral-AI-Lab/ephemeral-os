@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 
-use eos_plugin::{PluginError, PpcEnvelope};
+use crate::{PluginError, PpcEnvelope};
 
-use crate::PpcError;
+use crate::host::PpcError;
 
 pub(super) type CallbackHandler =
     Arc<dyn Fn(PpcEnvelope) -> Result<PpcEnvelope, PpcError> + Send + Sync>;

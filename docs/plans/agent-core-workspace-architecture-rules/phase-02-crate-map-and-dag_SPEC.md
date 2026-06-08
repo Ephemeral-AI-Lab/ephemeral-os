@@ -33,19 +33,21 @@ placements those inversions require.
 ## Lock reconciliation (read first)
 
 Phase 00 (the accepted lock) freezes the 10-crate map, vocabulary, ownership, and
-parallel lanes, but does **not** contain a per-crate dependency DAG. This spec is
-the authoritative DAG and should be ratified back into Phase 00 before the
-destructive lanes start.
+parallel lanes, but originally did **not** contain a per-crate dependency DAG.
+This spec is the authoritative DAG and has been ratified back into Phase 00
+before the destructive lanes start.
 
 Two prior elaborations disagreed: `index.md`'s mermaid drew
 `Workflow --> AgentRun`, while this DAG has no such edge.
 **Resolution: `eos-workflow` does not depend on `eos-agent-run`.** Workflow spawns
 runs only through an injected `AgentRunApi` port defined in `eos-types`; the
 concrete run lifecycle is wired at the `eos-agent-core` composition root. The
-`index.md` mermaid `Workflow --> AgentRun` edge should be deleted to match.
+`index.md` mermaid now records `Workflow --> Tool` and `Workflow --> Types`
+instead.
 
-Phase 00's retired-crate list also names `eos-agent-api`, which never existed; the
-real retired crate is `eos-agent-ports`. Correct that name when ratifying.
+Phase 00's retired-crate list previously named `eos-agent-api`, which never
+existed; the real retired crate is `eos-agent-ports`, and the lock plus guard now
+use only the real crate name.
 
 ## Local Architecture
 
@@ -127,14 +129,45 @@ preference, forces these placements:
 | `WorkflowApi` (was `workflow_api.rs`) | `eos-types` (rename) | consumed by tool + engine; implemented by workflow |
 | persistence store traits (`AgentRunStore`, …) | `eos-types/ports/` → `stores.rs` | drops banned `port` vocab |
 | neutral LLM DTOs: `Message`, `ContentBlock`, `MessageRole`, `ToolSpec` | `eos-llm-client` | consumed by tool, engine, records, testkit; sinking them severs `tool -> llm-client` and `records -> llm-client` |
-| agent DTOs: `AgentName`, `AgentDefinition`, `AgentRole`, `AgentType`, read-only `AgentRegistry` | `eos-agent-def` | consumed by workflow + tool + agent-run; none can reach the facade |
+| agent DTOs: `AgentName`, `AgentDefinition`, `AgentType`, read-only `AgentRegistry` + in-memory builder | `eos-agent-def` | consumed by workflow + tool + agent-run; none can reach the facade |
 | `parse_markdown_frontmatter` (pure parser) | `eos-config/markdown.rs` | shared by tool (skills) and the agent-def/plugin loaders; pure, no I/O |
 | `AuditSink` trait + audit event/node DTOs | `eos-audit` | only if engine/run code emits audit; the file sink impl stays in the facade |
 
-`eos-types` stays behavior-free: no `load()`, no registry builder, no provider
-encoders, no I/O. The `*Api` trait type names are tolerated as external-contract
-language; only the *module* names `workflow_api.rs` / `agent_run_api.rs` are
-banned and are replaced by `contracts.rs`.
+`eos-types` stays behavior-free: no `load()`, no filesystem registry builder, no
+provider encoders, no I/O. A passive in-memory `AgentRegistryBuilder` is allowed
+only to assemble already-loaded `AgentDefinition` values. The `*Api` trait type
+names are tolerated as external-contract language; only the *module* names
+`workflow_api.rs` / `agent_run_api.rs` are banned and are replaced by
+`contracts.rs`.
+
+### Agent type launch classes
+
+`AgentType` is the only launch/dispatch axis on the agent profile. There is no
+separate `AgentRole`: a run's workflow role is the `TaskRole` on its lineage row
+(`root`, `planner`, `generator`, `reducer`), and a parented run's launch class is
+the `ParentedRunKind` on its run row (`subagent`, `advisor`); neither is a field
+on the profile. The target `AgentType` values are:
+
+| `AgentType` | Launcher | Required runner rule |
+| --- | --- | --- |
+| `agent` | root and workflow launches | task-owned runs (root/planner/generator/reducer) require `agent` |
+| `subagent` | `run_subagent` | subagent runs require `subagent` |
+| `advisor` | `ask_advisor` | advisor runs require `advisor` |
+
+There is no generic standalone `agent` launch: every top-level run of a request
+is a root task run, so `agent` covers root and workflow roles only.
+
+The advisor profile is therefore `agent_type: advisor` with no role field. This
+removes the current profile-name convention where advisor is encoded as a plain
+`agent`, and lets `eos-agent-run` validate advisor launches the same way it
+validates subagent launches.
+
+Behavior that previously keyed off `AgentDefinition.role` re-anchors on the
+task's `TaskRole` and the profile's `AgentType`: the planner's
+generator-capability check and the context-builder/context-recipe selection read
+the `TaskRole` the agent is admitted to, not a workflow role pinned on the
+profile. An `agent`-type profile is therefore not bound to a single workflow
+role.
 
 ## Edges that require migration, not a move
 
@@ -185,6 +218,7 @@ There is no generic final `eos-config` crate and no replacement loader crate.
   runtime wiring, the audit file sink, the plugin catalog, the agent-definition
   loader, and the config file-merge loader.
 - `eos-agent-run` owns run lifecycle and implements `eos-types::AgentRunApi`; it
+  validates `AgentType` launch classes against the requested record kind and
   depends on engine services, not engine internals.
 - `eos-engine` owns execution and depends on `eos-tool` for tool framework
   contracts; it consumes `dyn AgentRunApi` / `dyn WorkflowApi` from `eos-types`,
@@ -199,8 +233,8 @@ There is no generic final `eos-config` crate and no replacement loader crate.
   `client` / `providers` / `stream`, not `services`, and no longer owns the
   neutral transcript DTOs.
 - `eos-types` owns passive DTOs, store traits, cross-cutting trait ports, the
-  neutral LLM DTOs, the agent-definition DTOs, and the pure frontmatter parser.
-  It holds no behavior or I/O.
+  neutral LLM DTOs, the agent-definition DTOs (including `AgentType::Advisor`),
+  and the pure frontmatter parser. It holds no behavior or I/O.
 - `eos-sandbox-port` remains the only port-named crate.
 
 ## Resulting Workspace Manifest Shape
@@ -237,7 +271,7 @@ agent-core/crates/
 │       ├── lib.rs · error.rs · ids.rs · json.rs · time.rs
 │       ├── frontmatter.rs           # new   from eos-config::parse_markdown_frontmatter (pure)
 │       ├── llm.rs                   # new   from eos-llm-client: Message/ContentBlock/MessageRole/ToolSpec
-│       ├── agent.rs                 # new   from eos-agent-def: AgentName/Definition/Role/Type + read-only AgentRegistry
+│       ├── agent.rs                 # new   from eos-agent-def: AgentName/Definition/Type + read-only AgentRegistry
 │       ├── stores.rs                # renamed from ports/ persistence traits
 │       ├── contracts.rs             # AgentRunApi (from eos-agent-ports) + WorkflowApi (was workflow_api.rs)
 │       ├── state.rs
@@ -313,21 +347,22 @@ budget guard must confirm no logic lands there.
 
 | Item | Status |
 | --- | --- |
-| Ratify this DAG + contract floor into Phase 00 lock | Not started |
-| Add target crate names to workspace guard | Not started |
-| Sink LLM/agent/contract DTOs + frontmatter parser into `eos-types` | Not started |
+| Ratify this DAG + contract floor into Phase 00 lock | Done (2026-06-09) |
+| Add target crate names to workspace guard | Done (2026-06-09; stale `eos-agent-api` retired alias removed) |
+| Sink LLM/agent/contract DTOs + frontmatter parser into `eos-types` | Done (2026-06-09; `AgentType::Advisor`, neutral LLM DTOs, `AgentRunApi` contracts, `WorkflowApi`, and pure frontmatter parser now live in `eos-types`) |
+| Remove agent-profile role axis (`AgentRole`, `AgentDefinition.role`, and `role:` frontmatter) | Not started |
 | Fold `eos-runtime` lib into `eos-agent-core/src/runtime/`; relocate bin to backend-server | Not started |
 | Rename `eos-tools` → `eos-tool`; rename `eos-agent-runner` → `eos-agent-run` | Not started |
 | Fold `eos-tool-ports` into `eos-tool` (+ contracts to `eos-types`) | Not started |
-| Split `eos-agent-ports` per the contract floor | Not started |
+| Split `eos-agent-ports` per the contract floor | In progress (2026-06-09; agent-run lifecycle contracts moved to `eos-types`; metadata/state contracts still need a tool/audit-safe split) |
 | Fold `eos-agent-message-records` into `eos-engine/src/records.rs` | Not started |
 | Fold `eos-skills` into `eos-tool/src/tools/skills.rs` | Not started |
 | Fold `eos-plugin-catalog` into `eos-agent-core/src/runtime/plugins.rs` | Not started |
-| Fold `eos-agent-def`: DTOs → `eos-types`, loader → `eos-agent-core/src/agents.rs` | Not started |
-| Dissolve `eos-config`: structs to owners, parser → types, loader → facade | Not started |
+| Fold `eos-agent-def`: DTOs → `eos-types`, loader → `eos-agent-core/src/agents.rs` | In progress (2026-06-09; DTOs and passive registry moved, loader still local) |
+| Dissolve `eos-config`: structs to owners, parser → types, loader → facade | In progress (2026-06-09; pure parser moved, config structs/loader still local) |
 | Fold `eos-audit`: sink → facade, `AuditSink` trait → `eos-types` | Not started |
-| Update workspace dependencies and internal imports | Not started |
-| Update dependency DAG guard to the target edge set | Not started |
+| Update workspace dependencies and internal imports | In progress (2026-06-09; staged imports updated for completed sinks) |
+| Update dependency DAG guard to the target edge set | Done (2026-06-09; staged legacy graph remains active until the final crate map is present) |
 
 ## Acceptance Criteria
 
@@ -344,6 +379,9 @@ budget guard must confirm no logic lands there.
   edge to `eos-agent-run` or `eos-workflow`.
 - The shared frontmatter parser resolves from `eos-types`; the config file loader
   resolves from `eos-agent-core/src/runtime/config.rs`.
+- Agent profiles and `AgentDefinition` expose `AgentType` only. There is no
+  `AgentRole` enum, no `AgentDefinition.role`, and no `role:` frontmatter field;
+  planner/generator/reducer/root are `TaskRole` lineage coordinates.
 - `eos-agent-core` ships as a library with no `main.rs`; the process binary lives
   in `backend-server`.
 - The internal DAG guard passes with the target edge set; `crate_inventory` and

@@ -5,9 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-# eos-config owns the shared `---` YAML frontmatter split (parse_markdown_frontmatter),
-# the only use of this edge — the skill root itself is passed in by eos-runtime.
-eos-config.workspace = true
+eos-types.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 thiserror.workspace = true

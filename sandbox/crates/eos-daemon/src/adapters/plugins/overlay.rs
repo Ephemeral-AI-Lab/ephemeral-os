@@ -28,7 +28,7 @@ use crate::adapters::overlay::{
     run_ns_runner_child, DaemonPublisherPort, RunDirCleanup,
 };
 
-use super::state::PluginOperationRoute;
+use eos_plugin::host::route::PluginOperationRoute;
 
 pub(crate) struct PluginOverlayCommand {
     pub(crate) layer_stack_root: PathBuf,

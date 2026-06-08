@@ -488,14 +488,14 @@
 <span class="rs-comment">//! Each skill is a subdirectory of the configured root containing a `SKILL.md`</span>
 <span class="rs-comment">//! (with optional `---` YAML frontmatter) and an optional `references/` directory</span>
 <span class="rs-comment">//! of `*.md` files. The `---` split itself is **not** re-implemented here: it is</span>
-<span class="rs-comment">//! the shared [`eos_config::parse_markdown_frontmatter`] helper. Only the</span>
+<span class="rs-comment">//! the shared [`eos_types::parse_markdown_frontmatter`] helper. Only the</span>
 <span class="rs-comment">//! skills-specific `name`/`description` fallback lives in this module.</span>
 
 <span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
 <span class="rs-kw">use</span> std::fs;
 <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
 
-<span class="rs-kw">use</span> eos_config::parse_markdown_frontmatter;
+<span class="rs-kw">use</span> eos_types::parse_markdown_frontmatter;
 <span class="rs-kw">use</span> serde_yaml::<span class="rs-type">Value</span>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::definition::{<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>};

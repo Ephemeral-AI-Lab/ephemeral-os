@@ -7,7 +7,6 @@
 
 mod connected;
 mod dispatch;
-mod ensure_args;
 mod occ_callbacks;
 mod overlay;
 mod process;
@@ -37,8 +36,9 @@ use crate::error::DaemonError;
 use connected::response_payload_from_reply;
 #[cfg(test)]
 use dispatch::route_for_op;
-use ensure_args::{loaded_matches_parsed, validate_plugin_caller_fields, ParsedEnsure};
-use eos_plugin_host::{ensure_package, needs_upload_response, PackageEnsureReport};
+use eos_plugin::host::ensure_args::{validate_plugin_caller_fields, ParsedEnsure};
+use eos_plugin::host::{ensure_package, needs_upload_response, PackageEnsureReport};
+use state::loaded_matches_parsed;
 #[cfg(test)]
 use refresh::WORKSPACE_SNAPSHOT_REFRESH_OP;
 use refresh::{probe_service_health, service_health_probe_targets};
@@ -53,7 +53,7 @@ use service::{
     stop_services_for_layer_stack_root as stop_services_for_layer_stack_root_in_state,
 };
 #[cfg(test)]
-use state::MAX_PLUGIN_CALLER_FIELD_CHARS;
+use eos_plugin::host::ensure_args::MAX_PLUGIN_CALLER_FIELD_CHARS;
 use state::{
     connected_ppc_routes, connected_ppc_services, loaded_plugin_values, lock_state, process_values,
     route_values, setup_failure_key, setup_failure_values, LoadedPluginRuntime,
@@ -78,6 +78,23 @@ fn plugin_runtime_config_cell() -> &'static RwLock<PluginRuntimeConfig> {
     CONFIG.get_or_init(|| RwLock::new(default_plugin_runtime_config()))
 }
 
+/// PPC socket root for `ParsedEnsure` spec construction. Reads the daemon
+/// runtime config global, so it stays daemon-side and is threaded into the
+/// host-neutral parser.
+fn ppc_socket_root(args: &Value) -> String {
+    #[cfg(test)]
+    {
+        if let Some(root) = args.get("ppc_socket_root").and_then(Value::as_str) {
+            return root.to_owned();
+        }
+    }
+    let _ = args;
+    plugin_runtime_config()
+        .ppc_root
+        .to_string_lossy()
+        .into_owned()
+}
+
 fn default_plugin_runtime_config() -> PluginRuntimeConfig {
     PluginRuntimeConfig {
         ppc_root: PathBuf::from("/eos/plugin/ppc"),
@@ -90,7 +107,7 @@ fn default_plugin_runtime_config() -> PluginRuntimeConfig {
 pub fn op_ensure(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     ensure_plugin_family_allowed(args)?;
 
-    let parsed = ParsedEnsure::from_args(args)?;
+    let parsed = ParsedEnsure::from_args(args, &ppc_socket_root(args))?;
     let start_services = args
         .get("start_services")
         .and_then(Value::as_bool)
@@ -286,7 +303,7 @@ fn register_ppc_client_for_tests(
     }
     state.service_ppc_clients.insert(
         service_instance_id,
-        Arc::new(eos_plugin_host::PpcClient::new(stream)?),
+        Arc::new(eos_plugin::host::PpcClient::new(stream)?),
     );
     drop(state);
     Ok(())

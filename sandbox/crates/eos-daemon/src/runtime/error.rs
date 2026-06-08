@@ -93,13 +93,13 @@ impl DaemonError {
     }
 }
 
-impl From<eos_plugin_host::PpcError> for DaemonError {
+impl From<eos_plugin::host::PpcError> for DaemonError {
     /// Fold a plugin-host PPC / package failure onto the matching daemon
     /// variant. `Plugin` keeps the inner [`eos_plugin::PluginError`] so
     /// `wire_kind` still classifies `ForbiddenInIsolatedWorkspace`; `Callback`
     /// carries an already-formatted message that re-wraps as a PPC error.
-    fn from(err: eos_plugin_host::PpcError) -> Self {
-        use eos_plugin_host::PpcError;
+    fn from(err: eos_plugin::host::PpcError) -> Self {
+        use eos_plugin::host::PpcError;
         match err {
             PpcError::Plugin(source) => Self::Plugin(source),
             PpcError::Protocol(source) => Self::Protocol(source),

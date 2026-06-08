@@ -27,7 +27,6 @@ pub const TARGET_CRATES: &[&str] = &[
 
 pub const RETIRED_CRATES: &[&str] = &[
     "eos-runtime",
-    "eos-agent-api",
     "eos-agent-ports",
     "eos-tool-ports",
     "eos-agent-message-records",
@@ -72,7 +71,7 @@ pub const RETIRED_CRATE_RULES: &[RetiredCrateRule] = &[
     RetiredCrateRule {
         retired: "eos-agent-ports",
         successor: "eos-agent-core",
-        target: "split contracts into eos-agent-core/eos-agent-run/eos-engine/eos-types",
+        target: "split shared contracts into eos-types and facade-private wiring into eos-agent-core",
     },
     RetiredCrateRule {
         retired: "eos-tool-ports",
@@ -101,18 +100,18 @@ pub const RETIRED_CRATE_RULES: &[RetiredCrateRule] = &[
     },
     RetiredCrateRule {
         retired: "eos-plugin-catalog",
-        successor: "eos-tool",
-        target: "fold plugin catalog into eos-tool or eos-agent-core/runtime/plugins.rs",
+        successor: "eos-agent-core",
+        target: "fold plugin catalog into eos-agent-core/runtime/plugins.rs",
     },
     RetiredCrateRule {
         retired: "eos-agent-def",
         successor: "eos-agent-core",
-        target: "fold agent definitions into eos-agent-core/src/agents.rs",
+        target: "move agent DTOs to eos-types and loader/validation to eos-agent-core/src/agents.rs",
     },
     RetiredCrateRule {
         retired: "eos-config",
         successor: "eos-agent-core",
-        target: "move config structs to owning crates",
+        target: "move config structs to owners, pure parser to eos-types, loader to eos-agent-core/runtime/config.rs",
     },
     RetiredCrateRule {
         retired: "eos-audit",

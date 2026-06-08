@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>30</b><span>items</span></div>
+  <div><b>32</b><span>items</span></div>
   <div><b>16</b><span>fields</span></div>
   <div><b>21</b><span>methods</span></div>
 </section>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-runner.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-runner--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-runner--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-agent-runner--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link active" href="eos-agent-runner--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-agent-runner--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="agent_run_service crates/eos-agent-runner/src/agent_run_service.rs RuntimeStateRecorder RuntimeStateRemover AgentRunService impl std :: fmt :: Debug for AgentRunService impl AgentRunService impl AgentRunApi for AgentRunService forward_agent_loop_outcome agent_run_outcome_from_loop loop_messages_to_llm_messages tool_result_from_payload agent_type_value">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-runner.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-runner--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-runner--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-agent-runner--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link active" href="eos-agent-runner--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-agent-runner--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="agent_run_service crates/eos-agent-runner/src/agent_run_service.rs RuntimeStateRecorder RuntimeStateRemover AgentRunService impl std :: fmt :: Debug for AgentRunService impl AgentRunService impl AgentRunApi for AgentRunService forward_agent_loop_outcome agent_run_outcome_from_loop loop_messages_to_llm_messages tool_result_from_payload agent_type_value expected_agent_type record_kind_declares_required_agent_type">
   <div class="module-head">
     <div>
       <h2>src/agent_run_service.rs</h2>
@@ -52,7 +52,7 @@
       <span>file owns</span>
       <span>1 types</span>
       <span>3 impls</span>
-      <span>5 fns</span>
+      <span>7 fns</span>
       <span>11 methods</span>
     </div>
   </div>
@@ -189,7 +189,7 @@
         persistence_requested: bool,
         outcome: <span class="rs-type">AgentLoopOutcome</span>,
     ) -&gt; <span class="rs-type">AgentRunOutcome</span> {
-        <span class="rs-kw">let</span> agent_outcome = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-383">agent_run_outcome_from_loop</a>(agent_run_id.clone(), outcome);
+        <span class="rs-kw">let</span> agent_outcome = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-381">agent_run_outcome_from_loop</a>(agent_run_id.clone(), outcome);
         <span class="rs-kw">let</span> submission = agent_outcome
             .submission_payload
             .as_ref()
@@ -259,16 +259,14 @@
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(agent_def) = <span class="rs-self">self</span>.agent_registry.get(&amp;agent_name) <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">AgentNotRegistered</span>(requested_agent_name));
         };
-        <span class="rs-kw">if</span> matches!(
-            request.record_kind,
-            <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Subagent</span> { .. }
-        ) &amp;&amp; agent_def.agent_type != <span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span>
-        {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">WrongAgentType</span> {
-                agent_name: requested_agent_name,
-                expected: &quot;subagent&quot;,
-                actual: <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-445">agent_type_value</a>(agent_def.agent_type),
-            });
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(expected) = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;request.record_kind) {
+            <span class="rs-kw">if</span> agent_def.agent_type != expected {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">WrongAgentType</span> {
+                    agent_name: requested_agent_name,
+                    expected: <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a>(expected),
+                    actual: <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a>(agent_def.agent_type),
+                });
+            }
         }
 
         <span class="rs-kw">let</span> agent_def = (**agent_def).clone();
@@ -300,7 +298,7 @@
         <span class="rs-kw">let</span> service = <span class="rs-self">self</span>.clone();
         <span class="rs-kw">let</span> forward_agent_run_id = agent_run_id.clone();
         tokio::spawn(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
-            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-345">forward_agent_loop_outcome</a>(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-343">forward_agent_loop_outcome</a>(
                 service,
                 forward_agent_run_id,
                 persistence_requested,
@@ -312,13 +310,13 @@
         <span class="rs-type">Ok</span>(agent_run_id)
     }
 </code></pre>
-</details></td></tr><tr id="method-wait-for-agent-outcome-277"><td>method</td><td>wait_for_agent_outcome</td><td><code>async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#method-wait-for-agent-outcome-277">wait_for_agent_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; AgentRunOutcome , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-wait-for-agent-outcome-275"><td>method</td><td>wait_for_agent_outcome</td><td><code>async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#method-wait-for-agent-outcome-275">wait_for_agent_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; AgentRunOutcome , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-wait-for-agent-outcome-277">wait_for_agent_outcome</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-wait-for-agent-outcome-275">wait_for_agent_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunError</span>&gt; {
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-295">poll_agent_run_outcome</a>(agent_run_id).<span class="rs-kw">await</span>? {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-293">poll_agent_run_outcome</a>(agent_run_id).<span class="rs-kw">await</span>? {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(outcome);
         }
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rx = <span class="rs-self">self</span>.active_agent_runs.<a class="symbol-link rs-fn" href="eos-agent-runner.html#method-subscribe-92">subscribe</a>(agent_run_id).<span class="rs-kw">await</span>?;
@@ -332,9 +330,9 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-poll-agent-run-outcome-295"><td>method</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-295">poll_agent_run_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-poll-agent-run-outcome-293"><td>method</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-293">poll_agent_run_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-295">poll_agent_run_outcome</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-293">poll_agent_run_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt;, <span class="rs-type">AgentRunError</span>&gt; {
@@ -352,9 +350,9 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-persistence-rs.html#item-fn-completion-from-agent-run-65">completion_from_agent_run</a>(agent_run_id, &amp;run))
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-313"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#method-cancel-agent-run-313">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-311"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#method-cancel-agent-run-311">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-cancel-agent-run-313">cancel_agent_run</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-cancel-agent-run-311">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -408,17 +406,17 @@
   <div class="tags"></div>
 
   <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:26</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-forward-agent-loop-outcome-345" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn forward_agent_loop_outcome private async fn forward_agent_loop_outcome (service : AgentRunService , agent_run_id : AgentRunId , persistence_requested : bool , outcome_receiver : oneshot :: Receiver &lt; AgentLoopOutcome &gt; ,) crates/eos-agent-runner/src/agent_run_service.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-forward-agent-loop-outcome-343" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn forward_agent_loop_outcome private async fn forward_agent_loop_outcome (service : AgentRunService , agent_run_id : AgentRunId , persistence_requested : bool , outcome_receiver : oneshot :: Receiver &lt; AgentLoopOutcome &gt; ,) crates/eos-agent-runner/src/agent_run_service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>forward_agent_loop_outcome</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-345">forward_agent_loop_outcome</a> (service : <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-struct-AgentRunService-28">AgentRunService</a> , agent_run_id : AgentRunId , persistence_requested : bool , outcome_receiver : oneshot :: Receiver &lt; AgentLoopOutcome &gt; ,)</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-343">forward_agent_loop_outcome</a> (service : <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-struct-AgentRunService-28">AgentRunService</a> , agent_run_id : AgentRunId , persistence_requested : bool , outcome_receiver : oneshot :: Receiver &lt; AgentLoopOutcome &gt; ,)</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-345">forward_agent_loop_outcome</a>(
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-343">forward_agent_loop_outcome</a>(
     service: <a class="symbol-link rs-type" href="eos-agent-runner--src-agent-run-service-rs.html#item-struct-AgentRunService-28">AgentRunService</a>,
     agent_run_id: <span class="rs-type">AgentRunId</span>,
     persistence_requested: bool,
@@ -458,22 +456,22 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:345</p>
-</article><article id="item-fn-agent-run-outcome-from-loop-383" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_run_outcome_from_loop private fn agent_run_outcome_from_loop (agent_run_id : AgentRunId , outcome : AgentLoopOutcome ,) -&gt; AgentRunOutcome crates/eos-agent-runner/src/agent_run_service.rs  ">
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:343</p>
+</article><article id="item-fn-agent-run-outcome-from-loop-381" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_run_outcome_from_loop private fn agent_run_outcome_from_loop (agent_run_id : AgentRunId , outcome : AgentLoopOutcome ,) -&gt; AgentRunOutcome crates/eos-agent-runner/src/agent_run_service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>agent_run_outcome_from_loop</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-383">agent_run_outcome_from_loop</a> (agent_run_id : AgentRunId , outcome : AgentLoopOutcome ,) -&gt; AgentRunOutcome</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-381">agent_run_outcome_from_loop</a> (agent_run_id : AgentRunId , outcome : AgentLoopOutcome ,) -&gt; AgentRunOutcome</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-383">agent_run_outcome_from_loop</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-381">agent_run_outcome_from_loop</a>(
     agent_run_id: <span class="rs-type">AgentRunId</span>,
     outcome: <span class="rs-type">AgentLoopOutcome</span>,
 ) -&gt; <span class="rs-type">AgentRunOutcome</span> {
-    <span class="rs-kw">let</span> message_history = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-411">loop_messages_to_llm_messages</a>(outcome.final_conversation_messages);
+    <span class="rs-kw">let</span> message_history = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-409">loop_messages_to_llm_messages</a>(outcome.final_conversation_messages);
     <span class="rs-kw">let</span> total_token_count = outcome.total_token_count;
     <span class="rs-kw">match</span> outcome.kind {
         <span class="rs-type">AgentLoopOutcomeKind</span>::<span class="rs-type">TerminalToolSubmitted</span> {
@@ -499,18 +497,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:383</p>
-</article><article id="item-fn-loop-messages-to-llm-messages-411" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn loop_messages_to_llm_messages private fn loop_messages_to_llm_messages (messages : Vec &lt; eos_agent_ports :: AgentLoopMessage &gt;) -&gt; Vec &lt; Message &gt; crates/eos-agent-runner/src/agent_run_service.rs  ">
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:381</p>
+</article><article id="item-fn-loop-messages-to-llm-messages-409" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn loop_messages_to_llm_messages private fn loop_messages_to_llm_messages (messages : Vec &lt; eos_agent_ports :: AgentLoopMessage &gt;) -&gt; Vec &lt; Message &gt; crates/eos-agent-runner/src/agent_run_service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>loop_messages_to_llm_messages</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-411">loop_messages_to_llm_messages</a> (messages : Vec &lt; eos_agent_ports :: AgentLoopMessage &gt;) -&gt; Vec &lt; Message &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-409">loop_messages_to_llm_messages</a> (messages : Vec &lt; eos_agent_ports :: AgentLoopMessage &gt;) -&gt; Vec &lt; Message &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-411">loop_messages_to_llm_messages</a>(messages: <span class="rs-type">Vec</span>&lt;eos_agent_ports::<span class="rs-type">AgentLoopMessage</span>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-409">loop_messages_to_llm_messages</a>(messages: <span class="rs-type">Vec</span>&lt;eos_agent_ports::<span class="rs-type">AgentLoopMessage</span>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; {
     messages
         .into_iter()
         .filter_map(|message| <span class="rs-kw">match</span> message {
@@ -523,18 +521,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:411</p>
-</article><article id="item-fn-tool-result-from-payload-422" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_from_payload private fn tool_result_from_payload (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool_ports :: ToolResult crates/eos-agent-runner/src/agent_run_service.rs  ">
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:409</p>
+</article><article id="item-fn-tool-result-from-payload-420" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_from_payload private fn tool_result_from_payload (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool_ports :: ToolResult crates/eos-agent-runner/src/agent_run_service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_result_from_payload</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-422">tool_result_from_payload</a> (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool_ports :: ToolResult</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a> (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool_ports :: ToolResult</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-422">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool_ports::<span class="rs-type">ToolResult</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool_ports::<span class="rs-type">ToolResult</span> {
     <span class="rs-kw">let</span> output = payload
         .get(&quot;output&quot;)
         .and_then(serde_json::<span class="rs-type">Value</span>::as_str)
@@ -559,27 +557,90 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:422</p>
-</article><article id="item-fn-agent-type-value-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_type_value private const fn agent_type_value (agent_type : AgentType) -&gt; &amp; 'static str crates/eos-agent-runner/src/agent_run_service.rs  ">
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:420</p>
+</article><article id="item-fn-agent-type-value-443" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_type_value private const fn agent_type_value (agent_type : AgentType) -&gt; &amp; 'static str crates/eos-agent-runner/src/agent_run_service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>agent_type_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-445">agent_type_value</a> (agent_type : AgentType) -&gt; &amp; &#x27;static str</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a> (agent_type : AgentType) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-445">agent_type_value</a>(agent_type: <span class="rs-type">AgentType</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a>(agent_type: <span class="rs-type">AgentType</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> agent_type {
         <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span> =&gt; &quot;agent&quot;,
         <span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span> =&gt; &quot;subagent&quot;,
+        <span class="rs-type">AgentType</span>::<span class="rs-type">Advisor</span> =&gt; &quot;advisor&quot;,
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:445</p>
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:443</p>
+</article><article id="item-fn-expected-agent-type-451" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn expected_agent_type private const fn expected_agent_type (record_kind : &amp; AgentRunMessageRecordKind) -&gt; Option &lt; AgentType &gt; crates/eos-agent-runner/src/agent_run_service.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>expected_agent_type</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a> (record_kind : &amp; AgentRunMessageRecordKind) -&gt; Option &lt; AgentType &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(record_kind: &amp;<span class="rs-type">AgentRunMessageRecordKind</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentType</span>&gt; {
+    <span class="rs-kw">match</span> record_kind {
+        <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Root</span>
+        | <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">WorkflowTask</span> { .. }
+        | <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Agent</span> =&gt; <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>),
+        <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Subagent</span> { .. } =&gt; <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span>),
+        <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Advisor</span> { .. } =&gt; <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Advisor</span>),
+        _ =&gt; <span class="rs-type">None</span>,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:451</p>
+</article><article id="item-fn-record-kind-declares-required-agent-type-466" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_kind_declares_required_agent_type private fn record_kind_declares_required_agent_type () crates/eos-agent-runner/src/agent_run_service.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>record_kind_declares_required_agent_type</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-record-kind-declares-required-agent-type-466">record_kind_declares_required_agent_type</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-record-kind-declares-required-agent-type-466">record_kind_declares_required_agent_type</a>() {
+        <span class="rs-kw">let</span> parent_agent_run_id = <span class="rs-type">AgentRunId</span>::new_v4();
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Root</span>),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>)
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Agent</span>),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>)
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Subagent</span> {
+                parent_agent_run_id: parent_agent_run_id.clone(),
+            }),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span>)
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Advisor</span> {
+                parent_agent_run_id,
+            }),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Advisor</span>)
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-agent-runner/src/agent_run_service.rs:466</p>
 </article></div>
 </section></div>
 </main>
@@ -748,7 +809,7 @@
         persistence_requested: bool,
         outcome: <span class="rs-type">AgentLoopOutcome</span>,
     ) -&gt; <span class="rs-type">AgentRunOutcome</span> {
-        <span class="rs-kw">let</span> agent_outcome = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-383">agent_run_outcome_from_loop</a>(agent_run_id.clone(), outcome);
+        <span class="rs-kw">let</span> agent_outcome = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-381">agent_run_outcome_from_loop</a>(agent_run_id.clone(), outcome);
         <span class="rs-kw">let</span> submission = agent_outcome
             .submission_payload
             .as_ref()
@@ -811,16 +872,14 @@
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(agent_def) = <span class="rs-self">self</span>.agent_registry.get(&amp;agent_name) <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">AgentNotRegistered</span>(requested_agent_name));
         };
-        <span class="rs-kw">if</span> matches!(
-            request.record_kind,
-            <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Subagent</span> { .. }
-        ) &amp;&amp; agent_def.agent_type != <span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span>
-        {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">WrongAgentType</span> {
-                agent_name: requested_agent_name,
-                expected: &quot;subagent&quot;,
-                actual: <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-445">agent_type_value</a>(agent_def.agent_type),
-            });
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(expected) = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;request.record_kind) {
+            <span class="rs-kw">if</span> agent_def.agent_type != expected {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">WrongAgentType</span> {
+                    agent_name: requested_agent_name,
+                    expected: <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a>(expected),
+                    actual: <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a>(agent_def.agent_type),
+                });
+            }
         }
 
         <span class="rs-kw">let</span> agent_def = (**agent_def).clone();
@@ -852,7 +911,7 @@
         <span class="rs-kw">let</span> service = <span class="rs-self">self</span>.clone();
         <span class="rs-kw">let</span> forward_agent_run_id = agent_run_id.clone();
         tokio::spawn(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
-            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-345">forward_agent_loop_outcome</a>(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-343">forward_agent_loop_outcome</a>(
                 service,
                 forward_agent_run_id,
                 persistence_requested,
@@ -864,11 +923,11 @@
         <span class="rs-type">Ok</span>(agent_run_id)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-wait-for-agent-outcome-277">wait_for_agent_outcome</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-wait-for-agent-outcome-275">wait_for_agent_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunError</span>&gt; {
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-295">poll_agent_run_outcome</a>(agent_run_id).<span class="rs-kw">await</span>? {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-293">poll_agent_run_outcome</a>(agent_run_id).<span class="rs-kw">await</span>? {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(outcome);
         }
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rx = <span class="rs-self">self</span>.active_agent_runs.<a class="symbol-link rs-fn" href="eos-agent-runner.html#method-subscribe-92">subscribe</a>(agent_run_id).<span class="rs-kw">await</span>?;
@@ -882,7 +941,7 @@
         }
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-295">poll_agent_run_outcome</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-poll-agent-run-outcome-293">poll_agent_run_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt;, <span class="rs-type">AgentRunError</span>&gt; {
@@ -900,7 +959,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-persistence-rs.html#item-fn-completion-from-agent-run-65">completion_from_agent_run</a>(agent_run_id, &amp;run))
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-cancel-agent-run-313">cancel_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#method-cancel-agent-run-311">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -932,7 +991,7 @@
     }
 }
 
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-345">forward_agent_loop_outcome</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-forward-agent-loop-outcome-343">forward_agent_loop_outcome</a>(
     service: <a class="symbol-link rs-type" href="eos-agent-runner--src-agent-run-service-rs.html#item-struct-AgentRunService-28">AgentRunService</a>,
     agent_run_id: <span class="rs-type">AgentRunId</span>,
     persistence_requested: bool,
@@ -970,11 +1029,11 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-383">agent_run_outcome_from_loop</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-run-outcome-from-loop-381">agent_run_outcome_from_loop</a>(
     agent_run_id: <span class="rs-type">AgentRunId</span>,
     outcome: <span class="rs-type">AgentLoopOutcome</span>,
 ) -&gt; <span class="rs-type">AgentRunOutcome</span> {
-    <span class="rs-kw">let</span> message_history = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-411">loop_messages_to_llm_messages</a>(outcome.final_conversation_messages);
+    <span class="rs-kw">let</span> message_history = <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-409">loop_messages_to_llm_messages</a>(outcome.final_conversation_messages);
     <span class="rs-kw">let</span> total_token_count = outcome.total_token_count;
     <span class="rs-kw">match</span> outcome.kind {
         <span class="rs-type">AgentLoopOutcomeKind</span>::<span class="rs-type">TerminalToolSubmitted</span> {
@@ -998,7 +1057,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-411">loop_messages_to_llm_messages</a>(messages: <span class="rs-type">Vec</span>&lt;eos_agent_ports::<span class="rs-type">AgentLoopMessage</span>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-loop-messages-to-llm-messages-409">loop_messages_to_llm_messages</a>(messages: <span class="rs-type">Vec</span>&lt;eos_agent_ports::<span class="rs-type">AgentLoopMessage</span>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; {
     messages
         .into_iter()
         .filter_map(|message| <span class="rs-kw">match</span> message {
@@ -1009,7 +1068,7 @@
         .collect()
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-422">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool_ports::<span class="rs-type">ToolResult</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool_ports::<span class="rs-type">ToolResult</span> {
     <span class="rs-kw">let</span> output = payload
         .get(&quot;output&quot;)
         .and_then(serde_json::<span class="rs-type">Value</span>::as_str)
@@ -1032,10 +1091,52 @@
     }
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-445">agent_type_value</a>(agent_type: <span class="rs-type">AgentType</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-agent-type-value-443">agent_type_value</a>(agent_type: <span class="rs-type">AgentType</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> agent_type {
         <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span> =&gt; &quot;agent&quot;,
         <span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span> =&gt; &quot;subagent&quot;,
+        <span class="rs-type">AgentType</span>::<span class="rs-type">Advisor</span> =&gt; &quot;advisor&quot;,
+    }
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(record_kind: &amp;<span class="rs-type">AgentRunMessageRecordKind</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentType</span>&gt; {
+    <span class="rs-kw">match</span> record_kind {
+        <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Root</span>
+        | <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">WorkflowTask</span> { .. }
+        | <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Agent</span> =&gt; <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>),
+        <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Subagent</span> { .. } =&gt; <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span>),
+        <span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Advisor</span> { .. } =&gt; <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Advisor</span>),
+        _ =&gt; <span class="rs-type">None</span>,
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-record-kind-declares-required-agent-type-466">record_kind_declares_required_agent_type</a>() {
+        <span class="rs-kw">let</span> parent_agent_run_id = <span class="rs-type">AgentRunId</span>::new_v4();
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Root</span>),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>)
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Agent</span>),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>)
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Subagent</span> {
+                parent_agent_run_id: parent_agent_run_id.clone(),
+            }),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Subagent</span>)
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-agent-runner--src-agent-run-service-rs.html#item-fn-expected-agent-type-451">expected_agent_type</a>(&amp;<span class="rs-type">AgentRunMessageRecordKind</span>::<span class="rs-type">Advisor</span> {
+                parent_agent_run_id,
+            }),
+            <span class="rs-type">Some</span>(<span class="rs-type">AgentType</span>::<span class="rs-type">Advisor</span>)
+        );
     }
 }
 </code></pre>

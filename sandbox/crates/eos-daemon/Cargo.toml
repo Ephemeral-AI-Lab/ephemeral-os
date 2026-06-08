@@ -16,7 +16,6 @@ eos-workspace-api.workspace = true
 eos-isolated-workspace.workspace = true
 eos-ephemeral-workspace.workspace = true
 eos-plugin.workspace = true
-eos-plugin-host.workspace = true
 eos-checkpoint-host.workspace = true
 eos-workspace-run-host.workspace = true
 eos-runner.workspace = true
@@ -36,7 +35,7 @@ nix = { workspace = true, features = ["fs", "process", "signal"] }
 # Enable the package-root test seam only for the daemon's own test build; the
 # production `[dependencies]` entry above leaves it off (resolver 2 keeps the
 # dev-dependency feature out of the non-test build).
-eos-plugin-host = { workspace = true, features = ["test-root-override"] }
+eos-plugin = { workspace = true, features = ["test-root-override"] }
 
 [lints]
 workspace = true

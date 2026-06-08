@@ -11,7 +11,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::AgentDefError;
-use crate::model::{AgentDefinition, RawAgentDefinition};
+use crate::model::{definition_from_frontmatter, AgentDefinition, RawAgentDefinition};
 
 const MAIN_PROFILE_DIRNAME: &str = "main";
 const MAIN_ROLE_CONTRACT_NAME: &str = "_main_role_contract.md";
@@ -161,7 +161,7 @@ fn load_one(path: &Path) -> Result<AgentDefinition, AgentDefError> {
         }
     }
 
-    AgentDefinition::from_frontmatter(raw, path)
+    definition_from_frontmatter(raw, path)
 }
 
 fn file_stem(path: &Path) -> String {

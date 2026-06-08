@@ -30,11 +30,11 @@ fn port_crate_names_are_limited_to_sandbox_or_migration_crates() {
 }
 
 #[test]
-fn no_retired_api_facade_crate_name() {
+fn no_nonexistent_api_facade_crate_name() {
     let workspace = Workspace::load();
     assert!(
         !workspace.crate_names().contains("eos-agent-api"),
-        "naming_rules rule violated: crate `eos-agent-api` is retired; target facade is eos-agent-core"
+        "naming_rules rule violated: crate `eos-agent-api` never existed; target facade is eos-agent-core"
     );
 }
 

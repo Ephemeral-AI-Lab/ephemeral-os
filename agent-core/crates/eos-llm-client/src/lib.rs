@@ -3,12 +3,12 @@
 //! [`LlmStreamEvent`]s.
 //!
 //! This crate is the single boundary where a wire protocol (Anthropic Messages,
-//! `OpenAI` Responses) is encoded from neutral types and decoded back into neutral
-//! types. It owns [`Message`]/[`ContentBlock`], [`UsageSnapshot`], [`LlmRequest`],
-//! [`LlmStreamEvent`], [`ProviderError`], [`ToolSpec`], and the [`LlmClient`]
-//! seam (anchor §5). It depends on no provider SDK — direct `reqwest` + a
-//! hand-rolled SSE splitter only — and owns no engine-domain events, tool
-//! registry, or lifecycle policy.
+//! `OpenAI` Responses) is encoded from neutral `eos-types` DTOs and decoded back
+//! into neutral stream events. It owns [`UsageSnapshot`], [`LlmRequest`],
+//! [`LlmStreamEvent`], [`ProviderError`], and the [`LlmClient`] seam (anchor
+//! §5). It depends on no provider SDK — direct `reqwest` + a hand-rolled SSE
+//! splitter only — and owns no engine-domain events, tool registry, or lifecycle
+//! policy.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 

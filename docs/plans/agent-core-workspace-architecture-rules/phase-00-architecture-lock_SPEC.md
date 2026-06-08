@@ -19,7 +19,9 @@ module budget, or parallel work lanes must reopen Phase 0 before implementation
 continues.
 
 Amendment record: service replacement vocabulary and Rust folder-structure
-guardrails tightened by user instruction on 2026-06-09.
+guardrails tightened by user instruction on 2026-06-09. Phase 02's dependency
+DAG and contract-floor placements were ratified back into this lock on
+2026-06-09 before destructive crate moves began.
 
 ## Locked Decisions
 
@@ -28,9 +30,10 @@ guardrails tightened by user instruction on 2026-06-09.
 | external facade crate | `eos-agent-core` |
 | HTTP/path router | outside `agent-core`; belongs in `backend-server` |
 | removed runtime crate | `eos-runtime` folds into `eos-agent-core/src/runtime/` |
-| removed generic config crate | config structs live with their owning crate |
-| removed agent definition crate | agent definitions live in `eos-agent-core/src/agents.rs` |
-| removed audit crate | audit sink lives in `eos-agent-core/src/runtime/audit.rs` |
+| removed generic config crate | config structs live with their owning crate; file loading lives in `eos-agent-core/src/runtime/config.rs` |
+| removed agent definition crate | passive DTOs live in `eos-types`; filesystem loading/validation lives in `eos-agent-core/src/agents.rs` |
+| removed audit crate | audit sink lives in `eos-agent-core/src/runtime/audit.rs`; shared audit contracts live in `eos-types` only when lower crates emit audit |
+| shared contract floor | cross-crate trait ports, neutral LLM DTOs, agent DTOs, store traits, and the pure frontmatter parser live in `eos-types` |
 | only allowed port crate | `eos-sandbox-port` |
 | service meaning | sibling-crate consumed callable surface |
 | service replacement vocabulary | `runtime`, `handles`, `context`, `client`, `records` |
@@ -60,7 +63,6 @@ Retired crates:
 
 ```text
 eos-runtime
-eos-agent-api
 eos-agent-ports
 eos-tool-ports
 eos-agent-message-records
@@ -72,6 +74,30 @@ eos-agent-def
 eos-config
 eos-audit
 ```
+
+## Locked Dependency DAG
+
+Phase 02 is the authoritative crate dependency DAG. It is ratified here so the
+destructive lanes share one acyclic target:
+
+```text
+eos-types            (contract floor; no internal upstream edge)
+eos-sandbox-port  -> eos-types
+eos-llm-client    -> eos-types
+eos-db            -> eos-types
+eos-tool          -> eos-types, eos-sandbox-port
+eos-engine        -> eos-types, eos-tool, eos-llm-client, eos-sandbox-port
+eos-workflow      -> eos-types, eos-tool
+eos-agent-run     -> eos-types, eos-engine
+eos-agent-core    -> eos-types, eos-db, eos-llm-client, eos-sandbox-port,
+                     eos-tool, eos-engine, eos-workflow, eos-agent-run
+eos-testkit       -> eos-types, eos-engine, eos-agent-run, eos-llm-client,
+                     eos-sandbox-port, eos-tool   (dev-only)
+```
+
+`eos-workflow` has no crate edge to `eos-agent-run`; it starts runs through the
+`AgentRunApi` contract from `eos-types`, and the concrete run lifecycle is wired
+only at the `eos-agent-core` composition root.
 
 ## Boundary Rules
 
@@ -144,7 +170,10 @@ policy. `registry.rs` owns default tool registration, the executor trait, and
 
 ### eos-workflow
 
-Owns workflow lifecycle and sibling-facing workflow services.
+Owns workflow lifecycle and sibling-facing workflow services. It renders tool
+instructions through `eos-tool` and starts runs through an injected
+`eos-types::AgentRunApi`; it does not depend on the concrete `eos-agent-run`
+crate.
 
 ### Config, Agent Definitions, and Audit
 
@@ -153,16 +182,34 @@ There is no standalone generic crate for these concerns in the final target.
 | Concern | Owner |
 | --- | --- |
 | provider config | `eos-llm-client` |
+| agent definition DTOs | `eos-types/src/agent.rs`; `AgentType` is the launch class `agent` / `subagent` / `advisor` |
 | agent profile and definition loading | `eos-agent-core/src/agents.rs` |
 | workflow config | `eos-workflow` |
 | DB config | `eos-db` |
 | passive shared config DTO, only if unavoidable | `eos-types` |
+| pure markdown frontmatter parser | `eos-types/src/frontmatter.rs` |
+| file-merge config loader | `eos-agent-core/src/runtime/config.rs` |
 | runtime audit sink | `eos-agent-core/src/runtime/audit.rs` |
 
 ### eos-llm-client
 
-Owns outbound provider clients. It uses `client.rs`, `providers.rs`, and
-`stream.rs`, not `services.rs`.
+Owns outbound provider clients and provider-wire DTOs. It uses `client.rs`,
+`providers.rs`, and `stream.rs`, not `services.rs`; neutral transcript DTOs
+shared with tool, engine, records, and testkit live in `eos-types`.
+
+### eos-types
+
+Owns passive shared contracts: typed IDs, state DTOs, store traits,
+`AgentRunApi`, `WorkflowApi`, neutral LLM DTOs, agent-definition DTOs, audit
+contracts when needed, and the pure markdown frontmatter parser. It has no
+runtime, I/O, provider, DB, or service logic.
+
+`AgentType` is the only profile launch/dispatch axis: `agent` is the normal
+root/workflow class, `subagent` is launchable only through `run_subagent`, and
+`advisor` is launchable only through `ask_advisor`. There is no `AgentRole` on
+the profile; a run's workflow role is the `TaskRole` on its lineage row. There
+is no generic standalone `agent` run. The advisor profile uses
+`agent_type: advisor`.
 
 ## Vocabulary Rules
 
@@ -205,6 +252,7 @@ move.
 | Approve final 10-crate map | Approved |
 | Approve owner-local config / agent definition / audit folds | Approved |
 | Approve retired crate list | Approved |
+| Ratify Phase 02 dependency DAG and contract floor | Approved |
 | Approve vocabulary rules | Approved |
 | Approve service sibling-use rule | Approved |
 | Approve canonical service replacement vocabulary | Approved |
@@ -218,6 +266,12 @@ move.
 - The target facade crate is `eos-agent-core`.
 - No target crate or module is named router.
 - `eos-runtime` is not a target crate.
+- `eos-workflow` has no target dependency edge to `eos-agent-run`; run spawning
+  crosses `eos-types::AgentRunApi`.
+- Shared cross-crate contracts resolve from `eos-types`, which has no internal
+  upstream dependency edge.
+- Agent profiles and `AgentDefinition` expose `AgentType` only; `AgentRole`,
+  `AgentDefinition.role`, and `role:` agent-profile frontmatter are removed.
 - `composition`, `deps`, and `runtime_services` are rejected vocabulary.
 - The final crate map contains exactly 10 crates.
 - Every target `services.rs` has a named sibling-crate behavior consumer.

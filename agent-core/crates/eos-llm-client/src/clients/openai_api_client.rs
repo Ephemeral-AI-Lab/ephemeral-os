@@ -347,6 +347,7 @@ fn serialize_openai_message(message: &Message) -> Vec<Value> {
                 "output": content,
             })),
             ContentBlock::Reasoning { .. } => {}
+            _ => {}
         }
     }
     if !text_parts.is_empty() {

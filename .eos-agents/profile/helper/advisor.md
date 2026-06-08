@@ -4,7 +4,7 @@ description: Blocking read-only helper that audits a parent's pending terminal s
 model: inherit
 tool_call_limit: 30
 role: helper
-agent_type: agent
+agent_type: advisor
 allowed_tools:
   - read_file
 terminals:
