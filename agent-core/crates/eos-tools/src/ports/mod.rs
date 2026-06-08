@@ -1,10 +1,11 @@
-//! Compatibility re-exports for shared transition contracts.
+//! Compatibility re-exports for shared tool contracts.
 
-pub use eos_tool_core::{
-    AttemptSubmissionPort, BackgroundSessionCounts, CancelPort, CancelableResource,
-    CancelledSubagent, CommandServicePort, CommandSessionPort, NotificationSink,
-    OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed, StartWorkflowRequest,
+pub use crate::core::ports::{
+    AgentRunServicePort, AttemptSubmissionPort, BackgroundSessionCounts, CancelPort,
+    CancelableResource, CancelledSubagent, CommandServicePort, CommandSessionPort,
+    NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed,
+    StartSubagentRunOutcome, StartSubagentRunRequest, StartWorkflowRequest, StartedSubagentRun,
     StartedWorkflow, SubagentLaunchRejection, SubagentProgress, SubagentSessionPort,
-    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalWorkflow,
+    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalAgentRun, TerminalWorkflow,
     WorkflowServicePort, WorkflowSessionPort,
 };

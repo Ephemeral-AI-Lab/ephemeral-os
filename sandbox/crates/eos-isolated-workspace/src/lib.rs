@@ -29,7 +29,7 @@
 
 pub mod audit;
 pub mod caps;
-pub mod command_session;
+pub mod command;
 pub mod error;
 pub mod network;
 mod ops;
@@ -40,6 +40,10 @@ pub mod config {
 }
 
 pub use audit::{AuditSink, JsonlAuditSink};
+pub use command::{
+    finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
+    IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
+};
 pub use caps::{
     ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION,
 };

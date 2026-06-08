@@ -4,10 +4,10 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_agent_run::{AgentRunApi, AgentRunOutcome, AgentRunStatus};
-use eos_tool_core::{Sealed, SubagentSessionPort};
 #[cfg(test)]
 use eos_state::AgentRun;
 use eos_tools::ToolResult;
+use eos_tools::{Sealed, SubagentSessionPort};
 #[cfg(test)]
 use eos_types::JsonObject;
 use eos_types::{AgentRunId, SubagentSessionId};
@@ -386,11 +386,11 @@ impl SubagentSessionPort for SubagentSessionManager {
     async fn subagent_session_snapshot(
         &self,
         subagent_session_id: &SubagentSessionId,
-    ) -> Option<eos_tool_core::SubagentProgress> {
+    ) -> Option<eos_tools::SubagentProgress> {
         self.progress(subagent_session_id)
             .await
             .map(
-                |(status, result, agent_name)| eos_tool_core::SubagentProgress::Found {
+                |(status, result, agent_name)| eos_tools::SubagentProgress::Found {
                     subagent_session_id: subagent_session_id.clone(),
                     status: background_status_to_subagent(status),
                     agent_name,
@@ -403,24 +403,20 @@ impl SubagentSessionPort for SubagentSessionManager {
         &self,
         subagent_session_id: &SubagentSessionId,
         reason: &str,
-    ) -> eos_tool_core::CancelledSubagent {
+    ) -> eos_tools::CancelledSubagent {
         if self.cancel_one(subagent_session_id, reason).await {
-            eos_tool_core::CancelledSubagent::Cancelled {
+            eos_tools::CancelledSubagent::Cancelled {
                 subagent_session_id: subagent_session_id.clone(),
                 reason: reason.to_owned(),
             }
         } else {
-            eos_tool_core::CancelledSubagent::MissingOrSettled {
+            eos_tools::CancelledSubagent::MissingOrSettled {
                 subagent_session_id: subagent_session_id.clone(),
             }
         }
     }
 
-    async fn cancel_background_agent_run(
-        &self,
-        agent_run_id: &AgentRunId,
-        reason: &str,
-    ) -> bool {
+    async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, reason: &str) -> bool {
         self.cancel_agent_run(agent_run_id, reason).await
     }
 
@@ -463,13 +459,13 @@ const fn agent_run_status_to_background(status: AgentRunStatus) -> BackgroundSes
 
 const fn background_status_to_subagent(
     status: BackgroundSessionStatus,
-) -> eos_tool_core::SubagentSessionStatus {
+) -> eos_tools::SubagentSessionStatus {
     match status {
-        BackgroundSessionStatus::Running => eos_tool_core::SubagentSessionStatus::Running,
-        BackgroundSessionStatus::Completed => eos_tool_core::SubagentSessionStatus::Completed,
-        BackgroundSessionStatus::Failed => eos_tool_core::SubagentSessionStatus::Failed,
-        BackgroundSessionStatus::Cancelled => eos_tool_core::SubagentSessionStatus::Cancelled,
-        BackgroundSessionStatus::Delivered => eos_tool_core::SubagentSessionStatus::Delivered,
+        BackgroundSessionStatus::Running => eos_tools::SubagentSessionStatus::Running,
+        BackgroundSessionStatus::Completed => eos_tools::SubagentSessionStatus::Completed,
+        BackgroundSessionStatus::Failed => eos_tools::SubagentSessionStatus::Failed,
+        BackgroundSessionStatus::Cancelled => eos_tools::SubagentSessionStatus::Cancelled,
+        BackgroundSessionStatus::Delivered => eos_tools::SubagentSessionStatus::Delivered,
     }
 }
 

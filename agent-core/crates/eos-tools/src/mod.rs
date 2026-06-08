@@ -15,7 +15,7 @@
 #![warn(missing_docs)]
 
 #[path = "core/mod.rs"]
-mod core;
+pub mod core;
 #[path = "hooks/mod.rs"]
 mod hooks;
 #[path = "ports/mod.rs"]
@@ -38,11 +38,12 @@ pub use core::name::{ToolKey, ToolName};
 pub use core::result::{OutputShape, ToolResult};
 pub use hooks::{Hook, HookDenial, HookOutcome};
 pub use ports::{
-    AttemptSubmissionPort, BackgroundSessionCounts, CancelPort, CancelableResource,
-    CancelledSubagent, CommandServicePort, CommandSessionPort, NotificationSink,
-    OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, StartWorkflowRequest,
+    AgentRunServicePort, AttemptSubmissionPort, BackgroundSessionCounts, CancelPort,
+    CancelableResource, CancelledSubagent, CommandServicePort, CommandSessionPort,
+    NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed,
+    StartSubagentRunOutcome, StartSubagentRunRequest, StartWorkflowRequest, StartedSubagentRun,
     StartedWorkflow, SubagentLaunchRejection, SubagentProgress, SubagentSessionPort,
-    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalWorkflow,
+    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalAgentRun, TerminalWorkflow,
     WorkflowServicePort, WorkflowSessionPort,
 };
 pub use registry::config::{ToolConfig, ToolConfigError, ToolConfigSet};

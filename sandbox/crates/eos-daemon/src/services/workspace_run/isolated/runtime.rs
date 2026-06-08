@@ -37,7 +37,10 @@ use serde_json::{json, Value};
 
 use super::{setup_error, test_runtime_stub_enabled};
 
-#[cfg(target_os = "linux")]
+/// Per-command-session snapshot of a caller's isolated workspace state (pure
+/// data: namespace fds, scratch dirs, lease/manifest coordinates). The daemon's
+/// isolated workspace run owns one of these per session; it carries everything
+/// the run needs to build the set-ns runner request and finalize for audit.
 #[derive(Debug, Clone)]
 pub struct CommandHandle {
     pub caller_id: String,

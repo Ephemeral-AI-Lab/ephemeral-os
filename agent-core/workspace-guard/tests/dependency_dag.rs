@@ -15,6 +15,20 @@ fn expected_edges() -> Edges {
         ("eos-audit", &["eos-types"]),
         ("eos-llm-client", &["eos-types", "eos-config"]),
         ("eos-agent-def", &[]),
+        (
+            "eos-agent-message-records",
+            &["eos-llm-client", "eos-types"],
+        ),
+        (
+            "eos-agent-run",
+            &[
+                "eos-types",
+                "eos-agent-def",
+                "eos-agent-message-records",
+                "eos-llm-client",
+                "eos-tools",
+            ],
+        ),
         ("eos-sandbox-port", &["eos-types"]),
         ("eos-skills", &["eos-config"]),
         (
@@ -22,6 +36,8 @@ fn expected_edges() -> Edges {
             &[
                 "eos-types",
                 "eos-state",
+                "eos-agent-def",
+                "eos-agent-message-records",
                 "eos-sandbox-port",
                 "eos-skills",
                 "eos-llm-client",
@@ -32,6 +48,8 @@ fn expected_edges() -> Edges {
             "eos-engine",
             &[
                 "eos-types",
+                "eos-agent-run",
+                "eos-agent-message-records",
                 "eos-llm-client",
                 "eos-tools",
                 "eos-sandbox-port",
@@ -52,6 +70,8 @@ fn expected_edges() -> Edges {
                 "eos-engine",
                 "eos-workflow",
                 "eos-plugin-catalog",
+                "eos-agent-run",
+                "eos-agent-message-records",
                 "eos-skills",
                 "eos-config",
                 "eos-agent-def",
@@ -76,8 +96,6 @@ fn expected_edges() -> Edges {
                 "eos-llm-client",
                 "eos-sandbox-port",
                 "eos-tools",
-                "eos-state",
-                "eos-skills",
             ],
         ),
     ];

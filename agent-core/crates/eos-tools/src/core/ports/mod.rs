@@ -1,4 +1,4 @@
-//! Transitional shared contracts while owner APIs replace the old ports crate.
+//! Core tool contracts shared by the engine and concrete tool executors.
 
 use std::collections::BTreeMap;
 
@@ -73,19 +73,19 @@ pub enum SubmissionAck {
 #[async_trait]
 pub trait AttemptSubmissionPort: Sealed + Send + Sync {
     /// Apply a validated planner DAG.
-    async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, crate::ToolError>;
+    async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, super::ToolError>;
 
     /// Record one generator task's terminal outcome.
     async fn submit_generator(
         &self,
         submission: GeneratorSubmission,
-    ) -> Result<SubmissionAck, crate::ToolError>;
+    ) -> Result<SubmissionAck, super::ToolError>;
 
     /// Record one reducer task's terminal outcome.
     async fn apply_reducer(
         &self,
         submission: ReducerSubmission,
-    ) -> Result<SubmissionAck, crate::ToolError>;
+    ) -> Result<SubmissionAck, super::ToolError>;
 }
 
 /// A system notification a tool/hook asks the engine to surface.
@@ -101,26 +101,27 @@ pub struct SystemNotification {
 #[async_trait]
 pub trait NotificationSink: Sealed + Send + Sync {
     /// Surface one system notification.
-    async fn notify_system(&self, notification: SystemNotification) -> Result<(), crate::ToolError>;
+    async fn notify_system(&self, notification: SystemNotification)
+        -> Result<(), super::ToolError>;
 }
 
 /// A non-leaf effect a tool creates that must be torn down on cancellation.
 #[async_trait]
 pub trait CancelableResource: Send + Sync {
     /// Tear down the spawned effect.
-    async fn teardown(&self, reason: &str) -> Result<(), crate::ToolError>;
+    async fn teardown(&self, reason: &str) -> Result<(), super::ToolError>;
 }
 
 /// Recursive agent-core cancellation primitives.
 #[async_trait]
 pub trait CancelPort: Send + Sync {
     /// Cancel a persisted task.
-    async fn cancel_task(&self, task_id: &TaskId, reason: &str) -> Result<(), crate::ToolError>;
+    async fn cancel_task(&self, task_id: &TaskId, reason: &str) -> Result<(), super::ToolError>;
 
     /// Cancel a live agent run.
     async fn cancel_agent_run(
         &self,
         agent_run_id: &AgentRunId,
         reason: &str,
-    ) -> Result<(), crate::ToolError>;
+    ) -> Result<(), super::ToolError>;
 }

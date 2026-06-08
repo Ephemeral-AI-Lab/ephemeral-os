@@ -21,7 +21,7 @@ mod subagent_lifecycle {
     use crate::entry::root_task_id_for;
     use crate::runtime_services::support::build_test_state;
     use crate::runtime_services::EventSourceFactory;
-    use eos_testkit::{agent_def, tool_use_turn, ScriptedSource};
+    use eos_testkit::{agent_def, text_turn, tool_use_turn, ScriptedSource};
 
     fn stream_of(events: Vec<StreamEvent>) -> EngineStream {
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
@@ -31,15 +31,10 @@ mod subagent_lifecycle {
         let mut def = agent_def(
             "root",
             AgentRole::Root,
-            &[
-                "run_subagent",
-                "check_subagent_progress",
-                "read_file",
-                "ask_advisor",
-            ],
+            &["run_subagent", "read_file", "ask_advisor"],
             &["submit_root_outcome"],
         );
-        // Generous budget so the poll loop never trips the no-terminal ceiling.
+        // Generous budget so the wait loop never trips the no-terminal ceiling.
         def.tool_call_limit = NonZeroU32::new(40).expect("nonzero");
         def
     }
@@ -148,8 +143,8 @@ mod subagent_lifecycle {
         );
     }
 
-    /// A root probe: launch the subagent, then poll `check_subagent_progress`
-    /// until the transcript shows the child `finished`, then approve + submit.
+    /// A root probe: launch the subagent, wait until the background completion
+    /// notification reaches the transcript, then approve + submit.
     struct FinishProbeSource {
         started: Arc<AtomicBool>,
         asked_advisor: Arc<AtomicBool>,
@@ -161,8 +156,10 @@ mod subagent_lifecycle {
         async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError> {
             let finished = request.messages.iter().any(|message| {
                 message.content.iter().any(|block| {
-                    matches!(block, ContentBlock::ToolResult { content, .. }
-                        if content.contains("\"status\": \"finished\""))
+                    matches!(block, ContentBlock::SystemNotification { text }
+                        if text.contains("[BACKGROUND COMPLETED]")
+                            && text.contains("subagent_session_id=")
+                            && text.contains("status=completed"))
                 })
             });
             if finished {
@@ -188,20 +185,16 @@ mod subagent_lifecycle {
                     json!({"agent_name": "explorer", "prompt": "investigate"}),
                 )));
             }
-            // Yield so the spawned subagent run can reach its terminal before the
-            // next check.
+            // Yield so the spawned subagent run can reach its terminal and the
+            // heartbeat can enqueue the completion before the next loop-top drain.
             tokio::time::sleep(Duration::from_millis(20)).await;
-            Ok(stream_of(tool_use_turn(
-                "toolu_check",
-                "check_subagent_progress",
-                json!({"subagent_session_id": "subagent_1", "last_n_messages": 5}),
-            )))
+            Ok(stream_of(text_turn("waiting for the subagent completion")))
         }
     }
 
     // D1/D3 end-to-end: a real explorer child runs, calls
-    // `submit_exploration_result`, and `check_subagent_progress` reports
-    // `finished` — no test-only fake supervisor.
+    // `submit_exploration_result`, and completion reaches the root as a
+    // `[BACKGROUND COMPLETED]` notification — no test-only fake supervisor.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn subagent_runs_and_reports_finished() {
         let saw_finished = Arc::new(AtomicBool::new(false));
@@ -240,7 +233,7 @@ mod subagent_lifecycle {
 
         assert!(
             saw_finished.load(Ordering::SeqCst),
-            "the child explorer must run and report finished via check_subagent_progress"
+            "the child explorer must run and report completion via notification"
         );
         let task = state
             .db

@@ -12,8 +12,8 @@
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use eos_tool_core::WorkflowServicePort;
 use eos_sandbox_port::SandboxCommandApi;
+use eos_tools::WorkflowServicePort;
 use eos_types::{AgentRunId, TaskId};
 
 use crate::background::BackgroundSessionService;

@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-engine · src/background/background_session_manager/workflow_session_manager.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-engine File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>42</b><span>modules</span></div>
+  <div><b>339</b><span>items</span></div>
+  <div><b>297</b><span>fields</span></div>
+  <div><b>254</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><span class="folder">background_session_manager</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html"><span>command_session_manager.rs</span><small>5/5</small></a></li><li><a class="file-link" href="eos-engine--src-background-background-session-manager-mod-rs.html"><span>mod.rs</span><small>8/2</small></a></li><li><a class="file-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html"><span>subagent_session_manager.rs</span><small>6/15</small></a></li><li><a class="file-link active" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html"><span>workflow_session_manager.rs</span><small>5/2</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-notification-rs.html"><span>notification.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="background::background_session_manager::workflow_session_manager crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs WorkflowServiceCell WorkflowSession impl WorkflowSession impl BackgroundSession for WorkflowSession WorkflowCompletion WorkflowSessionManager impl std :: fmt :: Debug for WorkflowSessionManager impl WorkflowSessionManager WorkflowSessionMonitor impl Drop for WorkflowSessionMonitor impl WorkflowSessionMonitor impl BackgroundSessionManager for WorkflowSessionManager impl Sealed for WorkflowSessionManager impl WorkflowSessionPort for WorkflowSessionManager AlwaysSucceededService impl Sealed for AlwaysSucceededService impl WorkflowServicePort for AlwaysSucceededService manager poll_push_notification_and_cancel_are_manager_owned">
+  <div class="module-head">
+    <div>
+      <h2>src/background/background_session_manager/workflow_session_manager.rs</h2>
+      <p class="path">module <code>background::background_session_manager::workflow_session_manager</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>11 impls</span>
+      <span>2 fns</span>
+      <span>31 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkflowSession-16" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowSession pub(crate :: background) pub(crate :: background) struct WorkflowSession crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs id WorkflowSessionId workflow_id WorkflowId status BackgroundSessionStatus ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkflowSession</h3>
+    <span class="visibility">pub(crate :: background)</span>
+  </div>
+  <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a></code>
+  <p class="docstring">One delegated workflow tracked as background work for the owning agent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>id</td><td><code>WorkflowSessionId</code></td></tr><tr><td>private</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>private</td><td>status</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-cancel-41"><td>method</td><td>cancel</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a> (&amp; mut self) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        }
+        <span class="rs-self">self</span>.status = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>;
+        <span class="rs-kw">true</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-workflow-id-33"><td>method</td><td>workflow_id</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a> (&amp; self) -&gt; &amp; WorkflowId</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">WorkflowId</span> {
+        &amp;<span class="rs-self">self</span>.workflow_id
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-37"><td>method</td><td>status</td><td><code>const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> {
+        <span class="rs-self">self</span>.status
+    }
+</code></pre>
+</details></td></tr><tr id="method-settle-running-49"><td>method</td><td>settle_running</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a> (&amp; mut self , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; bool {
+        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        }
+        <span class="rs-self">self</span>.status = status;
+        <span class="rs-kw">true</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-running-25"><td>associated-fn</td><td>running</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-running-26">running</a> (id : WorkflowSessionId , workflow_id : WorkflowId) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-running-26">running</a>(id: <span class="rs-type">WorkflowSessionId</span>, workflow_id: <span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            id,
+            workflow_id,
+            status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-60">BackgroundSession</a> for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a></code></summary><table><tbody><tr id="method-id-61"><td>method</td><td>id</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a> (&amp; self) -&gt; &amp; Self :: Id</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-self">Self</span>::<span class="rs-type">Id</span> {
+        &amp;<span class="rs-self">self</span>.id
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:16</p>
+</article><article id="item-struct-WorkflowCompletion-66" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkflowCompletion pub(crate :: background) pub(crate :: background) struct WorkflowCompletion crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs workflow_task_id WorkflowSessionId workflow_id WorkflowId status BackgroundSessionStatus ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkflowCompletion</h3>
+    <span class="visibility">pub(crate :: background)</span>
+  </div>
+  <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>workflow_task_id</td><td><code>WorkflowSessionId</code></td></tr><tr><td>pub(super)</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>pub(super)</td><td>status</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:66</p>
+</article><article id="item-struct-WorkflowSessionManager-73" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowSessionManager pub(crate :: background) pub(crate :: background) struct WorkflowSessionManager crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs agent_run_id AgentRunId sessions Arc &lt; Mutex &lt; HashMap &lt; WorkflowSessionId , WorkflowSession &gt; &gt; &gt; workflow_service WorkflowServiceCell notification BackgroundNotificationEmitter ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkflowSessionManager</h3>
+    <span class="visibility">pub(crate :: background)</span>
+  </div>
+  <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a></code>
+  <p class="docstring">Tracks delegated workflow sessions for one agent run.</p>
+  <div class="tags"><span>derive: Clone</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>sessions</td><td><code>Arc &lt; Mutex &lt; HashMap &lt; WorkflowSessionId , <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>workflow_service</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a></code></td></tr><tr><td>private</td><td>notification</td><td><code><a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-91"><td>constructor</td><td>new</td><td><code>pub(crate :: background) fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a> (agent_run_id : AgentRunId , workflow_service : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a> , notification : <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a> ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
+        workflow_service: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a>,
+        notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            agent_run_id,
+            sessions: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>())),
+            workflow_service,
+            notification,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-background-session-104"><td>method</td><td>register_background_session</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a> (&amp; self , workflow : &amp; StartedWorkflow ,)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow: &amp;<span class="rs-type">StartedWorkflow</span>,
+    ) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-running-26">running</a>(
+            workflow.workflow_task_id.clone(),
+            workflow.workflow_id.clone(),
+        ))
+        .<span class="rs-kw">await</span>;
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-session-115"><td>method</td><td>cancel_session</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-session-115">cancel_session</a> (&amp; self , workflow_task_id : &amp; WorkflowSessionId ,) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-session-115">cancel_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+    ) -&gt; bool {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .get_mut(workflow_task_id)
+            .is_some_and(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>::cancel)
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-background-sessions-126"><td>method</td><td>cancel_background_sessions</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-background-sessions-126">cancel_background_sessions</a> (&amp; self , reason : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-background-sessions-126">cancel_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
+        <span class="rs-kw">let</span> workflow_service = <span class="rs-self">self</span>.workflow_service.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-get-77">get</a>().cloned();
+        <span class="rs-kw">let</span> running = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-ids-146">running_ids</a>().<span class="rs-kw">await</span>;
+        <span class="rs-kw">for</span> workflow_task_id <span class="rs-kw">in</span> &amp;running {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service) = &amp;workflow_service {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = service
+                    .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-workflow-session-346">cancel_workflow_session</a>(workflow_task_id, reason)
+                    .<span class="rs-kw">await</span>
+                {
+                    tracing::warn!(
+                        error = %err,
+                        workflow_task_id = workflow_task_id.as_str(),
+                        &quot;background workflow cancellation failed&quot;
+                    );
+                }
+            }
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-session-115">cancel_session</a>(workflow_task_id).<span class="rs-kw">await</span>;
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-running-ids-146"><td>method</td><td>running_ids</td><td><code>pub(super) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-ids-146">running_ids</a> (&amp; self) -&gt; Vec &lt; WorkflowSessionId &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-ids-146">running_ids</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">WorkflowSessionId</span>&gt; {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .values()
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .map(|session| session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>().clone())
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-running-sessions-156"><td>method</td><td>running_sessions</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-sessions-156">running_sessions</a> (&amp; self) -&gt; Vec &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-sessions-156">running_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>&gt; {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .values()
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .cloned()
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-settle-running-166"><td>method</td><td>settle_running</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a> (&amp; self , workflow_task_id : &amp; WorkflowSessionId , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> ,) -&gt; Option &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.sessions.lock().<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> session = guard.get_mut(workflow_task_id)?;
+        <span class="rs-kw">if</span> !session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(status) {
+            <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+        }
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a> {
+            workflow_task_id: session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>().clone(),
+            workflow_id: session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a>().clone(),
+            status,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-poll-completions-183"><td>method</td><td>poll_completions</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a> (&amp; self) -&gt; Vec &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow_service) = <span class="rs-self">self</span>.workflow_service.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-get-77">get</a>().cloned() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>();
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completions = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>();
+        <span class="rs-kw">for</span> session <span class="rs-kw">in</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-sessions-156">running_sessions</a>().<span class="rs-kw">await</span> {
+            <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> workflow_service
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-poll-terminal-workflow-354">poll_terminal_workflow</a>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a>(), session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>())
+                .<span class="rs-kw">await</span>
+            {
+                <span class="rs-type">Ok</span>(terminal) =&gt; terminal,
+                <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">continue</span>,
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(terminal) = terminal <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> status = <span class="rs-kw">match</span> terminal.status {
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Completed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Failed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>,
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Running</span>
+                | eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Delivered</span> =&gt; <span class="rs-kw">continue</span>,
+            };
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(completion) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>(), status).<span class="rs-kw">await</span> {
+                completions.push(completion);
+            }
+        }
+        completions
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a></code></summary><table><tbody><tr id="method-fmt-83"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-fmt-58">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>&quot;)
+            .field(&quot;agent_run_id&quot;, &amp;<span class="rs-self">self</span>.agent_run_id)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a> for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a></code></summary><table><tbody><tr id="method-insert-247"><td>method</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a> (&amp; self , session : Self :: Session)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a>(&amp;<span class="rs-self">self</span>, session: <span class="rs-self">Self</span>::<span class="rs-type">Session</span>) {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>().clone(), session);
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-254"><td>method</td><td>count</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .values()
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-push-notification-on-completion-263"><td>method</td><td>push_notification_on_completion</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a> (&amp; self , completion : Self :: Completion)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-self">Self</span>::<span class="rs-type">Completion</span>) {
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>
+            .notification
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-152">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-21">BackgroundCompletion</a>::<span class="rs-type">Workflow</span> {
+                workflow_task_id: completion.workflow_task_id,
+                workflow_id: completion.workflow_id,
+                status: completion.status,
+            })
+            .<span class="rs-kw">await</span>;
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-274"><td>method</td><td>cancel</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a> (&amp; self , reason : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-background-sessions-126">cancel_background_sessions</a>(reason).<span class="rs-kw">await</span>;
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl Sealed for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowSessionPort for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a></code></summary><table><tbody><tr id="method-register-background-session-283"><td>method</td><td>register_background_session</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a> (&amp; self , workflow : &amp; StartedWorkflow)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(&amp;<span class="rs-self">self</span>, workflow: &amp;<span class="rs-type">StartedWorkflow</span>) {
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(<span class="rs-self">self</span>, workflow).<span class="rs-kw">await</span>;
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-background-sessions-287"><td>method</td><td>count_background_sessions</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-background-sessions-310">count_background_sessions</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-background-sessions-310">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>(<span class="rs-self">self</span>).<span class="rs-kw">await</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-all-background-sessions-291"><td>method</td><td>cancel_all_background_sessions</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-all-background-sessions-314">cancel_all_background_sessions</a> (&amp; self , reason : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-all-background-sessions-314">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>;
+    }
+</code></pre>
+</details></td></tr><tr id="method-poll-complete-background-sessions-295"><td>method</td><td>poll_complete_background_sessions</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-complete-background-sessions-318">poll_complete_background_sessions</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-complete-background-sessions-318">poll_complete_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">let</span> completions = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>().<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> count = completions.len();
+        <span class="rs-kw">for</span> completion <span class="rs-kw">in</span> completions {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
+        }
+        count
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:73</p>
+</article><article id="item-struct-WorkflowSessionMonitor-214" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowSessionMonitor pub(crate :: background) pub(crate :: background) struct WorkflowSessionMonitor crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs join JoinHandle &lt; () &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkflowSessionMonitor</h3>
+    <span class="visibility">pub(crate :: background)</span>
+  </div>
+  <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionMonitor-214">WorkflowSessionMonitor</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>join</td><td><code>JoinHandle &lt; () &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-spawn-225"><td>associated-fn</td><td>spawn</td><td><code>pub(crate :: background) fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-spawn-224">spawn</a> (manager : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> , interval : Duration ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-spawn-224">spawn</a>(
+        manager: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>,
+        interval: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            join: tokio::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-spawn-224">spawn</a>(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
+                loop {
+                    <span class="rs-kw">for</span> completion <span class="rs-kw">in</span> manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>().<span class="rs-kw">await</span> {
+                        manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
+                    }
+                    tokio::time::sleep(interval).<span class="rs-kw">await</span>;
+                }
+            }),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionMonitor-214">WorkflowSessionMonitor</a></code></summary><table><tbody><tr id="method-drop-219"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-drop-218">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-drop-218">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.join.abort();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:214</p>
+</article><article id="item-struct-AlwaysSucceededService-324" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct AlwaysSucceededService private struct AlwaysSucceededService crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AlwaysSucceededService</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a></code>
+  <div class="tags"><span>derive: Debug</span><span>port/service</span></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowServicePort for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a></code></summary><table><tbody><tr id="method-start-workflow-331"><td>method</td><td>start_workflow</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-start-workflow-331">start_workflow</a> (&amp; self , _request : StartWorkflowRequest ,) -&gt; Result &lt; StartedWorkflow , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-start-workflow-331">start_workflow</a>(
+            &amp;<span class="rs-self">self</span>,
+            _request: <span class="rs-type">StartWorkflowRequest</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">StartedWorkflow</span>, <span class="rs-type">ToolError</span>&gt; {
+            unreachable!(&quot;not used&quot;)
+        }
+</code></pre>
+</details></td></tr><tr id="method-check-workflow-status-338"><td>method</td><td>check_workflow_status</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-check-workflow-status-338">check_workflow_status</a> (&amp; self , _workflow_id : &amp; WorkflowId , _workflow_task_id : Option &lt; &amp; WorkflowSessionId &gt; ,) -&gt; Result &lt; String , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-check-workflow-status-338">check_workflow_status</a>(
+            &amp;<span class="rs-self">self</span>,
+            _workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+            _workflow_task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">WorkflowSessionId</span>&gt;,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+            unreachable!(&quot;not used&quot;)
+        }
+</code></pre>
+</details></td></tr><tr id="method-cancel-workflow-session-346"><td>method</td><td>cancel_workflow_session</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-workflow-session-346">cancel_workflow_session</a> (&amp; self , _workflow_task_id : &amp; WorkflowSessionId , _reason : &amp; str ,) -&gt; Result &lt; String , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-workflow-session-346">cancel_workflow_session</a>(
+            &amp;<span class="rs-self">self</span>,
+            _workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+            _reason: &amp;str,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(&quot;cancelled&quot;.to_owned())
+        }
+</code></pre>
+</details></td></tr><tr id="method-poll-terminal-workflow-354"><td>method</td><td>poll_terminal_workflow</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-poll-terminal-workflow-354">poll_terminal_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId , workflow_task_id : &amp; WorkflowSessionId ,) -&gt; Result &lt; Option &lt; TerminalWorkflow &gt; , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-poll-terminal-workflow-354">poll_terminal_workflow</a>(
+            &amp;<span class="rs-self">self</span>,
+            workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+            workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">TerminalWorkflow</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(<span class="rs-type">TerminalWorkflow</span> {
+                workflow_id: workflow_id.clone(),
+                workflow_task_id: workflow_task_id.clone(),
+                status: <span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Completed</span>,
+            }))
+        }
+</code></pre>
+</details></td></tr><tr id="method-find-outstanding-workflows-366"><td>method</td><td>find_outstanding_workflows</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-find-outstanding-workflows-366">find_outstanding_workflows</a> (&amp; self , _parent_task_id : &amp; TaskId , _agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Vec &lt; OutstandingWorkflow &gt; , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-find-outstanding-workflows-366">find_outstanding_workflows</a>(
+            &amp;<span class="rs-self">self</span>,
+            _parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+            _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">OutstandingWorkflow</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>())
+        }
+</code></pre>
+</details></td></tr><tr id="method-workflow-depth-374"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-depth-374">workflow_depth</a> (&amp; self , _workflow_id : &amp; WorkflowId) -&gt; Result &lt; u32 , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-depth-374">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(1)
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:324</p>
+</article><div class="group-label">Aliases</div><article id="item-type-WorkflowServiceCell-14" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type WorkflowServiceCell pub(crate :: background) pub(crate :: background) type WorkflowServiceCell = Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowServicePort &gt; &gt; &gt; crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>WorkflowServiceCell</h3>
+    <span class="visibility">pub(crate :: background)</span>
+  </div>
+  <code class="signature">pub(crate :: background) type <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a> = Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowServicePort &gt; &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:14</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-manager-379" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manager private fn manager (notifier : &amp; NotificationService) -&gt; WorkflowSessionManager crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manager</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-412">manager</a> (notifier : &amp; <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-412">manager</a>(notifier: &amp;<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+        <span class="rs-kw">let</span> cell: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>());
+        <span class="rs-kw">let</span> _ = cell.set(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a>));
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(
+            &quot;owner-run&quot;.parse().expect(&quot;agent run id&quot;),
+            cell,
+            <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(notifier.clone()),
+        )
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:379</p>
+</article><article id="item-fn-poll-push-notification-and-cancel-are-manager-owned-389" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn poll_push_notification_and_cancel_are_manager_owned private async fn poll_push_notification_and_cancel_are_manager_owned () crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>poll_push_notification_and_cancel_are_manager_owned</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-fn-poll-push-notification-and-cancel-are-manager-owned-389">poll_push_notification_and_cancel_are_manager_owned</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-fn-poll-push-notification-and-cancel-are-manager-owned-389">poll_push_notification_and_cancel_are_manager_owned</a>() {
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>();
+        <span class="rs-kw">let</span> manager = <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-412">manager</a>(&amp;notifier);
+        manager
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(&amp;<span class="rs-type">StartedWorkflow</span> {
+                workflow_id: <span class="rs-type">WorkflowId</span>::new_v4(),
+                workflow_task_id: &quot;wf_1&quot;.parse().expect(&quot;workflow session&quot;),
+            })
+            .<span class="rs-kw">await</span>;
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 1);
+
+        <span class="rs-kw">let</span> completions = manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>().<span class="rs-kw">await</span>;
+        assert_eq!(completions.len(), 1);
+        <span class="rs-kw">for</span> completion <span class="rs-kw">in</span> completions {
+            manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
+        }
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 0);
+        <span class="rs-kw">let</span> notifications = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-120">drain</a>().<span class="rs-kw">await</span>;
+        assert_eq!(notifications.len(), 1);
+        assert!(notifications[0]
+            .message
+            .contains(&quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] workflow_task_id=wf_1&quot;));
+
+        manager
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(&amp;<span class="rs-type">StartedWorkflow</span> {
+                workflow_id: <span class="rs-type">WorkflowId</span>::new_v4(),
+                workflow_task_id: &quot;wf_2&quot;.parse().expect(&quot;workflow session&quot;),
+            })
+            .<span class="rs-kw">await</span>;
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 1);
+        manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(&quot;parent exited&quot;).<span class="rs-kw">await</span>;
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 0);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs:389</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">OnceLock</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_tools::{<span class="rs-type">Sealed</span>, <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">WorkflowServicePort</span>, <span class="rs-type">WorkflowSessionPort</span>};
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowSessionId</span>};
+<span class="rs-kw">use</span> tokio::sync::<span class="rs-type">Mutex</span>;
+<span class="rs-kw">use</span> tokio::task::<span class="rs-type">JoinHandle</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-60">BackgroundSession</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::notification::{<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-21">BackgroundCompletion</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowServicePort</span>&gt;&gt;&gt;;
+
+<span class="rs-comment">/// One delegated workflow tracked as background work for the owning agent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a> {
+    id: <span class="rs-type">WorkflowSessionId</span>,
+    workflow_id: <span class="rs-type">WorkflowId</span>,
+    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-running-26">running</a>(id: <span class="rs-type">WorkflowSessionId</span>, workflow_id: <span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            id,
+            workflow_id,
+            status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">WorkflowId</span> {
+        &amp;<span class="rs-self">self</span>.workflow_id
+    }
+
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> {
+        <span class="rs-self">self</span>.status
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        }
+        <span class="rs-self">self</span>.status = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>;
+        <span class="rs-kw">true</span>
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; bool {
+        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        }
+        <span class="rs-self">self</span>.status = status;
+        <span class="rs-kw">true</span>
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-60">BackgroundSession</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Id</span> = <span class="rs-type">WorkflowSessionId</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-self">Self</span>::<span class="rs-type">Id</span> {
+        &amp;<span class="rs-self">self</span>.id
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) workflow_task_id: <span class="rs-type">WorkflowSessionId</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) workflow_id: <span class="rs-type">WorkflowId</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+}
+
+<span class="rs-comment">/// Tracks delegated workflow sessions for one agent run.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+    agent_run_id: <span class="rs-type">AgentRunId</span>,
+    sessions: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">WorkflowSessionId</span>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>&gt;&gt;&gt;,
+    workflow_service: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a>,
+    notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>&quot;)
+            .field(&quot;agent_run_id&quot;, &amp;<span class="rs-self">self</span>.agent_run_id)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
+        workflow_service: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a>,
+        notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            agent_run_id,
+            sessions: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>())),
+            workflow_service,
+            notification,
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow: &amp;<span class="rs-type">StartedWorkflow</span>,
+    ) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-running-26">running</a>(
+            workflow.workflow_task_id.clone(),
+            workflow.workflow_id.clone(),
+        ))
+        .<span class="rs-kw">await</span>;
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-session-115">cancel_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+    ) -&gt; bool {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .get_mut(workflow_task_id)
+            .is_some_and(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>::cancel)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-background-sessions-126">cancel_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
+        <span class="rs-kw">let</span> workflow_service = <span class="rs-self">self</span>.workflow_service.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-get-77">get</a>().cloned();
+        <span class="rs-kw">let</span> running = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-ids-146">running_ids</a>().<span class="rs-kw">await</span>;
+        <span class="rs-kw">for</span> workflow_task_id <span class="rs-kw">in</span> &amp;running {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service) = &amp;workflow_service {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = service
+                    .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-workflow-session-346">cancel_workflow_session</a>(workflow_task_id, reason)
+                    .<span class="rs-kw">await</span>
+                {
+                    tracing::warn!(
+                        error = %err,
+                        workflow_task_id = workflow_task_id.as_str(),
+                        &quot;background workflow cancellation failed&quot;
+                    );
+                }
+            }
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-session-115">cancel_session</a>(workflow_task_id).<span class="rs-kw">await</span>;
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-ids-146">running_ids</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">WorkflowSessionId</span>&gt; {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .values()
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .map(|session| session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>().clone())
+            .collect()
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-sessions-156">running_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>&gt; {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .values()
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .cloned()
+            .collect()
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.sessions.lock().<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> session = guard.get_mut(workflow_task_id)?;
+        <span class="rs-kw">if</span> !session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(status) {
+            <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+        }
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a> {
+            workflow_task_id: session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>().clone(),
+            workflow_id: session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a>().clone(),
+            status,
+        })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow_service) = <span class="rs-self">self</span>.workflow_service.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-get-77">get</a>().cloned() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>();
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completions = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>();
+        <span class="rs-kw">for</span> session <span class="rs-kw">in</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-running-sessions-156">running_sessions</a>().<span class="rs-kw">await</span> {
+            <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> workflow_service
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-poll-terminal-workflow-354">poll_terminal_workflow</a>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-id-33">workflow_id</a>(), session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>())
+                .<span class="rs-kw">await</span>
+            {
+                <span class="rs-type">Ok</span>(terminal) =&gt; terminal,
+                <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">continue</span>,
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(terminal) = terminal <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> status = <span class="rs-kw">match</span> terminal.status {
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Completed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Failed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>,
+                eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Running</span>
+                | eos_tools::<span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Delivered</span> =&gt; <span class="rs-kw">continue</span>,
+            };
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(completion) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-settle-running-49">settle_running</a>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>(), status).<span class="rs-kw">await</span> {
+                completions.push(completion);
+            }
+        }
+        completions
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionMonitor-214">WorkflowSessionMonitor</a> {
+    join: <span class="rs-type">JoinHandle</span>&lt;()&gt;,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionMonitor-214">WorkflowSessionMonitor</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-drop-218">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.join.abort();
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionMonitor-214">WorkflowSessionMonitor</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-spawn-224">spawn</a>(
+        manager: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>,
+        interval: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            join: tokio::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-spawn-224">spawn</a>(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
+                loop {
+                    <span class="rs-kw">for</span> completion <span class="rs-kw">in</span> manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>().<span class="rs-kw">await</span> {
+                        manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
+                    }
+                    tokio::time::sleep(interval).<span class="rs-kw">await</span>;
+                }
+            }),
+        }
+    }
+}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Session</span> = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSession-16">WorkflowSession</a>;
+    <span class="rs-kw">type</span> <span class="rs-type">Completion</span> = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowCompletion-66">WorkflowCompletion</a>;
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a>(&amp;<span class="rs-self">self</span>, session: <span class="rs-self">Self</span>::<span class="rs-type">Session</span>) {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-243">insert</a>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-65">id</a>().clone(), session);
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.sessions
+            .lock()
+            .<span class="rs-kw">await</span>
+            .values()
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-39">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>()
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-self">Self</span>::<span class="rs-type">Completion</span>) {
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>
+            .notification
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-152">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-21">BackgroundCompletion</a>::<span class="rs-type">Workflow</span> {
+                workflow_task_id: completion.workflow_task_id,
+                workflow_id: completion.workflow_id,
+                status: completion.status,
+            })
+            .<span class="rs-kw">await</span>;
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-background-sessions-126">cancel_background_sessions</a>(reason).<span class="rs-kw">await</span>;
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Sealed</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <span class="rs-type">WorkflowSessionPort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(&amp;<span class="rs-self">self</span>, workflow: &amp;<span class="rs-type">StartedWorkflow</span>) {
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(<span class="rs-self">self</span>, workflow).<span class="rs-kw">await</span>;
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-background-sessions-310">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>(<span class="rs-self">self</span>).<span class="rs-kw">await</span>
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-all-background-sessions-314">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>;
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-complete-background-sessions-318">poll_complete_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">let</span> completions = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>().<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> count = completions.len();
+        <span class="rs-kw">for</span> completion <span class="rs-kw">in</span> completions {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
+        }
+        count
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::expect_used)]
+
+    <span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">OnceLock</span>};
+
+    <span class="rs-kw">use</span> async_trait::async_trait;
+    <span class="rs-kw">use</span> eos_state::<span class="rs-type">TaskId</span>;
+    <span class="rs-kw">use</span> eos_tools::{
+        <span class="rs-type">OutstandingWorkflow</span>, <span class="rs-type">StartWorkflowRequest</span>, <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">SubagentSessionStatus</span>,
+        <span class="rs-type">TerminalWorkflow</span>, <span class="rs-type">ToolError</span>, <span class="rs-type">WorkflowServicePort</span>,
+    };
+    <span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::notification::<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[derive(<span class="rs-type">Debug</span>)]
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a>;
+
+    <span class="rs-kw">impl</span> <span class="rs-type">Sealed</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a> {}
+
+    #[async_trait]
+    <span class="rs-kw">impl</span> <span class="rs-type">WorkflowServicePort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a> {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-start-workflow-331">start_workflow</a>(
+            &amp;<span class="rs-self">self</span>,
+            _request: <span class="rs-type">StartWorkflowRequest</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">StartedWorkflow</span>, <span class="rs-type">ToolError</span>&gt; {
+            unreachable!(&quot;not used&quot;)
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-check-workflow-status-338">check_workflow_status</a>(
+            &amp;<span class="rs-self">self</span>,
+            _workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+            _workflow_task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">WorkflowSessionId</span>&gt;,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+            unreachable!(&quot;not used&quot;)
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-cancel-workflow-session-346">cancel_workflow_session</a>(
+            &amp;<span class="rs-self">self</span>,
+            _workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+            _reason: &amp;str,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(&quot;cancelled&quot;.to_owned())
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-poll-terminal-workflow-354">poll_terminal_workflow</a>(
+            &amp;<span class="rs-self">self</span>,
+            workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+            workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">TerminalWorkflow</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(<span class="rs-type">TerminalWorkflow</span> {
+                workflow_id: workflow_id.clone(),
+                workflow_task_id: workflow_task_id.clone(),
+                status: <span class="rs-type">SubagentSessionStatus</span>::<span class="rs-type">Completed</span>,
+            }))
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-find-outstanding-workflows-366">find_outstanding_workflows</a>(
+            &amp;<span class="rs-self">self</span>,
+            _parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+            _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">OutstandingWorkflow</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>())
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#method-workflow-depth-374">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(1)
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-412">manager</a>(notifier: &amp;<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a> {
+        <span class="rs-kw">let</span> cell: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-type-WorkflowServiceCell-14">WorkflowServiceCell</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>());
+        <span class="rs-kw">let</span> _ = cell.set(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-AlwaysSucceededService-324">AlwaysSucceededService</a>));
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-struct-WorkflowSessionManager-73">WorkflowSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(
+            &quot;owner-run&quot;.parse().expect(&quot;agent run id&quot;),
+            cell,
+            <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-133">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>(notifier.clone()),
+        )
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html#item-fn-poll-push-notification-and-cancel-are-manager-owned-389">poll_push_notification_and_cancel_are_manager_owned</a>() {
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-new-109">new</a>();
+        <span class="rs-kw">let</span> manager = <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-412">manager</a>(&amp;notifier);
+        manager
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(&amp;<span class="rs-type">StartedWorkflow</span> {
+                workflow_id: <span class="rs-type">WorkflowId</span>::new_v4(),
+                workflow_task_id: &quot;wf_1&quot;.parse().expect(&quot;workflow session&quot;),
+            })
+            .<span class="rs-kw">await</span>;
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 1);
+
+        <span class="rs-kw">let</span> completions = manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-poll-completions-189">poll_completions</a>().<span class="rs-kw">await</span>;
+        assert_eq!(completions.len(), 1);
+        <span class="rs-kw">for</span> completion <span class="rs-kw">in</span> completions {
+            manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-259">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
+        }
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 0);
+        <span class="rs-kw">let</span> notifications = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-120">drain</a>().<span class="rs-kw">await</span>;
+        assert_eq!(notifications.len(), 1);
+        assert!(notifications[0]
+            .message
+            .contains(&quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] workflow_task_id=wf_1&quot;));
+
+        manager
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-register-background-session-122">register_background_session</a>(&amp;<span class="rs-type">StartedWorkflow</span> {
+                workflow_id: <span class="rs-type">WorkflowId</span>::new_v4(),
+                workflow_task_id: &quot;wf_2&quot;.parse().expect(&quot;workflow session&quot;),
+            })
+            .<span class="rs-kw">await</span>;
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 1);
+        manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-50">cancel</a>(&quot;parent exited&quot;).<span class="rs-kw">await</span>;
+        assert_eq!(manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-250">count</a>().<span class="rs-kw">await</span>, 0);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tool_core::{CommandSessionPort, Sealed};
+use eos_tools::{CommandSessionPort, Sealed};
 use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 use tokio::sync::Mutex;

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::mode::WorkspaceMode;
-use crate::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
+use crate::response::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 
 /// Input needed for a workspace-mode crate to prepare command execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -108,39 +108,3 @@ impl WorkspaceCommandOutcome {
         }
     }
 }
-
-/// Mode-specific command workspace policy. Daemon-owned PTY/process/session
-/// registry behavior stays outside this trait.
-pub trait CommandWorkspacePolicy: Send + Sync {
-    fn prepare_command_workspace(
-        &self,
-        request: PrepareCommandRequest,
-    ) -> Result<PreparedCommandWorkspace, WorkspaceApiError>;
-
-    fn command_session_started(&self, command_session_id: &str, caller_id: &str) {
-        let _ = (command_session_id, caller_id);
-    }
-
-    fn command_session_finished(&self, command_session_id: &str, caller_id: &str, status: &str) {
-        let _ = (command_session_id, caller_id, status);
-    }
-
-    fn finalize_command_workspace(
-        &self,
-        request: FinalizeCommandRequest,
-    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;
-
-    /// Discard a prepared command workspace WITHOUT publishing: release the
-    /// snapshot lease and remove the run dirs, then report a cancelled outcome
-    /// carrying no changed paths. This is the cancel branch of session
-    /// settlement; because it never reaches the publish/OCC merge, a cancelled
-    /// command can never modify the shared workspace.
-    fn discard_command_workspace(
-        &self,
-        request: FinalizeCommandRequest,
-    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;
-}
-
-const _: fn(&dyn CommandWorkspacePolicy) = _assert_command_workspace_policy_object_safe;
-
-fn _assert_command_workspace_policy_object_safe(_: &dyn CommandWorkspacePolicy) {}

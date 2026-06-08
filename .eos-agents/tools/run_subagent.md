@@ -35,31 +35,27 @@ understand why the task matters.
   "list the file paths").
 - Terse command-style prompts produce shallow, generic work.
 
-Don't peek. The launch returns a `subagent_session_id`; the subagent
-runs asynchronously. Don't read its transcript or poll progress unless
-the user explicitly asks for a status check — that defeats the point
-of forking off its tool noise. You'll be notified when it completes.
+Don't peek. The launch returns an `agent_run_id`; the subagent runs
+asynchronously. Don't poll or inspect its transcript — that defeats the
+point of forking off its tool noise. You'll be notified when it completes.
 
 Don't race. After launching, you know nothing about what the subagent
 will find. Never predict its result in any format. If the user asks a
 follow-up before completion, give status, not a guess.
 
 Capabilities and constraints:
-- The launch returns immediately with a `subagent_session_id`.
-- Peek progress with `check_subagent_progress` — you get
-  the last few messages while it's running, the terminal output once it
-  finishes.
-- Cancel with `cancel_subagent`.
+- The launch returns immediately with an `agent_run_id`.
+- Cancel with `cancel_subagent(agent_run_id=...)`.
 - A subagent that exits without calling a terminal tool is marked
   failed.
 
 Launch output:
-- On success: `[SUBAGENT LAUNCHED]` with `subagent_session_id`, `status=running`,
+- On success: `[SUBAGENT LAUNCHED]` with `agent_run_id`, `status=running`,
   and `agent_name`.
-- Metadata includes `subagent_session_id`, `status`, and `agent_name`.
-- Completion is delivered later by typed notification or
-  `check_subagent_progress`; terminal metadata such as
-  `subagent_terminal_called` belongs to that completion result, not the launch.
+- Metadata includes `agent_run_id`, `status`, and `agent_name`.
+- Completion is delivered later as a typed `[BACKGROUND COMPLETED]`
+  notification; terminal metadata such as `subagent_terminal_called`
+  belongs to that completion result, not the launch.
 
 Example:
   run_subagent(

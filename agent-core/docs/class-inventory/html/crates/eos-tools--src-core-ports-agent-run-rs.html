@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-tools · src/core/ports/agent_run.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>68</b><span>modules</span></div>
+  <div><b>401</b><span>items</span></div>
+  <div><b>258</b><span>fields</span></div>
+  <div><b>186</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-tools.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-intent-rs.html"><span>intent.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tools--src-core-metadata-rs.html"><span>metadata.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-name-rs.html"><span>name.rs</span><small>2/5</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link active" href="eos-tools--src-core-ports-agent-run-rs.html"><span>agent_run.rs</span><small>11/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-ports-command-rs.html"><span>command.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-ports-mod-rs.html"><span>mod.rs</span><small>10/0</small></a></li><li><a class="file-link" href="eos-tools--src-core-ports-workflow-rs.html"><span>workflow.rs</span><small>6/0</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-core-result-rs.html"><span>result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">hooks</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-hooks-advisor-approval-rs.html"><span>advisor_approval.rs</span><small>0/11</small></a></li><li><a class="file-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html"><span>disallow_nested_planner_deferral.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tools--src-hooks-mod-rs.html"><span>mod.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html"><span>require_no_background_sessions.rs</span><small>2/13</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-ports-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">registry</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-registry-config-rs.html"><span>config.rs</span><small>4/21</small></a></li><li><a class="file-link" href="eos-tools--src-registry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tools--src-registry-spec-rs.html"><span>spec.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-tools--src-registry-tool-registry-rs.html"><span>tool_registry.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-runtime-dispatch-rs.html"><span>dispatch.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-tools--src-runtime-execution-rs.html"><span>execution.rs</span><small>5/12</small></a></li><li><a class="file-link" href="eos-tools--src-runtime-executor-rs.html"><span>executor.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">tools</span><ul class="file-tree"><li><span class="folder">ask_helper</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html"><span>ask_advisor.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-ask-helper-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">isolated_workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html"><span>enter_isolated_workspace.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html"><span>exit_isolated_workspace.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html"><span>mod.rs</span><small>0/9</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-mod-rs.html"><span>mod.rs</span><small>1/4</small></a></li><li><span class="folder">sandbox</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-sandbox-edit-file-rs.html"><span>edit_file.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-exec-command-rs.html"><span>exec_command.rs</span><small>2/0</small></a></li><li><span class="folder">lib</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html"><span>outputs.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-lib-registration-rs.html"><span>registration.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-lib-rs.html"><span>lib.rs</span><small>0/15</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-multi-edit-rs.html"><span>multi_edit.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html"><span>read_command_progress.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-read-file-rs.html"><span>read_file.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-write-file-rs.html"><span>write_file.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tools--src-tools-sandbox-write-stdin-rs.html"><span>write_stdin.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-services-rs.html"><span>services.rs</span><small>7/0</small></a></li><li><span class="folder">skills</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-skills-load-skill-reference-rs.html"><span>load_skill_reference.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-tools--src-tools-skills-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">subagent</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-subagent-cancel-subagent-rs.html"><span>cancel_subagent.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-subagent-run-subagent-rs.html"><span>run_subagent.rs</span><small>2/4</small></a></li></ul></li><li><span class="folder">submission</span><ul class="file-tree"><li><span class="folder">advisor</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-advisor-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html"><span>submit_advisor_feedback.rs</span><small>3/1</small></a></li></ul></li><li><span class="folder">explorer</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-explorer-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-explorer-submit-exploration-result-rs.html"><span>submit_exploration_result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">generator</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-generator-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html"><span>submit_generator_outcome.rs</span><small>1/1</small></a></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-submission-lib-rs.html"><span>lib.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><span class="folder">planner</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-planner-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html"><span>submit_planner_outcome.rs</span><small>4/4</small></a></li></ul></li><li><span class="folder">reducer</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-reducer-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html"><span>submit_reducer_outcome.rs</span><small>1/1</small></a></li></ul></li><li><span class="folder">root</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-submission-root-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html"><span>submit_root_outcome.rs</span><small>2/7</small></a></li></ul></li></ul></li><li><a class="file-link" href="eos-tools--src-tools-terminal-rs.html"><span>terminal.rs</span><small>3/3</small></a></li><li><span class="folder">workflow</span><ul class="file-tree"><li><a class="file-link" href="eos-tools--src-tools-workflow-cancel-workflow-rs.html"><span>cancel_workflow.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html"><span>check_workflow_status.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html"><span>delegate_workflow.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-tools--src-tools-workflow-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li></ul></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::ports::agent_run crates/eos-tools/src/core/ports/agent_run.rs StartSubagentRunRequest StartedSubagentRun StartSubagentRunOutcome TerminalAgentRun AgentRunServicePort SubagentLaunchRejection SubagentSessionStatus SubagentProgress CancelledSubagent BackgroundSessionCounts SubagentSessionPort">
+  <div class="module-head">
+    <div>
+      <h2>src/core/ports/agent_run.rs</h2>
+      <p class="path">module <code>core::ports::agent_run</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>11 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>10 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-StartSubagentRunRequest-7" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StartSubagentRunRequest pub pub struct StartSubagentRunRequest crates/eos-tools/src/core/ports/agent_run.rs ctx ExecutionMetadata agent_name String prompt String guidance String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StartSubagentRunRequest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartSubagentRunRequest-7">StartSubagentRunRequest</a></code>
+  <p class="docstring">Tool-owned request to start a subagent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>ctx</td><td><code><a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-12">ExecutionMetadata</a></code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>prompt</td><td><code>String</code></td></tr><tr><td>pub</td><td>guidance</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:7</p>
+</article><article id="item-struct-StartedSubagentRun-20" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StartedSubagentRun pub pub struct StartedSubagentRun crates/eos-tools/src/core/ports/agent_run.rs agent_run_id AgentRunId agent_name String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StartedSubagentRun</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartedSubagentRun-20">StartedSubagentRun</a></code>
+  <p class="docstring">A started subagent agent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:20</p>
+</article><article id="item-struct-TerminalAgentRun-38" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TerminalAgentRun pub pub struct TerminalAgentRun crates/eos-tools/src/core/ports/agent_run.rs agent_run_id AgentRunId status SubagentSessionStatus result ToolResult ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TerminalAgentRun</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-TerminalAgentRun-38">TerminalAgentRun</a></code>
+  <p class="docstring">Terminal facts for a child agent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-91">SubagentSessionStatus</a></code></td></tr><tr><td>pub</td><td>result</td><td><code><a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-6">ToolResult</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:38</p>
+</article><article id="item-struct-BackgroundSessionCounts-144" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BackgroundSessionCounts pub pub struct BackgroundSessionCounts crates/eos-tools/src/core/ports/agent_run.rs total usize subagents usize workflows usize command_sessions usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>BackgroundSessionCounts</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-BackgroundSessionCounts-144">BackgroundSessionCounts</a></code>
+  <p class="docstring">Per-kind in-flight background-session count for one agent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>total</td><td><code>usize</code></td></tr><tr><td>pub</td><td>subagents</td><td><code>usize</code></td></tr><tr><td>pub</td><td>workflows</td><td><code>usize</code></td></tr><tr><td>pub</td><td>command_sessions</td><td><code>usize</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:144</p>
+</article><article id="item-enum-StartSubagentRunOutcome-29" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum StartSubagentRunOutcome pub pub enum StartSubagentRunOutcome crates/eos-tools/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>StartSubagentRunOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-StartSubagentRunOutcome-29">StartSubagentRunOutcome</a></code>
+  <p class="docstring">Subagent launch result.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Started</td><td><code>0: <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartedSubagentRun-20">StartedSubagentRun</a></code></td></tr><tr><td>Rejected</td><td><code>0: <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentLaunchRejection-72">SubagentLaunchRejection</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:29</p>
+</article><article id="item-enum-SubagentLaunchRejection-72" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SubagentLaunchRejection pub pub enum SubagentLaunchRejection crates/eos-tools/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>SubagentLaunchRejection</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentLaunchRejection-72">SubagentLaunchRejection</a></code>
+  <p class="docstring">Typed launch rejection facts.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Recursive</td><td><code></code></td></tr><tr><td>NotRegistered</td><td><code>agent_name: String</code></td></tr><tr><td>NotSubagent</td><td><code>agent_name: String, agent_type: String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:72</p>
+</article><article id="item-enum-SubagentSessionStatus-91" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SubagentSessionStatus pub pub enum SubagentSessionStatus crates/eos-tools/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>SubagentSessionStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-91">SubagentSessionStatus</a></code>
+  <p class="docstring">Background-session status facts returned for subagent control tools.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Completed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr><tr><td>Delivered</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:91</p>
+</article><article id="item-enum-SubagentProgress-106" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SubagentProgress pub pub enum SubagentProgress crates/eos-tools/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>SubagentProgress</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentProgress-106">SubagentProgress</a></code>
+  <p class="docstring">Result of looking up a tracked subagent session.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Found</td><td><code>subagent_session_id: SubagentSessionId, status: <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-91">SubagentSessionStatus</a>, agent_name: String, result: Option &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-6">ToolResult</a> &gt;</code></td></tr><tr><td>Missing</td><td><code>subagent_session_id: SubagentSessionId</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:106</p>
+</article><article id="item-enum-CancelledSubagent-127" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum CancelledSubagent pub pub enum CancelledSubagent crates/eos-tools/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CancelledSubagent</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-CancelledSubagent-127">CancelledSubagent</a></code>
+  <p class="docstring">Result of a `cancel_subagent` request.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Cancelled</td><td><code>subagent_session_id: SubagentSessionId, reason: String</code></td></tr><tr><td>MissingOrSettled</td><td><code>subagent_session_id: SubagentSessionId</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:127</p>
+</article><article id="item-trait-AgentRunServicePort-49" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AgentRunServicePort pub pub trait AgentRunServicePort crates/eos-tools/src/core/ports/agent_run.rs  start_subagent_run async fn start_subagent_run (&amp; self , request : StartSubagentRunRequest ,) -&gt; Result &lt; StartSubagentRunOutcome , ToolError &gt; poll_terminal_agent_run async fn poll_terminal_agent_run (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; TerminalAgentRun &gt; , ToolError &gt; cancel_agent_run async fn cancel_agent_run (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>AgentRunServicePort</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-trait-AgentRunServicePort-49">AgentRunServicePort</a></code>
+  <p class="docstring">Resource service for starting, polling, and cancelling subagent agent runs.</p>
+  <div class="tags"><span>async_trait</span><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-start-subagent-run-52"><td>required</td><td>start_subagent_run</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-start-subagent-run-52">start_subagent_run</a> (&amp; self , request : <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartSubagentRunRequest-7">StartSubagentRunRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-StartSubagentRunOutcome-29">StartSubagentRunOutcome</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Start a subagent run, returning typed launch facts.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Start a subagent run, returning typed launch facts.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-start-subagent-run-52">start_subagent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartSubagentRunRequest-7">StartSubagentRunRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-StartSubagentRunOutcome-29">StartSubagentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-poll-terminal-agent-run-58"><td>required</td><td>poll_terminal_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-poll-terminal-agent-run-58">poll_terminal_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-TerminalAgentRun-38">TerminalAgentRun</a> &gt; , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Poll a child agent run for terminal state.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Poll a child agent run for terminal state.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-poll-terminal-agent-run-58">poll_terminal_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-TerminalAgentRun-38">TerminalAgentRun</a>&gt;, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-cancel-agent-run-64"><td>required</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-agent-run-64">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel a child agent run.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel a child agent run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-agent-run-64">cancel_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:49</p>
+</article><article id="item-trait-SubagentSessionPort-157" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait SubagentSessionPort pub pub trait SubagentSessionPort crates/eos-tools/src/core/ports/agent_run.rs  register_background_session async fn register_background_session (&amp; self , agent_run_id : &amp; AgentRunId , agent_name : &amp; str ,) -&gt; SubagentSessionId subagent_session_snapshot async fn subagent_session_snapshot (&amp; self , subagent_session_id : &amp; SubagentSessionId ,) -&gt; Option &lt; SubagentProgress &gt; cancel_background_session async fn cancel_background_session (&amp; self , subagent_session_id : &amp; SubagentSessionId , reason : &amp; str ,) -&gt; CancelledSubagent cancel_background_agent_run async fn cancel_background_agent_run (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str) -&gt; bool count_background_sessions async fn count_background_sessions (&amp; self) -&gt; usize cancel_all_background_sessions async fn cancel_all_background_sessions (&amp; self , reason : &amp; str) poll_complete_background_sessions async fn poll_complete_background_sessions (&amp; self) -&gt; usize">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>SubagentSessionPort</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-trait-SubagentSessionPort-157">SubagentSessionPort</a></code>
+  <p class="docstring">Subagent background-session registry for one owning agent run.</p>
+  <div class="tags"><span>async_trait</span><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-register-background-session-160"><td>required</td><td>register_background_session</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-register-background-session-160">register_background_session</a> (&amp; self , agent_run_id : &amp; AgentRunId , agent_name : &amp; str ,) -&gt; SubagentSessionId</code><p class="docstring">Register a started child agent run as a background session.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register a started child agent run as a background session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-register-background-session-160">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        agent_name: &amp;str,
+    ) -&gt; <span class="rs-type">SubagentSessionId</span>;
+</code></pre>
+</details></td></tr><tr id="method-subagent-session-snapshot-167"><td>required</td><td>subagent_session_snapshot</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-subagent-session-snapshot-167">subagent_session_snapshot</a> (&amp; self , subagent_session_id : &amp; SubagentSessionId ,) -&gt; Option &lt; <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentProgress-106">SubagentProgress</a> &gt;</code><p class="docstring">Snapshot one tracked subagent session for model-facing rendering.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Snapshot one tracked subagent session for model-facing rendering.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-subagent-session-snapshot-167">subagent_session_snapshot</a>(
+        &amp;<span class="rs-self">self</span>,
+        subagent_session_id: &amp;<span class="rs-type">SubagentSessionId</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentProgress-106">SubagentProgress</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-cancel-background-session-173"><td>required</td><td>cancel_background_session</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-background-session-173">cancel_background_session</a> (&amp; self , subagent_session_id : &amp; SubagentSessionId , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-CancelledSubagent-127">CancelledSubagent</a></code><p class="docstring">Cancel one tracked subagent session.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel one tracked subagent session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-background-session-173">cancel_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        subagent_session_id: &amp;<span class="rs-type">SubagentSessionId</span>,
+        reason: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-CancelledSubagent-127">CancelledSubagent</a>;
+</code></pre>
+</details></td></tr><tr id="method-cancel-background-agent-run-180"><td>required</td><td>cancel_background_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-background-agent-run-180">cancel_background_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str) -&gt; bool</code><p class="docstring">Cancel one tracked subagent by its natural child agent-run id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel one tracked subagent by its natural child agent-run id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-background-agent-run-180">cancel_background_agent_run</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>, reason: &amp;str) -&gt; bool;
+</code></pre>
+</details></td></tr><tr id="method-count-background-sessions-183"><td>required</td><td>count_background_sessions</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-count-background-sessions-183">count_background_sessions</a> (&amp; self) -&gt; usize</code><p class="docstring">Count running background sessions for this run.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Count running background sessions for this run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-count-background-sessions-183">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize;
+</code></pre>
+</details></td></tr><tr id="method-cancel-all-background-sessions-186"><td>required</td><td>cancel_all_background_sessions</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-all-background-sessions-186">cancel_all_background_sessions</a> (&amp; self , reason : &amp; str)</code><p class="docstring">Cancel all running background sessions for this run.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel all running background sessions for this run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-all-background-sessions-186">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str);
+</code></pre>
+</details></td></tr><tr id="method-poll-complete-background-sessions-189"><td>required</td><td>poll_complete_background_sessions</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-core-ports-agent-run-rs.html#method-poll-complete-background-sessions-189">poll_complete_background_sessions</a> (&amp; self) -&gt; usize</code><p class="docstring">Poll terminal child runs and push notifications.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Poll terminal child runs and push notifications.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-poll-complete-background-sessions-189">poll_complete_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tools/src/core/ports/agent_run.rs:157</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/core/ports/agent_run.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">SubagentSessionId</span>};
+<span class="rs-kw">use</span> serde::<span class="rs-type">Serialize</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::{<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-12">ExecutionMetadata</a>, <a class="symbol-link rs-type" href="eos-tools--src-core-ports-mod-rs.html#item-trait-Sealed-20">Sealed</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>, <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-6">ToolResult</a>};
+
+<span class="rs-comment">/// Tool-owned request to start a subagent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartSubagentRunRequest-7">StartSubagentRunRequest</a> {
+    <span class="rs-comment">/// Caller execution facts.</span>
+    <span class="rs-kw">pub</span> ctx: <a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-12">ExecutionMetadata</a>,
+    <span class="rs-comment">/// Registered subagent name requested by the model.</span>
+    <span class="rs-kw">pub</span> agent_name: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// User/model supplied subagent task prompt.</span>
+    <span class="rs-kw">pub</span> prompt: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Launch guidance appended to the child run.</span>
+    <span class="rs-kw">pub</span> guidance: <span class="rs-type">String</span>,
+}
+
+<span class="rs-comment">/// A started subagent agent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartedSubagentRun-20">StartedSubagentRun</a> {
+    <span class="rs-comment">/// The durable child agent-run id.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
+    <span class="rs-comment">/// Registered child agent name.</span>
+    <span class="rs-kw">pub</span> agent_name: <span class="rs-type">String</span>,
+}
+
+<span class="rs-comment">/// Subagent launch result.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-StartSubagentRunOutcome-29">StartSubagentRunOutcome</a> {
+    <span class="rs-comment">/// The subagent run was started.</span>
+    <span class="rs-type">Started</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartedSubagentRun-20">StartedSubagentRun</a>),
+    <span class="rs-comment">/// Validation rejected the dispatch.</span>
+    <span class="rs-type">Rejected</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentLaunchRejection-72">SubagentLaunchRejection</a>),
+}
+
+<span class="rs-comment">/// Terminal facts for a child agent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-TerminalAgentRun-38">TerminalAgentRun</a> {
+    <span class="rs-comment">/// The child agent-run id.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
+    <span class="rs-comment">/// Terminal background status.</span>
+    <span class="rs-kw">pub</span> status: <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-91">SubagentSessionStatus</a>,
+    <span class="rs-comment">/// Terminal result payload.</span>
+    <span class="rs-kw">pub</span> result: <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-6">ToolResult</a>,
+}
+
+<span class="rs-comment">/// Resource service for starting, polling, and cancelling subagent agent runs.</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-trait-AgentRunServicePort-49">AgentRunServicePort</a>: <a class="symbol-link rs-type" href="eos-tools--src-core-ports-mod-rs.html#item-trait-Sealed-20">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Start a subagent run, returning typed launch facts.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-start-subagent-run-52">start_subagent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-StartSubagentRunRequest-7">StartSubagentRunRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-StartSubagentRunOutcome-29">StartSubagentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>&gt;;
+
+    <span class="rs-comment">/// Poll a child agent run for terminal state.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-poll-terminal-agent-run-58">poll_terminal_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-TerminalAgentRun-38">TerminalAgentRun</a>&gt;, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>&gt;;
+
+    <span class="rs-comment">/// Cancel a child agent run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-agent-run-64">cancel_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-6">ToolError</a>&gt;;
+}
+
+<span class="rs-comment">/// Typed launch rejection facts.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentLaunchRejection-72">SubagentLaunchRejection</a> {
+    <span class="rs-comment">/// The caller is already a subagent.</span>
+    <span class="rs-type">Recursive</span>,
+    <span class="rs-comment">/// The requested agent name is not registered.</span>
+    <span class="rs-type">NotRegistered</span> {
+        <span class="rs-comment">/// Requested agent name.</span>
+        agent_name: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// The requested agent exists but is not subagent-typed.</span>
+    <span class="rs-type">NotSubagent</span> {
+        <span class="rs-comment">/// Requested agent name.</span>
+        agent_name: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// Registered agent type string.</span>
+        agent_type: <span class="rs-type">String</span>,
+    },
+}
+
+<span class="rs-comment">/// Background-session status facts returned for subagent control tools.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-91">SubagentSessionStatus</a> {
+    <span class="rs-comment">/// The subagent is still running.</span>
+    <span class="rs-type">Running</span>,
+    <span class="rs-comment">/// The subagent called its terminal tool.</span>
+    <span class="rs-type">Completed</span>,
+    <span class="rs-comment">/// The subagent crashed or exited without terminal output.</span>
+    <span class="rs-type">Failed</span>,
+    <span class="rs-comment">/// The subagent was cancelled.</span>
+    <span class="rs-type">Cancelled</span>,
+    <span class="rs-comment">/// The subagent result was already delivered.</span>
+    <span class="rs-type">Delivered</span>,
+}
+
+<span class="rs-comment">/// Result of looking up a tracked subagent session.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentProgress-106">SubagentProgress</a> {
+    <span class="rs-comment">/// The session exists.</span>
+    <span class="rs-type">Found</span> {
+        <span class="rs-comment">/// Agent-facing subagent session id.</span>
+        subagent_session_id: <span class="rs-type">SubagentSessionId</span>,
+        <span class="rs-comment">/// Current tracked status.</span>
+        status: <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-91">SubagentSessionStatus</a>,
+        <span class="rs-comment">/// Registered subagent name.</span>
+        agent_name: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// Terminal result, when available.</span>
+        result: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-6">ToolResult</a>&gt;,
+    },
+    <span class="rs-comment">/// The session id is unknown to the owning run.</span>
+    <span class="rs-type">Missing</span> {
+        <span class="rs-comment">/// Agent-facing subagent session id that was requested.</span>
+        subagent_session_id: <span class="rs-type">SubagentSessionId</span>,
+    },
+}
+
+<span class="rs-comment">/// Result of a `cancel_subagent` request.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-CancelledSubagent-127">CancelledSubagent</a> {
+    <span class="rs-comment">/// A running subagent was cancelled.</span>
+    <span class="rs-type">Cancelled</span> {
+        <span class="rs-comment">/// Agent-facing subagent session id.</span>
+        subagent_session_id: <span class="rs-type">SubagentSessionId</span>,
+        <span class="rs-comment">/// User/tool supplied cancellation reason.</span>
+        reason: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// The session id is unknown or already terminal.</span>
+    <span class="rs-type">MissingOrSettled</span> {
+        <span class="rs-comment">/// Agent-facing subagent session id that could not be cancelled.</span>
+        subagent_session_id: <span class="rs-type">SubagentSessionId</span>,
+    },
+}
+
+<span class="rs-comment">/// Per-kind in-flight background-session count for one agent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-struct-BackgroundSessionCounts-144">BackgroundSessionCounts</a> {
+    <span class="rs-comment">/// `subagents + workflows + command_sessions`.</span>
+    <span class="rs-kw">pub</span> total: usize,
+    <span class="rs-comment">/// In-flight subagent runs for this agent run.</span>
+    <span class="rs-kw">pub</span> subagents: usize,
+    <span class="rs-comment">/// Outstanding delegated workflows for this agent run.</span>
+    <span class="rs-kw">pub</span> workflows: usize,
+    <span class="rs-comment">/// In-flight background-tracked command sessions for this agent run.</span>
+    <span class="rs-kw">pub</span> command_sessions: usize,
+}
+
+<span class="rs-comment">/// Subagent background-session registry for one owning agent run.</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-trait-SubagentSessionPort-157">SubagentSessionPort</a>: <a class="symbol-link rs-type" href="eos-tools--src-core-ports-mod-rs.html#item-trait-Sealed-20">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Register a started child agent run as a background session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-register-background-session-160">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        agent_name: &amp;str,
+    ) -&gt; <span class="rs-type">SubagentSessionId</span>;
+
+    <span class="rs-comment">/// Snapshot one tracked subagent session for model-facing rendering.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-subagent-session-snapshot-167">subagent_session_snapshot</a>(
+        &amp;<span class="rs-self">self</span>,
+        subagent_session_id: &amp;<span class="rs-type">SubagentSessionId</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-SubagentProgress-106">SubagentProgress</a>&gt;;
+
+    <span class="rs-comment">/// Cancel one tracked subagent session.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-background-session-173">cancel_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        subagent_session_id: &amp;<span class="rs-type">SubagentSessionId</span>,
+        reason: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-ports-agent-run-rs.html#item-enum-CancelledSubagent-127">CancelledSubagent</a>;
+
+    <span class="rs-comment">/// Cancel one tracked subagent by its natural child agent-run id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-background-agent-run-180">cancel_background_agent_run</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>, reason: &amp;str) -&gt; bool;
+
+    <span class="rs-comment">/// Count running background sessions for this run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-count-background-sessions-183">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize;
+
+    <span class="rs-comment">/// Cancel all running background sessions for this run.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-cancel-all-background-sessions-186">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str);
+
+    <span class="rs-comment">/// Poll terminal child runs and push notifications.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-ports-agent-run-rs.html#method-poll-complete-background-sessions-189">poll_complete_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize;
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -28,8 +28,7 @@ use crate::error::DaemonError;
 use crate::services::workspace_run;
 #[cfg(target_os = "linux")]
 use runtime::command_handle_from;
-#[cfg(target_os = "linux")]
-pub use runtime::CommandHandle;
+pub(crate) use runtime::CommandHandle;
 use runtime::{DaemonLayerStackPort, DaemonNamespaceRuntime};
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";

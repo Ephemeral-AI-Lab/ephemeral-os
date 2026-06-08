@@ -17,11 +17,11 @@ mod workflow;
 
 use std::sync::Arc;
 
-use eos_agent_run::AgentRunApi;
 use eos_llm_client::ToolSpec;
 
 use crate::core::name::ToolName;
 use crate::core::result::OutputShape;
+use crate::ports::AgentRunServicePort;
 use crate::registry::config::{ToolConfig, ToolConfigSet};
 use crate::registry::ToolRegistry;
 use crate::runtime::executor::{RegisteredTool, ToolExecutor};
@@ -93,7 +93,7 @@ pub fn build_default_registry_with_services(
     sandbox_service: SandboxToolService,
     root_submission: Option<RootSubmissionService>,
     attempt_submission: Option<AttemptSubmissionService>,
-    agent_run_service: Option<Arc<dyn AgentRunApi>>,
+    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
     subagent_sessions: Option<Arc<dyn crate::ports::SubagentSessionPort>>,
     workflow_service: Option<Arc<dyn crate::ports::WorkflowServicePort>>,
     workflow_sessions: Option<Arc<dyn crate::ports::WorkflowSessionPort>>,

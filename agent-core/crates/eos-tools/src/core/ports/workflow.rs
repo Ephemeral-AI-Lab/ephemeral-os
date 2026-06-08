@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
-use crate::{Sealed, ToolError};
+use crate::core::{Sealed, ToolError};
 
 /// Request to start a delegated workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,7 +31,7 @@ pub struct TerminalWorkflow {
     /// The agent-facing background session id.
     pub workflow_task_id: WorkflowSessionId,
     /// Terminal status for background accounting.
-    pub status: crate::agent_run::SubagentSessionStatus,
+    pub status: super::agent_run::SubagentSessionStatus,
 }
 
 /// Resource service for workflow lifecycle operations.

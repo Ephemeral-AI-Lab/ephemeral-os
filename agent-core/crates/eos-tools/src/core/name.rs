@@ -2,8 +2,7 @@
 //!
 //! Ports `_names.py` **plus** the five names that module omits (`write_stdin`,
 //! `read_command_progress`, `enter_isolated_workspace`, `exit_isolated_workspace`,
-//! `load_skill_reference`) and the two subagent control tools (`check_subagent_progress`,
-//! `cancel_subagent`) — GC-tools-04. The authoritative set is the union of the
+//! `load_skill_reference`) and `cancel_subagent` — GC-tools-04. The authoritative set is the union of the
 //! six registration sites, not `_names.py`. Each variant maps to its wire string
 //! (the exact `snake_case` of the variant), so `serde` `rename_all` and the
 //! hand-written [`ToolName::as_str`] agree (asserted by a test).
@@ -42,8 +41,6 @@ pub enum ToolName {
     ExitIsolatedWorkspace,
     /// `run_subagent` (subagent).
     RunSubagent,
-    /// `check_subagent_progress` (subagent control).
-    CheckSubagentProgress,
     /// `cancel_subagent` (subagent control).
     CancelSubagent,
     /// `ask_advisor` (ask helper).
@@ -73,7 +70,7 @@ pub enum ToolName {
 impl ToolName {
     /// Every tool name, in a stable order. Used by registry-totality tests and
     /// as the canonical iteration order for default-set construction.
-    pub const ALL: [ToolName; 23] = [
+    pub const ALL: [ToolName; 22] = [
         ToolName::ReadFile,
         ToolName::WriteFile,
         ToolName::EditFile,
@@ -84,7 +81,6 @@ impl ToolName {
         ToolName::EnterIsolatedWorkspace,
         ToolName::ExitIsolatedWorkspace,
         ToolName::RunSubagent,
-        ToolName::CheckSubagentProgress,
         ToolName::CancelSubagent,
         ToolName::AskAdvisor,
         ToolName::DelegateWorkflow,
@@ -113,7 +109,6 @@ impl ToolName {
             ToolName::EnterIsolatedWorkspace => "enter_isolated_workspace",
             ToolName::ExitIsolatedWorkspace => "exit_isolated_workspace",
             ToolName::RunSubagent => "run_subagent",
-            ToolName::CheckSubagentProgress => "check_subagent_progress",
             ToolName::CancelSubagent => "cancel_subagent",
             ToolName::AskAdvisor => "ask_advisor",
             ToolName::DelegateWorkflow => "delegate_workflow",

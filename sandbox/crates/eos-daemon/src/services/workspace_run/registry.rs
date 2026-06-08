@@ -1,6 +1,6 @@
 // The caller-keyed registry is the Linux PTY/overlay orchestration. On non-Linux
-// the daemon serves command-session ops as stubs, so the registry is dead there —
-// it stays compiled for the scaffold unit tests and a uniform module tree.
+// the daemon serves command-session ops as stubs, so most of the registry is dead
+// there — it stays compiled for the scaffold unit tests and a uniform module tree.
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
 use std::collections::{HashMap, HashSet};
@@ -11,103 +11,85 @@ use eos_command_session::{
     CollectCompleted, CollectCompletedResponse, CommandResponse, CommandSession,
     CommandSessionCompletion,
 };
-use eos_workspace_api::CommandWorkspacePolicy;
+use eos_ephemeral_workspace::EphemeralWorkspace;
 
-/// The workspace policy owned by a run — overlay/namespace state (lease + dirs)
-/// plus the finalize/discard logic. The run, not the session, owns this so the
-/// publish-vs-discard decision lives at the run level.
-pub(crate) type PolicyArc = Arc<dyn CommandWorkspacePolicy + Send + Sync>;
+use super::isolated::CommandHandle;
 
-/// One command session paired with the workspace policy that owns its overlay
-/// (ephemeral) or namespace (isolated) state. The session is the PTY substrate;
-/// the policy decides publish (complete) vs discard (cancel).
-pub(crate) struct RunSession {
+/// One ephemeral workspace run: exactly **one** command session paired with the
+/// fresh overlay it owns (snapshot lease + run dirs). The run owns the overlay
+/// state directly — there is no policy indirection — so completion publishes the
+/// captured upperdir and cancellation discards it, structurally.
+pub(crate) struct EphemeralRun {
     pub(crate) session: CommandSession,
-    pub(crate) policy: PolicyArc,
+    pub(crate) workspace: EphemeralWorkspace,
 }
 
-impl RunSession {
-    #[must_use]
-    pub(crate) fn new(session: CommandSession, policy: PolicyArc) -> Self {
-        Self { session, policy }
+/// One command session running inside a caller's isolated workspace. It carries
+/// the per-session [`CommandHandle`] (namespace fds, scratch dirs, lease/manifest
+/// coordinates) needed to finalize the session for AUDIT (never published); the
+/// namespace + lease themselves are owned by the isolated-session subsystem and
+/// torn down on `exit`.
+pub(crate) struct IsolatedRun {
+    pub(crate) session: CommandSession,
+    pub(crate) handle: CommandHandle,
+}
+
+/// A single workspace run: an ephemeral overlay run or one session of the
+/// caller's isolated run. The variant carries the per-kind state the daemon needs
+/// to publish (ephemeral complete), discard (cancel), or audit (isolated).
+pub(crate) enum WorkspaceRun {
+    Ephemeral(EphemeralRun),
+    Isolated(IsolatedRun),
+}
+
+impl WorkspaceRun {
+    pub(crate) fn session(&self) -> &CommandSession {
+        match self {
+            Self::Ephemeral(run) => &run.session,
+            Self::Isolated(run) => &run.session,
+        }
     }
-}
-
-/// Which workspace a starting command session belongs to. The daemon picks the
-/// kind from the caller's current mode; the registry uses it to place the session
-/// into a fresh ephemeral workspace run or the caller's isolated run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WorkspaceRunKind {
-    Ephemeral,
-    Isolated,
-}
-
-/// One ephemeral workspace run: **exactly one** command session. Each ephemeral
-/// `exec_command` gets its own workspace (its snapshot lease + run dirs live in
-/// the run's policy), so the workspace and its session are 1:1 and co-terminal.
-struct EphemeralWorkspaceRun {
-    run: Arc<RunSession>,
-}
-
-/// The isolated workspace run: **many** command sessions sharing the caller's one
-/// isolated workspace (namespace + snapshot are owned by the isolated-session
-/// subsystem; this run just tracks the command sessions running inside it).
-struct IsolatedWorkspaceRun {
-    sessions: HashMap<String, Arc<RunSession>>,
 }
 
 /// A caller's workspace runs. The XOR — many ephemeral workspaces (each one
 /// session) **or** the one isolated workspace (many sessions) — is enforced by
-/// the isolated enter/exit gate and encoded structurally here: an ephemeral
-/// caller maps to a set of single-session runs, an isolated caller to one
-/// many-session run.
+/// the isolated enter/exit gate and encoded structurally here.
 enum CallerRun {
-    Ephemeral(HashMap<String, EphemeralWorkspaceRun>),
-    Isolated(IsolatedWorkspaceRun),
+    Ephemeral(HashMap<String, Arc<WorkspaceRun>>),
+    Isolated(HashMap<String, Arc<WorkspaceRun>>),
 }
 
 impl CallerRun {
-    fn sessions(&self) -> Vec<Arc<RunSession>> {
+    fn sessions(&self) -> Vec<Arc<WorkspaceRun>> {
         match self {
-            Self::Ephemeral(runs) => runs.values().map(|run| Arc::clone(&run.run)).collect(),
-            Self::Isolated(run) => run.sessions.values().cloned().collect(),
+            Self::Ephemeral(runs) | Self::Isolated(runs) => runs.values().cloned().collect(),
         }
     }
 
-    fn get(&self, session_id: &str) -> Option<Arc<RunSession>> {
+    fn get(&self, session_id: &str) -> Option<Arc<WorkspaceRun>> {
         match self {
-            Self::Ephemeral(runs) => runs.get(session_id).map(|run| Arc::clone(&run.run)),
-            Self::Isolated(run) => run.sessions.get(session_id).cloned(),
+            Self::Ephemeral(runs) | Self::Isolated(runs) => runs.get(session_id).cloned(),
         }
     }
 
     fn count(&self) -> usize {
         match self {
-            Self::Ephemeral(runs) => runs.len(),
-            Self::Isolated(run) => run.sessions.len(),
+            Self::Ephemeral(runs) | Self::Isolated(runs) => runs.len(),
         }
     }
 
     /// Remove `session_id`, returning the removed run and whether this caller
     /// run is now empty (so the registry can drop the caller entry).
-    fn take(&mut self, session_id: &str) -> (Option<Arc<RunSession>>, bool) {
+    fn take(&mut self, session_id: &str) -> (Option<Arc<WorkspaceRun>>, bool) {
         match self {
-            Self::Ephemeral(runs) => {
-                let removed = runs.remove(session_id).map(|run| run.run);
+            Self::Ephemeral(runs) | Self::Isolated(runs) => {
+                let removed = runs.remove(session_id);
                 (removed, runs.is_empty())
-            }
-            Self::Isolated(run) => {
-                let removed = run.sessions.remove(session_id);
-                (removed, run.sessions.is_empty())
             }
         }
     }
 }
 
-/// Single caller-keyed command-session authority. Each caller maps to its
-/// `CallerRun` (many ephemeral workspace runs or the one isolated run).
-/// Session-targeted ops resolve by scanning runs for the session id (caller count
-/// is small).
 /// Hard cap on parked (completed-but-uncollected) sessions. A caller that never
 /// calls `collect_completed` would otherwise grow this map without bound; on
 /// overflow the oldest uncollected completion is dropped. Silently losing a stale
@@ -120,6 +102,10 @@ struct CompletedEntry {
     completion: CommandSessionCompletion,
 }
 
+/// Single caller-keyed command-session authority. Each caller maps to its
+/// `CallerRun` (many ephemeral workspace runs or the one isolated run).
+/// Session-targeted ops resolve by scanning runs for the session id (caller count
+/// is small).
 #[derive(Default)]
 pub(crate) struct WorkspaceRunRegistry {
     runs: Mutex<HashMap<String, CallerRun>>,
@@ -144,40 +130,38 @@ impl WorkspaceRunRegistry {
         format!("cmd_{}", self.counter.fetch_add(1, Ordering::Relaxed))
     }
 
-    /// Place a started run into its caller's runs: a fresh ephemeral workspace
-    /// run, or the caller's (created-on-first-session) isolated run.
-    pub(crate) fn insert(&self, run: Arc<RunSession>, kind: WorkspaceRunKind) {
-        let caller_id = run.session.caller_id().to_owned();
-        let session_id = run.session.id().to_owned();
+    /// Place a started run into its caller's runs, keyed by the run's own kind: a
+    /// fresh ephemeral workspace run, or a session of the caller's isolated run.
+    pub(crate) fn insert(&self, run: Arc<WorkspaceRun>) {
+        let caller_id = run.session().caller_id().to_owned();
+        let session_id = run.session().id().to_owned();
         let mut runs = lock(&self.runs);
-        match kind {
-            WorkspaceRunKind::Ephemeral => {
-                let caller = runs
+        match &*run {
+            WorkspaceRun::Ephemeral(_) => {
+                if let CallerRun::Ephemeral(ephemeral) = runs
                     .entry(caller_id)
-                    .or_insert_with(|| CallerRun::Ephemeral(HashMap::new()));
-                if let CallerRun::Ephemeral(ephemeral) = caller {
-                    ephemeral.insert(session_id, EphemeralWorkspaceRun { run });
+                    .or_insert_with(|| CallerRun::Ephemeral(HashMap::new()))
+                {
+                    ephemeral.insert(session_id, run);
                 }
             }
-            WorkspaceRunKind::Isolated => {
-                let caller = runs.entry(caller_id).or_insert_with(|| {
-                    CallerRun::Isolated(IsolatedWorkspaceRun {
-                        sessions: HashMap::new(),
-                    })
-                });
-                if let CallerRun::Isolated(isolated) = caller {
-                    isolated.sessions.insert(session_id, run);
+            WorkspaceRun::Isolated(_) => {
+                if let CallerRun::Isolated(isolated) = runs
+                    .entry(caller_id)
+                    .or_insert_with(|| CallerRun::Isolated(HashMap::new()))
+                {
+                    isolated.insert(session_id, run);
                 }
             }
         }
     }
 
     #[must_use]
-    pub(crate) fn get(&self, id: &str) -> Option<Arc<RunSession>> {
+    pub(crate) fn get(&self, id: &str) -> Option<Arc<WorkspaceRun>> {
         lock(&self.runs).values().find_map(|run| run.get(id))
     }
 
-    pub(crate) fn remove(&self, id: &str) -> Option<Arc<RunSession>> {
+    pub(crate) fn remove(&self, id: &str) -> Option<Arc<WorkspaceRun>> {
         let mut runs = lock(&self.runs);
         let caller = runs
             .iter()
@@ -203,7 +187,7 @@ impl WorkspaceRunRegistry {
     }
 
     #[must_use]
-    pub(crate) fn live(&self) -> Vec<Arc<RunSession>> {
+    pub(crate) fn live(&self) -> Vec<Arc<WorkspaceRun>> {
         lock(&self.runs)
             .values()
             .flat_map(CallerRun::sessions)
@@ -211,9 +195,8 @@ impl WorkspaceRunRegistry {
     }
 
     /// All live runs owned by `caller_id` (drives per-caller cleanup).
-    #[cfg(target_os = "linux")]
     #[must_use]
-    pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<RunSession>> {
+    pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<WorkspaceRun>> {
         lock(&self.runs)
             .get(caller_id)
             .map(CallerRun::sessions)
@@ -295,6 +278,13 @@ pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
+    use eos_command_session::CommandSessionSpec;
+    use eos_ephemeral_workspace::{
+        CallerId, EphemeralRunDirs, EphemeralSnapshot, InvocationId, WorkspaceRoot,
+    };
+
     use super::*;
 
     fn sample_completion(id: &str) -> CommandSessionCompletion {
@@ -306,6 +296,58 @@ mod tests {
             result: result.clone(),
             notification_result: result,
         }
+    }
+
+    fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
+        let session = CommandSession::new(CommandSessionSpec {
+            id: id.to_owned(),
+            caller_id: caller.to_owned(),
+            command: "sleep 1".to_owned(),
+            timeout_seconds: None,
+        });
+        let workspace = EphemeralWorkspace {
+            layer_stack_root: WorkspaceRoot(PathBuf::from("/layers")),
+            workspace_root: PathBuf::from("/workspace"),
+            caller_id: CallerId(caller.to_owned()),
+            invocation_id: InvocationId("inv".to_owned()),
+            snapshot: EphemeralSnapshot {
+                lease_id: "lease".to_owned(),
+                manifest_version: 1,
+                manifest_root_hash: "hash".to_owned(),
+                layer_paths: Vec::new(),
+            },
+            dirs: EphemeralRunDirs {
+                run_dir: PathBuf::from("/run"),
+                upperdir: PathBuf::from("/upper"),
+                workdir: PathBuf::from("/work"),
+                output_path: PathBuf::from("/out.json"),
+                final_path: PathBuf::from("/final.json"),
+                request_path: None,
+                result_path: None,
+            },
+        };
+        Arc::new(WorkspaceRun::Ephemeral(EphemeralRun { session, workspace }))
+    }
+
+    #[test]
+    fn insert_get_count_remove_track_caller_runs() {
+        let registry = WorkspaceRunRegistry::new();
+        registry.insert(ephemeral_run("cmd_1", "caller"));
+        registry.insert(ephemeral_run("cmd_2", "caller"));
+        registry.insert(ephemeral_run("cmd_3", "other"));
+
+        assert_eq!(registry.count_by_caller(Some("caller")), 2);
+        assert_eq!(registry.count_by_caller(Some("other")), 1);
+        assert_eq!(registry.count_by_caller(None), 3);
+        assert!(registry.get("cmd_2").is_some());
+        assert_eq!(registry.caller_sessions("caller").len(), 2);
+
+        assert!(registry.remove("cmd_2").is_some());
+        assert_eq!(registry.count_by_caller(Some("caller")), 1);
+        // Removing a caller's last session drops the caller entry.
+        assert!(registry.remove("cmd_1").is_some());
+        assert_eq!(registry.count_by_caller(Some("caller")), 0);
+        assert_eq!(registry.live().len(), 1);
     }
 
     #[test]

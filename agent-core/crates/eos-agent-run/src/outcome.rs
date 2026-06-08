@@ -1,7 +1,7 @@
 //! Agent-run terminal outcome DTOs.
 
 use eos_llm_client::Message;
-use eos_tool_core::ToolResult;
+use eos_tools::ToolResult;
 use eos_types::{AgentRunId, JsonObject};
 
 /// Terminal outcome for one agent run.

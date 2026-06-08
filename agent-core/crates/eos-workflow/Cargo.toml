@@ -8,7 +8,6 @@ rust-version.workspace = true
 async-trait.workspace = true
 eos-state.workspace = true
 eos-tools.workspace = true
-eos-tool-core.workspace = true
 eos-agent-def.workspace = true
 eos-types.workspace = true
 parking_lot.workspace = true

@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_tool_core::{Sealed, StartedWorkflow, WorkflowServicePort, WorkflowSessionPort};
+use eos_tools::{Sealed, StartedWorkflow, WorkflowServicePort, WorkflowSessionPort};
 use eos_types::{AgentRunId, WorkflowId, WorkflowSessionId};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -197,11 +197,11 @@ impl WorkflowSessionManager {
                 continue;
             };
             let status = match terminal.status {
-                eos_tool_core::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
-                eos_tool_core::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
-                eos_tool_core::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
-                eos_tool_core::SubagentSessionStatus::Running
-                | eos_tool_core::SubagentSessionStatus::Delivered => continue,
+                eos_tools::SubagentSessionStatus::Completed => BackgroundSessionStatus::Completed,
+                eos_tools::SubagentSessionStatus::Failed => BackgroundSessionStatus::Failed,
+                eos_tools::SubagentSessionStatus::Cancelled => BackgroundSessionStatus::Cancelled,
+                eos_tools::SubagentSessionStatus::Running
+                | eos_tools::SubagentSessionStatus::Delivered => continue,
             };
             if let Some(completion) = self.settle_running(session.id(), status).await {
                 completions.push(completion);
@@ -309,11 +309,11 @@ mod tests {
     use std::sync::{Arc, OnceLock};
 
     use async_trait::async_trait;
-    use eos_tool_core::{
+    use eos_state::TaskId;
+    use eos_tools::{
         OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus,
         TerminalWorkflow, ToolError, WorkflowServicePort,
     };
-    use eos_state::TaskId;
     use eos_types::AgentRunId;
 
     use crate::background::notification::BackgroundNotificationEmitter;

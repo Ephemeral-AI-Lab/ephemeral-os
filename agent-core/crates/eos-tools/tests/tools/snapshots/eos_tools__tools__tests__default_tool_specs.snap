@@ -329,7 +329,7 @@ expression: specs
   },
   {
     "name": "exec_command",
-    "description": "Run a command in a managed PTY session inside the sandbox. If the command finishes within `yield_time_ms` you get the final result; otherwise the session keeps running in the background and you get `status: running` with a `command_session_id`. Use `write_stdin` to feed input or send exact Ctrl-C/Ctrl-D teardown, and use `read_command_progress` to inspect later output without writing stdin. Set `timeout` (seconds) to bound the run. Output is a merged PTY stream: everything (including the program's stderr) arrives in `stdout`, and the `stderr` field is always empty.",
+    "description": "Run a command in a managed PTY session inside the sandbox. If the command finishes within `yield_time_ms` you get the final result; otherwise the session keeps running in the background and you get `status: running` with a `command_session_id`. Use `write_stdin` to feed input or send exact Ctrl-C/Ctrl-D teardown, and use `read_command_progress` to inspect later output without writing stdin. Set `timeout` (seconds) to override the daemon-configured default run bound. Output is a timestamp-prefixed merged PTY stream: everything (including the program's stderr) arrives in `stdout` as lines like `[2026-06-07T18:42:31.238Z] ...`, and the `stderr` field is always empty.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ExecCommandInput",
@@ -435,7 +435,7 @@ expression: specs
   },
   {
     "name": "write_stdin",
-    "description": "Send literal text to a running command session by `command_session_id` (for example `\"y\\n\"`). `chars` must be non-empty. After writing, the tool waits up to `yield_time_ms` for output or completion and returns that result. Sending exactly `\"\\x03\"` (Ctrl-C) or exactly `\"\\x04\"` (Ctrl-D) tears down the PTY session through command-session cancel; mixed control text is rejected. Empty polling is not supported. Use `read_command_progress` to inspect output without writing stdin.",
+    "description": "Send literal text to a running command session by `command_session_id` (for example `\"y\\n\"`). `chars` must be non-empty. After writing, the tool waits up to `yield_time_ms` for timestamp-prefixed PTY output or completion and returns that result. Sending exactly `\"\\x03\"` (Ctrl-C) or exactly `\"\\x04\"` (Ctrl-D) tears down the PTY session through command-session cancel; mixed control text is rejected. Empty polling is not supported. Use `read_command_progress` to inspect output without writing stdin.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WriteStdinInput",
@@ -536,7 +536,7 @@ expression: specs
   },
   {
     "name": "read_command_progress",
-    "description": "Read a stateless tail snapshot from a running or completed command session by `command_session_id`. Returns at most `last_n_lines` trailing output lines and any terminal status now known for the session. This tool has no progress cursor and does not mutate stdin; call it again when you need a fresh snapshot.",
+    "description": "Read a stateless tail snapshot from a running or completed command session by `command_session_id`. Returns at most `last_n_lines` trailing timestamp-prefixed output lines and any terminal status now known for the session. This tool has no progress cursor and does not mutate stdin; call it again when you need a fresh snapshot.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ReadCommandProgressInput",
@@ -786,7 +786,7 @@ expression: specs
   },
   {
     "name": "submit_generator_outcome",
-    "description": "Terminate your generator run with SUCCESS or FAILED for the current generator task.\n\n## Inputs\n- `status`: `\"success\"` when the assigned task is complete, or `\"failed\"`\n  when it cannot be completed in this attempt.\n- `outcome`: 1-3 sentence factual report. For success, include what changed,\n  verification evidence, and artifact references. For failure, include the\n  concrete blocker and evidence.\n\n## Do Not Use This Tool When\n- A delegated workflow you started is still outstanding; use\n  `delegate_workflow` only for new delegated work, then inspect or\n  cancel outstanding workflow sessions before submitting your final outcome.\n\n## Behavior\n- Records reducer-visible generator success or failure on the current task.\n- The orchestrator advances the DAG after the submission is accepted.\n\n## Success vs Failure Decision\n\nGenerator task:\n- Treat `<dependencies>` outcomes as context inputs for your `<assigned_task>`.\n- Work on the assigned generator task, use `delegate_workflow` only\n  when a subtask needs delegated decomposition, then choose exactly one terminal\n  tool after all delegated work is resolved.\n\nCall `submit_generator_outcome` with `status=\"success\"` when:\n- You completed the assigned task and the deliverable is in place.\n- Required verification passed, or the task did not require verification.\n- Your `outcome` identifies what downstream tasks or reducers should read,\n  including verification and artifact references.\n\nCall `submit_generator_outcome` with `status=\"failed\"` when:\n- You attempted the assigned task but cannot complete it in this attempt.\n- The blocker is concrete enough for retry or replanning.\n- Delegated workflow results still leave the assigned task incomplete.",
+    "description": "Terminate your generator run with SUCCESS or FAILED for the current generator task.\n\n## Inputs\n- `status`: `\"success\"` when the assigned task is complete, or `\"failed\"`\n  when it cannot be completed in this attempt.\n- `outcome`: 1-3 sentence factual report. For success, include what changed,\n  verification evidence, and artifact references. For failure, include the\n  concrete blocker and evidence.\n\n## Do Not Use This Tool When\n- A delegated workflow you started is still outstanding; use\n  `delegate_workflow` only for new delegated work, then inspect or\n  cancel outstanding workflow handles before submitting your final outcome.\n\n## Behavior\n- Records reducer-visible generator success or failure on the current task.\n- The orchestrator advances the DAG after the submission is accepted.\n\n## Success vs Failure Decision\n\nGenerator task:\n- Treat `<dependencies>` outcomes as context inputs for your `<assigned_task>`.\n- Work on the assigned generator task, use `delegate_workflow` only\n  when a subtask needs delegated decomposition, then choose exactly one terminal\n  tool after all delegated work is resolved.\n\nCall `submit_generator_outcome` with `status=\"success\"` when:\n- You completed the assigned task and the deliverable is in place.\n- Required verification passed, or the task did not require verification.\n- Your `outcome` identifies what downstream tasks or reducers should read,\n  including verification and artifact references.\n\nCall `submit_generator_outcome` with `status=\"failed\"` when:\n- You attempted the assigned task but cannot complete it in this attempt.\n- The blocker is concrete enough for retry or replanning.\n- Delegated workflow results still leave the assigned task incomplete.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "OutcomeInput",
@@ -939,7 +939,7 @@ expression: specs
   },
   {
     "name": "delegate_workflow",
-    "description": "Start non-terminal delegated workflow work. Returns a workflow session; continue running and use check_workflow_status or cancel_workflow later.",
+    "description": "Start non-terminal delegated workflow work. Returns a workflow handle; continue running and use check_workflow_status or cancel_workflow later.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DelegateWorkflowInput",
@@ -1004,7 +1004,7 @@ expression: specs
   },
   {
     "name": "run_subagent",
-    "description": "Spawn a registered subagent as a supervised async session. You hand it `prompt` as\nits only input. It must finish by calling its terminal tool; whatever that\nterminal tool emits becomes your result.\n\nUse this when:\n- You need to delegate a focused, context-isolated investigation (e.g.,\n  \"where is X used across the repo?\") so your context isn't polluted by\n  intermediate tool output.\n- You can launch multiple independent investigations and want to run them\n  in parallel — fire them all in a single message with multiple\n  `run_subagent` calls.\n\nDo NOT use for:\n- Work you'd handle in 1–3 of your own tool calls — direct execution\n  beats subagent overhead.\n- Spawning further subagents from inside a subagent — that path is\n  rejected at validation time. Handle the work directly, or submit your\n  findings via your own terminal tool.\n- Tasks that need shared context with you — the subagent does NOT\n  inherit your conversation. The `prompt` is the only channel.\n\nWriting the prompt:\nBrief the subagent like a smart colleague who just walked into the room.\nIt hasn't seen your conversation, doesn't know what you've tried, doesn't\nunderstand why the task matters.\n- Explain what you're trying to accomplish and why.\n- Include the exact paths, symbol names, or commands you'd run yourself.\n- Specify what's in scope and what's out of scope.\n- Tell it what shape of answer you want (\"report in under 200 words\",\n  \"list the file paths\").\n- Terse command-style prompts produce shallow, generic work.\n\nDon't peek. The launch returns a `subagent_session_id`; the subagent\nruns asynchronously. Don't read its transcript or poll progress unless\nthe user explicitly asks for a status check — that defeats the point\nof forking off its tool noise. You'll be notified when it completes.\n\nDon't race. After launching, you know nothing about what the subagent\nwill find. Never predict its result in any format. If the user asks a\nfollow-up before completion, give status, not a guess.\n\nCapabilities and constraints:\n- The launch returns immediately with a `subagent_session_id`.\n- Peek progress with `check_subagent_progress` — you get\n  the last few messages while it's running, the terminal output once it\n  finishes.\n- Cancel with `cancel_subagent`.\n- A subagent that exits without calling a terminal tool is marked\n  failed.\n\nLaunch output:\n- On success: `[SUBAGENT LAUNCHED]` with `subagent_session_id`, `status=running`,\n  and `agent_name`.\n- Metadata includes `subagent_session_id`, `status`, and `agent_name`.\n- Completion is delivered later by typed notification or\n  `check_subagent_progress`; terminal metadata such as\n  `subagent_terminal_called` belongs to that completion result, not the launch.\n\nExample:\n  run_subagent(\n    agent_name=\"explorer\",\n    prompt=(\n      \"Find every call site of \"\n      \"`AttemptOrchestrator.apply_reducer_submission` in agent-core/crates/eos-workflow \"\n      \"and report (file, line, calling function). The signature is \"\n      \"changing in PR #842; I need the punch list of files to update. \"\n      \"Report under 200 words.\"\n    ),\n  )",
+    "description": "Spawn a registered subagent as a supervised async session. You hand it `prompt` as\nits only input. It must finish by calling its terminal tool; whatever that\nterminal tool emits becomes your result.\n\nUse this when:\n- You need to delegate a focused, context-isolated investigation (e.g.,\n  \"where is X used across the repo?\") so your context isn't polluted by\n  intermediate tool output.\n- You can launch multiple independent investigations and want to run them\n  in parallel — fire them all in a single message with multiple\n  `run_subagent` calls.\n\nDo NOT use for:\n- Work you'd handle in 1–3 of your own tool calls — direct execution\n  beats subagent overhead.\n- Spawning further subagents from inside a subagent — that path is\n  rejected at validation time. Handle the work directly, or submit your\n  findings via your own terminal tool.\n- Tasks that need shared context with you — the subagent does NOT\n  inherit your conversation. The `prompt` is the only channel.\n\nWriting the prompt:\nBrief the subagent like a smart colleague who just walked into the room.\nIt hasn't seen your conversation, doesn't know what you've tried, doesn't\nunderstand why the task matters.\n- Explain what you're trying to accomplish and why.\n- Include the exact paths, symbol names, or commands you'd run yourself.\n- Specify what's in scope and what's out of scope.\n- Tell it what shape of answer you want (\"report in under 200 words\",\n  \"list the file paths\").\n- Terse command-style prompts produce shallow, generic work.\n\nDon't peek. The launch returns an `agent_run_id`; the subagent runs\nasynchronously. Don't poll or inspect its transcript — that defeats the\npoint of forking off its tool noise. You'll be notified when it completes.\n\nDon't race. After launching, you know nothing about what the subagent\nwill find. Never predict its result in any format. If the user asks a\nfollow-up before completion, give status, not a guess.\n\nCapabilities and constraints:\n- The launch returns immediately with an `agent_run_id`.\n- Cancel with `cancel_subagent(agent_run_id=...)`.\n- A subagent that exits without calling a terminal tool is marked\n  failed.\n\nLaunch output:\n- On success: `[SUBAGENT LAUNCHED]` with `agent_run_id`, `status=running`,\n  and `agent_name`.\n- Metadata includes `agent_run_id`, `status`, and `agent_name`.\n- Completion is delivered later as a typed `[BACKGROUND COMPLETED]`\n  notification; terminal metadata such as `subagent_terminal_called`\n  belongs to that completion result, not the launch.\n\nExample:\n  run_subagent(\n    agent_name=\"explorer\",\n    prompt=(\n      \"Find every call site of \"\n      \"`AttemptOrchestrator.apply_reducer_submission` in agent-core/crates/eos-workflow \"\n      \"and report (file, line, calling function). The signature is \"\n      \"changing in PR #842; I need the punch list of files to update. \"\n      \"Report under 200 words.\"\n    ),\n  )",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "RunSubagentInput",
@@ -1030,46 +1030,21 @@ expression: specs
     "output_schema": null
   },
   {
-    "name": "check_subagent_progress",
-    "description": "Check a running or finished subagent by subagent_session_id. Returns the latest child-agent message snapshot while running and the terminal result after successful completion.",
-    "input_schema": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CheckSubagentProgressInput",
-      "type": "object",
-      "required": [
-        "subagent_session_id"
-      ],
-      "properties": {
-        "last_n_messages": {
-          "default": 5,
-          "type": "integer",
-          "format": "uint8",
-          "maximum": 10.0,
-          "minimum": 1.0
-        },
-        "subagent_session_id": {
-          "type": "string"
-        }
-      }
-    },
-    "output_schema": null
-  },
-  {
     "name": "cancel_subagent",
-    "description": "Cancel a running subagent by subagent_session_id.",
+    "description": "Cancel a running subagent by agent_run_id.",
     "input_schema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CancelSubagentInput",
       "type": "object",
       "required": [
-        "subagent_session_id"
+        "agent_run_id"
       ],
       "properties": {
-        "reason": {
-          "default": "",
+        "agent_run_id": {
           "type": "string"
         },
-        "subagent_session_id": {
+        "reason": {
+          "default": "",
           "type": "string"
         }
       }

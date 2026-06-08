@@ -5,7 +5,7 @@ use eos_sandbox_port::{
 };
 use eos_types::{AgentRunId, CommandSessionId, JsonObject, SandboxId};
 
-use crate::{Sealed, ToolError};
+use crate::core::{Sealed, ToolError};
 
 /// Resource service for sandbox command operations.
 #[async_trait]

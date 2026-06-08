@@ -8,7 +8,7 @@
 //! and generic OCC publisher ownership stay outside this crate.
 
 pub mod capture;
-pub mod command_session;
+pub mod command;
 pub mod dirs;
 pub mod error;
 pub mod finalize;
@@ -18,6 +18,10 @@ pub mod timings;
 pub mod types;
 
 pub use capture::{capture_for_publish, CapturedUpperdir};
+pub use command::{
+    discard_ephemeral_command, finalize_ephemeral_command, prepare_ephemeral_command,
+    EphemeralCommandPrepareContext, PreparedEphemeralCommand,
+};
 pub use dirs::{EphemeralDirAllocator, RunDirCleanup};
 pub use error::EphemeralWorkspaceError;
 pub use finalize::{finalize_publishable_workspace, FinalizeOutcome, FinalizeRequest};
