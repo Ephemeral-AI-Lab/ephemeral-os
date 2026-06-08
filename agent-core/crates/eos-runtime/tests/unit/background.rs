@@ -28,7 +28,7 @@ mod command_session_delivery {
     use crate::runtime_services::support::{FakeGateway, FakeProvisioner};
     use crate::runtime_services::EventSourceFactory;
     use crate::RuntimeServices;
-    use eos_testkit::{agent_def, request_route_key_for, text_turn, tool_use_turn};
+    use eos_testkit::{agent_def, text_turn, tool_use_turn, ScriptedSource};
 
     /// A fake daemon transport: `exec_command` starts a backgrounded session
     /// `cmd_1`, `collect_completed` parks a successful completion for it, and the
@@ -128,29 +128,6 @@ mod command_session_delivery {
         }
     }
 
-    struct DeliveryRoutingSource {
-        advisor_turn: Vec<StreamEvent>,
-        started: Arc<AtomicBool>,
-        asked_advisor: Arc<AtomicBool>,
-        saw_notification: Arc<AtomicBool>,
-    }
-
-    #[async_trait]
-    impl EventSource for DeliveryRoutingSource {
-        async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError> {
-            if request_route_key_for(request, &["advisor", "root"]) == "advisor" {
-                return Ok(stream_of(self.advisor_turn.clone()));
-            }
-            DeliveryProbeSource {
-                started: self.started.clone(),
-                asked_advisor: self.asked_advisor.clone(),
-                saw_notification: self.saw_notification.clone(),
-            }
-            .stream(request)
-            .await
-        }
-    }
-
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn backgrounded_completion_lands_as_system_notification() {
         let mut root = agent_def(
@@ -182,13 +159,16 @@ mod command_session_delivery {
             "submit_advisor_feedback",
             json!({"verdict": "approve", "summary": "background completion is real; approve"}),
         );
-        let factory: EventSourceFactory = Arc::new(move |_request| {
-            Arc::new(DeliveryRoutingSource {
-                advisor_turn: advisor_turn.clone(),
-                started: started_factory.clone(),
-                asked_advisor: asked_factory.clone(),
-                saw_notification: saw_factory.clone(),
-            }) as Arc<dyn EventSource>
+        let factory: EventSourceFactory = Arc::new(move |_request, agent_state| {
+            if agent_state.agent_name == "advisor" {
+                Arc::new(ScriptedSource::new(vec![advisor_turn.clone()])) as Arc<dyn EventSource>
+            } else {
+                Arc::new(DeliveryProbeSource {
+                    started: started_factory.clone(),
+                    asked_advisor: asked_factory.clone(),
+                    saw_notification: saw_factory.clone(),
+                }) as Arc<dyn EventSource>
+            }
         });
 
         let dir = tempfile::tempdir().expect("tempdir");

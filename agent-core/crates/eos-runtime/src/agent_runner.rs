@@ -28,8 +28,7 @@ use eos_tools::{AttemptSubmissionPort, AttemptSubmissionService};
 use eos_types::{AgentRunId, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
-use crate::runtime_services::build_agent_loop_launcher;
-use crate::runtime_services::RuntimeServices;
+use crate::runtime_services::{build_agent_loop_launcher, EventCallback, RuntimeServices};
 
 /// Runtime adapter over the shared engine loop, supplied to `AttemptDeps.runner`.
 pub(crate) struct RuntimeAgentRunner {
@@ -43,6 +42,8 @@ pub(crate) struct RuntimeAgentRunner {
     /// `get()` is `Some` by the time any run starts, so workflow agents' hooks
     /// can read `workflow_depth` (deferral) and `find_outstanding` (no-inflight).
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
+    /// Optional stream-event callback shared with the root request.
+    event_callback: Option<EventCallback>,
 }
 
 impl std::fmt::Debug for RuntimeAgentRunner {
@@ -57,12 +58,14 @@ impl RuntimeAgentRunner {
         workspace_root: impl Into<String>,
         attempt_submission: Arc<dyn AttemptSubmissionPort>,
         workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
+        event_callback: Option<EventCallback>,
     ) -> Self {
         Self {
             services,
             workspace_root: workspace_root.into(),
             attempt_submission,
             workflow_service,
+            event_callback,
         }
     }
 }
@@ -87,6 +90,7 @@ impl AgentRunner for RuntimeAgentRunner {
                 self.attempt_submission.clone(),
             )),
             self.workflow_service.clone(),
+            self.event_callback.clone(),
         );
         let agent_runs = Arc::new(RunnerAgentRunService::new(
             self.services.agent_core.agent_registry.clone(),

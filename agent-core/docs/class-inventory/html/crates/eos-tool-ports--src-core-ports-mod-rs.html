@@ -172,47 +172,46 @@
   <h4>Methods</h4><table><tbody><tr id="method-notify-system-99"><td>required</td><td>notify_system</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-notify-system-99">notify_system</a> (&amp; self , notification : <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#item-struct-SystemNotification-87">SystemNotification</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Surface one system notification.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Surface one system notification.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-notify-system-99">notify_system</a>(&amp;<span class="rs-self">self</span>, notification: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-struct-SystemNotification-87">SystemNotification</a>)
-        -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-notify-system-99">notify_system</a>(&amp;<span class="rs-self">self</span>, notification: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-struct-SystemNotification-87">SystemNotification</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-tool-ports/src/core/ports/mod.rs:96</p>
-</article><article id="item-trait-CancelableResource-104" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CancelableResource pub pub trait CancelableResource crates/eos-tool-ports/src/core/ports/mod.rs  teardown async fn teardown (&amp; self , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt;">
+</article><article id="item-trait-CancelableResource-103" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CancelableResource pub pub trait CancelableResource crates/eos-tool-ports/src/core/ports/mod.rs  teardown async fn teardown (&amp; self , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>CancelableResource</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelableResource-104">CancelableResource</a></code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelableResource-103">CancelableResource</a></code>
   <p class="docstring">A non-leaf effect a tool creates that must be torn down on cancellation.</p>
   <div class="tags"><span>async_trait</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-teardown-107"><td>required</td><td>teardown</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-teardown-107">teardown</a> (&amp; self , reason : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Tear down the spawned effect.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-teardown-106"><td>required</td><td>teardown</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-teardown-106">teardown</a> (&amp; self , reason : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Tear down the spawned effect.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Tear down the spawned effect.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-teardown-107">teardown</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-teardown-106">teardown</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-tool-ports/src/core/ports/mod.rs:104</p>
-</article><article id="item-trait-CancelPort-111" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CancelPort pub pub trait CancelPort crates/eos-tool-ports/src/core/ports/mod.rs  cancel_task async fn cancel_task (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt; cancel_agent_run async fn cancel_agent_run (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;">
+  <p class="source">crates/eos-tool-ports/src/core/ports/mod.rs:103</p>
+</article><article id="item-trait-CancelPort-110" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CancelPort pub pub trait CancelPort crates/eos-tool-ports/src/core/ports/mod.rs  cancel_task async fn cancel_task (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt; cancel_agent_run async fn cancel_agent_run (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>CancelPort</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelPort-111">CancelPort</a></code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelPort-110">CancelPort</a></code>
   <p class="docstring">Recursive agent-core cancellation primitives.</p>
   <div class="tags"><span>async_trait</span><span>port/service</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-cancel-task-114"><td>required</td><td>cancel_task</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-task-114">cancel_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel a persisted task.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-cancel-task-113"><td>required</td><td>cancel_task</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-task-113">cancel_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel a persisted task.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel a persisted task.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-task-114">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-task-113">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-117"><td>required</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-agent-run-117">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel a live agent run.</p><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-116"><td>required</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-agent-run-116">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel a live agent run.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel a live agent run.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-agent-run-117">cancel_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-agent-run-116">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -220,7 +219,7 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-tool-ports/src/core/ports/mod.rs:111</p>
+  <p class="source">crates/eos-tool-ports/src/core/ports/mod.rs:110</p>
 </article></div>
 </section></div>
 </main>
@@ -328,25 +327,24 @@
 #[async_trait]
 <span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-NotificationSink-96">NotificationSink</a>: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-Sealed-16">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
     <span class="rs-comment">/// Surface one system notification.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-notify-system-99">notify_system</a>(&amp;<span class="rs-self">self</span>, notification: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-struct-SystemNotification-87">SystemNotification</a>)
-        -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-notify-system-99">notify_system</a>(&amp;<span class="rs-self">self</span>, notification: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-struct-SystemNotification-87">SystemNotification</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
 }
 
 <span class="rs-comment">/// A non-leaf effect a tool creates that must be torn down on cancellation.</span>
 #[async_trait]
-<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelableResource-104">CancelableResource</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelableResource-103">CancelableResource</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
     <span class="rs-comment">/// Tear down the spawned effect.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-teardown-107">teardown</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-teardown-106">teardown</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
 }
 
 <span class="rs-comment">/// Recursive agent-core cancellation primitives.</span>
 #[async_trait]
-<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelPort-111">CancelPort</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-mod-rs.html#item-trait-CancelPort-110">CancelPort</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
     <span class="rs-comment">/// Cancel a persisted task.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-task-114">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-task-113">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt;;
 
     <span class="rs-comment">/// Cancel a live agent run.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-agent-run-117">cancel_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-ports-mod-rs.html#method-cancel-agent-run-116">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,

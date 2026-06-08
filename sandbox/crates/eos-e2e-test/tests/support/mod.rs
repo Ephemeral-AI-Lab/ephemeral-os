@@ -231,6 +231,46 @@ pub(crate) fn stdout(value: &Value) -> &str {
         .unwrap_or_default()
 }
 
+/// Command stdout with the per-line `[ISO-8601] ` transcript timestamp prefix
+/// removed. The daemon's PTY reader prepends a wall-clock timestamp to every
+/// transcript line (for `read_progress` monitoring), so a settled command's
+/// `output.stdout` carries those prefixes. Tests that assert on the command's
+/// actual output strip the environment-dependent timestamp first; lines without
+/// a timestamp prefix pass through unchanged.
+pub(crate) fn clean_stdout(value: &Value) -> String {
+    strip_transcript_timestamps(stdout(value))
+}
+
+/// Strip the `[ISO-8601] ` timestamp prefix from each line of `raw`. See
+/// [`clean_stdout`].
+pub(crate) fn strip_transcript_timestamps(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    for (index, line) in raw.lines().enumerate() {
+        if index > 0 {
+            out.push('\n');
+        }
+        out.push_str(strip_line_timestamp(line));
+    }
+    out
+}
+
+fn strip_line_timestamp(line: &str) -> &str {
+    let Some(rest) = line.strip_prefix('[') else {
+        return line;
+    };
+    let Some(close) = rest.find("] ") else {
+        return line;
+    };
+    // Only strip a real timestamp (`YYYY-...`): require 4 leading digits + `-`
+    // so genuine bracketed output is never mistaken for a transcript prefix.
+    let stamp = rest.as_bytes();
+    if close >= 5 && stamp[..4].iter().all(u8::is_ascii_digit) && stamp[4] == b'-' {
+        &rest[close + 2..]
+    } else {
+        line
+    }
+}
+
 pub(crate) fn conflict_reason(value: &Value) -> String {
     value
         .get("conflict")

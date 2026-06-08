@@ -7,8 +7,9 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, seed_base_files, stdout,
-    wait_for_active_leases, wait_for_session_count,
+    array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, live_pool_or_skip,
+    seed_base_files, strip_transcript_timestamps, stdout, wait_for_active_leases,
+    wait_for_session_count,
 };
 
 /// Read a nested `timings.<key>` number from a response.
@@ -66,7 +67,7 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&read_only, "status")?, "ok", "{read_only}");
-    assert_eq!(stdout(&read_only), "firstsecond", "{read_only}");
+    assert_eq!(clean_stdout(&read_only), "firstsecond", "{read_only}");
     assert!(
         array(&read_only, "changed_paths")?.is_empty(),
         "read-intent exec must not publish changed paths: {read_only}"
@@ -111,7 +112,7 @@ fn exec_write_outside_workspace_is_not_captured() -> Result<()> {
         ops::API_V1_EXEC_COMMAND,
         json!({"cmd": format!("cat {marker}"), "yield_time_ms": 1000, "timeout_seconds": 10}),
     )?;
-    assert_eq!(stdout(&read_back), "outside", "{read_back}");
+    assert_eq!(clean_stdout(&read_back), "outside", "{read_back}");
     Ok(())
 }
 
@@ -172,7 +173,7 @@ printf 'extra_state=%s\n' "$(dir_state /tmp/eos-mask-test)"
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-    let output = stdout(&exec);
+    let output = strip_transcript_timestamps(stdout(&exec));
     for expected in [
         "proc=visible",
         "eos_fs=tmpfs",

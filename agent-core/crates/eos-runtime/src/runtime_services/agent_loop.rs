@@ -4,14 +4,15 @@ use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use eos_agent_ports::{
-    AgentExecutionMetadataService, AgentLoopLauncher, AgentPortError, AgentRunApi, AgentState,
-    AuditNodeBuildInput, ExecutionMetadataBuildInput,
+    AgentExecutionMetadataService, AgentLoopLauncher, AgentPortError, AgentRunApi, AgentRunError,
+    AgentRunOutcome, AgentState, AuditNodeBuildInput, ExecutionMetadataBuildInput,
 };
 use eos_audit::AuditNode;
 use eos_engine::{
-    AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory, ProviderEventSource,
-    TokioAgentLoopLauncher,
+    AgentLoopBackgroundDependencies, AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory,
+    EventCallback, ProviderEventSource, TokioAgentLoopLauncher,
 };
+use eos_sandbox_port::SandboxCommandService;
 use eos_tool_ports::{ExecutionMetadata, ToolRegistry};
 use eos_tools::{
     build_default_registry_with_services, AttemptSubmissionService, CallerScope,
@@ -31,6 +32,7 @@ pub(crate) fn build_agent_loop_launcher(
     services: RuntimeServices,
     attempt_submission: Option<AttemptSubmissionService>,
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
+    event_callback: Option<EventCallback>,
 ) -> (Arc<dyn AgentLoopLauncher>, AgentRunApiCell) {
     let agent_run_api = Arc::new(OnceLock::new());
     let metadata_service = Arc::new(RuntimeExecutionMetadataService::new(services.clone()));
@@ -40,19 +42,87 @@ pub(crate) fn build_agent_loop_launcher(
         workflow_service,
         agent_run_api: agent_run_api.clone(),
     });
-    let launcher: Arc<dyn AgentLoopLauncher> = match services.engine.event_source_factory.clone() {
-        Some(factory) => Arc::new(TokioAgentLoopLauncher::with_event_source_factory(
-            factory,
-            registry_factory,
-            metadata_service,
+    let background_dependencies = AgentLoopBackgroundDependencies::new(
+        Arc::new(LateBoundAgentRunApi::new(agent_run_api.clone())),
+        Arc::new(SandboxCommandService::new(
+            services.sandbox.transport.clone(),
         )),
-        None => Arc::new(TokioAgentLoopLauncher::new(
+        services.engine.command_session_completion_poll_interval(),
+        registry_factory.workflow_service.clone(),
+    );
+    let launcher_impl = match services.engine.event_source_factory.clone() {
+        Some(factory) => TokioAgentLoopLauncher::with_event_source_factory(
+            factory,
+            registry_factory.clone(),
+            metadata_service.clone(),
+        ),
+        None => TokioAgentLoopLauncher::new(
             Arc::new(ProviderEventSource::new(services.engine.llm_client.clone())),
             registry_factory,
             metadata_service,
-        )),
-    };
+        ),
+    }
+    .with_background_dependencies(background_dependencies)
+    .with_event_callback(event_callback);
+    let launcher: Arc<dyn AgentLoopLauncher> = Arc::new(launcher_impl);
     (launcher, agent_run_api)
+}
+
+#[derive(Clone)]
+struct LateBoundAgentRunApi {
+    cell: AgentRunApiCell,
+}
+
+impl LateBoundAgentRunApi {
+    fn new(cell: AgentRunApiCell) -> Self {
+        Self { cell }
+    }
+
+    fn service(&self) -> Result<Arc<dyn AgentRunApi>, AgentRunError> {
+        self.cell
+            .get()
+            .cloned()
+            .ok_or_else(|| AgentRunError::Internal("agent-run API not initialized".to_owned()))
+    }
+}
+
+impl std::fmt::Debug for LateBoundAgentRunApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LateBoundAgentRunApi")
+            .finish_non_exhaustive()
+    }
+}
+
+#[async_trait]
+impl AgentRunApi for LateBoundAgentRunApi {
+    async fn spawn_agent(
+        &self,
+        request: eos_agent_ports::SpawnAgentRequest,
+    ) -> Result<eos_types::AgentRunId, AgentRunError> {
+        self.service()?.spawn_agent(request).await
+    }
+
+    async fn wait_for_agent_outcome(
+        &self,
+        agent_run_id: &eos_types::AgentRunId,
+    ) -> Result<AgentRunOutcome, AgentRunError> {
+        self.service()?.wait_for_agent_outcome(agent_run_id).await
+    }
+
+    async fn poll_agent_run_outcome(
+        &self,
+        agent_run_id: &eos_types::AgentRunId,
+    ) -> Result<Option<AgentRunOutcome>, AgentRunError> {
+        self.service()?.poll_agent_run_outcome(agent_run_id).await
+    }
+
+    async fn cancel_agent_run(
+        &self,
+        agent_run_id: &eos_types::AgentRunId,
+        reason: &str,
+    ) -> Result<(), AgentRunError> {
+        self.service()?.cancel_agent_run(agent_run_id, reason).await
+    }
 }
 
 struct RuntimeToolRegistryFactory {

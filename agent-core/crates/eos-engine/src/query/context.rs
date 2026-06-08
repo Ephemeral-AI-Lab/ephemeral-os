@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_ports::StartAgentLoopRequest;
+use eos_agent_ports::{AgentState, StartAgentLoopRequest};
 use eos_audit::AuditSink;
 use eos_llm_client::LlmRequest;
 use eos_tool_ports::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
@@ -24,7 +24,7 @@ pub type EngineStream = Pin<Box<dyn Stream<Item = Result<StreamEvent, EngineErro
 
 /// Per-loop event source factory.
 pub type EventSourceFactory =
-    Arc<dyn Fn(&StartAgentLoopRequest) -> Arc<dyn EventSource> + Send + Sync>;
+    Arc<dyn Fn(&StartAgentLoopRequest, &AgentState) -> Arc<dyn EventSource> + Send + Sync>;
 
 /// Per-run stream-event callback.
 pub type EventCallback = Arc<dyn Fn(&StreamEvent) + Send + Sync>;

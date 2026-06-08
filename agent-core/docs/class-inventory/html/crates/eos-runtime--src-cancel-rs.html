@@ -95,13 +95,13 @@
     request_id: &amp;<span class="rs-type">RequestId</span>,
     reason: &amp;str,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runtime--src-cancel-rs.html#item-struct-CancelReport-16">CancelReport</a>&gt; {
-    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a>(request_id);
+    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a>(request_id);
     <span class="rs-kw">let</span> port = services.cancel_registry.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-get-55">get</a>(request_id);
     <span class="rs-kw">let</span> had_live_run = port.is_some();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(port) = port {
         <span class="rs-comment">// Recurse: flips the root task to Cancelled and tears down the root run</span>
         <span class="rs-comment">// and every descendant (subagents, delegated workflows, command sessions).</span>
-        port.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-56">cancel_task</a>(&amp;root_task_id, reason).<span class="rs-kw">await</span>?;
+        port.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-55">cancel_task</a>(&amp;root_task_id, reason).<span class="rs-kw">await</span>?;
     }
     services
         .db
@@ -167,13 +167,13 @@
     request_id: &amp;<span class="rs-type">RequestId</span>,
     reason: &amp;str,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runtime--src-cancel-rs.html#item-struct-CancelReport-16">CancelReport</a>&gt; {
-    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a>(request_id);
+    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a>(request_id);
     <span class="rs-kw">let</span> port = services.cancel_registry.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-get-55">get</a>(request_id);
     <span class="rs-kw">let</span> had_live_run = port.is_some();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(port) = port {
         <span class="rs-comment">// Recurse: flips the root task to Cancelled and tears down the root run</span>
         <span class="rs-comment">// and every descendant (subagents, delegated workflows, command sessions).</span>
-        port.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-56">cancel_task</a>(&amp;root_task_id, reason).<span class="rs-kw">await</span>?;
+        port.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-55">cancel_task</a>(&amp;root_task_id, reason).<span class="rs-kw">await</span>?;
     }
     services
         .db

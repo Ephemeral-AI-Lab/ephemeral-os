@@ -640,6 +640,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
+ "eos-agent-ports",
  "eos-engine",
  "eos-llm-client",
  "eos-sandbox-port",

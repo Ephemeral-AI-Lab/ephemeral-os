@@ -69,30 +69,30 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> agent_loop;
 <span class="rs-kw">mod</span> agent_name;
 <span class="rs-kw">mod</span> agent_run_api;
 <span class="rs-kw">mod</span> agent_run_outcome;
-<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> agent_loop;
 <span class="rs-kw">mod</span> agent_state;
 <span class="rs-kw">mod</span> error;
 <span class="rs-kw">mod</span> metadata_service;
 <span class="rs-kw">mod</span> spawn_agent_request;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_name::{<a class="symbol-link rs-type" href="eos-agent-ports--src-agent-name-rs.html#item-struct-AgentName-5">AgentName</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-name-rs.html#item-enum-AgentNameError-35">AgentNameError</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_loop::{
     agent_loop_cancel_pair, <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-loop-launcher-rs.html#item-struct-AgentLoopCancelHandle-22">AgentLoopCancelHandle</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-loop-launcher-rs.html#item-struct-AgentLoopCancelSignal-37">AgentLoopCancelSignal</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-loop-launcher-rs.html#item-trait-AgentLoopLauncher-7">AgentLoopLauncher</a>,
     <a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a>, <a class="symbol-link rs-type" href="eos-agent-ports.html#item-struct-AgentLoopOutcome-33">AgentLoopOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopOutcomeKind-44">AgentLoopOutcomeKind</a>, <a class="symbol-link rs-type" href="eos-agent-ports.html#item-struct-StartAgentLoopRequest-7">StartAgentLoopRequest</a>,
     <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-loop-launcher-rs.html#item-struct-StartedAgentLoop-13">StartedAgentLoop</a>,
 };
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_name::{<a class="symbol-link rs-type" href="eos-agent-ports--src-agent-name-rs.html#item-struct-AgentName-5">AgentName</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-name-rs.html#item-enum-AgentNameError-35">AgentNameError</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_run_api::<a class="symbol-link rs-type" href="eos-agent-ports--src-agent-run-api-rs.html#item-trait-AgentRunApi-8">AgentRunApi</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_run_outcome::{<a class="symbol-link rs-type" href="eos-agent-ports--src-agent-run-outcome-rs.html#item-struct-AgentRunOutcome-6">AgentRunOutcome</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-agent-run-outcome-rs.html#item-enum-AgentRunStatus-23">AgentRunStatus</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_state::<a class="symbol-link rs-type" href="eos-agent-ports--src-agent-state-rs.html#item-struct-AgentState-7">AgentState</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_state::<a class="symbol-link rs-type" href="eos-agent-ports--src-agent-state-rs.html#item-struct-AgentState-5">AgentState</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-agent-ports--src-error-rs.html#item-enum-AgentPortError-5">AgentPortError</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-error-rs.html#item-enum-AgentRunError-14">AgentRunError</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> metadata_service::{
     <a class="symbol-link rs-type" href="eos-agent-ports--src-metadata-service-rs.html#item-trait-AgentExecutionMetadataService-36">AgentExecutionMetadataService</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-metadata-service-rs.html#item-struct-AuditNodeBuildInput-25">AuditNodeBuildInput</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-metadata-service-rs.html#item-struct-ExecutionMetadataBuildInput-12">ExecutionMetadataBuildInput</a>,
 };
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> spawn_agent_request::{
-    <a class="symbol-link rs-type" href="eos-agent-ports--src-spawn-agent-request-rs.html#item-enum-AgentRunMessageRecordKind-41">AgentRunMessageRecordKind</a>, <span class="rs-type">AgentRunRecordKind</span>, <a class="symbol-link rs-type" href="eos-agent-ports--src-spawn-agent-request-rs.html#item-struct-SpawnAgentRequest-10">SpawnAgentRequest</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-spawn-agent-request-rs.html#item-enum-WorkflowTaskRole-76">WorkflowTaskRole</a>,
+    <a class="symbol-link rs-type" href="eos-agent-ports--src-spawn-agent-request-rs.html#item-enum-AgentRunMessageRecordKind-39">AgentRunMessageRecordKind</a>, <span class="rs-type">AgentRunRecordKind</span>, <a class="symbol-link rs-type" href="eos-agent-ports--src-spawn-agent-request-rs.html#item-struct-SpawnAgentRequest-8">SpawnAgentRequest</a>, <a class="symbol-link rs-type" href="eos-agent-ports--src-spawn-agent-request-rs.html#item-enum-WorkflowTaskRole-74">WorkflowTaskRole</a>,
 };
 </code></pre>
 </section>

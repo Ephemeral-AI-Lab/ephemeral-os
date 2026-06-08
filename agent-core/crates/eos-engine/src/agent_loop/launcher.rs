@@ -8,22 +8,16 @@ use eos_agent_ports::{
 };
 use tokio::sync::oneshot;
 
-use super::{AgentLoopExecutor, AgentLoopHooks, AgentLoopToolRegistryFactory, NoopAgentLoopHooks};
-use crate::query::{EventSource, EventSourceFactory};
+use super::{
+    AgentLoopBackgroundDependencies, AgentLoopExecutor, AgentLoopHooks,
+    AgentLoopToolRegistryFactory, NoopAgentLoopHooks,
+};
+use crate::query::{EventCallback, EventSource, EventSourceFactory};
 
 #[derive(Clone)]
 pub(crate) enum AgentLoopEventSource {
     Static(Arc<dyn EventSource>),
     Factory(EventSourceFactory),
-}
-
-impl AgentLoopEventSource {
-    fn resolve(&self, request: &StartAgentLoopRequest) -> Arc<dyn EventSource> {
-        match self {
-            Self::Static(source) => Arc::clone(source),
-            Self::Factory(factory) => factory(request),
-        }
-    }
 }
 
 /// Tokio-backed non-blocking agent-loop launcher.
@@ -32,6 +26,8 @@ pub struct TokioAgentLoopLauncher {
     loop_hooks: Arc<dyn AgentLoopHooks>,
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
     metadata_service: Arc<dyn AgentExecutionMetadataService>,
+    background_dependencies: Option<AgentLoopBackgroundDependencies>,
+    event_callback: Option<EventCallback>,
 }
 
 impl std::fmt::Debug for TokioAgentLoopLauncher {
@@ -84,7 +80,26 @@ impl TokioAgentLoopLauncher {
             loop_hooks,
             tool_registry_factory,
             metadata_service,
+            background_dependencies: None,
+            event_callback: None,
         }
+    }
+
+    /// Attach runtime ports for engine-owned background managers.
+    #[must_use]
+    pub fn with_background_dependencies(
+        mut self,
+        dependencies: AgentLoopBackgroundDependencies,
+    ) -> Self {
+        self.background_dependencies = Some(dependencies);
+        self
+    }
+
+    /// Attach an optional stream-event callback invoked by each run.
+    #[must_use]
+    pub fn with_event_callback(mut self, callback: Option<EventCallback>) -> Self {
+        self.event_callback = callback;
+        self
     }
 }
 
@@ -92,13 +107,14 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
     fn start_agent_loop(&self, request: StartAgentLoopRequest) -> StartedAgentLoop {
         let (outcome_sender, outcome_receiver) = oneshot::channel();
         let (cancel_handle, cancel_signal) = agent_loop_cancel_pair();
-        let event_source = self.event_source.resolve(&request);
         let loop_executor = AgentLoopExecutor::new(
-            event_source,
+            self.event_source.clone(),
             Arc::clone(&self.loop_hooks),
             Arc::clone(&self.tool_registry_factory),
             Arc::clone(&self.metadata_service),
             cancel_signal,
+            self.background_dependencies.clone(),
+            self.event_callback.clone(),
         );
 
         tokio::spawn(async move {

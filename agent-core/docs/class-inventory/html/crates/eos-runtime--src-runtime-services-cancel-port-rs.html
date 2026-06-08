@@ -65,7 +65,7 @@
   <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code>
   <p class="docstring">Request-scoped cancellation port wired to the runner service.</p>
   <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_api</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-27"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-runtime.html#method-new-55">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , agent_run_store : Arc &lt; dyn AgentRunStore &gt; , agent_run_api : Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt; ,) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_api</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-26"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-runtime.html#method-new-55">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , agent_run_store : Arc &lt; dyn AgentRunStore &gt; , agent_run_api : Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt; ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(
         task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
@@ -79,9 +79,9 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-live-run-for-task-39"><td>method</td><td>cancel_live_run_for_task</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-39">cancel_live_run_for_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-live-run-for-task-38"><td>method</td><td>cancel_live_run_for_task</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-38">cancel_live_run_for_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-39">cancel_live_run_for_task</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-38">cancel_live_run_for_task</a>(
         &amp;<span class="rs-self">self</span>,
         task_id: &amp;<span class="rs-type">TaskId</span>,
         reason: &amp;str,
@@ -92,22 +92,21 @@
         <span class="rs-kw">if</span> run.finished_at.is_some() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a>(&amp;run.id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a>(&amp;run.id, reason).<span class="rs-kw">await</span>
     }
 </code></pre>
 </details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code></summary><table><tbody><tr id="method-fmt-20"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-49">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-49">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>&quot;)
-            .finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>&quot;).finish_non_exhaustive()
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl CancelPort for <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code></summary><table><tbody><tr id="method-cancel-task-56"><td>method</td><td>cancel_task</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-56">cancel_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl CancelPort for <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code></summary><table><tbody><tr id="method-cancel-task-55"><td>method</td><td>cancel_task</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-55">cancel_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-56">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-55">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-get-55">get</a>(task_id).<span class="rs-kw">await</span>? {
             <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
-                <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-89">cancelled_terminal</a>(reason);
+                <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a>(reason);
                 <span class="rs-self">self</span>.task_store
                     .set_task_status_if_current(
                         task_id,
@@ -119,12 +118,12 @@
                     .<span class="rs-kw">await</span>?;
             }
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-39">cancel_live_run_for_task</a>(task_id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-38">cancel_live_run_for_task</a>(task_id, reason).<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-74"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-73"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -133,7 +132,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         };
         agent_run_api
-            .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a>(agent_run_id, reason)
+            .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a>(agent_run_id, reason)
             .<span class="rs-kw">await</span>
             .map_err(|err| <span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(err.to_string()))
     }
@@ -141,17 +140,17 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-runtime/src/runtime_services/cancel_port.rs:11</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-cancelled-terminal-89" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancelled_terminal private fn cancelled_terminal (reason : &amp; str) -&gt; JsonObject crates/eos-runtime/src/runtime_services/cancel_port.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-cancelled-terminal-88" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancelled_terminal private fn cancelled_terminal (reason : &amp; str) -&gt; JsonObject crates/eos-runtime/src/runtime_services/cancel_port.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cancelled_terminal</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-89">cancelled_terminal</a> (reason : &amp; str) -&gt; JsonObject</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a> (reason : &amp; str) -&gt; JsonObject</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-89">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>();
     terminal.insert(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
     terminal.insert(&quot;reason&quot;.to_owned(), reason.into());
@@ -160,7 +159,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-runtime/src/runtime_services/cancel_port.rs:89</p>
+  <p class="source">crates/eos-runtime/src/runtime_services/cancel_port.rs:88</p>
 </article></div>
 </section></div>
 </main>
@@ -176,8 +175,8 @@
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_agent_ports::<span class="rs-type">AgentRunApi</span>;
 <span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">CancelPort</span>, <span class="rs-type">ToolError</span>};
-<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunStore</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">TaskStore</span>};
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">TaskId</span>};
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunStore</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">TaskStore</span>};
 
 <span class="rs-comment">/// Request-scoped cancellation port wired to the runner service.</span>
 #[derive(<span class="rs-type">Clone</span>)]
@@ -189,8 +188,7 @@
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-49">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>&quot;)
-            .finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>&quot;).finish_non_exhaustive()
     }
 }
 
@@ -207,7 +205,7 @@
         }
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-39">cancel_live_run_for_task</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-38">cancel_live_run_for_task</a>(
         &amp;<span class="rs-self">self</span>,
         task_id: &amp;<span class="rs-type">TaskId</span>,
         reason: &amp;str,
@@ -218,16 +216,16 @@
         <span class="rs-kw">if</span> run.finished_at.is_some() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a>(&amp;run.id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a>(&amp;run.id, reason).<span class="rs-kw">await</span>
     }
 }
 
 #[async_trait]
 <span class="rs-kw">impl</span> <span class="rs-type">CancelPort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a> {
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-56">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-task-55">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-get-55">get</a>(task_id).<span class="rs-kw">await</span>? {
             <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
-                <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-89">cancelled_terminal</a>(reason);
+                <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a>(reason);
                 <span class="rs-self">self</span>.task_store
                     .set_task_status_if_current(
                         task_id,
@@ -239,10 +237,10 @@
                     .<span class="rs-kw">await</span>?;
             }
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-39">cancel_live_run_for_task</a>(task_id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-live-run-for-task-38">cancel_live_run_for_task</a>(task_id, reason).<span class="rs-kw">await</span>
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -251,13 +249,13 @@
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         };
         agent_run_api
-            .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-74">cancel_agent_run</a>(agent_run_id, reason)
+            .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#method-cancel-agent-run-73">cancel_agent_run</a>(agent_run_id, reason)
             .<span class="rs-kw">await</span>
             .map_err(|err| <span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(err.to_string()))
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-89">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>();
     terminal.insert(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
     terminal.insert(&quot;reason&quot;.to_owned(), reason.into());

@@ -121,7 +121,7 @@ async fn delegate_workflow_leaves_parent_running() {
 // mutated at close, GC-eos-runtime-03).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
-    use eos_testkit::ScriptedByAgentSource;
+    use eos_testkit::ScriptedSource;
 
     // Each role: ask the advisor for its own terminal, then (with the approve
     // verdict now in its transcript) submit. The advisor profile returns approve.
@@ -139,17 +139,26 @@ async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
 
     // Root delegates then blocks (stays running); the workflow agents run their
     // scripts; everyone else gets an empty (first-turn-erroring) source.
-    let factory: EventSourceFactory = Arc::new(move |_request| {
-        let scripts = std::collections::HashMap::from([
-            ("root".to_owned(), vec![delegate_turn.clone()]),
-            ("planner".to_owned(), planner_turns.clone()),
-            ("coder".to_owned(), coder_turns.clone()),
-            ("reducer".to_owned(), reducer_turns.clone()),
-            ("advisor".to_owned(), advisor_turns.clone()),
-        ]);
-        Arc::new(ScriptedByAgentSource::new(scripts).with_blocking_route("root"))
-            as Arc<dyn EventSource>
-    });
+    let factory: EventSourceFactory =
+        Arc::new(
+            move |_request, agent_state| match agent_state.agent_name.as_str() {
+                "root" => Arc::new(ScriptedSource::new_blocking(vec![delegate_turn.clone()]))
+                    as Arc<dyn EventSource>,
+                "planner" => {
+                    Arc::new(ScriptedSource::new(planner_turns.clone())) as Arc<dyn EventSource>
+                }
+                "coder" => {
+                    Arc::new(ScriptedSource::new(coder_turns.clone())) as Arc<dyn EventSource>
+                }
+                "reducer" => {
+                    Arc::new(ScriptedSource::new(reducer_turns.clone())) as Arc<dyn EventSource>
+                }
+                "advisor" => {
+                    Arc::new(ScriptedSource::new(advisor_turns.clone())) as Arc<dyn EventSource>
+                }
+                _ => Arc::new(ScriptedSource::new(Vec::new())) as Arc<dyn EventSource>,
+            },
+        );
 
     let mut planner = agent_def(
         "planner",
@@ -354,32 +363,6 @@ impl EventSource for DelegateThenTerminalRootSource {
     }
 }
 
-struct WorkflowRoutingSource {
-    root: DelegateThenTerminalRootSource,
-    planner: eos_testkit::ScriptedSource,
-    coder: eos_testkit::ScriptedSource,
-    reducer: eos_testkit::ScriptedSource,
-    advisor: eos_testkit::ScriptedSource,
-}
-
-#[async_trait::async_trait]
-impl EventSource for WorkflowRoutingSource {
-    async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError> {
-        match eos_testkit::request_route_key_for(
-            request,
-            &["root", "planner", "coder", "reducer", "advisor"],
-        )
-        .as_str()
-        {
-            "planner" => self.planner.stream(request).await,
-            "coder" => self.coder.stream(request).await,
-            "reducer" => self.reducer.stream(request).await,
-            "advisor" => self.advisor.stream(request).await,
-            _ => self.root.stream(request).await,
-        }
-    }
-}
-
 // Phase-1 exit proof: one non-injected request delegates, workflow agents finish
 // through the real runtime runner, root observes the closed workflow, gets a real
 // advisor approval, and submits `submit_root_outcome`.
@@ -394,20 +377,26 @@ async fn root_delegates_waits_and_submits_terminal() {
 
     let saw_succeeded = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let saw_succeeded_factory = saw_succeeded.clone();
-    let factory: EventSourceFactory = Arc::new(move |_request| {
-        Arc::new(WorkflowRoutingSource {
-            root: DelegateThenTerminalRootSource {
-                started: std::sync::atomic::AtomicBool::new(false),
-                asked_advisor: std::sync::atomic::AtomicBool::new(false),
-                saw_succeeded: saw_succeeded_factory.clone(),
-                checks: std::sync::atomic::AtomicUsize::new(0),
+    let factory: EventSourceFactory =
+        Arc::new(
+            move |_request, agent_state| match agent_state.agent_name.as_str() {
+                "root" => Arc::new(DelegateThenTerminalRootSource {
+                    started: std::sync::atomic::AtomicBool::new(false),
+                    asked_advisor: std::sync::atomic::AtomicBool::new(false),
+                    saw_succeeded: saw_succeeded_factory.clone(),
+                    checks: std::sync::atomic::AtomicUsize::new(0),
+                }) as Arc<dyn EventSource>,
+                "planner" => Arc::new(eos_testkit::ScriptedSource::new(planner_turns.clone()))
+                    as Arc<dyn EventSource>,
+                "coder" => Arc::new(eos_testkit::ScriptedSource::new(coder_turns.clone()))
+                    as Arc<dyn EventSource>,
+                "reducer" => Arc::new(eos_testkit::ScriptedSource::new(reducer_turns.clone()))
+                    as Arc<dyn EventSource>,
+                "advisor" => Arc::new(eos_testkit::ScriptedSource::new(advisor_turns.clone()))
+                    as Arc<dyn EventSource>,
+                _ => Arc::new(eos_testkit::ScriptedSource::new(Vec::new())) as Arc<dyn EventSource>,
             },
-            planner: eos_testkit::ScriptedSource::new(planner_turns.clone()),
-            coder: eos_testkit::ScriptedSource::new(coder_turns.clone()),
-            reducer: eos_testkit::ScriptedSource::new(reducer_turns.clone()),
-            advisor: eos_testkit::ScriptedSource::new(advisor_turns.clone()),
-        }) as Arc<dyn EventSource>
-    });
+        );
 
     let mut planner = agent_def(
         "planner",

@@ -22,5 +22,8 @@ eos-sandbox-port = { workspace = true }
 # carries no `eos-engine` type across the boundary).
 eos-tools = { workspace = true }
 
+[dev-dependencies]
+eos-agent-ports = { workspace = true }
+
 [lints]
 workspace = true

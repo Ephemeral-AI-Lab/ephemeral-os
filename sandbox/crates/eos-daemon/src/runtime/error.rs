@@ -93,5 +93,21 @@ impl DaemonError {
     }
 }
 
+impl From<eos_checkpoint_host::CheckpointError> for DaemonError {
+    /// Fold a host checkpoint failure onto the matching daemon variant,
+    /// preserving variant identity (so `wire_kind` classifies `Forbidden`
+    /// correctly) and the original message text.
+    fn from(err: eos_checkpoint_host::CheckpointError) -> Self {
+        use eos_checkpoint_host::CheckpointError;
+        match err {
+            CheckpointError::InvalidEnvelope(message) => Self::InvalidEnvelope(message),
+            CheckpointError::Forbidden(message) => Self::Forbidden(message),
+            CheckpointError::OverlayPipeline(message) => Self::OverlayPipeline(message),
+            CheckpointError::LayerStack(source) => Self::LayerStack(source),
+            CheckpointError::Io(source) => Self::Io(source),
+        }
+    }
+}
+
 /// Convenience alias for fallible daemon operations.
 pub type Result<T> = core::result::Result<T, DaemonError>;

@@ -109,37 +109,24 @@ impl EventSource for ScriptedByAgentSource {
     }
 }
 
-/// Return the scripted agent route implied by the request's terminal tool set,
-/// constrained to routes the caller can serve.
-#[must_use]
-pub fn request_route_key_for(request: &LlmRequest, available_routes: &[&str]) -> String {
-    let candidates = request_route_candidates(request);
-    for &candidate in candidates {
-        if available_routes.contains(&candidate) {
-            return candidate.to_owned();
-        }
-    }
-    available_routes
-        .first()
-        .copied()
-        .unwrap_or("root")
-        .to_owned()
-}
-
 /// A factory that always returns the given scripted turns.
 #[must_use]
 pub fn factory_from(turns: Vec<Vec<StreamEvent>>) -> EventSourceFactory {
-    Arc::new(move |_request| Arc::new(ScriptedSource::new(turns.clone())) as Arc<dyn EventSource>)
+    Arc::new(move |_request, _agent_state| {
+        Arc::new(ScriptedSource::new(turns.clone())) as Arc<dyn EventSource>
+    })
 }
 
 /// A factory where the `root` agent plays `root_turns` then blocks (stays
 /// running), and every other agent gets an empty (first-turn-erroring) source.
 #[must_use]
 pub fn factory_root_blocks_after(root_turns: Vec<Vec<StreamEvent>>) -> EventSourceFactory {
-    Arc::new(move |_request| {
-        let scripts = HashMap::from([("root".to_owned(), root_turns.clone())]);
-        Arc::new(ScriptedByAgentSource::new(scripts).with_blocking_route("root"))
-            as Arc<dyn EventSource>
+    Arc::new(move |_request, agent_state| {
+        if agent_state.agent_name == "root" {
+            Arc::new(ScriptedSource::new_blocking(root_turns.clone())) as Arc<dyn EventSource>
+        } else {
+            Arc::new(ScriptedSource::new(Vec::new())) as Arc<dyn EventSource>
+        }
     })
 }
 
@@ -153,8 +140,12 @@ pub fn factory_by_agent(
         .into_iter()
         .map(|(name, turns)| (name.to_owned(), turns))
         .collect();
-    Arc::new(move |_request| {
-        Arc::new(ScriptedByAgentSource::new(scripts.clone())) as Arc<dyn EventSource>
+    Arc::new(move |_request, agent_state| {
+        let turns = scripts
+            .get(&agent_state.agent_name)
+            .cloned()
+            .unwrap_or_default();
+        Arc::new(ScriptedSource::new(turns)) as Arc<dyn EventSource>
     })
 }
 

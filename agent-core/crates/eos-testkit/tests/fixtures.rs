@@ -1,14 +1,14 @@
 //! Public fixture-contract tests for `eos-testkit`.
 #![allow(clippy::expect_used)]
 
-use eos_agent_def::AgentRole;
+use eos_agent_ports::{AgentState, StartAgentLoopRequest};
 use eos_engine::{EngineError, EventSource, QueryStream, StreamEvent};
-use eos_llm_client::{ContentBlock, LlmRequest, Message, UsageSnapshot};
+use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec, UsageSnapshot};
 use eos_sandbox_port::{DaemonOp, SandboxTransport};
 use eos_testkit::{
-    agent_def, factory_by_agent, run_until, text_turn, tool_use_turn, FakeTransport, ScriptedSource,
+    factory_by_agent, run_until, text_turn, tool_use_turn, FakeTransport, ScriptedSource,
 };
-use eos_types::{JsonObject, SandboxId};
+use eos_types::{AgentRunId, JsonObject, SandboxId};
 use futures::StreamExt;
 use serde_json::json;
 
@@ -18,8 +18,52 @@ fn request() -> LlmRequest {
         .build()
 }
 
+fn request_with_tool(tool_name: &str) -> LlmRequest {
+    LlmRequest::builder("test-model")
+        .message(Message::from_user_text("start"))
+        .tools(vec![ToolSpec::new(
+            tool_name,
+            "test tool",
+            JsonObject::new(),
+            None,
+        )])
+        .build()
+}
+
+fn start_request() -> StartAgentLoopRequest {
+    StartAgentLoopRequest {
+        agent_run_id: AgentRunId::new_v4(),
+        initial_messages: Vec::new(),
+        model_key: "test-model".to_owned(),
+        max_completion_tokens: 1,
+        tool_call_limit: 1,
+    }
+}
+
+fn agent_state(agent_name: &str) -> AgentState {
+    AgentState {
+        agent_run_id: AgentRunId::new_v4(),
+        agent_name: agent_name.to_owned(),
+        request_id: None,
+        task_id: None,
+        workflow_id: None,
+        iteration_id: None,
+        attempt_id: None,
+        sandbox_id: None,
+        workspace_root: String::new(),
+        is_isolated_workspace_mode: false,
+    }
+}
+
 async fn collect_source(source: &dyn EventSource) -> Vec<StreamEvent> {
-    let mut stream = source.stream(&request()).await.expect("stream opens");
+    collect_source_with_request(source, &request()).await
+}
+
+async fn collect_source_with_request(
+    source: &dyn EventSource,
+    request: &LlmRequest,
+) -> Vec<StreamEvent> {
+    let mut stream = source.stream(request).await.expect("stream opens");
     let mut events = Vec::new();
     while let Some(item) = stream.next().await {
         events.push(item.expect("event"));
@@ -62,16 +106,16 @@ async fn factory_by_agent_routes_by_agent_name() {
         ("root", vec![text_turn("root turn")]),
         ("advisor", vec![text_turn("advisor turn")]),
     ]);
-    let root = agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]);
-    let advisor = agent_def(
-        "advisor",
-        AgentRole::Helper,
-        &[],
-        &["submit_advisor_feedback"],
-    );
-
-    let root_events = collect_source(&*factory(&root)).await;
-    let advisor_events = collect_source(&*factory(&advisor)).await;
+    let start_request = start_request();
+    let root_source = factory(&start_request, &agent_state("root"));
+    let advisor_source = factory(&start_request, &agent_state("advisor"));
+    let root_events =
+        collect_source_with_request(&*root_source, &request_with_tool("submit_root_outcome")).await;
+    let advisor_events = collect_source_with_request(
+        &*advisor_source,
+        &request_with_tool("submit_advisor_feedback"),
+    )
+    .await;
 
     assert_eq!(complete_text(&root_events), "root turn");
     assert_eq!(complete_text(&advisor_events), "advisor turn");

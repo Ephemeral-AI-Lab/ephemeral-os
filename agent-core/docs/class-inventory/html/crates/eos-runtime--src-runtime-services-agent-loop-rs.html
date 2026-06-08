@@ -170,24 +170,26 @@
             workflow_id: task.as_ref().and_then(|task| task.workflow_id.clone()),
             iteration_id: task.as_ref().and_then(|task| task.iteration_id.clone()),
             attempt_id: task.as_ref().and_then(|task| task.attempt_id.clone()),
-            sandbox_id: request.as_ref().and_then(|request| request.sandbox_id.clone()),
+            sandbox_id: request
+                .as_ref()
+                .and_then(|request| request.sandbox_id.clone()),
             workspace_root: request.map_or_else(<span class="rs-type">String</span>::new, |request| request.cwd),
             is_isolated_workspace_mode: <span class="rs-kw">false</span>,
         })
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AgentExecutionMetadataService for <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-111">RuntimeExecutionMetadataService</a></code></summary><table><tbody><tr id="method-agent-state-171"><td>method</td><td>agent_state</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-agent-state-171">agent_state</a> (&amp; self , agent_run_id : &amp; eos_types :: AgentRunId ,) -&gt; Result &lt; AgentState , AgentPortError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AgentExecutionMetadataService for <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-111">RuntimeExecutionMetadataService</a></code></summary><table><tbody><tr id="method-agent-state-173"><td>method</td><td>agent_state</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-agent-state-173">agent_state</a> (&amp; self , agent_run_id : &amp; eos_types :: AgentRunId ,) -&gt; Result &lt; AgentState , AgentPortError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-agent-state-171">agent_state</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-agent-state-173">agent_state</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;eos_types::<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentState</span>, <span class="rs-type">AgentPortError</span>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-load-agent-state-121">load_agent_state</a>(agent_run_id).<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-build-execution-metadata-178"><td>method</td><td>build_execution_metadata</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-execution-metadata-178">build_execution_metadata</a> (&amp; self , input : ExecutionMetadataBuildInput ,) -&gt; Result &lt; ExecutionMetadata , AgentPortError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-build-execution-metadata-180"><td>method</td><td>build_execution_metadata</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-execution-metadata-180">build_execution_metadata</a> (&amp; self , input : ExecutionMetadataBuildInput ,) -&gt; Result &lt; ExecutionMetadata , AgentPortError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-execution-metadata-178">build_execution_metadata</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-execution-metadata-180">build_execution_metadata</a>(
         &amp;<span class="rs-self">self</span>,
         input: <span class="rs-type">ExecutionMetadataBuildInput</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ExecutionMetadata</span>, <span class="rs-type">AgentPortError</span>&gt; {
@@ -208,9 +210,9 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-build-audit-node-199"><td>method</td><td>build_audit_node</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-audit-node-199">build_audit_node</a> (&amp; self , input : AuditNodeBuildInput ,) -&gt; Result &lt; AuditNode , AgentPortError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-build-audit-node-201"><td>method</td><td>build_audit_node</td><td><code>async fn <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-audit-node-201">build_audit_node</a> (&amp; self , input : AuditNodeBuildInput ,) -&gt; Result &lt; AuditNode , AgentPortError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-audit-node-199">build_audit_node</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-audit-node-201">build_audit_node</a>(
         &amp;<span class="rs-self">self</span>,
         input: <span class="rs-type">AuditNodeBuildInput</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AuditNode</span>, <span class="rs-type">AgentPortError</span>&gt; {
@@ -472,7 +474,9 @@
             workflow_id: task.as_ref().and_then(|task| task.workflow_id.clone()),
             iteration_id: task.as_ref().and_then(|task| task.iteration_id.clone()),
             attempt_id: task.as_ref().and_then(|task| task.attempt_id.clone()),
-            sandbox_id: request.as_ref().and_then(|request| request.sandbox_id.clone()),
+            sandbox_id: request
+                .as_ref()
+                .and_then(|request| request.sandbox_id.clone()),
             workspace_root: request.map_or_else(<span class="rs-type">String</span>::new, |request| request.cwd),
             is_isolated_workspace_mode: <span class="rs-kw">false</span>,
         })
@@ -481,14 +485,14 @@
 
 #[async_trait]
 <span class="rs-kw">impl</span> <span class="rs-type">AgentExecutionMetadataService</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-111">RuntimeExecutionMetadataService</a> {
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-agent-state-171">agent_state</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-agent-state-173">agent_state</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;eos_types::<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentState</span>, <span class="rs-type">AgentPortError</span>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-load-agent-state-121">load_agent_state</a>(agent_run_id).<span class="rs-kw">await</span>
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-execution-metadata-178">build_execution_metadata</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-execution-metadata-180">build_execution_metadata</a>(
         &amp;<span class="rs-self">self</span>,
         input: <span class="rs-type">ExecutionMetadataBuildInput</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ExecutionMetadata</span>, <span class="rs-type">AgentPortError</span>&gt; {
@@ -509,7 +513,7 @@
         })
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-audit-node-199">build_audit_node</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-build-audit-node-201">build_audit_node</a>(
         &amp;<span class="rs-self">self</span>,
         input: <span class="rs-type">AuditNodeBuildInput</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AuditNode</span>, <span class="rs-type">AgentPortError</span>&gt; {

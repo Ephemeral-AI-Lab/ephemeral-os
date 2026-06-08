@@ -71,7 +71,7 @@ pub(crate) fn root_task_id_for(request_id: &RequestId) -> TaskId {
 pub async fn run_request(
     services: &RuntimeServices,
     input: RequestRunInput,
-    _on_event: Option<EventCallback>,
+    on_event: Option<EventCallback>,
 ) -> Result<RequestOutcome> {
     let RequestRunInput {
         request_id,
@@ -121,13 +121,18 @@ pub async fn run_request(
     // (Path A-recording). Stateless and shared across all runs.
     let attempt_submission: Arc<dyn AttemptSubmissionPort> =
         Arc::new(AttemptSubmissionAdapter::new(orchestrator_registry.clone()));
-    let (loop_launcher, agent_run_api_cell) =
-        build_agent_loop_launcher(services.clone(), None, workflow_service_cell.clone());
+    let (loop_launcher, agent_run_api_cell) = build_agent_loop_launcher(
+        services.clone(),
+        None,
+        workflow_service_cell.clone(),
+        on_event.clone(),
+    );
     let runner: Arc<dyn AgentRunner> = Arc::new(RuntimeAgentRunner::new(
         services.clone(),
         workspace_root.clone(),
         attempt_submission,
         workflow_service_cell.clone(),
+        on_event,
     ));
     // `attempt_deps` is a local moved into the starter (no clone, never returned).
     let attempt_deps = AttemptDeps::new(

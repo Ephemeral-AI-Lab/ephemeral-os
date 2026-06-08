@@ -101,14 +101,21 @@
     initial_messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentLoopMessage</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> messages = <span class="rs-type">Vec</span>::with_capacity(initial_messages.len().saturating_add(1));
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system_prompt) = agent.system_prompt.as_ref().filter(|text| !text.trim().is_empty())
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system_prompt) = agent
+        .system_prompt
+        .as_ref()
+        .filter(|text| !text.trim().is_empty())
     {
         messages.push(<span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">SystemPrompt</span>(system_prompt.clone()));
     }
-    messages.extend(initial_messages.into_iter().map(|message| <span class="rs-kw">match</span> message.role {
-        <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">UserMessage</span>(message),
-        <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">AssistantMessage</span>(message),
-    }));
+    messages.extend(
+        initial_messages
+            .into_iter()
+            .map(|message| <span class="rs-kw">match</span> message.role {
+                <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">UserMessage</span>(message),
+                <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">AssistantMessage</span>(message),
+            }),
+    );
     messages
 }
 </code></pre>
@@ -151,14 +158,21 @@
     initial_messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentLoopMessage</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> messages = <span class="rs-type">Vec</span>::with_capacity(initial_messages.len().saturating_add(1));
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system_prompt) = agent.system_prompt.as_ref().filter(|text| !text.trim().is_empty())
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system_prompt) = agent
+        .system_prompt
+        .as_ref()
+        .filter(|text| !text.trim().is_empty())
     {
         messages.push(<span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">SystemPrompt</span>(system_prompt.clone()));
     }
-    messages.extend(initial_messages.into_iter().map(|message| <span class="rs-kw">match</span> message.role {
-        <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">UserMessage</span>(message),
-        <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">AssistantMessage</span>(message),
-    }));
+    messages.extend(
+        initial_messages
+            .into_iter()
+            .map(|message| <span class="rs-kw">match</span> message.role {
+                <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">UserMessage</span>(message),
+                <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> =&gt; <span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">AssistantMessage</span>(message),
+            }),
+    );
     messages
 }
 </code></pre>

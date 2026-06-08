@@ -8,24 +8,30 @@ use eos_agent_ports::{
 };
 use eos_llm_client::{ContentBlock, LlmRequest, Message, UsageSnapshot};
 use eos_tool_ports::{RegisteredTool, ToolName, ToolResult};
-use eos_types::{JsonObject, ToolUseId};
+use eos_types::{AgentRunId, JsonObject, ToolUseId};
 use futures::StreamExt;
 
-use super::{AgentLoopHooks, AgentLoopState, AgentLoopToolRegistryFactory};
+use super::{
+    AgentLoopBackgroundDependencies, AgentLoopEventSource, AgentLoopHooks, AgentLoopRunServices,
+    AgentLoopState, AgentLoopToolRegistryFactory,
+};
+use crate::notifications::NotificationService;
 use crate::query::{provider_messages::build_provider_messages, EventSource};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
     ToolUseRequest,
 };
-use crate::EngineError;
+use crate::{stamp_identity, EngineError, StreamEvent};
 
 /// Executes a full agent loop from request to terminal outcome.
 pub(crate) struct AgentLoopExecutor {
-    event_source: Arc<dyn EventSource>,
+    event_source: AgentLoopEventSource,
     loop_hooks: Arc<dyn AgentLoopHooks>,
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
     metadata_service: Arc<dyn AgentExecutionMetadataService>,
     cancel_signal: AgentLoopCancelSignal,
+    background_dependencies: Option<AgentLoopBackgroundDependencies>,
+    event_callback: Option<crate::query::EventCallback>,
 }
 
 impl std::fmt::Debug for AgentLoopExecutor {
@@ -36,11 +42,13 @@ impl std::fmt::Debug for AgentLoopExecutor {
 
 impl AgentLoopExecutor {
     pub(crate) fn new(
-        event_source: Arc<dyn EventSource>,
+        event_source: AgentLoopEventSource,
         loop_hooks: Arc<dyn AgentLoopHooks>,
         tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
         metadata_service: Arc<dyn AgentExecutionMetadataService>,
         cancel_signal: AgentLoopCancelSignal,
+        background_dependencies: Option<AgentLoopBackgroundDependencies>,
+        event_callback: Option<crate::query::EventCallback>,
     ) -> Self {
         Self {
             event_source,
@@ -48,6 +56,8 @@ impl AgentLoopExecutor {
             tool_registry_factory,
             metadata_service,
             cancel_signal,
+            background_dependencies,
+            event_callback,
         }
     }
 
@@ -55,10 +65,29 @@ impl AgentLoopExecutor {
         self,
         request: StartAgentLoopRequest,
     ) -> AgentLoopOutcome {
+        let event_identity = match self
+            .metadata_service
+            .agent_state(&request.agent_run_id)
+            .await
+        {
+            Ok(identity) => identity,
+            Err(error) => {
+                return AgentLoopOutcome {
+                    kind: eos_agent_ports::AgentLoopOutcomeKind::LoopFailed {
+                        error_summary: error.to_string(),
+                    },
+                    final_conversation_messages: Vec::new(),
+                    total_token_count: None,
+                };
+            }
+        };
+        let event_source = self.resolve_event_source(&request, &event_identity);
+        let run_services = self.build_run_services(&request.agent_run_id);
         let mut state = match AgentLoopState::from_request(
             request,
             &*self.tool_registry_factory,
             Arc::clone(&self.metadata_service),
+            run_services,
         ) {
             Ok(state) => state,
             Err(error) => {
@@ -76,11 +105,17 @@ impl AgentLoopExecutor {
 
         loop {
             if let Some(reason) = self.cancel_signal.reason() {
+                state
+                    .teardown_background(&format!("agent loop cancelled: {reason}"))
+                    .await;
                 let outcome = state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
                 self.loop_hooks.on_complete(&outcome).await;
                 return outcome;
             }
             if state.turn_limit_reached() {
+                state
+                    .teardown_background("agent loop exited without a terminal tool submission")
+                    .await;
                 let outcome = state.loop_failed_summary(
                     "agent loop exited without a terminal tool submission".to_owned(),
                 );
@@ -89,9 +124,16 @@ impl AgentLoopExecutor {
             }
 
             self.loop_hooks.on_step(&state).await;
-            let turn_result = match self.execute_assistant_turn(&mut state).await {
+            self.drain_notifications(&mut state, &event_identity).await;
+            let turn_result = match self
+                .execute_assistant_turn(&event_source, &event_identity, &mut state)
+                .await
+            {
                 Ok(turn_result) => turn_result,
                 Err(error) => {
+                    state
+                        .teardown_background(&format!("agent loop failed: {error}"))
+                        .await;
                     let outcome = state.loop_failed(error);
                     self.loop_hooks.on_complete(&outcome).await;
                     return outcome;
@@ -101,6 +143,9 @@ impl AgentLoopExecutor {
             match turn_result {
                 AssistantTurnResult::Continue => state.advance_turn(),
                 AssistantTurnResult::TerminalToolSubmitted { outcome } => {
+                    state
+                        .teardown_background("parent agent submitted its terminal")
+                        .await;
                     let outcome = state.terminal_tool_submitted(outcome);
                     self.loop_hooks.on_complete(&outcome).await;
                     return outcome;
@@ -111,21 +156,30 @@ impl AgentLoopExecutor {
 
     async fn execute_assistant_turn(
         &self,
+        event_source: &Arc<dyn EventSource>,
+        event_identity: &eos_agent_ports::AgentState,
         state: &mut AgentLoopState,
     ) -> Result<AssistantTurnResult, EngineError> {
         let request = build_loop_provider_request(state);
-        let mut stream = self.event_source.stream(&request).await?;
+        let mut stream = event_source.stream(&request).await?;
         let mut final_message: Option<Message> = None;
         let mut final_usage: Option<UsageSnapshot> = None;
 
         while let Some(item) = stream.next().await {
-            match item? {
-                crate::StreamEvent::AssistantMessageComplete { payload, .. } => {
+            let event = item?;
+            let event = stamp_identity(
+                event,
+                &event_identity.agent_name,
+                &event_identity.agent_run_id,
+            );
+            match &event {
+                StreamEvent::AssistantMessageComplete { payload, .. } => {
                     final_usage = Some(payload.usage);
                     final_message = Some(payload.message.clone());
                 }
                 _ => {}
             }
+            self.emit_event(&event);
         }
 
         let message = final_message.ok_or_else(|| {
@@ -261,7 +315,65 @@ impl AgentLoopExecutor {
             })
             .await
             .map_err(|err| EngineError::Internal(err.to_string()))?;
-        Ok(execute_tool_once(tool, &call.input, &metadata).await?)
+        self.emit_event(&StreamEvent::ToolExecutionStarted {
+            agent_name: metadata.agent_name.clone(),
+            agent_run_id: metadata.agent_run_id.clone(),
+            tool_name: call.name.clone(),
+            tool_input: call.input.clone(),
+            tool_use_id: call.tool_use_id.clone(),
+        });
+        let result = execute_tool_once(tool, &call.input, &metadata).await?;
+        self.emit_event(&StreamEvent::ToolExecutionCompleted {
+            agent_name: metadata.agent_name,
+            agent_run_id: metadata.agent_run_id,
+            tool_name: call.name.clone(),
+            output: result.output.clone(),
+            is_error: result.is_error,
+            tool_use_id: call.tool_use_id.clone(),
+            metadata: result.metadata.clone(),
+            is_terminal: result.is_terminal,
+        });
+        Ok(result)
+    }
+
+    fn build_run_services(&self, agent_run_id: &AgentRunId) -> AgentLoopRunServices {
+        let Some(dependencies) = &self.background_dependencies else {
+            return AgentLoopRunServices::inert();
+        };
+        let notifier = NotificationService::new();
+        let background = dependencies.build_managers(agent_run_id.clone(), notifier.clone());
+        AgentLoopRunServices::from_background(&background, notifier)
+    }
+
+    fn resolve_event_source(
+        &self,
+        request: &StartAgentLoopRequest,
+        agent_state: &eos_agent_ports::AgentState,
+    ) -> Arc<dyn EventSource> {
+        match &self.event_source {
+            AgentLoopEventSource::Static(source) => Arc::clone(source),
+            AgentLoopEventSource::Factory(factory) => factory(request, agent_state),
+        }
+    }
+
+    async fn drain_notifications(
+        &self,
+        state: &mut AgentLoopState,
+        event_identity: &eos_agent_ports::AgentState,
+    ) {
+        for notification in state.drain_notifications().await {
+            self.emit_event(&StreamEvent::SystemNotification {
+                agent_name: event_identity.agent_name.clone(),
+                agent_run_id: Some(event_identity.agent_run_id.clone()),
+                text: notification.message,
+            });
+        }
+    }
+
+    fn emit_event(&self, event: &StreamEvent) {
+        if let Some(callback) = &self.event_callback {
+            callback(event);
+        }
     }
 }
 

@@ -56,25 +56,25 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RequestOutcome-33" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RequestOutcome pub pub struct RequestOutcome crates/eos-runtime/src/entry.rs status TaskStatus terminal Option &lt; JsonObject &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RequestOutcome-35" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RequestOutcome pub pub struct RequestOutcome crates/eos-runtime/src/entry.rs status TaskStatus terminal Option &lt; JsonObject &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RequestOutcome</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a></code>
   <p class="docstring">The terminal outcome of a completed top-level request — the root's outcome<br>(canonical flow step 7). The ids are caller-known (`request_id` is injected,<br>`root_task_id` is derived), so they are not echoed here; this struct holds<br>only what the run produces.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>dto</span><span>non_exhaustive</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>TaskStatus</code></td></tr><tr><td>pub</td><td>terminal</td><td><code>Option &lt; JsonObject &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-runtime/src/entry.rs:33</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-run-request-60" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_request pub pub async fn run_request (services : &amp; RuntimeServices , input : RequestRunInput , _on_event : Option &lt; EventCallback &gt; ,) -&gt; Result &lt; RequestOutcome &gt; crates/eos-runtime/src/entry.rs  ">
+  <p class="source">crates/eos-runtime/src/entry.rs:35</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-run-request-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_request pub pub async fn run_request (services : &amp; RuntimeServices , input : RequestRunInput , _on_event : Option &lt; EventCallback &gt; ,) -&gt; Result &lt; RequestOutcome &gt; crates/eos-runtime/src/entry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_request</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub async fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-run-request-60">run_request</a> (services : &amp; <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a> , input : <a class="symbol-link" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a> , _on_event : Option &lt; EventCallback &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a> &gt;</code>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-run-request-62">run_request</a> (services : &amp; <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a> , input : <a class="symbol-link" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a> , _on_event : Option &lt; EventCallback &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a> &gt;</code>
   <p class="docstring">Run a top-level request to completion and return the root's outcome.<br>`request_id` is minted by the caller (identity is an input, not an output):<br>the root task id is `root-{request_id}`, so both ids are caller-known before<br>the run finishes. Must be called within a Tokio runtime (it spawns the<br>per-request command-completion heartbeat).<br># Errors<br>Returns an error if provisioning, request/root-task creation, or the final<br>root-task read-back fails.</p>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
@@ -88,11 +88,11 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns an error if provisioning, request/root-task creation, or the final</span>
 <span class="rs-comment">/// root-task read-back fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-60">run_request</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-62">run_request</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a>,
     input: <a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>,
     _on_event: <span class="rs-type">Option</span>&lt;<span class="rs-type">EventCallback</span>&gt;,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a>&gt; {
     <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a> {
         request_id,
         prompt,
@@ -189,7 +189,7 @@
     <span class="rs-kw">let</span> _ = workflow_service_cell.set(workflow_service.clone());
 
     <span class="rs-comment">// Root task: `root-{request_id}` (Option A), running, no workflow.</span>
-    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a>(&amp;request_id);
+    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a>(&amp;request_id);
     services
         .db
         .task_store
@@ -272,7 +272,7 @@
     <span class="rs-comment">// The single framework-side closure guard, called unconditionally: a no-op once</span>
     <span class="rs-comment">// submit_root_outcome has closed the task; otherwise marks the root Failed +</span>
     <span class="rs-comment">// finish_request(Failed).</span>
-    <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-270">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
+    <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-272">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
     services.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-flush-audit-75">flush_audit</a>();
 
     <span class="rs-comment">// [7] RETURN OUTCOME — single read-back of the persisted root task.</span>
@@ -283,7 +283,7 @@
         .<span class="rs-kw">await</span>
         .context(&quot;reading the root task outcome&quot;)?
         .context(&quot;root task row missing after the run&quot;)?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a> {
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a> {
         status: task.status,
         terminal: task.terminal_tool_result,
     })
@@ -291,14 +291,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-runtime/src/entry.rs:60</p>
-</article><article id="item-fn-root-task-id-for-49" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_task_id_for pub(crate) pub(crate) fn root_task_id_for (request_id : &amp; RequestId) -&gt; TaskId crates/eos-runtime/src/entry.rs  ">
+  <p class="source">crates/eos-runtime/src/entry.rs:62</p>
+</article><article id="item-fn-root-task-id-for-51" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_task_id_for pub(crate) pub(crate) fn root_task_id_for (request_id : &amp; RequestId) -&gt; TaskId crates/eos-runtime/src/entry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>root_task_id_for</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a> (request_id : &amp; RequestId) -&gt; TaskId</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a> (request_id : &amp; RequestId) -&gt; TaskId</code>
   <p class="docstring">The single source of truth for the root task id derivation (Option A):<br>`root-{request_id}`. Used by `run_request` to mint the row and by tests to<br>know the id before the run completes. The `root-` prefix makes the string<br>statically non-empty, so `TaskId` parsing (which only rejects the empty<br>string) cannot fail.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -308,7 +308,7 @@
 <span class="rs-comment">/// know the id before the run completes. The `root-` prefix makes the string</span>
 <span class="rs-comment">/// statically non-empty, so `TaskId` parsing (which only rejects the empty</span>
 <span class="rs-comment">/// string) cannot fail.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a>(request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">TaskId</span> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a>(request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">TaskId</span> {
     format!(&quot;root-{request_id}&quot;)
         .parse()
         .expect(&quot;root-{request_id} is non-empty, so <span class="rs-type">TaskId</span> parsing cannot fail&quot;)
@@ -316,14 +316,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-runtime/src/entry.rs:49</p>
-</article><article id="item-fn-fail-unfinished-root-270" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fail_unfinished_root private async fn fail_unfinished_root (services : &amp; RuntimeServices , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,) crates/eos-runtime/src/entry.rs  ">
+  <p class="source">crates/eos-runtime/src/entry.rs:51</p>
+</article><article id="item-fn-fail-unfinished-root-272" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fail_unfinished_root private async fn fail_unfinished_root (services : &amp; RuntimeServices , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,) crates/eos-runtime/src/entry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>fail_unfinished_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-270">fail_unfinished_root</a> (services : &amp; <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a> , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,)</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-272">fail_unfinished_root</a> (services : &amp; <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a> , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,)</code>
   <p class="docstring">Fail the root **iff** it is still running (idempotent compare-and-set) and<br>finish the request as `Failed`. Called unconditionally after the root agent<br>has completed or failed; a no-op once `submit_root_outcome` has closed the<br>task. The root role is not in `ExecutionRole`, so the summary rides in<br>`terminal_tool_result` rather than a typed outcome row (documented deviation;<br>the typed outcome column is left empty for root).</p>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
@@ -334,7 +334,7 @@
 <span class="rs-comment">/// task. The root role is not in `ExecutionRole`, so the summary rides in</span>
 <span class="rs-comment">/// `terminal_tool_result` rather than a typed outcome row (documented deviation;</span>
 <span class="rs-comment">/// the typed outcome column is left empty for root).</span>
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-270">fail_unfinished_root</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-272">fail_unfinished_root</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a>,
     request_id: &amp;<span class="rs-type">RequestId</span>,
     root_task_id: &amp;<span class="rs-type">TaskId</span>,
@@ -376,7 +376,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-runtime/src/entry.rs:270</p>
+  <p class="source">crates/eos-runtime/src/entry.rs:272</p>
 </article></div>
 </section></div>
 </main>
@@ -398,7 +398,9 @@
 
 <span class="rs-kw">use</span> anyhow::{<span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
 <span class="rs-kw">use</span> eos_agent_def::<span class="rs-type">AgentName</span>;
-<span class="rs-kw">use</span> eos_agent_ports::{<span class="rs-type">AgentName</span> <span class="rs-kw">as</span> <span class="rs-type">AgentPortName</span>, <span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunRecordKind</span>, <span class="rs-type">SpawnAgentRequest</span>};
+<span class="rs-kw">use</span> eos_agent_ports::{
+    <span class="rs-type">AgentName</span> <span class="rs-kw">as</span> <span class="rs-type">AgentPortName</span>, <span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunRecordKind</span>, <span class="rs-type">SpawnAgentRequest</span>,
+};
 <span class="rs-kw">use</span> eos_agent_runner::<span class="rs-type">AgentRunService</span> <span class="rs-kw">as</span> <span class="rs-type">RunnerAgentRunService</span>;
 <span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">Message</span>;
 <span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">CancelPort</span>};
@@ -423,7 +425,7 @@
 <span class="rs-comment">/// only what the run produces.</span>
 #[non_exhaustive]
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a> {
     <span class="rs-comment">/// Authoritative final status of the root task (`Done` or `Failed`).</span>
     <span class="rs-kw">pub</span> status: <span class="rs-type">TaskStatus</span>,
     <span class="rs-comment">/// The root's persisted terminal payload (`Task.terminal_tool_result`): the</span>
@@ -438,7 +440,7 @@
 <span class="rs-comment">/// know the id before the run completes. The `root-` prefix makes the string</span>
 <span class="rs-comment">/// statically non-empty, so `TaskId` parsing (which only rejects the empty</span>
 <span class="rs-comment">/// string) cannot fail.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a>(request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">TaskId</span> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a>(request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">TaskId</span> {
     format!(&quot;root-{request_id}&quot;)
         .parse()
         .expect(&quot;root-{request_id} is non-empty, so <span class="rs-type">TaskId</span> parsing cannot fail&quot;)
@@ -453,11 +455,11 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns an error if provisioning, request/root-task creation, or the final</span>
 <span class="rs-comment">/// root-task read-back fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-60">run_request</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-run-request-62">run_request</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a>,
     input: <a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>,
     _on_event: <span class="rs-type">Option</span>&lt;<span class="rs-type">EventCallback</span>&gt;,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a>&gt; {
     <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a> {
         request_id,
         prompt,
@@ -554,7 +556,7 @@
     <span class="rs-kw">let</span> _ = workflow_service_cell.set(workflow_service.clone());
 
     <span class="rs-comment">// Root task: `root-{request_id}` (Option A), running, no workflow.</span>
-    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-49">root_task_id_for</a>(&amp;request_id);
+    <span class="rs-kw">let</span> root_task_id = <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-root-task-id-for-51">root_task_id_for</a>(&amp;request_id);
     services
         .db
         .task_store
@@ -637,7 +639,7 @@
     <span class="rs-comment">// The single framework-side closure guard, called unconditionally: a no-op once</span>
     <span class="rs-comment">// submit_root_outcome has closed the task; otherwise marks the root Failed +</span>
     <span class="rs-comment">// finish_request(Failed).</span>
-    <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-270">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
+    <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-272">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
     services.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-flush-audit-75">flush_audit</a>();
 
     <span class="rs-comment">// [7] RETURN OUTCOME — single read-back of the persisted root task.</span>
@@ -648,7 +650,7 @@
         .<span class="rs-kw">await</span>
         .context(&quot;reading the root task outcome&quot;)?
         .context(&quot;root task row missing after the run&quot;)?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-33">RequestOutcome</a> {
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-35">RequestOutcome</a> {
         status: task.status,
         terminal: task.terminal_tool_result,
     })
@@ -660,7 +662,7 @@
 <span class="rs-comment">/// task. The root role is not in `ExecutionRole`, so the summary rides in</span>
 <span class="rs-comment">/// `terminal_tool_result` rather than a typed outcome row (documented deviation;</span>
 <span class="rs-comment">/// the typed outcome column is left empty for root).</span>
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-270">fail_unfinished_root</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-entry-rs.html#item-fn-fail-unfinished-root-272">fail_unfinished_root</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a>,
     request_id: &amp;<span class="rs-type">RequestId</span>,
     root_task_id: &amp;<span class="rs-type">TaskId</span>,

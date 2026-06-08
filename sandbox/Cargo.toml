@@ -5,6 +5,7 @@ members = [
     "crates/eos-config",
     "crates/eosd",
     "crates/eos-daemon",
+    "crates/eos-checkpoint-host",
     "crates/eos-runner",
     "crates/eos-command-session",
     "crates/eos-ns-holder",
@@ -65,6 +66,7 @@ eos-runner = { path = "crates/eos-runner" }
 eos-command-session = { path = "crates/eos-command-session" }
 eos-ns-holder = { path = "crates/eos-ns-holder" }
 eos-daemon = { path = "crates/eos-daemon" }
+eos-checkpoint-host = { path = "crates/eos-checkpoint-host" }
 eosd = { path = "crates/eosd" }
 eos-e2e-test = { path = "crates/eos-e2e-test" }
 xtask = { path = "xtask" }

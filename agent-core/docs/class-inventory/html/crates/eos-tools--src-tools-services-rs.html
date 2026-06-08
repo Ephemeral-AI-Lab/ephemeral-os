@@ -261,13 +261,13 @@
 <span class="rs-kw">use</span> std::{fmt, sync::<span class="rs-type">Arc</span>};
 
 <span class="rs-kw">use</span> async_trait::async_trait;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_tool_ports::services::{
-    <span class="rs-type">CommandSessionToolService</span>, <span class="rs-type">HookServices</span>, <span class="rs-type">SubagentToolService</span>, <span class="rs-type">WorkflowToolService</span>,
-};
 <span class="rs-kw">use</span> eos_sandbox_port::{
     <span class="rs-type">DaemonOp</span>, <span class="rs-type">SandboxCommandApi</span>, <span class="rs-type">SandboxCommandService</span>, <span class="rs-type">SandboxPortError</span>, <span class="rs-type">SandboxTransport</span>,
 };
 <span class="rs-kw">use</span> eos_skills::<span class="rs-type">SkillRegistry</span>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_tool_ports::services::{
+    <span class="rs-type">CommandSessionToolService</span>, <span class="rs-type">HookServices</span>, <span class="rs-type">SubagentToolService</span>, <span class="rs-type">WorkflowToolService</span>,
+};
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxId</span>};
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">RequestStore</span>, <span class="rs-type">TaskStore</span>};
 

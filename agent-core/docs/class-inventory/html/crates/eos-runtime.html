@@ -103,7 +103,9 @@
 
         <span class="rs-kw">let</span> (loop_launcher, agent_run_api_cell) = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-28">build_agent_loop_launcher</a>(
             <span class="rs-self">self</span>.services.clone(),
-            <span class="rs-type">Some</span>(<span class="rs-type">AttemptSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(<span class="rs-self">self</span>.attempt_submission.clone())),
+            <span class="rs-type">Some</span>(<span class="rs-type">AttemptSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(
+                <span class="rs-self">self</span>.attempt_submission.clone(),
+            )),
             <span class="rs-self">self</span>.workflow_service.clone(),
         );
         <span class="rs-kw">let</span> agent_runs = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(<span class="rs-type">RunnerAgentRunService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(
@@ -132,7 +134,7 @@
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),
-                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-134">workflow_message_record_role</a>(launch.role()),
+                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-136">workflow_message_record_role</a>(launch.role()),
                 },
             })
             .<span class="rs-kw">await</span>
@@ -153,17 +155,17 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-runtime/src/agent_runner.rs:34</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-message-record-role-134" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_message_record_role private fn workflow_message_record_role (role : AgentRole) -&gt; WorkflowTaskRole crates/eos-runtime/src/agent_runner.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-message-record-role-136" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_message_record_role private fn workflow_message_record_role (role : AgentRole) -&gt; WorkflowTaskRole crates/eos-runtime/src/agent_runner.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_message_record_role</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runtime.html#item-fn-workflow-message-record-role-134">workflow_message_record_role</a> (role : AgentRole) -&gt; WorkflowTaskRole</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runtime.html#item-fn-workflow-message-record-role-136">workflow_message_record_role</a> (role : AgentRole) -&gt; WorkflowTaskRole</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-134">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-136">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
     <span class="rs-kw">match</span> role {
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>,
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Generator</span>,
@@ -174,7 +176,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-runtime/src/agent_runner.rs:134</p>
+  <p class="source">crates/eos-runtime/src/agent_runner.rs:136</p>
 </article></div>
 </section></div>
 </main>
@@ -213,8 +215,8 @@
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">WorkflowApi</span>};
 <span class="rs-kw">use</span> eos_workflow::{<span class="rs-type">AgentLaunch</span>, <span class="rs-type">AgentRunReport</span>, <span class="rs-type">AgentRunner</span>, <span class="rs-type">Result</span> <span class="rs-kw">as</span> <span class="rs-type">WorkflowResult</span>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime_services::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime_services::build_agent_loop_launcher;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime_services::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-35">RuntimeServices</a>;
 
 <span class="rs-comment">/// Runtime adapter over the shared engine loop, supplied to `AttemptDeps.runner`.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-34">RuntimeAgentRunner</a> {
@@ -268,7 +270,9 @@
 
         <span class="rs-kw">let</span> (loop_launcher, agent_run_api_cell) = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-28">build_agent_loop_launcher</a>(
             <span class="rs-self">self</span>.services.clone(),
-            <span class="rs-type">Some</span>(<span class="rs-type">AttemptSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(<span class="rs-self">self</span>.attempt_submission.clone())),
+            <span class="rs-type">Some</span>(<span class="rs-type">AttemptSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(
+                <span class="rs-self">self</span>.attempt_submission.clone(),
+            )),
             <span class="rs-self">self</span>.workflow_service.clone(),
         );
         <span class="rs-kw">let</span> agent_runs = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(<span class="rs-type">RunnerAgentRunService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-55">new</a>(
@@ -297,7 +301,7 @@
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),
-                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-134">workflow_message_record_role</a>(launch.role()),
+                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-136">workflow_message_record_role</a>(launch.role()),
                 },
             })
             .<span class="rs-kw">await</span>
@@ -316,7 +320,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-134">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-136">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
     <span class="rs-kw">match</span> role {
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>,
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Generator</span>,
