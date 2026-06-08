@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use eos_ephemeral_workspace::EphemeralWorkspaceOps;
+use eos_workspace_modes::ephemeral::EphemeralWorkspaceOps;
 #[cfg(target_os = "linux")]
-use eos_isolated_workspace::IsolatedWorkspaceOps;
+use eos_workspace_modes::isolated::IsolatedWorkspaceOps;
 use eos_protocol::models::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_workspace_api::{
+use eos_workspace::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     WorkspaceApiError, WorkspaceConflict, WorkspaceFileOps, WorkspaceMode, WriteFileOutcome,
     WriteFileRequest,
@@ -189,7 +189,7 @@ struct GuardedWireResponse {
     changed_paths: Vec<String>,
     changed_path_kinds: std::collections::BTreeMap<String, String>,
     mutation_source: String,
-    timings: eos_workspace_api::WorkspaceTimings,
+    timings: eos_workspace::WorkspaceTimings,
     applied_edits: Option<i64>,
 }
 

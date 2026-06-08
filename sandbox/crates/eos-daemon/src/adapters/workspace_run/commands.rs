@@ -26,7 +26,7 @@ use super::config::{
     command_session_config, command_session_scratch_root, runtime_command_session_config,
 };
 #[cfg(target_os = "linux")]
-use eos_workspace_run_host::{StartTarget, WorkspaceRunManager};
+use eos_workspace_run::{StartTarget, WorkspaceRunManager};
 #[cfg(not(target_os = "linux"))]
 use super::wire::command_result;
 #[cfg(target_os = "linux")]

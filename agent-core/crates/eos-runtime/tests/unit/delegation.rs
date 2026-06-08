@@ -176,28 +176,24 @@ async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
 
     let mut planner = agent_def(
         "planner",
-        AgentRole::Planner,
         &["ask_advisor", "read_file"],
         &["submit_planner_outcome"],
     );
     planner.context_recipe = Some("planner".to_owned());
     let mut coder = agent_def(
         "coder",
-        AgentRole::Generator,
         &["ask_advisor", "read_file"],
         &["submit_generator_outcome"],
     );
     coder.context_recipe = Some("generator".to_owned());
     let mut reducer = agent_def(
         "reducer",
-        AgentRole::Reducer,
         &["ask_advisor", "read_file"],
         &["submit_reducer_outcome"],
     );
     reducer.context_recipe = Some("reducer".to_owned());
     let root = agent_def(
         "root",
-        AgentRole::Root,
         &["delegate_workflow", "ask_advisor", "read_file"],
         &["submit_root_outcome"],
     );
@@ -410,28 +406,24 @@ async fn root_delegates_waits_and_submits_terminal() {
 
     let mut planner = agent_def(
         "planner",
-        AgentRole::Planner,
         &["ask_advisor", "read_file"],
         &["submit_planner_outcome"],
     );
     planner.context_recipe = Some("planner".to_owned());
     let mut coder = agent_def(
         "coder",
-        AgentRole::Generator,
         &["ask_advisor", "read_file"],
         &["submit_generator_outcome"],
     );
     coder.context_recipe = Some("generator".to_owned());
     let mut reducer = agent_def(
         "reducer",
-        AgentRole::Reducer,
         &["ask_advisor", "read_file"],
         &["submit_reducer_outcome"],
     );
     reducer.context_recipe = Some("reducer".to_owned());
     let mut root = agent_def(
         "root",
-        AgentRole::Root,
         &[
             "delegate_workflow",
             "check_workflow_status",

@@ -101,7 +101,7 @@
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>eos_types :: AttemptId</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>eos_types :: IterationId</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>context</td><td><code>String</code></td></tr><tr><td>pub</td><td>agent_def</td><td><code>AgentDefinition</code></td></tr><tr><td>pub</td><td>task_guidance</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:67</p>
-</article><article id="item-struct-ExecutionLaunch-92" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ExecutionLaunch pub pub struct ExecutionLaunch crates/eos-workflow/src/attempt/launch.rs task_id TaskId request_id RequestId attempt_id eos_types :: AttemptId workflow_id WorkflowId iteration_id eos_types :: IterationId role AgentRole agent_name String context String task_guidance Option &lt; String &gt; needs Vec &lt; TaskId &gt; agent_def AgentDefinition skill Option &lt; String &gt; ">
+</article><article id="item-struct-ExecutionLaunch-92" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ExecutionLaunch pub pub struct ExecutionLaunch crates/eos-workflow/src/attempt/launch.rs task_id TaskId request_id RequestId attempt_id eos_types :: AttemptId workflow_id WorkflowId iteration_id eos_types :: IterationId role TaskRole agent_name String context String task_guidance Option &lt; String &gt; needs Vec &lt; TaskId &gt; agent_def AgentDefinition skill Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ExecutionLaunch</h3>
@@ -110,7 +110,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a></code>
   <p class="docstring">Launch descriptor for a generator or reducer.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>eos_types :: AttemptId</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>eos_types :: IterationId</code></td></tr><tr><td>pub</td><td>role</td><td><code>AgentRole</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>context</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_guidance</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>needs</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>agent_def</td><td><code>AgentDefinition</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>eos_types :: AttemptId</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>eos_types :: IterationId</code></td></tr><tr><td>pub</td><td>role</td><td><code>TaskRole</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>context</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_guidance</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>needs</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>agent_def</td><td><code>AgentDefinition</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:92</p>
 </article><article id="item-struct-AttemptDeps-223" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptDeps pub pub struct AttemptDeps crates/eos-workflow/src/attempt/launch.rs workflow_store Arc &lt; dyn WorkflowStore &gt; iteration_store Arc &lt; dyn IterationStore &gt; attempt_store Arc &lt; dyn AttemptStore &gt; task_store Arc &lt; dyn TaskStore &gt; agent_registry Arc &lt; AgentRegistry &gt; orchestrator_registry Arc &lt; AttemptOrchestratorRegistry &gt; iteration_coordinators Option &lt; Arc &lt; OpenIterationCoordinatorRegistry &gt; &gt; lifecycle_config WorkflowLifecycleConfig composer Option &lt; Arc &lt; AgentEntryComposer &gt; &gt; runner Arc &lt; dyn AgentRunner &gt; max_concurrent_task_runs usize ">
@@ -264,7 +264,7 @@
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;planner&quot;,
-            role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span>,
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>,
             scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-planner-370">for_planner</a>(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -296,7 +296,7 @@
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name,
-            role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>,
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
             scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-generator-399">for_generator</a>(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -324,7 +324,7 @@
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;reducer&quot;,
-            role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>,
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
             scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-reducer-430">for_reducer</a>(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -357,6 +357,14 @@
             })?
             .as_ref()
             .clone();
+        <span class="rs-kw">if</span> agent_def.agent_type != <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                &quot;workflow launch {:?} is bound to agent {:?} with <span class="rs-kw">type</span> {:?}, expected agent&quot;,
+                args.role.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
+                args.base_agent_name,
+                agent_def.agent_type
+            )));
+        }
         <span class="rs-kw">let</span> (context, task_guidance, agent_def, skill) = <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(composer) = &amp;<span class="rs-self">self</span>.deps.composer
         {
             <span class="rs-kw">let</span> messages = composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(args.base_agent_name, &amp;args.scope).<span class="rs-kw">await</span>?;
@@ -380,7 +388,7 @@
         };
         <span class="rs-kw">let</span> agent_name = args.base_agent_name.to_owned();
         <span class="rs-type">Ok</span>(<span class="rs-kw">match</span> args.role {
-            <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Planner</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a> {
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Planner</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a> {
                 task_id: args.task_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
@@ -392,27 +400,13 @@
                 task_guidance,
                 skill,
             }),
-            <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Generator</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Generator</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
                 task_id: args.task_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
                 workflow_id: args.workflow_id,
                 iteration_id: args.iteration_id,
-                role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>,
-                agent_name,
-                context,
-                task_guidance,
-                needs: args.needs,
-                agent_def,
-                skill,
-            }),
-            <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Reducer</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
-                task_id: args.task_id,
-                request_id: args.request_id,
-                attempt_id: args.attempt_id,
-                workflow_id: args.workflow_id,
-                iteration_id: args.iteration_id,
-                role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>,
+                role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
                 agent_name,
                 context,
                 task_guidance,
@@ -420,10 +414,24 @@
                 agent_def,
                 skill,
             }),
-            other =&gt; {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
-                    &quot;workflow launch does not support role {other:?}&quot;
-                )));
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Reducer</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
+                task_id: args.task_id,
+                request_id: args.request_id,
+                attempt_id: args.attempt_id,
+                workflow_id: args.workflow_id,
+                iteration_id: args.iteration_id,
+                role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
+                agent_name,
+                context,
+                task_guidance,
+                needs: args.needs,
+                agent_def,
+                skill,
+            }),
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(
+                    &quot;workflow launch does not support root task role&quot;,
+                ));
             }
         })
     }
@@ -440,15 +448,15 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a></code>
   <p class="docstring">Launch descriptor for one workflow agent.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Planner</td><td><code>0: <a class="symbol-link" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a></code></td></tr><tr><td>Generator</td><td><code>0: <a class="symbol-link" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a></code></td></tr><tr><td>Reducer</td><td><code>0: <a class="symbol-link" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-role-122"><td>method</td><td>role</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow.html#method-role-122">role</a> (&amp; self) -&gt; AgentRole</code><p class="docstring">Agent role.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Planner</td><td><code>0: <a class="symbol-link" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a></code></td></tr><tr><td>Generator</td><td><code>0: <a class="symbol-link" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a></code></td></tr><tr><td>Reducer</td><td><code>0: <a class="symbol-link" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-role-122"><td>method</td><td>role</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow.html#method-role-122">role</a> (&amp; self) -&gt; TaskRole</code><p class="docstring">Workflow task role.</p><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Agent role.</span>
+  <pre><code>    <span class="rs-comment">/// Workflow task role.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">AgentRole</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">TaskRole</span> {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Planner</span>(_) =&gt; <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span>,
-            <span class="rs-self">Self</span>::<span class="rs-type">Generator</span>(_) =&gt; <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>,
-            <span class="rs-self">Self</span>::<span class="rs-type">Reducer</span>(_) =&gt; <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Planner</span>(_) =&gt; <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Generator</span>(_) =&gt; <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Reducer</span>(_) =&gt; <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
         }
     }
 </code></pre>
@@ -582,7 +590,7 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:49</p>
-</article><article id="item-struct-LaunchBuildArgs-351" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LaunchBuildArgs private struct LaunchBuildArgs&lt; 'a &gt; crates/eos-workflow/src/attempt/launch.rs base_agent_name &amp; 'a str role AgentRole scope ContextScope task_id TaskId request_id RequestId attempt_id eos_types :: AttemptId iteration_id eos_types :: IterationId needs Vec &lt; TaskId &gt; workflow_id WorkflowId ">
+</article><article id="item-struct-LaunchBuildArgs-351" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LaunchBuildArgs private struct LaunchBuildArgs&lt; 'a &gt; crates/eos-workflow/src/attempt/launch.rs base_agent_name &amp; 'a str role TaskRole scope ContextScope task_id TaskId request_id RequestId attempt_id eos_types :: AttemptId iteration_id eos_types :: IterationId needs Vec &lt; TaskId &gt; workflow_id WorkflowId ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LaunchBuildArgs</h3>
@@ -590,7 +598,7 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a>&lt; &#x27;a &gt;</code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base_agent_name</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>private</td><td>role</td><td><code>AgentRole</code></td></tr><tr><td>private</td><td>scope</td><td><code><a class="symbol-link" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a></code></td></tr><tr><td>private</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>private</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>private</td><td>attempt_id</td><td><code>eos_types :: AttemptId</code></td></tr><tr><td>private</td><td>iteration_id</td><td><code>eos_types :: IterationId</code></td></tr><tr><td>private</td><td>needs</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>private</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base_agent_name</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>private</td><td>role</td><td><code>TaskRole</code></td></tr><tr><td>private</td><td>scope</td><td><code><a class="symbol-link" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a></code></td></tr><tr><td>private</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>private</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>private</td><td>attempt_id</td><td><code>eos_types :: AttemptId</code></td></tr><tr><td>private</td><td>iteration_id</td><td><code>eos_types :: IterationId</code></td></tr><tr><td>private</td><td>needs</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>private</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:351</p>
 </article></div>
@@ -604,10 +612,10 @@
   <pre class="file-source"><code><span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> async_trait::async_trait;
-<span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentRole</span>};
+<span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentType</span>};
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptStore</span>, <span class="rs-type">IterationStore</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">WorkflowId</span>,
-    <span class="rs-type">WorkflowStore</span>,
+    <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptStore</span>, <span class="rs-type">IterationStore</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskRole</span>, <span class="rs-type">TaskStore</span>,
+    <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowStore</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::context::{<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>};
@@ -705,8 +713,8 @@
     <span class="rs-kw">pub</span> workflow_id: <span class="rs-type">WorkflowId</span>,
     <span class="rs-comment">/// Iteration id.</span>
     <span class="rs-kw">pub</span> iteration_id: eos_types::<span class="rs-type">IterationId</span>,
-    <span class="rs-comment">/// Agent role.</span>
-    <span class="rs-kw">pub</span> role: <span class="rs-type">AgentRole</span>,
+    <span class="rs-comment">/// Workflow task role.</span>
+    <span class="rs-kw">pub</span> role: <span class="rs-type">TaskRole</span>,
     <span class="rs-comment">/// Profile name.</span>
     <span class="rs-kw">pub</span> agent_name: <span class="rs-type">String</span>,
     <span class="rs-comment">/// Rendered context row.</span>
@@ -722,13 +730,13 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a> {
-    <span class="rs-comment">/// Agent role.</span>
+    <span class="rs-comment">/// Workflow task role.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">AgentRole</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">TaskRole</span> {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">Planner</span>(_) =&gt; <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span>,
-            <span class="rs-self">Self</span>::<span class="rs-type">Generator</span>(_) =&gt; <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>,
-            <span class="rs-self">Self</span>::<span class="rs-type">Reducer</span>(_) =&gt; <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Planner</span>(_) =&gt; <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Generator</span>(_) =&gt; <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Reducer</span>(_) =&gt; <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
         }
     }
 
@@ -953,7 +961,7 @@
 
 <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a>&lt;&#x27;a&gt; {
     base_agent_name: &amp;&#x27;a str,
-    role: <span class="rs-type">AgentRole</span>,
+    role: <span class="rs-type">TaskRole</span>,
     scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>,
     task_id: <span class="rs-type">TaskId</span>,
     request_id: <span class="rs-type">RequestId</span>,
@@ -983,7 +991,7 @@
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;planner&quot;,
-            role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span>,
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>,
             scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-planner-370">for_planner</a>(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -1013,7 +1021,7 @@
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name,
-            role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>,
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
             scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-generator-399">for_generator</a>(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -1039,7 +1047,7 @@
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;reducer&quot;,
-            role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>,
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
             scope: <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-reducer-430">for_reducer</a>(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -1070,6 +1078,14 @@
             })?
             .as_ref()
             .clone();
+        <span class="rs-kw">if</span> agent_def.agent_type != <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                &quot;workflow launch {:?} is bound to agent {:?} with <span class="rs-kw">type</span> {:?}, expected agent&quot;,
+                args.role.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
+                args.base_agent_name,
+                agent_def.agent_type
+            )));
+        }
         <span class="rs-kw">let</span> (context, task_guidance, agent_def, skill) = <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(composer) = &amp;<span class="rs-self">self</span>.deps.composer
         {
             <span class="rs-kw">let</span> messages = composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(args.base_agent_name, &amp;args.scope).<span class="rs-kw">await</span>?;
@@ -1093,7 +1109,7 @@
         };
         <span class="rs-kw">let</span> agent_name = args.base_agent_name.to_owned();
         <span class="rs-type">Ok</span>(<span class="rs-kw">match</span> args.role {
-            <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Planner</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a> {
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Planner</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a> {
                 task_id: args.task_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
@@ -1105,27 +1121,13 @@
                 task_guidance,
                 skill,
             }),
-            <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Generator</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Generator</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
                 task_id: args.task_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
                 workflow_id: args.workflow_id,
                 iteration_id: args.iteration_id,
-                role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span>,
-                agent_name,
-                context,
-                task_guidance,
-                needs: args.needs,
-                agent_def,
-                skill,
-            }),
-            <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Reducer</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
-                task_id: args.task_id,
-                request_id: args.request_id,
-                attempt_id: args.attempt_id,
-                workflow_id: args.workflow_id,
-                iteration_id: args.iteration_id,
-                role: <span class="rs-type">AgentRole</span>::<span class="rs-type">Reducer</span>,
+                role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
                 agent_name,
                 context,
                 task_guidance,
@@ -1133,10 +1135,24 @@
                 agent_def,
                 skill,
             }),
-            other =&gt; {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
-                    &quot;workflow launch does not support role {other:?}&quot;
-                )));
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span> =&gt; <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>::<span class="rs-type">Reducer</span>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a> {
+                task_id: args.task_id,
+                request_id: args.request_id,
+                attempt_id: args.attempt_id,
+                workflow_id: args.workflow_id,
+                iteration_id: args.iteration_id,
+                role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
+                agent_name,
+                context,
+                task_guidance,
+                needs: args.needs,
+                agent_def,
+                skill,
+            }),
+            <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(
+                    &quot;workflow launch does not support root task role&quot;,
+                ));
             }
         })
     }

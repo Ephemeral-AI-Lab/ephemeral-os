@@ -10,7 +10,7 @@ mod subagent_lifecycle {
     use std::time::Duration;
 
     use async_trait::async_trait;
-    use eos_agent_def::{AgentDefinition, AgentRole, AgentType};
+    use eos_agent_def::{AgentDefinition, AgentType};
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
     use eos_types::RequestId;
@@ -30,7 +30,6 @@ mod subagent_lifecycle {
     fn root_with_subagent() -> AgentDefinition {
         let mut def = agent_def(
             "root",
-            AgentRole::Root,
             &["run_subagent", "read_file", "ask_advisor"],
             &["submit_root_outcome"],
         );
@@ -39,24 +38,16 @@ mod subagent_lifecycle {
         def
     }
 
-    fn explorer_subagent() -> AgentDefinition {
-        let mut def = agent_def(
-            "explorer",
-            AgentRole::Helper,
-            &["read_file"],
-            &["submit_exploration_result"],
-        );
+    fn general_subagent() -> AgentDefinition {
+        let mut def = agent_def("subagent", &["read_file"], &["submit_subagent_result"]);
         def.agent_type = AgentType::Subagent;
         def
     }
 
     fn advisor_agent() -> AgentDefinition {
-        agent_def(
-            "advisor",
-            AgentRole::Helper,
-            &["read_file"],
-            &["submit_advisor_feedback"],
-        )
+        let mut def = agent_def("advisor", &["read_file"], &["submit_advisor_feedback"]);
+        def.agent_type = AgentType::Advisor;
+        def
     }
 
     fn approve_turn() -> Vec<StreamEvent> {
@@ -77,7 +68,7 @@ mod subagent_lifecycle {
             tool_use_turn(
                 "toolu_sub",
                 "run_subagent",
-                json!({"agent_name": "explorer", "prompt": "investigate forever"}),
+                json!({"agent_name": "subagent", "prompt": "investigate forever"}),
             ),
             tool_use_turn(
                 "toolu_advise",
@@ -91,7 +82,7 @@ mod subagent_lifecycle {
             .agent_name
             .as_str()
         {
-            "explorer" => {
+            "subagent" => {
                 Arc::new(ScriptedSource::new_blocking(Vec::new())) as Arc<dyn EventSource>
             }
             "advisor" => {
@@ -102,7 +93,7 @@ mod subagent_lifecycle {
 
         let (state, _dir) = build_test_state(
             Some(factory),
-            vec![root_with_subagent(), advisor_agent(), explorer_subagent()],
+            vec![root_with_subagent(), advisor_agent(), general_subagent()],
         )
         .await;
         let request_id = RequestId::new_v4();
@@ -182,7 +173,7 @@ mod subagent_lifecycle {
                 return Ok(stream_of(tool_use_turn(
                     "toolu_sub",
                     "run_subagent",
-                    json!({"agent_name": "explorer", "prompt": "investigate"}),
+                    json!({"agent_name": "subagent", "prompt": "investigate"}),
                 )));
             }
             // Yield so the spawned subagent run can reach its terminal and the
@@ -192,23 +183,23 @@ mod subagent_lifecycle {
         }
     }
 
-    // D1/D3 end-to-end: a real explorer child runs, calls
-    // `submit_exploration_result`, and completion reaches the root as a
+    // D1/D3 end-to-end: a real subagent child runs, calls
+    // `submit_subagent_result`, and completion reaches the root as a
     // `[BACKGROUND COMPLETED]` notification — no test-only fake supervisor.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn subagent_runs_and_reports_finished() {
         let saw_finished = Arc::new(AtomicBool::new(false));
         let saw_finished_factory = saw_finished.clone();
-        let explorer_turns = vec![tool_use_turn(
-            "toolu_expl",
-            "submit_exploration_result",
+        let subagent_turns = vec![tool_use_turn(
+            "toolu_sub_result",
+            "submit_subagent_result",
             json!({"summary": "the bug is at foo.rs:10", "findings": ["foo.rs:10"]}),
         )];
         let advisor_turns = vec![approve_turn()];
         let factory: EventSourceFactory =
             Arc::new(
                 move |_request, agent_state| match agent_state.agent_name.as_str() {
-                    "explorer" => Arc::new(ScriptedSource::new(explorer_turns.clone()))
+                    "subagent" => Arc::new(ScriptedSource::new(subagent_turns.clone()))
                         as Arc<dyn EventSource>,
                     "advisor" => {
                         Arc::new(ScriptedSource::new(advisor_turns.clone())) as Arc<dyn EventSource>
@@ -223,7 +214,7 @@ mod subagent_lifecycle {
 
         let (state, _dir) = build_test_state(
             Some(factory),
-            vec![root_with_subagent(), advisor_agent(), explorer_subagent()],
+            vec![root_with_subagent(), advisor_agent(), general_subagent()],
         )
         .await;
         let request_id = RequestId::new_v4();
@@ -234,7 +225,7 @@ mod subagent_lifecycle {
 
         assert!(
             saw_finished.load(Ordering::SeqCst),
-            "the child explorer must run and report completion via notification"
+            "the child subagent must run and report completion via notification"
         );
         let task = state
             .db
@@ -287,7 +278,7 @@ mod subagent_lifecycle {
             tool_use_turn(
                 "toolu_sub",
                 "run_subagent",
-                json!({"agent_name": "explorer", "prompt": "go"}),
+                json!({"agent_name": "subagent", "prompt": "go"}),
             ),
             tool_use_turn(
                 "toolu_advise",
@@ -311,7 +302,7 @@ mod subagent_lifecycle {
             }
         });
 
-        // No "explorer" agent registered → run_subagent must reject "not registered".
+        // No "subagent" agent registered -> run_subagent must reject "not registered".
         let (state, _dir) =
             build_test_state(Some(factory), vec![root_with_subagent(), advisor_agent()]).await;
         let request_id = RequestId::new_v4();
@@ -323,7 +314,7 @@ mod subagent_lifecycle {
         let captured = rejection.lock().unwrap().clone();
         assert_eq!(
             captured.as_deref(),
-            Some("run_subagent: agent 'explorer' is not registered."),
+            Some("run_subagent: agent 'subagent' is not registered."),
             "an unregistered agent is rejected with the Rust error text"
         );
         let task = state

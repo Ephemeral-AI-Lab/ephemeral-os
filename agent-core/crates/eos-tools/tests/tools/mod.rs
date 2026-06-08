@@ -12,7 +12,7 @@ fn all_tools_named_and_intented() {
     let registry = build_default_registry(
         &repo_tools_config(),
         &CallerScope {
-            dispatchable_subagents: vec!["explorer".to_owned()],
+            dispatchable_subagents: vec!["subagent".to_owned()],
             skill_slug: None,
         },
     );
@@ -69,7 +69,7 @@ fn advisor_hook_count(registry: &ToolRegistry, name: ToolName) -> usize {
 }
 
 // Exactly the four main submission terminals carry one `AdvisorApproval` hook;
-// helper/explorer terminals and `ask_advisor` carry none.
+// helper/subagent terminals and `ask_advisor` carry none.
 #[test]
 fn advisor_gate_wired_on_exactly_the_four_main_terminals() {
     let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
@@ -100,7 +100,7 @@ fn advisor_gate_wired_on_exactly_the_four_main_terminals() {
     for ungated in [
         ToolName::AskAdvisor,
         ToolName::SubmitAdvisorFeedback,
-        ToolName::SubmitExplorationResult,
+        ToolName::SubmitSubagentResult,
     ] {
         assert_eq!(
             advisor_hook_count(&registry, ungated),
@@ -194,7 +194,7 @@ fn specs_snapshot() {
     let registry = build_default_registry(
         &repo_tools_config(),
         &CallerScope {
-            dispatchable_subagents: vec!["explorer".to_owned(), "coder".to_owned()],
+            dispatchable_subagents: vec!["subagent".to_owned(), "coder".to_owned()],
             skill_slug: None,
         },
     );
@@ -206,7 +206,7 @@ fn specs_snapshot() {
         .find(|s| s.name == "run_subagent")
         .expect("run_subagent registered");
     let agent_enum = &run_subagent.input_schema["properties"]["agent_name"]["enum"];
-    assert_eq!(agent_enum, &serde_json::json!(["explorer", "coder"]));
+    assert_eq!(agent_enum, &serde_json::json!(["subagent", "coder"]));
 
     insta::assert_json_snapshot!("default_tool_specs", specs);
 }

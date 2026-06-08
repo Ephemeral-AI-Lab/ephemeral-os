@@ -3,7 +3,6 @@ name: reducer
 description: Main agent reducer that completes assigned reducer work and reports outcomes.
 model: inherit
 tool_call_limit: 50
-role: reducer
 agent_type: agent
 allowed_tools:
   - read_file

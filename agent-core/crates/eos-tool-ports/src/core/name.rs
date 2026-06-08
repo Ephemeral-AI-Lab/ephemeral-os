@@ -64,8 +64,8 @@ pub enum ToolName {
     SubmitPlannerOutcome,
     /// `submit_advisor_feedback` (submission, terminal).
     SubmitAdvisorFeedback,
-    /// `submit_exploration_result` (submission, terminal).
-    SubmitExplorationResult,
+    /// `submit_subagent_result` (submission, terminal).
+    SubmitSubagentResult,
 }
 
 impl ToolName {
@@ -93,7 +93,7 @@ impl ToolName {
         ToolName::SubmitReducerOutcome,
         ToolName::SubmitPlannerOutcome,
         ToolName::SubmitAdvisorFeedback,
-        ToolName::SubmitExplorationResult,
+        ToolName::SubmitSubagentResult,
     ];
 
     /// The wire string the model calls this tool by.
@@ -121,7 +121,7 @@ impl ToolName {
             ToolName::SubmitReducerOutcome => "submit_reducer_outcome",
             ToolName::SubmitPlannerOutcome => "submit_planner_outcome",
             ToolName::SubmitAdvisorFeedback => "submit_advisor_feedback",
-            ToolName::SubmitExplorationResult => "submit_exploration_result",
+            ToolName::SubmitSubagentResult => "submit_subagent_result",
         }
     }
 

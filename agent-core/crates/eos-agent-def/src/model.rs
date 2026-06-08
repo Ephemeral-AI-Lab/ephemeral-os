@@ -1,9 +1,9 @@
 //! Loader-local raw frontmatter DTO and validation into `eos-types` agent DTOs.
 
 use std::num::NonZeroU32;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-pub use eos_types::{AgentDefinition, AgentName, AgentRole, AgentType};
+pub use eos_types::{AgentDefinition, AgentName, AgentType};
 use serde::Deserialize;
 
 use crate::error::AgentDefError;
@@ -27,8 +27,6 @@ pub(crate) struct RawAgentDefinition {
     #[serde(default)]
     pub tool_call_limit: u32,
     #[serde(default)]
-    pub role: Option<AgentRole>,
-    #[serde(default)]
     pub agent_type: AgentType,
     #[serde(default)]
     pub allowed_tools: Vec<String>,
@@ -48,11 +46,7 @@ pub(crate) struct RawAgentDefinition {
 /// the name/description defaults and resolved the skill path.
 pub(crate) fn definition_from_frontmatter(
     raw: RawAgentDefinition,
-    path: &Path,
 ) -> Result<AgentDefinition, AgentDefError> {
-    let role = raw.role.ok_or_else(|| AgentDefError::MissingRole {
-        path: path.to_owned(),
-    })?;
     let name =
         AgentName::new(raw.name.unwrap_or_default()).map_err(|_| AgentDefError::EmptyName)?;
     let tool_call_limit =
@@ -76,7 +70,6 @@ pub(crate) fn definition_from_frontmatter(
         system_prompt: raw.system_prompt,
         model: raw.model,
         tool_call_limit,
-        role,
         agent_type: raw.agent_type,
         allowed_tools: raw.allowed_tools,
         terminals,
@@ -97,7 +90,6 @@ mod tests {
             name: Some("worker".to_owned()),
             description: Some("a worker".to_owned()),
             tool_call_limit: 10,
-            role: Some(AgentRole::Generator),
             terminals: vec!["submit_generator_outcome".to_owned()],
             ..RawAgentDefinition::default()
         }
@@ -105,33 +97,31 @@ mod tests {
 
     #[test]
     fn definition_rejects_unknown_field() {
-        let yaml = "name: x\ndescription: y\ntool_call_limit: 1\nrole: generator\nterminals: [t]\nbogus_key: 1\n";
+        let yaml = "name: x\ndescription: y\ntool_call_limit: 1\nterminals: [t]\nbogus_key: 1\n";
         let parsed = serde_yaml::from_str::<RawAgentDefinition>(yaml);
         assert!(parsed.is_err(), "deny_unknown_fields must reject bogus_key");
     }
 
     #[test]
     fn definition_enforces_terminals_and_limit() {
-        let path = Path::new("test.md");
-
         let mut empty = valid_raw();
         empty.terminals = vec![];
         assert!(matches!(
-            definition_from_frontmatter(empty, path),
+            definition_from_frontmatter(empty),
             Err(AgentDefError::EmptyTerminals)
         ));
 
         let mut blank = valid_raw();
         blank.terminals = vec!["   ".to_owned(), "".to_owned()];
         assert!(matches!(
-            definition_from_frontmatter(blank, path),
+            definition_from_frontmatter(blank),
             Err(AgentDefError::EmptyTerminals)
         ));
 
         let mut zero = valid_raw();
         zero.tool_call_limit = 0;
         assert!(matches!(
-            definition_from_frontmatter(zero, path),
+            definition_from_frontmatter(zero),
             Err(AgentDefError::NonPositiveToolCallLimit)
         ));
     }
@@ -141,7 +131,7 @@ mod tests {
         let mut raw = valid_raw();
         raw.terminals = vec!["  ".to_owned(), "submit_x".to_owned()];
         raw.notification_triggers = vec!["keep".to_owned(), "  ".to_owned()];
-        let def = definition_from_frontmatter(raw, Path::new("t.md")).unwrap();
+        let def = definition_from_frontmatter(raw).unwrap();
         assert_eq!(def.terminals, vec!["submit_x".to_owned()]);
         assert_eq!(def.notification_triggers, vec!["keep".to_owned()]);
     }
@@ -151,7 +141,7 @@ mod tests {
         let mut raw = valid_raw();
         raw.name = Some("   ".to_owned());
         assert!(matches!(
-            definition_from_frontmatter(raw, Path::new("t.md")),
+            definition_from_frontmatter(raw),
             Err(AgentDefError::EmptyName)
         ));
     }

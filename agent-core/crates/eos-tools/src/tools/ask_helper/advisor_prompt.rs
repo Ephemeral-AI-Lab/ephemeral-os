@@ -26,7 +26,7 @@ Review two distinct things:\n\n\
 1. Tool selection -- using the parent's original context, original task, and \
 transcript as evidence, did the parent pick the right terminal from the catalog \
 above? Or should it have called a different terminal?\n\n\
-2. Quality of synthesis/exploration backing the payload -- does the transcript \
+2. Quality of supporting analysis backing the payload -- does the transcript \
 actually support the payload's claims? Flag stubs, TODOs, unverified assertions, \
 missed acceptance criteria, or claims that exceed what the transcript shows.\n\n\
 Quote transcript lines or contract fragments to ground your findings. Falsifiable \
@@ -37,7 +37,7 @@ Apply a lenient approve bar:\n\n\
 - approve when the tool choice is right and the payload is plausibly supported \
 by the transcript, even if the work isn't pristine.\n\n\
 - reject only on real quality problems: wrong terminal selection, or \
-synthesis/exploration that doesn't support the payload's claims.\n\n\
+supporting analysis that doesn't support the payload's claims.\n\n\
 If the parent has already received a prior reject in this run, check whether the \
 parent addressed the prior issues. A parent that ignored prior feedback warrants \
 a sharper second reject.";
@@ -46,7 +46,7 @@ const ADVISOR_HOW_TO_SUBMIT_SECTION: &str = "# How to submit\n\n\
 Call `submit_advisor_feedback` exactly once with:\n\n\
 - `verdict`: \"approve\" or \"reject\".\n\n\
 - `summary`: focused prose that covers, in order: tool selection, quality of \
-synthesis/exploration backing the payload, and residual risks.";
+supporting analysis backing the payload, and residual risks.";
 
 pub(super) fn build_advisor_messages(
     ctx: &ExecutionMetadata,

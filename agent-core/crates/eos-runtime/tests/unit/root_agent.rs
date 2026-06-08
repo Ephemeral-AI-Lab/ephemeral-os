@@ -153,12 +153,7 @@ async fn workflow_config_wires_attempt_and_planner_depth() {
 
 #[tokio::test]
 async fn unknown_profile_tool_fails_startup() {
-    let bad = agent_def(
-        "root",
-        AgentRole::Root,
-        &["totally_not_a_tool"],
-        &["submit_root_outcome"],
-    );
+    let bad = agent_def("root", &["totally_not_a_tool"], &["submit_root_outcome"]);
     let dir = tempfile::tempdir().unwrap();
 
     let registry: AgentRegistry = vec![bad].into_iter().collect();
@@ -175,7 +170,6 @@ async fn unknown_profile_tool_fails_startup() {
 async fn plugin_profile_tool_passes_startup_validation() {
     let root = agent_def(
         "root",
-        AgentRole::Root,
         &["read_file", "lsp.hover"],
         &["submit_root_outcome"],
     );
@@ -209,7 +203,7 @@ async fn agents_dir_seeds_registry_so_root_resolves() {
     // validation still runs.
     std::fs::write(
         profiles.join("root.md"),
-        "---\nname: root\ndescription: d\ntool_call_limit: 5\nrole: root\nagent_type: agent\nallowed_tools: [read_file]\nterminals: [submit_root_outcome]\n---\nroot body\n",
+        "---\nname: root\ndescription: d\ntool_call_limit: 5\nagent_type: agent\nallowed_tools: [read_file]\nterminals: [submit_root_outcome]\n---\nroot body\n",
     )
     .unwrap();
 

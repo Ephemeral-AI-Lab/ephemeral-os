@@ -2,9 +2,9 @@
 //! descriptor catalog.
 //!
 //! Ports `_terminals/registry.py`. The Rust registry has only 4 of 6
-//! descriptors (advisor + exploration rely on `render_terminal_catalog`'s generic
+//! descriptors (advisor + subagent rely on `render_terminal_catalog`'s generic
 //! fallback). Resolution (GC-tools-03): the Rust domain is **all six**
-//! `is_terminal_tool=True` tools; the advisor + exploration descriptors are
+//! `is_terminal_tool=True` tools; the advisor + subagent descriptors are
 //! authored so the fallback branch disappears. Totality is a compile-time
 //! exhaustive `match` over the [`TerminalTool`] enum.
 
@@ -25,8 +25,8 @@ pub enum TerminalTool {
     Planner,
     /// `submit_advisor_feedback`.
     AdvisorFeedback,
-    /// `submit_exploration_result`.
-    ExplorationResult,
+    /// `submit_subagent_result`.
+    SubagentResult,
 }
 
 impl TerminalTool {
@@ -37,7 +37,7 @@ impl TerminalTool {
         TerminalTool::Reducer,
         TerminalTool::Planner,
         TerminalTool::AdvisorFeedback,
-        TerminalTool::ExplorationResult,
+        TerminalTool::SubagentResult,
     ];
 
     /// The wire [`ToolName`] this terminal submits with.
@@ -49,7 +49,7 @@ impl TerminalTool {
             TerminalTool::Reducer => ToolName::SubmitReducerOutcome,
             TerminalTool::Planner => ToolName::SubmitPlannerOutcome,
             TerminalTool::AdvisorFeedback => ToolName::SubmitAdvisorFeedback,
-            TerminalTool::ExplorationResult => ToolName::SubmitExplorationResult,
+            TerminalTool::SubagentResult => ToolName::SubmitSubagentResult,
         }
     }
 
@@ -63,7 +63,7 @@ impl TerminalTool {
             ToolName::SubmitReducerOutcome => Some(TerminalTool::Reducer),
             ToolName::SubmitPlannerOutcome => Some(TerminalTool::Planner),
             ToolName::SubmitAdvisorFeedback => Some(TerminalTool::AdvisorFeedback),
-            ToolName::SubmitExplorationResult => Some(TerminalTool::ExplorationResult),
+            ToolName::SubmitSubagentResult => Some(TerminalTool::SubagentResult),
             _ => None,
         }
     }
@@ -112,10 +112,10 @@ pub const fn descriptor(terminal: TerminalTool) -> TerminalDescriptor {
             selection_guidance: "Call with verdict=\"approve\" when the pending submission satisfies its contract and is ready to send; call with verdict=\"reject\" when it does not. The summary must give concrete, actionable reasons for the verdict.",
             advisor_review_focus: "Confirm the verdict follows from the pending submission's contract and that the summary names specific, fixable issues rather than vague concerns.",
         },
-        TerminalTool::ExplorationResult => TerminalDescriptor {
-            name: ToolName::SubmitExplorationResult,
-            selection_guidance: "Call when the exploration goal is answered: provide a summary, the concrete findings, and the file/reference paths that support them. Report what was found, not a plan of further work.",
-            advisor_review_focus: "Confirm the summary is supported by the listed findings and references, and that the findings answer the exploration goal without speculative or unsupported claims.",
+        TerminalTool::SubagentResult => TerminalDescriptor {
+            name: ToolName::SubmitSubagentResult,
+            selection_guidance: "Call when the subagent goal is answered: provide a summary, the concrete findings, and the file/reference paths that support them. Report what was found, not a plan of further work.",
+            advisor_review_focus: "Confirm the summary is supported by the listed findings and references, and that the findings answer the subagent goal without speculative or unsupported claims.",
         },
     }
 }

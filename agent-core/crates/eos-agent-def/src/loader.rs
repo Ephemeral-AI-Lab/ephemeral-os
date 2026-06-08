@@ -111,8 +111,7 @@ fn load_one(path: &Path) -> Result<AgentDefinition, AgentDefError> {
         cause,
     })?;
     let (frontmatter, body) = split_frontmatter(&content);
-    // An empty / absent frontmatter block deserializes as the all-default DTO
-    // (role = None), which becomes a clean `MissingRole` below.
+    // An empty / absent frontmatter block deserializes as the all-default DTO.
     let frontmatter = frontmatter.filter(|f| !f.trim().is_empty());
     let mut raw: RawAgentDefinition = serde_yaml::from_str(frontmatter.as_deref().unwrap_or("{}"))
         .map_err(|cause| AgentDefError::Frontmatter {
@@ -161,7 +160,7 @@ fn load_one(path: &Path) -> Result<AgentDefinition, AgentDefError> {
         }
     }
 
-    definition_from_frontmatter(raw, path)
+    definition_from_frontmatter(raw)
 }
 
 fn file_stem(path: &Path) -> String {
@@ -218,8 +217,6 @@ fn split_frontmatter(content: &str) -> (Option<String>, String) {
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
     use super::*;
-    use crate::model::AgentRole;
-
     /// A throwaway directory under the system temp dir, unique per test name and
     /// recreated empty. Removed on drop.
     struct Scratch(PathBuf);
@@ -247,16 +244,15 @@ mod tests {
         }
     }
 
-    // AC-eos-agent-def-01: a profile with no `role:` returns MissingRole.
     #[test]
-    fn loader_rejects_missing_role() {
-        let s = Scratch::new("missing-role");
+    fn loader_rejects_role_frontmatter() {
+        let s = Scratch::new("role-frontmatter");
         s.write(
-            "norole.md",
-            "---\nname: norole\ndescription: d\ntool_call_limit: 5\nterminals: [submit_x]\n---\nbody\n",
+            "role.md",
+            "---\nname: with_role\ndescription: d\ntool_call_limit: 5\nrole: generator\nterminals: [submit_x]\n---\nbody\n",
         );
         let err = load_agents_dir(&s.0).unwrap_err();
-        assert!(matches!(err, AgentDefError::MissingRole { .. }), "{err:?}");
+        assert!(matches!(err, AgentDefError::Frontmatter { .. }), "{err:?}");
     }
 
     // AC-eos-agent-def-04: `_*.md` is skipped; a main/ profile gets the contract
@@ -267,7 +263,7 @@ mod tests {
         s.write("main/_main_role_contract.md", "CONTRACT TEXT\n");
         s.write(
             "main/worker.md",
-            "---\nname: worker\ndescription: d\ntool_call_limit: 5\nrole: generator\nterminals: [submit_x]\n---\nBODY TEXT\n",
+            "---\nname: worker\ndescription: d\ntool_call_limit: 5\nterminals: [submit_x]\n---\nBODY TEXT\n",
         );
         let defs = load_agents_tree(&s.0).unwrap();
         // The `_main_role_contract.md` include is skipped — only `worker` loads.
@@ -285,12 +281,12 @@ mod tests {
         let s = Scratch::new("defaults");
         // No name/description in frontmatter -> stem + "Agent: <stem>".
         s.write(
-            "explorer.md",
-            "---\ntool_call_limit: 5\nrole: subagent\nagent_type: subagent\nterminals: [submit_x]\n---\nbody\n",
+            "subagent.md",
+            "---\ntool_call_limit: 5\nagent_type: subagent\nterminals: [submit_x]\n---\nbody\n",
         );
         let defs = load_agents_dir(&s.0).unwrap();
-        assert_eq!(defs[0].name.as_str(), "explorer");
-        assert_eq!(defs[0].description, "Agent: explorer");
+        assert_eq!(defs[0].name.as_str(), "subagent");
+        assert_eq!(defs[0].description, "Agent: subagent");
     }
 
     // AC-eos-agent-def-05: a missing skill path errors; an existing one resolves
@@ -300,7 +296,7 @@ mod tests {
         let s = Scratch::new("skill");
         s.write(
             "agent.md",
-            "---\nname: a\ndescription: d\ntool_call_limit: 5\nrole: generator\nterminals: [submit_x]\nskill: ./missing/SKILL.md\n---\nbody\n",
+            "---\nname: a\ndescription: d\ntool_call_limit: 5\nterminals: [submit_x]\nskill: ./missing/SKILL.md\n---\nbody\n",
         );
         let err = load_agents_dir(&s.0).unwrap_err();
         assert!(
@@ -312,7 +308,7 @@ mod tests {
         s.write("skills/SKILL.md", "# skill\n");
         s.write(
             "agent.md",
-            "---\nname: a\ndescription: d\ntool_call_limit: 5\nrole: generator\nterminals: [submit_x]\nskill: ./skills/SKILL.md\n---\nbody\n",
+            "---\nname: a\ndescription: d\ntool_call_limit: 5\nterminals: [submit_x]\nskill: ./skills/SKILL.md\n---\nbody\n",
         );
         let defs = load_agents_dir(&s.0).unwrap();
         let skill = defs[0].skill.as_ref().unwrap();
@@ -336,8 +332,8 @@ mod tests {
         assert!(fm.is_none());
         assert_eq!(body, "no frontmatter here");
 
-        let (fm, body) = split_frontmatter("---\nrole: generator\n---\nthe body\n");
-        assert_eq!(fm.as_deref(), Some("role: generator"));
+        let (fm, body) = split_frontmatter("---\nagent_type: agent\n---\nthe body\n");
+        assert_eq!(fm.as_deref(), Some("agent_type: agent"));
         assert_eq!(body, "the body");
     }
 
@@ -346,10 +342,9 @@ mod tests {
         let s = Scratch::new("non-main");
         s.write(
             "helper/advisor.md",
-            "---\nname: advisor\ndescription: d\ntool_call_limit: 5\nrole: helper\nterminals: [submit_x]\n---\nADVISOR BODY\n",
+            "---\nname: advisor\ndescription: d\ntool_call_limit: 5\nterminals: [submit_x]\n---\nADVISOR BODY\n",
         );
         let defs = load_agents_tree(&s.0).unwrap();
-        assert_eq!(defs[0].role, AgentRole::Helper);
         assert_eq!(defs[0].system_prompt.as_deref(), Some("ADVISOR BODY"));
     }
 }

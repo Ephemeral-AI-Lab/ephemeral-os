@@ -1,6 +1,6 @@
 //! Caller-keyed workspace-run service.
 //!
-//! The run container and lifecycle orchestration live in the `eos-workspace-run-host`
+//! The run container and lifecycle orchestration live in the `eos-workspace-run`
 //! crate (the `eos-occ`-free composition tier); this module is the daemon half:
 //! it owns the `WorkspaceRunManager` singleton ([`commands`]), injects the
 //! daemon-resident seams (the OCC publish, resource telemetry, and isolated-audit

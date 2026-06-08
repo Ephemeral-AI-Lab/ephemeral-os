@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum CommandSessionError {
     #[error("{0}")]
-    Workspace(#[from] eos_workspace_api::WorkspaceApiError),
+    Workspace(#[from] eos_workspace::WorkspaceApiError),
     #[error("command session not found: {0}")]
     NotFound(String),
     #[error("invalid command session request: {0}")]

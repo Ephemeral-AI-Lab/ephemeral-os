@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
-use eos_isolated_workspace::{
+use eos_workspace_modes::isolated::{
     CallerId, IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress,
 };
@@ -31,7 +31,7 @@ mod ns_runner;
 #[cfg(target_os = "linux")]
 use runtime::command_handle_from;
 #[cfg(target_os = "linux")]
-pub(crate) use eos_workspace_run_host::CommandHandle;
+pub(crate) use eos_workspace_run::CommandHandle;
 use runtime::{DaemonLayerStackPort, DaemonNamespaceRuntime};
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";

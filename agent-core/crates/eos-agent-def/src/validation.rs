@@ -1,45 +1,9 @@
 //! The *pure* fragments of profile validation that need no other crate: the
-//! `context_recipe` role-gating precheck (`resolved_validation.py:42`) and the
 //! skill-file terminal-silence scanner (`skills/loader.py`).
 //!
-//! The cyclic edges in the Rust source are broken by relocation and injection
-//! (GC-eos-agent-def-05): the recipe *catalog* check (`validate_context_recipe`)
-//! lives in `eos-workflow`; the terminal keys are passed into the scanner as data
-//! rather than imported from `eos-tools`.
-
-use crate::error::AgentDefError;
-use crate::model::{AgentDefinition, AgentRole};
-
-/// Roles that own a context builder; a `context_recipe` is only valid on these.
-fn role_has_context_builder(role: AgentRole) -> bool {
-    matches!(
-        role,
-        AgentRole::Planner | AgentRole::Generator | AgentRole::Reducer
-    )
-}
-
-/// Reject a `context_recipe` declared by a role outside
-/// `{planner, generator, reducer}` (the pure precheck only).
-///
-/// The catalog-validity check (`validate_context_recipe`) is owned by
-/// `eos-workflow` and runs at the composition root after the registry is built.
-///
-/// # Errors
-/// Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a
-/// role that has no context builder.
-pub fn check_context_recipe_role(definition: &AgentDefinition) -> Result<(), AgentDefError> {
-    let Some(recipe) = &definition.context_recipe else {
-        return Ok(());
-    };
-    if role_has_context_builder(definition.role) {
-        return Ok(());
-    }
-    Err(AgentDefError::RecipeRoleMismatch {
-        agent: definition.name.as_str().to_owned(),
-        recipe: recipe.clone(),
-        role: definition.role,
-    })
-}
+//! The cyclic edge in the Rust source is broken by injection (GC-eos-agent-def-05):
+//! terminal keys are passed into the scanner as data rather than imported from
+//! `eos-tools`.
 
 /// Terminal-silence lint over a skill body (`agents/skills/loader.py`).
 pub mod skill_lint {
@@ -107,47 +71,7 @@ pub mod skill_lint {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
-    use std::num::NonZeroU32;
-
     use super::skill_lint::scan_skill_file;
-    use super::*;
-    use crate::model::{AgentName, AgentType};
-
-    fn def_with(role: AgentRole, recipe: Option<&str>) -> AgentDefinition {
-        AgentDefinition {
-            name: AgentName::new("a").unwrap(),
-            description: "d".to_owned(),
-            system_prompt: None,
-            model: None,
-            tool_call_limit: NonZeroU32::new(10).unwrap(),
-            role,
-            agent_type: AgentType::Agent,
-            allowed_tools: vec![],
-            terminals: vec!["submit_x".to_owned()],
-            notification_triggers: vec![],
-            skill: None,
-            context_recipe: recipe.map(str::to_owned),
-        }
-    }
-
-    // AC-eos-agent-def-07: recipe on an out-of-scope role fails; in-scope passes.
-    #[test]
-    fn recipe_role_precheck() {
-        // No recipe -> ok regardless of role.
-        assert!(check_context_recipe_role(&def_with(AgentRole::Helper, None)).is_ok());
-        // In-scope roles pass the precheck.
-        for role in [AgentRole::Planner, AgentRole::Generator, AgentRole::Reducer] {
-            assert!(check_context_recipe_role(&def_with(role, Some("generator"))).is_ok());
-        }
-        // Out-of-scope role with a recipe -> RecipeRoleMismatch.
-        for role in [AgentRole::Root, AgentRole::Helper, AgentRole::Subagent] {
-            let err = check_context_recipe_role(&def_with(role, Some("generator"))).unwrap_err();
-            assert!(
-                matches!(err, AgentDefError::RecipeRoleMismatch { .. }),
-                "{err:?}"
-            );
-        }
-    }
 
     // AC-eos-agent-def-08: submit_* tokens and injected keys are flagged; a
     // terminal-silent body returns empty.

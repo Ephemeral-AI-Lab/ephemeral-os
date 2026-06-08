@@ -64,7 +64,7 @@
   </div>
   <code class="signature">pub enum <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a></code>
   <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Workspace</td><td><code>0: eos_workspace_api :: WorkspaceApiError</code></td></tr><tr><td>NotFound</td><td><code>0: String</code></td></tr><tr><td>InvalidRequest</td><td><code>0: String</code></td></tr><tr><td>Unsupported</td><td><code>0: String</code></td></tr><tr><td>Io</td><td><code>0: String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; std :: io :: Error &gt; for <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a></code></summary><table><tbody><tr id="method-from-18"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-command-session.html#method-from-18">from</a> (error : std :: io :: Error) -&gt; Self</code><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Workspace</td><td><code>0: eos_workspace :: WorkspaceApiError</code></td></tr><tr><td>NotFound</td><td><code>0: String</code></td></tr><tr><td>InvalidRequest</td><td><code>0: String</code></td></tr><tr><td>Unsupported</td><td><code>0: String</code></td></tr><tr><td>Io</td><td><code>0: String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; std :: io :: Error &gt; for <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a></code></summary><table><tbody><tr id="method-from-18"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-command-session.html#method-from-18">from</a> (error : std :: io :: Error) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session.html#method-from-18">from</a>(error: std::io::<span class="rs-type">Error</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<span class="rs-type">Io</span>(error.to_string())
@@ -86,7 +86,7 @@
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
 <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a> {
     #[<a class="symbol-link rs-fn" href="eos-command-session--src-response-rs.html#method-error-50">error</a>(&quot;{0}&quot;)]
-    <span class="rs-type">Workspace</span>(#[from] eos_workspace_api::<span class="rs-type">WorkspaceApiError</span>),
+    <span class="rs-type">Workspace</span>(#[from] eos_workspace::<span class="rs-type">WorkspaceApiError</span>),
     #[<a class="symbol-link rs-fn" href="eos-command-session--src-response-rs.html#method-error-50">error</a>(&quot;command session not found: {0}&quot;)]
     <span class="rs-type">NotFound</span>(<span class="rs-type">String</span>),
     #[<a class="symbol-link rs-fn" href="eos-command-session--src-response-rs.html#method-error-50">error</a>(&quot;invalid command session request: {0}&quot;)]

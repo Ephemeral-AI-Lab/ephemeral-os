@@ -65,9 +65,9 @@
   <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code>
   <p class="docstring">Request-scoped cancellation port wired to the runner service.</p>
   <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_api</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-26"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-runtime.html#method-new-57">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , agent_run_store : Arc &lt; dyn AgentRunStore &gt; , agent_run_api : Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt; ,) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>private</td><td>agent_run_api</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-26"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-runtime.html#method-new-56">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , agent_run_store : Arc &lt; dyn AgentRunStore &gt; , agent_run_api : Arc &lt; OnceLock &lt; Arc &lt; dyn AgentRunApi &gt; &gt; &gt; ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
         task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
         agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
         agent_run_api: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;&gt;&gt;,
@@ -95,9 +95,9 @@
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-cancel-agent-run-119">cancel_agent_run</a>(&amp;run.id, reason).<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code></summary><table><tbody><tr id="method-fmt-20"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a></code></summary><table><tbody><tr id="method-fmt-20"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-50">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-50">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>&quot;).finish_non_exhaustive()
     }
 </code></pre>
@@ -151,7 +151,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>();
     terminal.insert(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
     terminal.insert(&quot;reason&quot;.to_owned(), reason.into());
     terminal
@@ -187,13 +187,13 @@
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-50">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>&quot;).finish_non_exhaustive()
     }
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
         task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
         agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
         agent_run_api: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;&gt;&gt;,
@@ -256,7 +256,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-fn-cancelled-terminal-88">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>();
     terminal.insert(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
     terminal.insert(&quot;reason&quot;.to_owned(), reason.into());
     terminal

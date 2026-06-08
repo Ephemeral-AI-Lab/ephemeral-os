@@ -511,7 +511,7 @@ mod tests {
             id: "run-sub-finished".parse().expect("agent run id"),
             task_id: None,
             initial_messages: None,
-            agent_name: "explorer".to_owned(),
+            agent_name: "subagent".to_owned(),
             message_history: None,
             terminal_tool_result,
             token_count: 0,

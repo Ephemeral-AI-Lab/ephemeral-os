@@ -208,8 +208,8 @@
             .map(|task| task.status);
         <span class="rs-kw">match</span> planner_status {
             <span class="rs-type">Some</span>(<span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>) =&gt; {
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-24">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">Arc</span>::clone(<span class="rs-self">self</span>))
-                    .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-advance-run-stage-37">advance_run_stage</a>()
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">Arc</span>::clone(<span class="rs-self">self</span>))
+                    .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-advance-run-stage-36">advance_run_stage</a>()
                     .<span class="rs-kw">await</span>
             }
             <span class="rs-type">Some</span>(<span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>) =&gt; <span class="rs-type">Ok</span>(()),
@@ -762,7 +762,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::plan_dag::{validate_plan_agents, validate_plan_shape};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{
-    <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-24">AttemptStageAdvancer</a>,
+    <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>,
 };
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ids::{generator_task_id, planner_task_id, reducer_task_id};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::util::json_object;
@@ -935,8 +935,8 @@
             .map(|task| task.status);
         <span class="rs-kw">match</span> planner_status {
             <span class="rs-type">Some</span>(<span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>) =&gt; {
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-24">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">Arc</span>::clone(<span class="rs-self">self</span>))
-                    .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-advance-run-stage-37">advance_run_stage</a>()
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">Arc</span>::clone(<span class="rs-self">self</span>))
+                    .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-advance-run-stage-36">advance_run_stage</a>()
                     .<span class="rs-kw">await</span>
             }
             <span class="rs-type">Some</span>(<span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>) =&gt; <span class="rs-type">Ok</span>(()),

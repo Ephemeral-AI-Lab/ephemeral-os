@@ -6,7 +6,7 @@ use std::time::Instant;
 use eos_occ::ChangesetResult;
 use eos_protocol::Manifest;
 use eos_runner::RunResult;
-use eos_workspace_api::WorkspaceTimings;
+use eos_workspace::WorkspaceTimings;
 use serde_json::{json, Value};
 
 #[derive(Clone, Copy, Debug)]
@@ -20,7 +20,7 @@ pub(crate) struct TreeResourceStats {
 }
 
 impl TreeResourceStats {
-    pub(crate) fn from_ephemeral(stats: &eos_ephemeral_workspace::TreeResourceStats) -> Self {
+    pub(crate) fn from_ephemeral(stats: &eos_workspace_modes::ephemeral::TreeResourceStats) -> Self {
         let file_entries = stats.files.saturating_add(stats.symlinks);
         let entry_count = file_entries.saturating_add(stats.dirs);
         Self {
@@ -286,12 +286,12 @@ pub(crate) fn usize_to_i64_saturating(value: usize) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
 }
 
-// Delegate to eos-workspace-api's converters so daemon-emitted timings/metrics
+// Delegate to eos-workspace's converters so daemon-emitted timings/metrics
 // share ONE saturating semantics. The daemon copies used to cap at u32::MAX —
 // correct for small counts (depth, path counts) but wrong on the byte paths
 // (e.g. `*_tree_bytes`), where a >4.29 GB tree was silently clamped.
 pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
-    eos_workspace_api::usize_to_f64_saturating(value)
+    eos_workspace::usize_to_f64_saturating(value)
 }
 
 #[cfg(test)]
@@ -300,7 +300,7 @@ pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
 }
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
-    eos_workspace_api::u64_to_f64_saturating(value)
+    eos_workspace::u64_to_f64_saturating(value)
 }
 
 pub(crate) fn u64_to_usize_saturating(value: u64) -> usize {

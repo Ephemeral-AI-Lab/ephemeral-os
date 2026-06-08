@@ -1,0 +1,17 @@
+[package]
+name = "eos-workspace-run"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-command-session.workspace = true
+eos-workspace-modes.workspace = true
+eos-workspace.workspace = true
+eos-layerstack.workspace = true
+eos-overlay.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

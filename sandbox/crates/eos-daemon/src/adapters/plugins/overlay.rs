@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eos_ephemeral_workspace::{
+use eos_workspace_modes::ephemeral::{
     finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralSnapshot,
     EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
 };

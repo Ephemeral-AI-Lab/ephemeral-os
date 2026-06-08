@@ -1,6 +1,6 @@
 //! Daemon implementation of the run-host injected seams.
 //!
-//! These are the three responsibilities the `eos-workspace-run-host` crate
+//! These are the three responsibilities the `eos-workspace-run` crate
 //! deliberately does NOT take on (they would pull the `eos-occ` edge or reach
 //! daemon-global state): publishing through the per-root OCC single writer,
 //! sampling daemon-process resource telemetry, and recording an isolated
@@ -8,12 +8,12 @@
 
 use std::path::Path;
 
-use eos_ephemeral_workspace::{finalize_ephemeral_command, EphemeralWorkspace};
+use eos_workspace_modes::ephemeral::{finalize_ephemeral_command, EphemeralWorkspace};
 use eos_layerstack::LayerStack;
-use eos_workspace_api::{
+use eos_workspace::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
-use eos_workspace_run_host::WorkspaceRunHostPorts;
+use eos_workspace_run::WorkspaceRunHostPorts;
 use serde_json::Value;
 
 use crate::response_timings::{resource_timings, timing_map};

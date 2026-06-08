@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use eos_agent_def::AgentRole;
 use eos_types::{
     execution_outcome_for_submission, Attempt, ExecutionRole, GeneratorSubmission, JsonObject,
     PlannerFailReason, PlannerFailureSubmission, ReducerSubmission, Task, TaskOutcomeStatus,
@@ -289,7 +288,7 @@ impl AttemptStageAdvancer {
         let attempt_id = launch.attempt_id().clone();
         let exhausted = json_object("fail_reason", "run_exhausted");
         match launch.role() {
-            AgentRole::Planner => {
+            TaskRole::Planner => {
                 self.orchestrator
                     .apply_planner_failure(PlannerFailureSubmission {
                         attempt_id,
@@ -298,7 +297,7 @@ impl AttemptStageAdvancer {
                     })
                     .await
             }
-            AgentRole::Generator => {
+            TaskRole::Generator => {
                 self.orchestrator
                     .record_generator_submission(GeneratorSubmission {
                         attempt_id,
@@ -309,7 +308,7 @@ impl AttemptStageAdvancer {
                     })
                     .await
             }
-            AgentRole::Reducer => {
+            TaskRole::Reducer => {
                 self.orchestrator
                     .record_reducer_submission(ReducerSubmission {
                         attempt_id,
@@ -320,7 +319,7 @@ impl AttemptStageAdvancer {
                     })
                     .await
             }
-            _ => Err(WorkflowError::invariant(format!(
+            TaskRole::Root => Err(WorkflowError::invariant(format!(
                 "no exhaustion reporter for role {:?}",
                 launch.role()
             ))),
@@ -331,12 +330,7 @@ impl AttemptStageAdvancer {
 /// The lowercase role label used in `workflow.task.*` audit payloads (Rust
 /// persists `task.role` as a lowercase string).
 fn task_role_label(role: TaskRole) -> &'static str {
-    match role {
-        TaskRole::Root => "root",
-        TaskRole::Planner => "planner",
-        TaskRole::Generator => "generator",
-        TaskRole::Reducer => "reducer",
-    }
+    role.as_str()
 }
 
 #[cfg(test)]
@@ -344,7 +338,6 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use std::sync::Arc;
 
-    use eos_agent_def::AgentRole;
     use eos_types::{
         AttemptBudget, AttemptFailReason, AttemptStatus, IterationStatus, PlanDisposition,
         PlanNodeId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowStatus,
@@ -405,11 +398,11 @@ mod tests {
 
         let launches = runner.launches();
         assert_eq!(launches.len(), 3);
-        assert_eq!(launches[0].role(), AgentRole::Planner);
-        assert_eq!(launches[1].role(), AgentRole::Generator);
+        assert_eq!(launches[0].role(), TaskRole::Planner);
+        assert_eq!(launches[1].role(), TaskRole::Generator);
         assert_eq!(launches[1].task_id(), &generator_id);
         assert_eq!(launches[1].attempt_id(), &started.attempt_id);
-        assert_eq!(launches[2].role(), AgentRole::Reducer);
+        assert_eq!(launches[2].role(), TaskRole::Reducer);
     }
 
     // AC-eos-workflow-07 (liveness): a generator run that ends WITHOUT a terminal
@@ -529,11 +522,11 @@ mod tests {
         let launches = runner.launches();
         // planner + 10 generators + 1 reducer.
         assert_eq!(launches.len(), 12);
-        assert_eq!(launches[0].role(), AgentRole::Planner);
-        assert_eq!(launches.last().unwrap().role(), AgentRole::Reducer);
+        assert_eq!(launches[0].role(), TaskRole::Planner);
+        assert_eq!(launches.last().unwrap().role(), TaskRole::Reducer);
         let generators = launches[1..11]
             .iter()
-            .filter(|l| l.role() == AgentRole::Generator)
+            .filter(|l| l.role() == TaskRole::Generator)
             .count();
         assert_eq!(generators, 10, "all generators ran before the reducer");
     }

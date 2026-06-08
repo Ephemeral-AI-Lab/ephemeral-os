@@ -7,7 +7,7 @@ use std::sync::Mutex;
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
-use eos_isolated_workspace as _;
+use eos_workspace_modes as _;
 use eos_layerstack as _;
 use eos_occ as _;
 use eos_overlay as _;

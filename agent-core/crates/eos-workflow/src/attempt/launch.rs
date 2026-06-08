@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRole};
+use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentType};
 use eos_types::{
-    Attempt, AttemptStore, IterationStore, RequestId, Task, TaskId, TaskStore, WorkflowId,
-    WorkflowStore,
+    Attempt, AttemptStore, IterationStore, RequestId, Task, TaskId, TaskRole, TaskStore,
+    WorkflowId, WorkflowStore,
 };
 
 use crate::context::{AgentEntryComposer, ContextScope};
@@ -102,8 +102,8 @@ pub struct ExecutionLaunch {
     pub workflow_id: WorkflowId,
     /// Iteration id.
     pub iteration_id: eos_types::IterationId,
-    /// Agent role.
-    pub role: AgentRole,
+    /// Workflow task role.
+    pub role: TaskRole,
     /// Profile name.
     pub agent_name: String,
     /// Rendered context row.
@@ -119,13 +119,13 @@ pub struct ExecutionLaunch {
 }
 
 impl AgentLaunch {
-    /// Agent role.
+    /// Workflow task role.
     #[must_use]
-    pub const fn role(&self) -> AgentRole {
+    pub const fn role(&self) -> TaskRole {
         match self {
-            Self::Planner(_) => AgentRole::Planner,
-            Self::Generator(_) => AgentRole::Generator,
-            Self::Reducer(_) => AgentRole::Reducer,
+            Self::Planner(_) => TaskRole::Planner,
+            Self::Generator(_) => TaskRole::Generator,
+            Self::Reducer(_) => TaskRole::Reducer,
         }
     }
 
@@ -350,7 +350,7 @@ pub struct AgentLaunchFactory {
 
 struct LaunchBuildArgs<'a> {
     base_agent_name: &'a str,
-    role: AgentRole,
+    role: TaskRole,
     scope: ContextScope,
     task_id: TaskId,
     request_id: RequestId,
@@ -380,7 +380,7 @@ impl AgentLaunchFactory {
             .ok_or_else(|| WorkflowError::not_found("iteration", attempt.iteration_id.as_str()))?;
         self.build(LaunchBuildArgs {
             base_agent_name: "planner",
-            role: AgentRole::Planner,
+            role: TaskRole::Planner,
             scope: ContextScope::for_planner(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -410,7 +410,7 @@ impl AgentLaunchFactory {
             .ok_or_else(|| WorkflowError::not_found("iteration", attempt.iteration_id.as_str()))?;
         self.build(LaunchBuildArgs {
             base_agent_name,
-            role: AgentRole::Generator,
+            role: TaskRole::Generator,
             scope: ContextScope::for_generator(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -436,7 +436,7 @@ impl AgentLaunchFactory {
             .ok_or_else(|| WorkflowError::not_found("iteration", attempt.iteration_id.as_str()))?;
         self.build(LaunchBuildArgs {
             base_agent_name: "reducer",
-            role: AgentRole::Reducer,
+            role: TaskRole::Reducer,
             scope: ContextScope::for_reducer(
                 iteration.workflow_id.clone(),
                 iteration.id.clone(),
@@ -467,6 +467,14 @@ impl AgentLaunchFactory {
             })?
             .as_ref()
             .clone();
+        if agent_def.agent_type != AgentType::Agent {
+            return Err(WorkflowError::invariant(format!(
+                "workflow launch {:?} is bound to agent {:?} with type {:?}, expected agent",
+                args.role.as_str(),
+                args.base_agent_name,
+                agent_def.agent_type
+            )));
+        }
         let (context, task_guidance, agent_def, skill) = if let Some(composer) = &self.deps.composer
         {
             let messages = composer.compose(args.base_agent_name, &args.scope).await?;
@@ -490,7 +498,7 @@ impl AgentLaunchFactory {
         };
         let agent_name = args.base_agent_name.to_owned();
         Ok(match args.role {
-            AgentRole::Planner => AgentLaunch::Planner(PlannerLaunch {
+            TaskRole::Planner => AgentLaunch::Planner(PlannerLaunch {
                 task_id: args.task_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
@@ -502,27 +510,13 @@ impl AgentLaunchFactory {
                 task_guidance,
                 skill,
             }),
-            AgentRole::Generator => AgentLaunch::Generator(ExecutionLaunch {
+            TaskRole::Generator => AgentLaunch::Generator(ExecutionLaunch {
                 task_id: args.task_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
                 workflow_id: args.workflow_id,
                 iteration_id: args.iteration_id,
-                role: AgentRole::Generator,
-                agent_name,
-                context,
-                task_guidance,
-                needs: args.needs,
-                agent_def,
-                skill,
-            }),
-            AgentRole::Reducer => AgentLaunch::Reducer(ExecutionLaunch {
-                task_id: args.task_id,
-                request_id: args.request_id,
-                attempt_id: args.attempt_id,
-                workflow_id: args.workflow_id,
-                iteration_id: args.iteration_id,
-                role: AgentRole::Reducer,
+                role: TaskRole::Generator,
                 agent_name,
                 context,
                 task_guidance,
@@ -530,10 +524,24 @@ impl AgentLaunchFactory {
                 agent_def,
                 skill,
             }),
-            other => {
-                return Err(WorkflowError::invariant(format!(
-                    "workflow launch does not support role {other:?}"
-                )));
+            TaskRole::Reducer => AgentLaunch::Reducer(ExecutionLaunch {
+                task_id: args.task_id,
+                request_id: args.request_id,
+                attempt_id: args.attempt_id,
+                workflow_id: args.workflow_id,
+                iteration_id: args.iteration_id,
+                role: TaskRole::Reducer,
+                agent_name,
+                context,
+                task_guidance,
+                needs: args.needs,
+                agent_def,
+                skill,
+            }),
+            TaskRole::Root => {
+                return Err(WorkflowError::invariant(
+                    "workflow launch does not support root task role",
+                ));
             }
         })
     }

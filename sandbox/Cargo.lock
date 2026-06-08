@@ -151,7 +151,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-checkpoint-host"
+name = "eos-checkpoint"
 version = "0.1.0"
 dependencies = [
  "eos-layerstack",
@@ -165,7 +165,7 @@ name = "eos-command-session"
 version = "0.1.0"
 dependencies = [
  "eos-config",
- "eos-workspace-api",
+ "eos-workspace",
  "nix 0.29.0",
  "rustix 0.38.44",
  "serde",
@@ -189,11 +189,9 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
- "eos-checkpoint-host",
+ "eos-checkpoint",
  "eos-command-session",
  "eos-config",
- "eos-ephemeral-workspace",
- "eos-isolated-workspace",
  "eos-layerstack",
  "eos-occ",
  "eos-occ-layerstack",
@@ -201,8 +199,9 @@ dependencies = [
  "eos-plugin",
  "eos-protocol",
  "eos-runner",
- "eos-workspace-api",
- "eos-workspace-run-host",
+ "eos-workspace",
+ "eos-workspace-modes",
+ "eos-workspace-run",
  "nix 0.29.0",
  "serde",
  "serde_json",
@@ -222,37 +221,6 @@ dependencies = [
  "eos-protocol",
  "serde_json",
  "sha2",
-]
-
-[[package]]
-name = "eos-ephemeral-workspace"
-version = "0.1.0"
-dependencies = [
- "eos-overlay",
- "eos-protocol",
- "eos-workspace-api",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-isolated-workspace"
-version = "0.1.0"
-dependencies = [
- "eos-config",
- "eos-overlay",
- "eos-protocol",
- "eos-workspace-api",
- "futures-util",
- "libc",
- "netlink-sys",
- "nix 0.29.0",
- "rtnetlink",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
 ]
 
 [[package]]
@@ -348,7 +316,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-workspace-api"
+name = "eos-workspace"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -357,15 +325,33 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-workspace-run-host"
+name = "eos-workspace-modes"
+version = "0.1.0"
+dependencies = [
+ "eos-config",
+ "eos-overlay",
+ "eos-protocol",
+ "eos-workspace",
+ "futures-util",
+ "libc",
+ "netlink-sys",
+ "nix 0.29.0",
+ "rtnetlink",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
+name = "eos-workspace-run"
 version = "0.1.0"
 dependencies = [
  "eos-command-session",
- "eos-ephemeral-workspace",
- "eos-isolated-workspace",
  "eos-layerstack",
  "eos-overlay",
- "eos-workspace-api",
+ "eos-workspace",
+ "eos-workspace-modes",
  "serde_json",
 ]
 

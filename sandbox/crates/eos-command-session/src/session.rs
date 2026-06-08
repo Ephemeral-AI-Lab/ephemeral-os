@@ -423,7 +423,7 @@ mod tests {
             stdout: reaped.stdout.clone(),
             stderr: String::new(),
             command_session_id: Some("cmd_1".to_owned()),
-            workspace_mode: Some(eos_workspace_api::WorkspaceMode::default()),
+            workspace_mode: Some(eos_workspace::WorkspaceMode::default()),
             metadata: serde_json::Value::Null,
         };
         session.persist_final(&response);

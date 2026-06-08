@@ -75,9 +75,9 @@ async fn submit_advisor_feedback_rejects_blank_summary() {
 }
 
 #[tokio::test]
-async fn submit_exploration_result_preserves_findings_and_references() {
+async fn submit_subagent_result_preserves_findings_and_references() {
     let res = execute(
-        ToolName::SubmitExplorationResult,
+        ToolName::SubmitSubagentResult,
         obj(&[
             ("summary", json!("found the issue")),
             ("findings", json!(["src/lib.rs:10", "src/main.rs:22"])),
@@ -88,7 +88,7 @@ async fn submit_exploration_result_preserves_findings_and_references() {
 
     assert!(!res.is_error, "{res:?}");
     assert_eq!(res.output, "found the issue");
-    assert_eq!(res.metadata["subagent_role"], json!("explorer"));
+    assert_eq!(res.metadata["agent_type"], json!("subagent"));
     assert_eq!(
         res.metadata["findings"],
         json!(["src/lib.rs:10", "src/main.rs:22"])
@@ -97,9 +97,9 @@ async fn submit_exploration_result_preserves_findings_and_references() {
 }
 
 #[tokio::test]
-async fn submit_exploration_result_rejects_blank_summary() {
+async fn submit_subagent_result_rejects_blank_summary() {
     let res = execute(
-        ToolName::SubmitExplorationResult,
+        ToolName::SubmitSubagentResult,
         obj(&[("summary", json!(" "))]),
     )
     .await;

@@ -59,7 +59,7 @@ Launch output:
 
 Example:
   run_subagent(
-    agent_name="explorer",
+    agent_name="subagent",
     prompt=(
       "Find every call site of "
       "`AttemptOrchestrator.apply_reducer_submission` in agent-core/crates/eos-workflow "

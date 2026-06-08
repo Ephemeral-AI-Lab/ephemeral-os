@@ -100,7 +100,7 @@ async fn run_subagent_returns_agent_run_id() {
     let res = RunSubagent::new(Some(background.clone()), Some(subagent_sessions))
         .execute(
             &obj(&[
-                ("agent_name", json!("explorer")),
+                ("agent_name", json!("subagent")),
                 ("prompt", json!("inspect the plan")),
             ]),
             &ctx,
@@ -114,7 +114,7 @@ async fn run_subagent_returns_agent_run_id() {
     assert_eq!(res.metadata["status"], json!("running"));
     assert_eq!(
         background.spawned.lock().unwrap().as_slice(),
-        &[("explorer".to_owned(), "inspect the plan".to_owned())]
+        &[("subagent".to_owned(), "inspect the plan".to_owned())]
     );
 }
 

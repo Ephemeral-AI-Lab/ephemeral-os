@@ -27,45 +27,6 @@ impl Default for AgentType {
     }
 }
 
-/// Canonical category of an agent profile.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum AgentRole {
-    /// The root request agent.
-    Root,
-    /// Authors the attempt DAG.
-    Planner,
-    /// Does the work; the `executor` profile maps here.
-    Generator,
-    /// Digests dependency outputs; the attempt exit gate.
-    Reducer,
-    /// The advisor helper.
-    Helper,
-    /// The read-only explorer subagent.
-    Subagent,
-}
-
-impl AgentRole {
-    /// The canonical `snake_case` token.
-    #[must_use]
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Root => "root",
-            Self::Planner => "planner",
-            Self::Generator => "generator",
-            Self::Reducer => "reducer",
-            Self::Helper => "helper",
-            Self::Subagent => "subagent",
-        }
-    }
-}
-
-impl fmt::Display for AgentRole {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.as_str())
-    }
-}
-
 /// A registry key / dispatchable agent profile name.
 #[derive(
     Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
@@ -125,9 +86,7 @@ pub struct AgentDefinition {
     pub model: Option<String>,
     /// Per-run cap on tool dispatches.
     pub tool_call_limit: NonZeroU32,
-    /// Canonical role.
-    pub role: AgentRole,
-    /// Regular agent or worker subagent.
+    /// Regular agent, worker subagent, or advisor helper.
     #[serde(default)]
     pub agent_type: AgentType,
     /// Tools the agent may call.
@@ -233,11 +192,6 @@ mod tests {
             system_prompt: None,
             model: None,
             tool_call_limit: NonZeroU32::new(10).unwrap(),
-            role: if agent_type == AgentType::Subagent {
-                AgentRole::Subagent
-            } else {
-                AgentRole::Generator
-            },
             agent_type,
             allowed_tools: vec![],
             terminals: vec!["submit_x".to_owned()],
@@ -248,27 +202,13 @@ mod tests {
     }
 
     #[test]
-    fn role_and_type_serde_values() {
-        let role = serde_json::to_value(AgentRole::Generator).unwrap();
-        assert_eq!(role, serde_json::json!("generator"));
+    fn agent_type_serde_values() {
+        let agent = serde_json::to_value(AgentType::Agent).unwrap();
+        assert_eq!(agent, serde_json::json!("agent"));
         let subagent = serde_json::to_value(AgentType::Subagent).unwrap();
         assert_eq!(subagent, serde_json::json!("subagent"));
         let advisor = serde_json::to_value(AgentType::Advisor).unwrap();
         assert_eq!(advisor, serde_json::json!("advisor"));
-        for (variant, token) in [
-            (AgentRole::Root, "root"),
-            (AgentRole::Planner, "planner"),
-            (AgentRole::Generator, "generator"),
-            (AgentRole::Reducer, "reducer"),
-            (AgentRole::Helper, "helper"),
-            (AgentRole::Subagent, "subagent"),
-        ] {
-            assert_eq!(
-                serde_json::to_value(variant).unwrap(),
-                serde_json::json!(token)
-            );
-            assert_eq!(variant.as_str(), token);
-        }
     }
 
     #[test]

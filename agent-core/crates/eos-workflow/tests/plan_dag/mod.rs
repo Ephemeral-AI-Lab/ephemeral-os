@@ -12,8 +12,7 @@
 
 use std::sync::Arc;
 
-use eos_agent_def::AgentRole;
-use eos_types::{AttemptBudget, AttemptStage, PlanNodeId, TaskStatus, WorkflowStatus};
+use eos_types::{AttemptBudget, AttemptStage, PlanNodeId, TaskRole, TaskStatus, WorkflowStatus};
 
 use crate::ids::generator_task_id;
 use crate::support::{
@@ -47,7 +46,7 @@ async fn plan_dag_materializes_and_parks_at_run_without_closing() {
         runner
             .launches()
             .iter()
-            .any(|launch| launch.role() == AgentRole::Generator)
+            .any(|launch| launch.role() == TaskRole::Generator)
     })
     .await;
 
@@ -80,7 +79,7 @@ async fn plan_dag_materializes_and_parks_at_run_without_closing() {
         runner
             .launches()
             .iter()
-            .all(|launch| launch.role() != AgentRole::Reducer),
+            .all(|launch| launch.role() != TaskRole::Reducer),
         "the reducer must not launch while the generator is parked"
     );
     assert_eq!(

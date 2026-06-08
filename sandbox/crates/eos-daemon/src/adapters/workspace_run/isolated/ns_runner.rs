@@ -1,5 +1,5 @@
 //! Low-level `ns-holder` / `ns-runner` child-spawn and fd plumbing under the
-//! [`NamespaceRuntimePort`](eos_isolated_workspace::NamespaceRuntimePort) impl:
+//! [`NamespaceRuntimePort`](eos_workspace_modes::isolated::NamespaceRuntimePort) impl:
 //! the holder-child registry, raw-fd helpers, and the `eosd ns-runner` re-exec
 //! for setns overlay-mount / DNS configuration. Linux-only by module gate.
 
@@ -12,7 +12,7 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use eos_isolated_workspace::IsolatedError;
+use eos_workspace_modes::isolated::IsolatedError;
 use eos_runner::{Fd, NsFds, RunRequest, RunResult};
 use nix::errno::Errno;
 use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};

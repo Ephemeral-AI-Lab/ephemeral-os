@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>37</b><span>items</span></div>
-  <div><b>25</b><span>fields</span></div>
+  <div><b>33</b><span>items</span></div>
+  <div><b>20</b><span>fields</span></div>
   <div><b>3</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/8</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-def.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-agent-def--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-loader-rs.html"><span>loader.rs</span><small>1/18</small></a></li><li><a class="file-link" href="eos-agent-def--src-model-rs.html"><span>model.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-def--src-registry-rs.html"><span>registry.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-def--src-validation-rs.html"><span>validation.rs</span><small>0/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-agent-def/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -87,11 +87,11 @@
 <span class="rs-kw">mod</span> registry;
 <span class="rs-kw">mod</span> validation;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-6">AgentDefError</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> loader::{load_agents_dir, load_agents_tree};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> model::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRole</span>, <span class="rs-type">AgentType</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> model::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentType</span>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> registry::{<span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentRegistryBuilder</span>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> validation::{check_context_recipe_role, skill_lint};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> validation::skill_lint;
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

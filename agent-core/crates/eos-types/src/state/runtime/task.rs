@@ -1,8 +1,7 @@
 //! `Task` — the persisted agent interface — with its status and role vocabularies.
 //!
-//! Ports `task/task.py`. `Task.role` uses a local 4-variant [`TaskRole`] (not
-//! `eos-agent-def`'s richer `AgentRole`) to keep `eos-types` upstream of
-//! `eos-agent-def` in the dependency DAG (spec §3, GC-state-05).
+//! Ports `task/task.py`. `Task.role` uses the local 4-variant [`TaskRole`] so
+//! workflow lineage stays separate from profile launch classes.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -56,6 +55,19 @@ pub enum TaskRole {
     Generator,
     /// Reducer task — the attempt's exit gate.
     Reducer,
+}
+
+impl TaskRole {
+    /// The canonical `snake_case` token.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Root => "root",
+            Self::Planner => "planner",
+            Self::Generator => "generator",
+            Self::Reducer => "reducer",
+        }
+    }
 }
 
 /// The four persisted task roles, mirroring Rust `TASK_AGENT_ROLES`.

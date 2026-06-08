@@ -86,7 +86,7 @@ fn launch_rejection(rejection: SubagentLaunchRejection) -> ToolResult {
     ToolResult::error(message)
 }
 
-fn explorer_launch_guidance() -> String {
+fn subagent_launch_guidance() -> String {
     "# What's in context\n\
      - Parent's user message above\n\
      \n\
@@ -99,7 +99,7 @@ fn explorer_launch_guidance() -> String {
      - Obvious areas you skipped.\n\
      \n\
      ## Submit\n\
-     Call `submit_exploration_result`."
+     Call `submit_subagent_result`."
         .to_owned()
 }
 
@@ -143,7 +143,7 @@ impl ToolExecutor for RunSubagent {
                 agent_run_id: None,
                 initial_messages: vec![
                     Message::from_user_text(parsed.prompt.clone()),
-                    Message::from_user_text(explorer_launch_guidance()),
+                    Message::from_user_text(subagent_launch_guidance()),
                 ],
                 parent_agent_run_id: Some(parent_agent_run_id.clone()),
                 request_id: ctx.request_id.clone(),

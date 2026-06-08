@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
+use eos_agent_def::{AgentDefinition, AgentRegistry};
 use eos_config::{DatabaseConfig, DatabaseUrl, ProvidersConfig, WorkflowConfig};
 use eos_db::Database;
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
@@ -32,7 +32,6 @@ use eos_testkit::{
 fn root_agent() -> AgentDefinition {
     agent_def(
         "root",
-        AgentRole::Root,
         &["read_file", "delegate_workflow", "ask_advisor"],
         &["submit_root_outcome"],
     )
@@ -41,12 +40,7 @@ fn root_agent() -> AgentDefinition {
 /// The advisor helper agent: read-only tools + the (ungated) advisor terminal.
 /// Resolved by name in the engine-driven `ask_advisor` run.
 fn advisor_agent() -> AgentDefinition {
-    agent_def(
-        "advisor",
-        AgentRole::Helper,
-        &["read_file"],
-        &["submit_advisor_feedback"],
-    )
+    agent_def("advisor", &["read_file"], &["submit_advisor_feedback"])
 }
 
 #[derive(Debug)]
@@ -60,12 +54,7 @@ impl LlmClient for NoopLlmClient {
 }
 
 fn planner_agent() -> AgentDefinition {
-    let mut def = agent_def(
-        "planner",
-        AgentRole::Planner,
-        &["read_file"],
-        &["submit_planner_outcome"],
-    );
+    let mut def = agent_def("planner", &["read_file"], &["submit_planner_outcome"]);
     def.context_recipe = Some("planner".to_owned());
     def
 }

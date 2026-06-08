@@ -90,7 +90,7 @@ agent-core/crates/eos-tool/
 │   │   │   ├── root.rs
 │   │   │   ├── generator.rs
 │   │   │   ├── reducer.rs
-│   │   │   ├── explorer.rs
+│   │   │   ├── subagent.rs
 │   │   │   └── advisor.rs
 │   │   ├── skills.rs
 │   │   └── terminal.rs
@@ -126,11 +126,11 @@ speculative growth:
   construction, *and* markdown loading. `config.rs` is a cohesive loader with its
   own error enum — a justified split, not a forbidden `catalog.rs`.
 - `tools/submission/` stays a subfolder. It holds six terminal-submission DTO
-  families — `root`, `planner`, `generator`, `reducer`, `explorer`, and
+  families — `root`, `planner`, `generator`, `reducer`, `subagent`, and
   `advisor` — plus a shared `lib`; flattened it is ~960 LOC of executor logic in
   one file, which the family-split rule below already covers. The families are
-  keyed by the launching `AgentRunMessageRecordKind` / `AgentType` axis (`root`
-  → `Root`; `planner`/`generator`/`reducer` → `WorkflowTask`; `explorer` →
+  keyed by the launching `AgentRunRecordKind` / `AgentType` axis (`root`
+  → `Root`; `planner`/`generator`/`reducer` → `WorkflowTask`; `subagent` →
   `Subagent`; `advisor` → `Advisor`), never by a behavioral `AgentRole`. Phase
   02 removes that profile role axis, so this spec classifies launches by
   `AgentType` only.
@@ -181,7 +181,7 @@ to the crate that owns its behavior or to an owner-neutral contract module.
 | `SystemNotification`, `NotificationSink`, background-session count/status DTOs | engine/background contracts unless a passive DTO must move to `eos-types` |
 
 The agent-launch contracts (`AgentType`, `AgentName`, `AgentRunApi`,
-`SpawnAgentRequest`, `AgentRunMessageRecordKind`, `WorkflowTaskRole`) are **not**
+`SpawnAgentRequest`, `AgentRunRecordKind`, `WorkflowTaskRole`) are **not**
 `eos-tool-ports` items; they arrive from `eos-types` via the Phase 02 contract
 floor (the `eos-agent-ports` split). `tools/subagent.rs` and
 `tools/ask_advisor.rs` consume them to build spawn requests and select the
@@ -211,7 +211,7 @@ Allowed `ToolRuntime` fields:
 | hook-resource bundle (sandbox + workflow + subagent subset) | `eos-agent-core` | stamped onto each `RegisteredTool`'s hook field |
 
 `run_subagent` and `ask_advisor` share one injected `AgentRunApi` handle (the
-`agent-launch resource`); they differ only in the `AgentRunMessageRecordKind`
+`agent-launch resource`); they differ only in the `AgentRunRecordKind`
 they stamp (`Subagent` vs `Advisor`), which `eos-agent-run` maps to the required
 `AgentType` (`subagent` / `advisor`) and validates against the spawned profile.
 `eos-tool` owns no launch-class policy: it never matches on `AgentType`, it only
@@ -317,7 +317,7 @@ collapse is the purpose of `ToolRuntime`, not an incidental rename.
 - `eos-tool` has no first-target `catalog.rs`, `executor.rs`, `runtime.rs`,
   `resources.rs`, `handles.rs`, `services.rs`, `services/`, or `hooks/` folder.
 - `tools/submission/` is a per-family subfolder (root, planner, generator,
-  reducer, explorer, advisor, shared `lib`); it is not flattened into one
+  reducer, subagent, advisor, shared `lib`); it is not flattened into one
   `tools/submission.rs`.
 - `eos-tool` has no one-file-per-tool-command module tree.
 - `eos-tool` exports no `*Service` types.
@@ -339,11 +339,11 @@ collapse is the purpose of `ToolRuntime`, not an incidental rename.
   the name disambiguates it from `tools/submission/advisor.rs`
   (`submit_advisor_feedback`).
 - `tools/subagent.rs` and `tools/ask_advisor.rs` share one injected `AgentRunApi`
-  handle and differ only in the `AgentRunMessageRecordKind` they stamp
+  handle and differ only in the `AgentRunRecordKind` they stamp
   (`Subagent` / `Advisor`); `ToolRuntime` does not carry two separate
   `AgentRunApi` fields.
 - `eos-tool` consumes `AgentType`, `AgentName`, `AgentRunApi`, `SpawnAgentRequest`,
-  and `AgentRunMessageRecordKind` from `eos-types`; it performs no `AgentType`
+  and `AgentRunRecordKind` from `eos-types`; it performs no `AgentType`
   validation (that stays in `eos-agent-run`) and references the `AgentType`
   launch axis only, never the retired `AgentRole` axis.
 - `eos-engine` imports tool framework contracts from `eos-tool`.

@@ -139,7 +139,7 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code>
   <p class="docstring">The typed name of a public tool (`type-no-stringly`). `#[non_exhaustive]`:<br>new tools are added here, never as raw strings.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>ReadFile</td><td><code></code></td></tr><tr><td>WriteFile</td><td><code></code></td></tr><tr><td>EditFile</td><td><code></code></td></tr><tr><td>MultiEdit</td><td><code></code></td></tr><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>WriteStdin</td><td><code></code></td></tr><tr><td>ReadCommandProgress</td><td><code></code></td></tr><tr><td>EnterIsolatedWorkspace</td><td><code></code></td></tr><tr><td>ExitIsolatedWorkspace</td><td><code></code></td></tr><tr><td>RunSubagent</td><td><code></code></td></tr><tr><td>CancelSubagent</td><td><code></code></td></tr><tr><td>AskAdvisor</td><td><code></code></td></tr><tr><td>DelegateWorkflow</td><td><code></code></td></tr><tr><td>CheckWorkflowStatus</td><td><code></code></td></tr><tr><td>CancelWorkflow</td><td><code></code></td></tr><tr><td>LoadSkillReference</td><td><code></code></td></tr><tr><td>SubmitRootOutcome</td><td><code></code></td></tr><tr><td>SubmitGeneratorOutcome</td><td><code></code></td></tr><tr><td>SubmitReducerOutcome</td><td><code></code></td></tr><tr><td>SubmitPlannerOutcome</td><td><code></code></td></tr><tr><td>SubmitAdvisorFeedback</td><td><code></code></td></tr><tr><td>SubmitExplorationResult</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-wire-128"><td>constructor</td><td>from_wire</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a> (value : &amp; str) -&gt; Option &lt; Self &gt;</code><p class="docstring">Parse a wire string into a [`ToolName`], or `None` when unknown.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>ReadFile</td><td><code></code></td></tr><tr><td>WriteFile</td><td><code></code></td></tr><tr><td>EditFile</td><td><code></code></td></tr><tr><td>MultiEdit</td><td><code></code></td></tr><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>WriteStdin</td><td><code></code></td></tr><tr><td>ReadCommandProgress</td><td><code></code></td></tr><tr><td>EnterIsolatedWorkspace</td><td><code></code></td></tr><tr><td>ExitIsolatedWorkspace</td><td><code></code></td></tr><tr><td>RunSubagent</td><td><code></code></td></tr><tr><td>CancelSubagent</td><td><code></code></td></tr><tr><td>AskAdvisor</td><td><code></code></td></tr><tr><td>DelegateWorkflow</td><td><code></code></td></tr><tr><td>CheckWorkflowStatus</td><td><code></code></td></tr><tr><td>CancelWorkflow</td><td><code></code></td></tr><tr><td>LoadSkillReference</td><td><code></code></td></tr><tr><td>SubmitRootOutcome</td><td><code></code></td></tr><tr><td>SubmitGeneratorOutcome</td><td><code></code></td></tr><tr><td>SubmitReducerOutcome</td><td><code></code></td></tr><tr><td>SubmitPlannerOutcome</td><td><code></code></td></tr><tr><td>SubmitAdvisorFeedback</td><td><code></code></td></tr><tr><td>SubmitSubagentResult</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-wire-128"><td>constructor</td><td>from_wire</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a> (value : &amp; str) -&gt; Option &lt; Self &gt;</code><p class="docstring">Parse a wire string into a [`ToolName`], or `None` when unknown.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Parse a wire string into a [`ToolName`], or `None` when unknown.</span>
     #[must_use]
@@ -174,7 +174,7 @@
             <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitReducerOutcome</span> =&gt; &quot;submit_reducer_outcome&quot;,
             <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitPlannerOutcome</span> =&gt; &quot;submit_planner_outcome&quot;,
             <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitAdvisorFeedback</span> =&gt; &quot;submit_advisor_feedback&quot;,
-            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitExplorationResult</span> =&gt; &quot;submit_exploration_result&quot;,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitSubagentResult</span> =&gt; &quot;submit_subagent_result&quot;,
         }
     }
 </code></pre>
@@ -385,8 +385,8 @@
     <span class="rs-type">SubmitPlannerOutcome</span>,
     <span class="rs-comment">/// `submit_advisor_feedback` (submission, terminal).</span>
     <span class="rs-type">SubmitAdvisorFeedback</span>,
-    <span class="rs-comment">/// `submit_exploration_result` (submission, terminal).</span>
-    <span class="rs-type">SubmitExplorationResult</span>,
+    <span class="rs-comment">/// `submit_subagent_result` (submission, terminal).</span>
+    <span class="rs-type">SubmitSubagentResult</span>,
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> {
@@ -414,7 +414,7 @@
         <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitReducerOutcome</span>,
         <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitPlannerOutcome</span>,
         <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitAdvisorFeedback</span>,
-        <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitExplorationResult</span>,
+        <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitSubagentResult</span>,
     ];
 
     <span class="rs-comment">/// The wire string the model calls this tool by.</span>
@@ -442,7 +442,7 @@
             <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitReducerOutcome</span> =&gt; &quot;submit_reducer_outcome&quot;,
             <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitPlannerOutcome</span> =&gt; &quot;submit_planner_outcome&quot;,
             <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitAdvisorFeedback</span> =&gt; &quot;submit_advisor_feedback&quot;,
-            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitExplorationResult</span> =&gt; &quot;submit_exploration_result&quot;,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">SubmitSubagentResult</span> =&gt; &quot;submit_subagent_result&quot;,
         }
     }
 

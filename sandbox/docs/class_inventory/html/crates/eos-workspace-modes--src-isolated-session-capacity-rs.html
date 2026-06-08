@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace-modes · src/isolated/session/capacity.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-modes File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>30</b><span>modules</span></div>
+  <div><b>199</b><span>items</span></div>
+  <div><b>128</b><span>fields</span></div>
+  <div><b>80</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">ephemeral</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-modes.html"><span>capture.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-command-rs.html"><span>command.rs</span><small>4/20</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-modes--src-isolated-audit-rs.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-command-rs.html"><span>command.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link active" href="eos-workspace-modes--src-isolated-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="isolated::session::capacity crates/eos-workspace-modes/src/isolated/session/capacity.rs impl IsolatedSession &lt; S , R , A &gt; check_host_capacity_against_budget required_host_capacity_bytes host_capacity_budget_bytes parse_memavailable_kib host_capacity_budget_bytes_from_memavailable_kib f64_floor_to_u64_saturating u64_to_f64_lossy">
+  <div class="module-head">
+    <div>
+      <h2>src/isolated/session/capacity.rs</h2>
+      <p class="path">module <code>isolated::session::capacity</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>1 impls</span>
+      <span>7 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-check-host-capacity-against-budget-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_host_capacity_against_budget pub(super) pub(super) fn check_host_capacity_against_budget (open_handles : usize , upperdir_bytes : u64 , budget_bytes : u64 ,) -&gt; Result &lt; () , IsolatedError &gt; crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>check_host_capacity_against_budget</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-check-host-capacity-against-budget-24">check_host_capacity_against_budget</a> (open_handles : usize , upperdir_bytes : u64 , budget_bytes : u64 ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-check-host-capacity-against-budget-24">check_host_capacity_against_budget</a>(
+    open_handles: usize,
+    upperdir_bytes: u64,
+    budget_bytes: u64,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> required_bytes = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-required-host-capacity-bytes-39">required_host_capacity_bytes</a>(open_handles, upperdir_bytes);
+    <span class="rs-kw">if</span> required_bytes &gt; budget_bytes {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">HostRamPressure</span> {
+            required_bytes,
+            budget_bytes,
+        });
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:24</p>
+</article><article id="item-fn-required-host-capacity-bytes-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn required_host_capacity_bytes pub(super) pub(super) fn required_host_capacity_bytes (open_handles : usize , upperdir_bytes : u64) -&gt; u64 crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>required_host_capacity_bytes</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-required-host-capacity-bytes-39">required_host_capacity_bytes</a> (open_handles : usize , upperdir_bytes : u64) -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-required-host-capacity-bytes-39">required_host_capacity_bytes</a>(open_handles: usize, upperdir_bytes: u64) -&gt; u64 {
+    u64::try_from(open_handles)
+        .unwrap_or(u64::<span class="rs-type">MAX</span>)
+        .saturating_add(1)
+        .saturating_mul(upperdir_bytes)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:39</p>
+</article><article id="item-fn-parse-memavailable-kib-55" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_memavailable_kib pub(super) pub(super) fn parse_memavailable_kib (meminfo : &amp; str) -&gt; Option &lt; u64 &gt; crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_memavailable_kib</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-parse-memavailable-kib-55">parse_memavailable_kib</a> (meminfo : &amp; str) -&gt; Option &lt; u64 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-parse-memavailable-kib-55">parse_memavailable_kib</a>(meminfo: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;u64&gt; {
+    meminfo.lines().find_map(|line| {
+        <span class="rs-kw">let</span> rest = line.trim_start().strip_prefix(&quot;<span class="rs-type">MemAvailable</span>:&quot;)?;
+        rest.split_whitespace().next()?.parse().ok()
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:55</p>
+</article><article id="item-fn-host-capacity-budget-bytes-from-memavailable-kib-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn host_capacity_budget_bytes_from_memavailable_kib pub(super) pub(super) fn host_capacity_budget_bytes_from_memavailable_kib (memavailable_kib : u64 , memavail_fraction : f64 ,) -&gt; u64 crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>host_capacity_budget_bytes_from_memavailable_kib</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-from-memavailable-kib-62">host_capacity_budget_bytes_from_memavailable_kib</a> (memavailable_kib : u64 , memavail_fraction : f64 ,) -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-from-memavailable-kib-62">host_capacity_budget_bytes_from_memavailable_kib</a>(
+    memavailable_kib: u64,
+    memavail_fraction: f64,
+) -&gt; u64 {
+    <span class="rs-kw">let</span> memavailable_bytes = memavailable_kib.saturating_mul(<span class="rs-type">KIB_BYTES</span>);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-f64-floor-to-u64-saturating-70">f64_floor_to_u64_saturating</a>(<a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a>(memavailable_bytes) * memavail_fraction)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:62</p>
+</article><article id="item-fn-host-capacity-budget-bytes-46" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn host_capacity_budget_bytes private fn host_capacity_budget_bytes (memavail_fraction : f64) -&gt; u64 crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>host_capacity_budget_bytes</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-46">host_capacity_budget_bytes</a> (memavail_fraction : f64) -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-46">host_capacity_budget_bytes</a>(memavail_fraction: f64) -&gt; u64 {
+    std::fs::read_to_string(&quot;/proc/meminfo&quot;)
+        .ok()
+        .and_then(|meminfo| <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-parse-memavailable-kib-55">parse_memavailable_kib</a>(&amp;meminfo))
+        .map_or(<span class="rs-type">HOST_BUDGET_FALLBACK_BYTES</span>, |memavailable_kib| {
+            <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-from-memavailable-kib-62">host_capacity_budget_bytes_from_memavailable_kib</a>(memavailable_kib, memavail_fraction)
+        })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:46</p>
+</article><article id="item-fn-f64-floor-to-u64-saturating-70" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn f64_floor_to_u64_saturating private fn f64_floor_to_u64_saturating (value : f64) -&gt; u64 crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>f64_floor_to_u64_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-f64-floor-to-u64-saturating-70">f64_floor_to_u64_saturating</a> (value : f64) -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-f64-floor-to-u64-saturating-70">f64_floor_to_u64_saturating</a>(value: f64) -&gt; u64 {
+    <span class="rs-kw">if</span> !value.is_finite() {
+        <span class="rs-kw">return</span> <span class="rs-kw">if</span> value.is_sign_positive() {
+            u64::<span class="rs-type">MAX</span>
+        } <span class="rs-kw">else</span> {
+            0
+        };
+    }
+    <span class="rs-kw">if</span> value &lt;= 0.0 {
+        <span class="rs-kw">return</span> 0;
+    }
+    <span class="rs-kw">let</span> floored = value.floor();
+    <span class="rs-kw">if</span> floored &gt;= <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a>(u64::<span class="rs-type">MAX</span>) {
+        <span class="rs-kw">return</span> u64::<span class="rs-type">MAX</span>;
+    }
+    format!(&quot;{floored:.0}&quot;).parse().unwrap_or(u64::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:70</p>
+</article><article id="item-fn-u64-to-f64-lossy-88" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_lossy private fn u64_to_f64_lossy (value : u64) -&gt; f64 crates/eos-workspace-modes/src/isolated/session/capacity.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>u64_to_f64_lossy</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a> (value : u64) -&gt; f64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a>(value: u64) -&gt; f64 {
+    <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
+    <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::from(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    f64::from(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::from(low))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:88</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-IsolatedSession---S---R---A---9" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-workspace-modes/src/isolated/session/capacity.rs  check_host_capacity pub(super) fn check_host_capacity (&amp; self) -&gt; Result &lt; () , IsolatedError &gt;">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl IsolatedSession &lt; S , R , A &gt;</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a> &lt; S , R , A &gt;</code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-check-host-capacity-15"><td>method</td><td>check_host_capacity</td><td><code>pub(super) fn <a class="symbol-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#method-check-host-capacity-15">check_host_capacity</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#method-check-host-capacity-15">check_host_capacity</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-check-host-capacity-against-budget-24">check_host_capacity_against_budget</a>(
+            <span class="rs-self">self</span>.handles.len(),
+            <span class="rs-self">self</span>.caps.upperdir_bytes,
+            <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-46">host_capacity_budget_bytes</a>(<span class="rs-self">self</span>.caps.memavail_fraction),
+        )
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-modes/src/isolated/session/capacity.rs:9</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-modes/src/isolated/session/capacity.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated::audit::<a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-audit-rs.html#item-trait-AuditSink-16">AuditSink</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated::error::<a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>, <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>, <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>};
+
+<span class="rs-kw">const</span> <span class="rs-type">HOST_BUDGET_FALLBACK_BYTES</span>: u64 = 1_u64 &lt;&lt; 62;
+<span class="rs-kw">const</span> <span class="rs-type">KIB_BYTES</span>: u64 = 1_024;
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>,
+    <span class="rs-type">R</span>: <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>,
+    <span class="rs-type">A</span>: <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-audit-rs.html#item-trait-AuditSink-16">AuditSink</a>,
+{
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#method-check-host-capacity-15">check_host_capacity</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-check-host-capacity-against-budget-24">check_host_capacity_against_budget</a>(
+            <span class="rs-self">self</span>.handles.len(),
+            <span class="rs-self">self</span>.caps.upperdir_bytes,
+            <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-46">host_capacity_budget_bytes</a>(<span class="rs-self">self</span>.caps.memavail_fraction),
+        )
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-check-host-capacity-against-budget-24">check_host_capacity_against_budget</a>(
+    open_handles: usize,
+    upperdir_bytes: u64,
+    budget_bytes: u64,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> required_bytes = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-required-host-capacity-bytes-39">required_host_capacity_bytes</a>(open_handles, upperdir_bytes);
+    <span class="rs-kw">if</span> required_bytes &gt; budget_bytes {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace-modes--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">HostRamPressure</span> {
+            required_bytes,
+            budget_bytes,
+        });
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-required-host-capacity-bytes-39">required_host_capacity_bytes</a>(open_handles: usize, upperdir_bytes: u64) -&gt; u64 {
+    u64::try_from(open_handles)
+        .unwrap_or(u64::<span class="rs-type">MAX</span>)
+        .saturating_add(1)
+        .saturating_mul(upperdir_bytes)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-46">host_capacity_budget_bytes</a>(memavail_fraction: f64) -&gt; u64 {
+    std::fs::read_to_string(&quot;/proc/meminfo&quot;)
+        .ok()
+        .and_then(|meminfo| <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-parse-memavailable-kib-55">parse_memavailable_kib</a>(&amp;meminfo))
+        .map_or(<span class="rs-type">HOST_BUDGET_FALLBACK_BYTES</span>, |memavailable_kib| {
+            <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-from-memavailable-kib-62">host_capacity_budget_bytes_from_memavailable_kib</a>(memavailable_kib, memavail_fraction)
+        })
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-parse-memavailable-kib-55">parse_memavailable_kib</a>(meminfo: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;u64&gt; {
+    meminfo.lines().find_map(|line| {
+        <span class="rs-kw">let</span> rest = line.trim_start().strip_prefix(&quot;<span class="rs-type">MemAvailable</span>:&quot;)?;
+        rest.split_whitespace().next()?.parse().ok()
+    })
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-host-capacity-budget-bytes-from-memavailable-kib-62">host_capacity_budget_bytes_from_memavailable_kib</a>(
+    memavailable_kib: u64,
+    memavail_fraction: f64,
+) -&gt; u64 {
+    <span class="rs-kw">let</span> memavailable_bytes = memavailable_kib.saturating_mul(<span class="rs-type">KIB_BYTES</span>);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-f64-floor-to-u64-saturating-70">f64_floor_to_u64_saturating</a>(<a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a>(memavailable_bytes) * memavail_fraction)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-f64-floor-to-u64-saturating-70">f64_floor_to_u64_saturating</a>(value: f64) -&gt; u64 {
+    <span class="rs-kw">if</span> !value.is_finite() {
+        <span class="rs-kw">return</span> <span class="rs-kw">if</span> value.is_sign_positive() {
+            u64::<span class="rs-type">MAX</span>
+        } <span class="rs-kw">else</span> {
+            0
+        };
+    }
+    <span class="rs-kw">if</span> value &lt;= 0.0 {
+        <span class="rs-kw">return</span> 0;
+    }
+    <span class="rs-kw">let</span> floored = value.floor();
+    <span class="rs-kw">if</span> floored &gt;= <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a>(u64::<span class="rs-type">MAX</span>) {
+        <span class="rs-kw">return</span> u64::<span class="rs-type">MAX</span>;
+    }
+    format!(&quot;{floored:.0}&quot;).parse().unwrap_or(u64::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-isolated-session-capacity-rs.html#item-fn-u64-to-f64-lossy-88">u64_to_f64_lossy</a>(value: u64) -&gt; f64 {
+    <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
+    <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::from(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    f64::from(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::from(low))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 // AC-eos-agent-def-10: loading the real bundled `agents/profile/` tree (root,
-// planner, executor, reducer, explorer, advisor) succeeds and the `executor`
-// profile resolves to `role == AgentRole::Generator`.
+// planner, executor, reducer, subagent, advisor) succeeds and profile launch
+// classes resolve through `AgentType`.
 //
 // This reads the bundled profile tree (read-only) so the Rust loader is
 // validated against the same source the runtime consumes. The path is relative
@@ -10,7 +10,7 @@
 
 use std::path::PathBuf;
 
-use eos_agent_def::{load_agents_tree, AgentName, AgentRegistry, AgentRole, AgentType};
+use eos_agent_def::{load_agents_tree, AgentName, AgentRegistry, AgentType};
 
 fn profile_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/profile")
@@ -30,7 +30,7 @@ fn loads_bundled_profiles() {
 
     // The six bundled profiles all load.
     for name in [
-        "root", "planner", "executor", "reducer", "advisor", "explorer",
+        "root", "planner", "executor", "reducer", "advisor", "subagent",
     ] {
         let key = AgentName::new(name).expect("non-empty name");
         assert!(
@@ -39,11 +39,10 @@ fn loads_bundled_profiles() {
         );
     }
 
-    // `executor` is a profile-name alias carrying role: generator.
+    // `executor` is a reusable workflow-capable profile.
     let executor = registry
         .get(&AgentName::new("executor").unwrap())
         .expect("executor present");
-    assert_eq!(executor.role, AgentRole::Generator);
     assert_eq!(executor.agent_type, AgentType::Agent);
     // executor declares a skill; the loader resolved it to an absolute file.
     let skill = executor.skill.as_ref().expect("executor skill resolved");
@@ -52,16 +51,15 @@ fn loads_bundled_profiles() {
     let advisor = registry
         .get(&AgentName::new("advisor").unwrap())
         .expect("advisor present");
-    assert_eq!(advisor.role, AgentRole::Helper);
     assert_eq!(advisor.agent_type, AgentType::Advisor);
 
-    // The explorer is the only dispatchable subagent in the bundled set.
+    // The general subagent is the only dispatchable subagent in the bundled set.
     let dispatchable: Vec<String> = registry
         .dispatchable_subagent_names()
         .iter()
         .map(|n| n.as_str().to_owned())
         .collect();
-    assert_eq!(dispatchable, vec!["explorer".to_owned()]);
+    assert_eq!(dispatchable, vec!["subagent".to_owned()]);
 
     // The `_main_role_contract.md` private include was skipped, and a main/
     // profile carries the prepended contract.

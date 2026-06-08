@@ -6,7 +6,7 @@ use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use eos_ephemeral_workspace::{
+use eos_workspace_modes::ephemeral::{
     EphemeralDirAllocator, EphemeralRunDirs, EphemeralSnapshot, EphemeralWorkspaceError,
     InvocationId, PathChange, PublishOutcome, PublishStatus, WorkspacePublisherPort, WorkspaceRoot,
 };
@@ -23,7 +23,7 @@ use crate::adapters::occ::{
     occ_route_metrics,
 };
 
-pub(crate) use eos_ephemeral_workspace::RunDirCleanup;
+pub(crate) use eos_workspace_modes::ephemeral::RunDirCleanup;
 
 pub(crate) struct DaemonPublisherPort<'a> {
     root: &'a Path,
@@ -195,12 +195,12 @@ pub(crate) fn path_changes_to_wire(path_changes: &[PathChange]) -> Vec<(String, 
         .collect()
 }
 
-pub(crate) fn path_change_kind_wire(kind: eos_ephemeral_workspace::PathChangeKind) -> &'static str {
+pub(crate) fn path_change_kind_wire(kind: eos_workspace_modes::ephemeral::PathChangeKind) -> &'static str {
     match kind {
-        eos_ephemeral_workspace::PathChangeKind::Write => "write",
-        eos_ephemeral_workspace::PathChangeKind::Delete => "delete",
-        eos_ephemeral_workspace::PathChangeKind::Symlink => "symlink",
-        eos_ephemeral_workspace::PathChangeKind::OpaqueDir => "opaque_dir",
+        eos_workspace_modes::ephemeral::PathChangeKind::Write => "write",
+        eos_workspace_modes::ephemeral::PathChangeKind::Delete => "delete",
+        eos_workspace_modes::ephemeral::PathChangeKind::Symlink => "symlink",
+        eos_workspace_modes::ephemeral::PathChangeKind::OpaqueDir => "opaque_dir",
     }
 }
 

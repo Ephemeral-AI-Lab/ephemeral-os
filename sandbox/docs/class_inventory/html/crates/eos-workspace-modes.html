@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace-modes · src/ephemeral/capture.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-modes File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>30</b><span>modules</span></div>
+  <div><b>199</b><span>items</span></div>
+  <div><b>128</b><span>fields</span></div>
+  <div><b>80</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">ephemeral</span><ul class="file-tree"><li><a class="file-link active" href="eos-workspace-modes.html"><span>capture.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-command-rs.html"><span>command.rs</span><small>4/20</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-ephemeral-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-modes--src-isolated-audit-rs.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-command-rs.html"><span>command.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-isolated-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-modes--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="ephemeral::capture crates/eos-workspace-modes/src/ephemeral/capture.rs CapturedUpperdir capture_for_publish path_change_from_layer_change">
+  <div class="module-head">
+    <div>
+      <h2>src/ephemeral/capture.rs</h2>
+      <p class="path">module <code>ephemeral::capture</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>2 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CapturedUpperdir-9" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CapturedUpperdir pub pub struct CapturedUpperdir crates/eos-workspace-modes/src/ephemeral/capture.rs changes Vec &lt; LayerChange &gt; path_kinds Vec &lt; PathChange &gt; stats TreeResourceStats capture_s f64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CapturedUpperdir</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a></code>
+  <p class="docstring">Captured publishable upperdir changes and local path classifications.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>changes</td><td><code>Vec &lt; LayerChange &gt;</code></td></tr><tr><td>pub</td><td>path_kinds</td><td><code>Vec &lt; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a> &gt;</code></td></tr><tr><td>pub</td><td>stats</td><td><code><a class="symbol-link" href="eos-workspace-modes--src-ephemeral-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a></code></td></tr><tr><td>pub</td><td>capture_s</td><td><code>f64</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/capture.rs:9</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-capture-for-publish-18" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_for_publish pub pub fn capture_for_publish (upperdir : &amp; Path) -&gt; Result &lt; CapturedUpperdir , EphemeralWorkspaceError &gt; crates/eos-workspace-modes/src/ephemeral/capture.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>capture_for_publish</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-modes.html#item-fn-capture-for-publish-18">capture_for_publish</a> (upperdir : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> , <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code>
+  <p class="docstring">Capture an ephemeral upperdir and classify path change kinds.<br># Errors<br>Returns [`EphemeralWorkspaceError`] when overlay capture fails.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Capture an ephemeral upperdir and classify path change kinds.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`EphemeralWorkspaceError`] when overlay capture fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes.html#item-fn-capture-for-publish-18">capture_for_publish</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a>, <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt; {
+    <span class="rs-kw">let</span> start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>::<span class="rs-type">CaptureFailed</span> {
+            reason: error.to_string(),
+        }
+    })?;
+    <span class="rs-kw">let</span> path_kinds = changes.iter().map(path_change_from_layer_change).<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-timings-rs.html#method-collect-23">collect</a>();
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> {
+        changes,
+        path_kinds,
+        stats: <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-timings-rs.html#method-collect-23">collect</a>(upperdir),
+        capture_s: start.elapsed().as_secs_f64(),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/capture.rs:18</p>
+</article><article id="item-fn-path-change-from-layer-change-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_from_layer_change private fn path_change_from_layer_change (change : &amp; LayerChange) -&gt; PathChange crates/eos-workspace-modes/src/ephemeral/capture.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_change_from_layer_change</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes.html#item-fn-path-change-from-layer-change-39">path_change_from_layer_change</a> (change : &amp; LayerChange) -&gt; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes.html#item-fn-path-change-from-layer-change-39">path_change_from_layer_change</a>(change: &amp;<span class="rs-type">LayerChange</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+    <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Write</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Delete</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Symlink</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+    };
+    <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+        path: change.path().as_str().to_owned(),
+        kind,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/capture.rs:39</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-modes/src/ephemeral/capture.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ephemeral::error::<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ephemeral::timings::<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ephemeral::types::{<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a>, <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>};
+
+<span class="rs-comment">/// Captured publishable upperdir changes and local path classifications.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> {
+    <span class="rs-kw">pub</span> changes: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerChange</span>&gt;,
+    <span class="rs-kw">pub</span> path_kinds: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a>&gt;,
+    <span class="rs-kw">pub</span> stats: <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>,
+    <span class="rs-kw">pub</span> capture_s: f64,
+}
+
+<span class="rs-comment">/// Capture an ephemeral upperdir and classify path change kinds.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`EphemeralWorkspaceError`] when overlay capture fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes.html#item-fn-capture-for-publish-18">capture_for_publish</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a>, <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt; {
+    <span class="rs-kw">let</span> start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>::<span class="rs-type">CaptureFailed</span> {
+            reason: error.to_string(),
+        }
+    })?;
+    <span class="rs-kw">let</span> path_kinds = changes.iter().map(path_change_from_layer_change).<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-timings-rs.html#method-collect-23">collect</a>();
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-modes.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> {
+        changes,
+        path_kinds,
+        stats: <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-timings-rs.html#method-collect-23">collect</a>(upperdir),
+        capture_s: start.elapsed().as_secs_f64(),
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes.html#item-fn-path-change-from-layer-change-39">path_change_from_layer_change</a>(change: &amp;<span class="rs-type">LayerChange</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+    <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Write</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Delete</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Symlink</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+    };
+    <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+        path: change.path().as_str().to_owned(),
+        kind,
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

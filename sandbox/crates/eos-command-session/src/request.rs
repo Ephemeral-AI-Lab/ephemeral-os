@@ -1,4 +1,4 @@
-use eos_workspace_api::PrepareCommandRequest;
+use eos_workspace::PrepareCommandRequest;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StartCommandSession {

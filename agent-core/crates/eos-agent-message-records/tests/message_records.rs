@@ -467,7 +467,7 @@ async fn child_created_waits_until_child_files_exist() {
             request_id: &request_id,
             task_id: None,
             agent_run_id: &child_id,
-            agent_name: "explorer",
+            agent_name: "subagent",
             kind: &AgentRunRecordKind::Subagent {
                 parent_agent_run_id: parent_id.clone(),
             },
@@ -611,7 +611,7 @@ async fn subagent_and_advisor_records_resolve_by_agent_run_id() {
             request_id: &request_id,
             task_id: None,
             agent_run_id: &subagent_id,
-            agent_name: "explorer",
+            agent_name: "subagent",
             kind: &AgentRunRecordKind::Subagent {
                 parent_agent_run_id: parent_id.clone(),
             },

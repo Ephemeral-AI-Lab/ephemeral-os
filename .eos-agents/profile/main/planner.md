@@ -3,7 +3,6 @@ name: planner
 description: Main agent planner for workflow attempt graphs.
 model: inherit
 tool_call_limit: 100
-role: planner
 agent_type: agent
 allowed_tools:
   - read_file

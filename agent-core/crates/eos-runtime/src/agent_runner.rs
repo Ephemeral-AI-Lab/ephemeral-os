@@ -17,7 +17,6 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use eos_agent_def::AgentRole;
 use eos_agent_ports::{
     AgentName as AgentPortName, AgentRunApi, AgentRunMessageRecordKind, SpawnAgentRequest,
     WorkflowTaskRole,
@@ -26,7 +25,7 @@ use eos_agent_runner::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
 use eos_tool_ports::AttemptSubmissionPort;
 use eos_tools::AttemptSubmissionService;
-use eos_types::{AgentRunId, WorkflowApi};
+use eos_types::{AgentRunId, TaskRole, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
 use crate::runtime_services::{build_agent_loop_launcher, EventCallback, RuntimeServices};
@@ -153,11 +152,11 @@ impl AgentRunner for RuntimeAgentRunner {
     }
 }
 
-fn workflow_message_record_role(role: AgentRole) -> WorkflowTaskRole {
+fn workflow_message_record_role(role: TaskRole) -> WorkflowTaskRole {
     match role {
-        AgentRole::Planner => WorkflowTaskRole::Planner,
-        AgentRole::Generator => WorkflowTaskRole::Generator,
-        AgentRole::Reducer => WorkflowTaskRole::Reducer,
-        AgentRole::Root | AgentRole::Helper | AgentRole::Subagent => WorkflowTaskRole::Generator,
+        TaskRole::Planner => WorkflowTaskRole::Planner,
+        TaskRole::Generator => WorkflowTaskRole::Generator,
+        TaskRole::Reducer => WorkflowTaskRole::Reducer,
+        TaskRole::Root => WorkflowTaskRole::Generator,
     }
 }

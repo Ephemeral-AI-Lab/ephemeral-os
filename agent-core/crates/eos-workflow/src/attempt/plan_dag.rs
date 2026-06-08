@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
-use eos_agent_def::{AgentName, AgentRegistry, AgentRole};
+use eos_agent_def::{AgentName, AgentRegistry, AgentType};
 use eos_tool_ports::PlannerPlan;
 use eos_types::{PlanNodeId, Task, TaskId, TaskStatus};
 
@@ -246,7 +246,7 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
 }
 
 /// Validate every plan agent before any task row is written: each generator
-/// is bound to a registered generator-role profile (D6) and has a task spec,
+/// is bound to a registered workflow-launchable profile and has a task spec,
 /// and the fixed `reducer` profile is registered. Runs after the pure shape
 /// checks and before materialization so a rejected plan leaves no orphan rows.
 pub(crate) fn validate_plan_agents(plan: &PlannerPlan, registry: &AgentRegistry) -> Result<()> {
@@ -258,12 +258,12 @@ pub(crate) fn validate_plan_agents(plan: &PlannerPlan, registry: &AgentRegistry)
                 task.agent_name
             ))
         })?;
-        // D6: a generator task must be bound to a generator-capable profile
-        // (Rust `_schemas.py` requires `AgentRole.GENERATOR`).
-        if agent_def.role != AgentRole::Generator {
+        // D6: a generator task must be bound to an agent-type profile. The
+        // generator role itself is task lineage, not profile metadata.
+        if agent_def.agent_type != AgentType::Agent {
             return Err(WorkflowError::invariant(format!(
-                "generator task {:?} is bound to agent {:?} with role {:?}, expected generator",
-                task.id, task.agent_name, agent_def.role
+                "generator task {:?} is bound to agent {:?} with type {:?}, expected agent",
+                task.id, task.agent_name, agent_def.agent_type
             )));
         }
         if !plan.task_specs.contains_key(&task.id) {
@@ -271,9 +271,15 @@ pub(crate) fn validate_plan_agents(plan: &PlannerPlan, registry: &AgentRegistry)
         }
     }
     let reducer_name = AgentName::new("reducer")?;
-    registry.get(&reducer_name).ok_or_else(|| {
+    let reducer = registry.get(&reducer_name).ok_or_else(|| {
         WorkflowError::AgentDefinition("agent definition \"reducer\" is not registered".to_owned())
     })?;
+    if reducer.agent_type != AgentType::Agent {
+        return Err(WorkflowError::invariant(format!(
+            "reducer profile has type {:?}, expected agent",
+            reducer.agent_type
+        )));
+    }
     Ok(())
 }
 

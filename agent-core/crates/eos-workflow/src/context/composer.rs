@@ -182,7 +182,7 @@ fn terminal_selection_block(agent_def: &AgentDefinition) -> Option<String> {
 mod tests {
     use std::num::NonZeroU32;
 
-    use eos_agent_def::{AgentName, AgentRole, AgentType};
+    use eos_agent_def::{AgentName, AgentType};
 
     use super::*;
 
@@ -193,7 +193,6 @@ mod tests {
             system_prompt: None,
             model: None,
             tool_call_limit: NonZeroU32::new(8).expect("nonzero"),
-            role: AgentRole::Generator,
             agent_type: AgentType::Agent,
             allowed_tools: Vec::new(),
             terminals: terminals.into_iter().map(ToOwned::to_owned).collect(),

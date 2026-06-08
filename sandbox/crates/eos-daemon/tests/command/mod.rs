@@ -161,21 +161,21 @@ fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -
 struct NoopRunHostPorts;
 
 #[cfg(target_os = "linux")]
-impl eos_workspace_run_host::WorkspaceRunHostPorts for NoopRunHostPorts {
+impl eos_workspace_run::WorkspaceRunHostPorts for NoopRunHostPorts {
     fn base_timings(
         &self,
         _root: &std::path::Path,
-    ) -> Result<eos_workspace_api::WorkspaceTimings, eos_workspace_api::WorkspaceApiError> {
+    ) -> Result<eos_workspace::WorkspaceTimings, eos_workspace::WorkspaceApiError> {
         unimplemented!("settle path is not exercised by completion-queue unit tests")
     }
 
     fn finalize_ephemeral(
         &self,
         _root: &std::path::Path,
-        _workspace: eos_ephemeral_workspace::EphemeralWorkspace,
-        _base_timings: eos_workspace_api::WorkspaceTimings,
-        _request: eos_workspace_api::FinalizeCommandRequest,
-    ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError> {
+        _workspace: eos_workspace_modes::ephemeral::EphemeralWorkspace,
+        _base_timings: eos_workspace::WorkspaceTimings,
+        _request: eos_workspace::FinalizeCommandRequest,
+    ) -> Result<eos_workspace::WorkspaceCommandOutcome, eos_workspace::WorkspaceApiError> {
         unimplemented!("settle path is not exercised by completion-queue unit tests")
     }
 

@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRegistryBuilder, AgentRole};
+use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRegistryBuilder};
 use eos_tool_ports::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan};
 use eos_types::{
     DeferredGoal, GeneratorSubmission, JsonObject, PlanDisposition, PlanNodeId, ReducerSubmission,
@@ -250,8 +250,8 @@ impl AgentRunner for ScriptedRunner {
         self.launches.lock().push(launch.clone());
         let attempt_id = launch.attempt_id().clone();
         let submission = match launch.role() {
-            AgentRole::Planner => ScriptedSubmission::Planner(self.build_plan(&launch)),
-            AgentRole::Generator => {
+            TaskRole::Planner => ScriptedSubmission::Planner(self.build_plan(&launch)),
+            TaskRole::Generator => {
                 self.enter();
                 for _ in 0..4 {
                     tokio::task::yield_now().await;
@@ -265,7 +265,7 @@ impl AgentRunner for ScriptedRunner {
                     terminal_tool_result: terminal_tool_result_fixture(),
                 })
             }
-            AgentRole::Reducer => {
+            TaskRole::Reducer => {
                 self.enter();
                 tokio::task::yield_now().await;
                 self.exit();
@@ -286,18 +286,14 @@ impl AgentRunner for ScriptedRunner {
 pub(crate) fn agent_registry() -> AgentRegistry {
     let mut builder = AgentRegistryBuilder::new();
     for (name, role, terminals) in [
-        ("root", AgentRole::Root, vec!["submit_root_outcome"]),
-        ("planner", AgentRole::Planner, vec!["submit_plan"]),
+        ("root", TaskRole::Root, vec!["submit_root_outcome"]),
+        ("planner", TaskRole::Planner, vec!["submit_plan"]),
         (
             "coder",
-            AgentRole::Generator,
+            TaskRole::Generator,
             vec!["submit_generator_outcome"],
         ),
-        (
-            "reducer",
-            AgentRole::Reducer,
-            vec!["submit_reducer_outcome"],
-        ),
+        ("reducer", TaskRole::Reducer, vec!["submit_reducer_outcome"]),
     ] {
         builder.add(agent_def(name, role, terminals));
     }
@@ -309,31 +305,26 @@ pub(crate) fn agent_registry() -> AgentRegistry {
 pub(crate) fn agent_registry_without_planner() -> AgentRegistry {
     let mut builder = AgentRegistryBuilder::new();
     for (name, role, terminals) in [
-        ("root", AgentRole::Root, vec!["submit_root_outcome"]),
+        ("root", TaskRole::Root, vec!["submit_root_outcome"]),
         (
             "coder",
-            AgentRole::Generator,
+            TaskRole::Generator,
             vec!["submit_generator_outcome"],
         ),
-        (
-            "reducer",
-            AgentRole::Reducer,
-            vec!["submit_reducer_outcome"],
-        ),
+        ("reducer", TaskRole::Reducer, vec!["submit_reducer_outcome"]),
     ] {
         builder.add(agent_def(name, role, terminals));
     }
     builder.build()
 }
 
-fn agent_def(name: &str, role: AgentRole, terminals: Vec<&str>) -> AgentDefinition {
+fn agent_def(name: &str, role: TaskRole, terminals: Vec<&str>) -> AgentDefinition {
     AgentDefinition {
         name: AgentName::new(name).unwrap(),
         description: format!("{name} agent"),
         system_prompt: None,
         model: None,
         tool_call_limit: NonZeroU32::new(16).unwrap(),
-        role,
         agent_type: eos_agent_def::AgentType::Agent,
         allowed_tools: Vec::new(),
         terminals: terminals.into_iter().map(ToOwned::to_owned).collect(),

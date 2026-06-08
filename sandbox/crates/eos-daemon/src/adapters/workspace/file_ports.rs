@@ -14,7 +14,7 @@ use eos_occ::ChangesetResult;
 use eos_protocol::{LayerChange, LayerPath};
 #[cfg(target_os = "linux")]
 use eos_protocol::{LayerRef, Manifest};
-use eos_workspace_api::{
+use eos_workspace::{
     ChangedPathKinds, ResolvedWorkspacePath, WorkspaceApiError, WorkspaceConflict, WorkspaceMode,
     WorkspaceMutationKind, WorkspaceMutationOutcome, WorkspaceMutationRequest,
     WorkspaceMutationSink, WorkspaceReadBytes, WorkspaceReadView, WorkspaceTimings,

@@ -2,23 +2,17 @@
 
 use std::num::NonZeroU32;
 
-use eos_agent_def::{AgentDefinition, AgentName, AgentRole, AgentType};
+use eos_agent_def::{AgentDefinition, AgentName, AgentType};
 
 /// Build a minimal agent definition for tests.
 #[must_use]
-pub fn agent_def(
-    name: &str,
-    role: AgentRole,
-    allowed: &[&str],
-    terminals: &[&str],
-) -> AgentDefinition {
+pub fn agent_def(name: &str, allowed: &[&str], terminals: &[&str]) -> AgentDefinition {
     AgentDefinition {
         name: AgentName::new(name).expect("name"),
         description: name.to_owned(),
         system_prompt: Some("test profile".to_owned()),
         model: Some("test-model".to_owned()),
         tool_call_limit: NonZeroU32::new(8).expect("nonzero"),
-        role,
         agent_type: AgentType::Agent,
         allowed_tools: allowed.iter().map(|s| (*s).to_owned()).collect(),
         terminals: terminals.iter().map(|s| (*s).to_owned()).collect(),

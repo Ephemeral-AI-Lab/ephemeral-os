@@ -24,8 +24,7 @@ pub mod state;
 mod time;
 
 pub use agent::{
-    AgentDefinition, AgentName, AgentNameError, AgentRegistry, AgentRegistryBuilder, AgentRole,
-    AgentType,
+    AgentDefinition, AgentName, AgentNameError, AgentRegistry, AgentRegistryBuilder, AgentType,
 };
 pub use contracts::{
     AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus,

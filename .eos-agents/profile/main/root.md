@@ -3,7 +3,6 @@ name: root
 description: Root request agent.
 model: inherit
 tool_call_limit: 100
-role: root
 agent_type: agent
 allowed_tools:
   - read_file

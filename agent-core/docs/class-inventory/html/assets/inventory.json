@@ -7,13 +7,13 @@
       "path": "crates/eos-agent-def",
       "stats": {
         "modules": 6,
-        "items": 37,
+        "items": 33,
         "structs": 2,
         "enums": 1,
         "traits": 0,
-        "functions": 32,
+        "functions": 28,
         "impls": 2,
-        "fields": 25,
+        "fields": 20,
         "methods": 3
       },
       "modules": [
@@ -28,16 +28,6 @@
               "signature": "pub enum AgentDefError",
               "fields": [],
               "variants": [
-                {
-                  "name": "MissingRole",
-                  "fields": [
-                    {
-                      "name": "path",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    }
-                  ]
-                },
                 {
                   "name": "EmptyName",
                   "fields": []
@@ -101,26 +91,6 @@
                   ]
                 },
                 {
-                  "name": "RecipeRoleMismatch",
-                  "fields": [
-                    {
-                      "name": "agent",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "recipe",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "role",
-                      "visibility": "private",
-                      "ty": "AgentRole"
-                    }
-                  ]
-                },
-                {
                   "name": "SkillLint",
                   "fields": [
                     {
@@ -143,7 +113,7 @@
               ],
               "file": "crates/eos-agent-def/src/error.rs",
               "module": "error",
-              "line": 8
+              "line": 6
             }
           ]
         },
@@ -298,7 +268,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader",
-              "line": 167
+              "line": 166
             },
             {
               "kind": "fn",
@@ -314,7 +284,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader",
-              "line": 173
+              "line": 172
             },
             {
               "kind": "fn",
@@ -330,7 +300,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader",
-              "line": 193
+              "line": 192
             },
             {
               "kind": "struct",
@@ -352,7 +322,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 223
+              "line": 220
             },
             {
               "kind": "impl",
@@ -367,14 +337,14 @@
                   "signature": "fn new (name : & str) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 228
+                  "line": 225
                 },
                 {
                   "name": "write",
                   "signature": "fn write (& self , rel : & str , body : & str) -> PathBuf",
                   "kind": "method",
                   "docs": null,
-                  "line": 234
+                  "line": 231
                 }
               ],
               "impl_target": "Scratch",
@@ -385,7 +355,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 227
+              "line": 224
             },
             {
               "kind": "impl",
@@ -400,7 +370,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 245
+                  "line": 242
                 }
               ],
               "impl_target": "Scratch",
@@ -412,13 +382,13 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 244
+              "line": 241
             },
             {
               "kind": "fn",
-              "name": "loader_rejects_missing_role",
+              "name": "loader_rejects_role_frontmatter",
               "visibility": "private",
-              "signature": "fn loader_rejects_missing_role ()",
+              "signature": "fn loader_rejects_role_frontmatter ()",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -430,7 +400,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 251
+              "line": 247
             },
             {
               "kind": "fn",
@@ -448,7 +418,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 264
+              "line": 260
             },
             {
               "kind": "fn",
@@ -466,7 +436,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 283
+              "line": 279
             },
             {
               "kind": "fn",
@@ -484,7 +454,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 298
+              "line": 294
             },
             {
               "kind": "fn",
@@ -502,7 +472,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 326
+              "line": 322
             },
             {
               "kind": "fn",
@@ -520,7 +490,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 333
+              "line": 329
             },
             {
               "kind": "fn",
@@ -538,7 +508,7 @@
               ],
               "file": "crates/eos-agent-def/src/loader.rs",
               "module": "loader::tests",
-              "line": 344
+              "line": 340
             }
           ]
         },
@@ -576,11 +546,6 @@
                   "name": "tool_call_limit",
                   "visibility": "pub",
                   "ty": "u32"
-                },
-                {
-                  "name": "role",
-                  "visibility": "pub",
-                  "ty": "Option < AgentRole >"
                 },
                 {
                   "name": "agent_type",
@@ -633,7 +598,7 @@
               "kind": "fn",
               "name": "definition_from_frontmatter",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) fn definition_from_frontmatter (raw : RawAgentDefinition , path : & Path ,) -> Result < AgentDefinition , AgentDefError >",
+              "signature": "pub(crate) fn definition_from_frontmatter (raw : RawAgentDefinition ,) -> Result < AgentDefinition , AgentDefError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -643,7 +608,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model",
-              "line": 45
+              "line": 43
             },
             {
               "kind": "fn",
@@ -659,7 +624,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 95
+              "line": 88
             },
             {
               "kind": "fn",
@@ -677,7 +642,7 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 106
+              "line": 98
             },
             {
               "kind": "fn",
@@ -695,7 +660,7 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 113
+              "line": 105
             },
             {
               "kind": "fn",
@@ -714,7 +679,7 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 139
+              "line": 129
             },
             {
               "kind": "fn",
@@ -732,7 +697,7 @@
               ],
               "file": "crates/eos-agent-def/src/model.rs",
               "module": "model::tests",
-              "line": 149
+              "line": 139
             }
           ]
         },
@@ -745,38 +710,6 @@
           "path": "crates/eos-agent-def/src/validation.rs",
           "module": "validation",
           "items": [
-            {
-              "kind": "fn",
-              "name": "role_has_context_builder",
-              "visibility": "private",
-              "signature": "fn role_has_context_builder (role : AgentRole) -> bool",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Roles that own a context builder; a `context_recipe` is only valid on these.",
-              "tags": [],
-              "file": "crates/eos-agent-def/src/validation.rs",
-              "module": "validation",
-              "line": 13
-            },
-            {
-              "kind": "fn",
-              "name": "check_context_recipe_role",
-              "visibility": "pub",
-              "signature": "pub fn check_context_recipe_role (definition : & AgentDefinition) -> Result < () , AgentDefError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Reject a `context_recipe` declared by a role outside\n`{planner, generator, reducer}` (the pure precheck only).\n\nThe catalog-validity check (`validate_context_recipe`) is owned by\n`eos-workflow` and runs at the composition root after the registry is built.\n\n# Errors\nReturns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a\nrole that has no context builder.",
-              "tags": [],
-              "file": "crates/eos-agent-def/src/validation.rs",
-              "module": "validation",
-              "line": 21
-            },
             {
               "kind": "fn",
               "name": "scan_skill_file",
@@ -793,7 +726,7 @@
               ],
               "file": "crates/eos-agent-def/src/validation.rs",
               "module": "validation::skill_lint",
-              "line": 46
+              "line": 10
             },
             {
               "kind": "fn",
@@ -809,41 +742,7 @@
               "tags": [],
               "file": "crates/eos-agent-def/src/validation.rs",
               "module": "validation::skill_lint",
-              "line": 80
-            },
-            {
-              "kind": "fn",
-              "name": "def_with",
-              "visibility": "private",
-              "signature": "fn def_with (role : AgentRole , recipe : Option < & str >) -> AgentDefinition",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-agent-def/src/validation.rs",
-              "module": "validation::tests",
-              "line": 116
-            },
-            {
-              "kind": "fn",
-              "name": "recipe_role_precheck",
-              "visibility": "private",
-              "signature": "fn recipe_role_precheck ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-agent-def/src/validation.rs",
-              "module": "validation::tests",
-              "line": 134
+              "line": 44
             },
             {
               "kind": "fn",
@@ -861,7 +760,7 @@
               ],
               "file": "crates/eos-agent-def/src/validation.rs",
               "module": "validation::tests",
-              "line": 154
+              "line": 78
             },
             {
               "kind": "fn",
@@ -879,7 +778,7 @@
               ],
               "file": "crates/eos-agent-def/src/validation.rs",
               "module": "validation::tests",
-              "line": 170
+              "line": 94
             }
           ]
         }
@@ -2116,14 +2015,14 @@
       "path": "crates/eos-agent-ports",
       "stats": {
         "modules": 11,
-        "items": 27,
-        "structs": 11,
-        "enums": 8,
-        "traits": 3,
+        "items": 16,
+        "structs": 8,
+        "enums": 3,
+        "traits": 2,
         "functions": 1,
-        "impls": 4,
-        "fields": 68,
-        "methods": 13
+        "impls": 2,
+        "fields": 35,
+        "methods": 6
       },
       "modules": [
         {
@@ -2174,7 +2073,7 @@
               ],
               "file": "crates/eos-agent-ports/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 7
+              "line": 6
             },
             {
               "kind": "enum",
@@ -2224,7 +2123,7 @@
               ],
               "file": "crates/eos-agent-ports/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 22
+              "line": 21
             },
             {
               "kind": "struct",
@@ -2259,7 +2158,7 @@
               ],
               "file": "crates/eos-agent-ports/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 33
+              "line": 32
             },
             {
               "kind": "enum",
@@ -2299,7 +2198,7 @@
               ],
               "file": "crates/eos-agent-ports/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 44
+              "line": 43
             }
           ]
         },
@@ -2490,272 +2389,17 @@
         {
           "path": "crates/eos-agent-ports/src/agent_name.rs",
           "module": "agent_name",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AgentName",
-              "visibility": "pub",
-              "signature": "pub struct AgentName",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Agent profile name used by agent-run ports.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: Ord",
-                "derive: PartialEq",
-                "derive: PartialOrd"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_name.rs",
-              "module": "agent_name",
-              "line": 5
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentName",
-              "visibility": "private",
-              "signature": "impl AgentName",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (value : impl AsRef < str >) -> Result < Self , AgentNameError >",
-                  "kind": "constructor",
-                  "docs": "Build a non-empty trimmed agent name.\n\n# Errors\nReturns [`AgentNameError::Empty`] when the trimmed value is empty.",
-                  "line": 10
-                },
-                {
-                  "name": "as_str",
-                  "signature": "pub fn as_str (& self) -> & str",
-                  "kind": "method",
-                  "docs": "Borrow the name as a string slice.",
-                  "line": 22
-                }
-              ],
-              "impl_target": "AgentName",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_name.rs",
-              "module": "agent_name",
-              "line": 9
-            },
-            {
-              "kind": "impl",
-              "name": "impl fmt :: Display for AgentName",
-              "visibility": "private",
-              "signature": "impl fmt :: Display for AgentName",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 30
-                }
-              ],
-              "impl_target": "AgentName",
-              "trait_name": "fmt :: Display",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_name.rs",
-              "module": "agent_name",
-              "line": 29
-            },
-            {
-              "kind": "enum",
-              "name": "AgentNameError",
-              "visibility": "pub",
-              "signature": "pub enum AgentNameError",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Empty",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Agent-name validation error.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: thiserror::Error",
-                "error",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_name.rs",
-              "module": "agent_name",
-              "line": 35
-            }
-          ]
+          "items": []
         },
         {
           "path": "crates/eos-agent-ports/src/agent_run_api.rs",
           "module": "agent_run_api",
-          "items": [
-            {
-              "kind": "trait",
-              "name": "AgentRunApi",
-              "visibility": "pub",
-              "signature": "pub trait AgentRunApi",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "spawn_agent",
-                  "signature": "async fn spawn_agent (& self , request : SpawnAgentRequest) -> Result < AgentRunId , AgentRunError >",
-                  "kind": "required",
-                  "docs": "Spawn an agent and return its natural run id immediately.",
-                  "line": 11
-                },
-                {
-                  "name": "wait_for_agent_outcome",
-                  "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
-                  "kind": "required",
-                  "docs": "Wait for one agent run to publish a terminal outcome.",
-                  "line": 14
-                },
-                {
-                  "name": "poll_agent_run_outcome",
-                  "signature": "async fn poll_agent_run_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunOutcome > , AgentRunError >",
-                  "kind": "required",
-                  "docs": "Nonblocking terminal outcome poll for background managers.",
-                  "line": 20
-                },
-                {
-                  "name": "cancel_agent_run",
-                  "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
-                  "kind": "required",
-                  "docs": "Cancel one active agent run.",
-                  "line": 26
-                }
-              ],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Lifecycle API for spawning, waiting, polling, and cancelling agent runs.",
-              "tags": [
-                "async_trait"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_run_api.rs",
-              "module": "agent_run_api",
-              "line": 8
-            }
-          ]
+          "items": []
         },
         {
           "path": "crates/eos-agent-ports/src/agent_run_outcome.rs",
           "module": "agent_run_outcome",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AgentRunOutcome",
-              "visibility": "pub",
-              "signature": "pub struct AgentRunOutcome",
-              "fields": [
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "AgentRunId"
-                },
-                {
-                  "name": "status",
-                  "visibility": "pub",
-                  "ty": "AgentRunStatus"
-                },
-                {
-                  "name": "submission_payload",
-                  "visibility": "pub",
-                  "ty": "Option < JsonObject >"
-                },
-                {
-                  "name": "message_history",
-                  "visibility": "pub",
-                  "ty": "Vec < Message >"
-                },
-                {
-                  "name": "token_count",
-                  "visibility": "pub",
-                  "ty": "Option < i64 >"
-                },
-                {
-                  "name": "error",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Terminal outcome for one agent run.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_run_outcome.rs",
-              "module": "agent_run_outcome",
-              "line": 6
-            },
-            {
-              "kind": "enum",
-              "name": "AgentRunStatus",
-              "visibility": "pub",
-              "signature": "pub enum AgentRunStatus",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Completed",
-                  "fields": []
-                },
-                {
-                  "name": "Failed",
-                  "fields": []
-                },
-                {
-                  "name": "Cancelled",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Agent-run terminal status.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-agent-ports/src/agent_run_outcome.rs",
-              "module": "agent_run_outcome",
-              "line": 23
-            }
-          ]
+          "items": []
         },
         {
           "path": "crates/eos-agent-ports/src/agent_state.rs",
@@ -2867,93 +2511,7 @@
               ],
               "file": "crates/eos-agent-ports/src/error.rs",
               "module": "error",
-              "line": 5
-            },
-            {
-              "kind": "enum",
-              "name": "AgentRunError",
-              "visibility": "pub",
-              "signature": "pub enum AgentRunError",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "NotActiveInProcess",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "AgentRunId"
-                    }
-                  ]
-                },
-                {
-                  "name": "AgentNotRegistered",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "WrongAgentType",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "expected",
-                      "visibility": "private",
-                      "ty": "& 'static str"
-                    },
-                    {
-                      "name": "actual",
-                      "visibility": "private",
-                      "ty": "& 'static str"
-                    }
-                  ]
-                },
-                {
-                  "name": "RecursiveSubagent",
-                  "fields": []
-                },
-                {
-                  "name": "CompletionChannelClosed",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "AgentRunId"
-                    }
-                  ]
-                },
-                {
-                  "name": "Internal",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Error returned by the agent-run lifecycle API.",
-              "tags": [
-                "derive: Debug",
-                "derive: thiserror::Error",
-                "error",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-agent-ports/src/error.rs",
-              "module": "error",
-              "line": 14
+              "line": 3
             }
           ]
         },
@@ -3004,7 +2562,7 @@
               ],
               "file": "crates/eos-agent-ports/src/metadata_service.rs",
               "module": "metadata_service",
-              "line": 12
+              "line": 11
             },
             {
               "kind": "struct",
@@ -3039,7 +2597,7 @@
               ],
               "file": "crates/eos-agent-ports/src/metadata_service.rs",
               "module": "metadata_service",
-              "line": 25
+              "line": 24
             },
             {
               "kind": "trait",
@@ -3054,21 +2612,21 @@
                   "signature": "async fn agent_state (& self , agent_run_id : & AgentRunId) -> Result < AgentState , AgentPortError >",
                   "kind": "required",
                   "docs": "Load the current runtime snapshot for one agent run.",
-                  "line": 39
+                  "line": 38
                 },
                 {
                   "name": "build_execution_metadata",
                   "signature": "async fn build_execution_metadata (& self , input : ExecutionMetadataBuildInput ,) -> Result < ExecutionMetadata , AgentPortError >",
                   "kind": "required",
                   "docs": "Render per-tool-call execution metadata from the current agent state.",
-                  "line": 42
+                  "line": 41
                 },
                 {
                   "name": "build_audit_node",
                   "signature": "async fn build_audit_node (& self , input : AuditNodeBuildInput ,) -> Result < AuditNode , AgentPortError >",
                   "kind": "required",
                   "docs": "Render an audit node from the current agent state.",
-                  "line": 48
+                  "line": 47
                 }
               ],
               "impl_target": null,
@@ -3080,213 +2638,14 @@
               ],
               "file": "crates/eos-agent-ports/src/metadata_service.rs",
               "module": "metadata_service",
-              "line": 36
+              "line": 35
             }
           ]
         },
         {
           "path": "crates/eos-agent-ports/src/spawn_agent_request.rs",
           "module": "spawn_agent_request",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "SpawnAgentRequest",
-              "visibility": "pub",
-              "signature": "pub struct SpawnAgentRequest",
-              "fields": [
-                {
-                  "name": "agent_name",
-                  "visibility": "pub",
-                  "ty": "AgentName"
-                },
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "Option < AgentRunId >"
-                },
-                {
-                  "name": "initial_messages",
-                  "visibility": "pub",
-                  "ty": "Vec < Message >"
-                },
-                {
-                  "name": "parent_agent_run_id",
-                  "visibility": "pub",
-                  "ty": "Option < AgentRunId >"
-                },
-                {
-                  "name": "request_id",
-                  "visibility": "pub",
-                  "ty": "Option < RequestId >"
-                },
-                {
-                  "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "Option < TaskId >"
-                },
-                {
-                  "name": "attempt_id",
-                  "visibility": "pub",
-                  "ty": "Option < AttemptId >"
-                },
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "Option < WorkflowId >"
-                },
-                {
-                  "name": "sandbox_id",
-                  "visibility": "pub",
-                  "ty": "Option < SandboxId >"
-                },
-                {
-                  "name": "workspace_root",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "is_isolated_workspace_mode",
-                  "visibility": "pub",
-                  "ty": "bool"
-                },
-                {
-                  "name": "persist",
-                  "visibility": "pub",
-                  "ty": "bool"
-                },
-                {
-                  "name": "record_kind",
-                  "visibility": "pub",
-                  "ty": "AgentRunMessageRecordKind"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Request to spawn any agent kind.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "dto"
-              ],
-              "file": "crates/eos-agent-ports/src/spawn_agent_request.rs",
-              "module": "spawn_agent_request",
-              "line": 8
-            },
-            {
-              "kind": "enum",
-              "name": "AgentRunMessageRecordKind",
-              "visibility": "pub",
-              "signature": "pub enum AgentRunMessageRecordKind",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Root",
-                  "fields": []
-                },
-                {
-                  "name": "WorkflowTask",
-                  "fields": [
-                    {
-                      "name": "workflow_id",
-                      "visibility": "private",
-                      "ty": "WorkflowId"
-                    },
-                    {
-                      "name": "iteration_id",
-                      "visibility": "private",
-                      "ty": "IterationId"
-                    },
-                    {
-                      "name": "attempt_id",
-                      "visibility": "private",
-                      "ty": "AttemptId"
-                    },
-                    {
-                      "name": "role",
-                      "visibility": "private",
-                      "ty": "WorkflowTaskRole"
-                    }
-                  ]
-                },
-                {
-                  "name": "Subagent",
-                  "fields": [
-                    {
-                      "name": "parent_agent_run_id",
-                      "visibility": "private",
-                      "ty": "AgentRunId"
-                    }
-                  ]
-                },
-                {
-                  "name": "Advisor",
-                  "fields": [
-                    {
-                      "name": "parent_agent_run_id",
-                      "visibility": "private",
-                      "ty": "AgentRunId"
-                    }
-                  ]
-                },
-                {
-                  "name": "Agent",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Agent-run message-record layout choice carried by callers without exposing\n`eos-agent-message-records` outside the runner.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-agent-ports/src/spawn_agent_request.rs",
-              "module": "spawn_agent_request",
-              "line": 39
-            },
-            {
-              "kind": "enum",
-              "name": "WorkflowTaskRole",
-              "visibility": "pub",
-              "signature": "pub enum WorkflowTaskRole",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Planner",
-                  "fields": []
-                },
-                {
-                  "name": "Generator",
-                  "fields": []
-                },
-                {
-                  "name": "Reducer",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Workflow task role used for message-record path labels.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-agent-ports/src/spawn_agent_request.rs",
-              "module": "spawn_agent_request",
-              "line": 71
-            }
-          ]
+          "items": []
         }
       ]
     },
@@ -22974,7 +22333,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 34
+              "line": 33
             },
             {
               "kind": "impl",
@@ -22989,7 +22348,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 51
+                  "line": 50
                 }
               ],
               "impl_target": "RuntimeAgentRunner",
@@ -23001,7 +22360,7 @@
               ],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 50
+              "line": 49
             },
             {
               "kind": "impl",
@@ -23016,7 +22375,7 @@
                   "signature": "pub(crate) fn new (services : RuntimeServices , workspace_root : impl Into < String > , attempt_submission : Arc < dyn AttemptSubmissionPort > , workflow_service : Arc < OnceLock < Arc < dyn WorkflowApi > > > , event_callback : Option < EventCallback > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 57
+                  "line": 56
                 }
               ],
               "impl_target": "RuntimeAgentRunner",
@@ -23027,7 +22386,7 @@
               ],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 56
+              "line": 55
             },
             {
               "kind": "impl",
@@ -23042,7 +22401,7 @@
                   "signature": "async fn run (& self , launch : AgentLaunch) -> WorkflowResult < AgentRunReport >",
                   "kind": "method",
                   "docs": null,
-                  "line": 76
+                  "line": 75
                 }
               ],
               "impl_target": "RuntimeAgentRunner",
@@ -23055,13 +22414,13 @@
               ],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 74
+              "line": 73
             },
             {
               "kind": "fn",
               "name": "workflow_message_record_role",
               "visibility": "private",
-              "signature": "fn workflow_message_record_role (role : AgentRole) -> WorkflowTaskRole",
+              "signature": "fn workflow_message_record_role (role : TaskRole) -> WorkflowTaskRole",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -23071,7 +22430,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 156
+              "line": 155
             }
           ]
         },
@@ -31323,7 +30682,7 @@
               "kind": "fn",
               "name": "agent_def",
               "visibility": "pub",
-              "signature": "pub fn agent_def (name : & str , role : AgentRole , allowed : & [& str] , terminals : & [& str] ,) -> AgentDefinition",
+              "signature": "pub fn agent_def (name : & str , allowed : & [& str] , terminals : & [& str]) -> AgentDefinition",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31353,7 +30712,7 @@
               ],
               "file": "crates/eos-testkit/src/agents.rs",
               "module": "agents",
-              "line": 31
+              "line": 25
             }
           ]
         },
@@ -32248,7 +31607,7 @@
                   "fields": []
                 },
                 {
-                  "name": "SubmitExplorationResult",
+                  "name": "SubmitSubagentResult",
                   "fields": []
                 }
               ],
@@ -38835,9 +38194,9 @@
             },
             {
               "kind": "fn",
-              "name": "explorer_launch_guidance",
+              "name": "subagent_launch_guidance",
               "visibility": "private",
-              "signature": "fn explorer_launch_guidance () -> String",
+              "signature": "fn subagent_launch_guidance () -> String",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -39091,132 +38450,6 @@
               "file": "crates/eos-tools/src/tools/submission/advisor/submit_advisor_feedback.rs",
               "module": "tools::submission::advisor::submit_advisor_feedback",
               "line": 70
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-tools/src/tools/submission/explorer/mod.rs",
-          "module": "tools::submission::explorer",
-          "items": [
-            {
-              "kind": "fn",
-              "name": "register",
-              "visibility": "pub(super)",
-              "signature": "pub(super) fn register (registry : & mut eos_tool_ports :: ToolRegistry , config : & crate :: registry :: config :: ToolConfigSet ,)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tools/src/tools/submission/explorer/mod.rs",
-              "module": "tools::submission::explorer",
-              "line": 3
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-tools/src/tools/submission/explorer/submit_exploration_result.rs",
-          "module": "tools::submission::explorer::submit_exploration_result",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "SubmitExplorationResultInput",
-              "visibility": "private",
-              "signature": "struct SubmitExplorationResultInput",
-              "fields": [
-                {
-                  "name": "summary",
-                  "visibility": "private",
-                  "ty": "String"
-                },
-                {
-                  "name": "findings",
-                  "visibility": "private",
-                  "ty": "Vec < String >"
-                },
-                {
-                  "name": "references",
-                  "visibility": "private",
-                  "ty": "Vec < String >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: JsonSchema",
-                "derive: Serialize",
-                "serde"
-              ],
-              "file": "crates/eos-tools/src/tools/submission/explorer/submit_exploration_result.rs",
-              "module": "tools::submission::explorer::submit_exploration_result",
-              "line": 23
-            },
-            {
-              "kind": "struct",
-              "name": "SubmitExplorationResult",
-              "visibility": "private",
-              "signature": "struct SubmitExplorationResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tools/src/tools/submission/explorer/submit_exploration_result.rs",
-              "module": "tools::submission::explorer::submit_exploration_result",
-              "line": 32
-            },
-            {
-              "kind": "impl",
-              "name": "impl ToolExecutor for SubmitExplorationResult",
-              "visibility": "private",
-              "signature": "impl ToolExecutor for SubmitExplorationResult",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "execute",
-                  "signature": "async fn execute (& self , input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 36
-                }
-              ],
-              "impl_target": "SubmitExplorationResult",
-              "trait_name": "ToolExecutor",
-              "docs": null,
-              "tags": [
-                "async_trait",
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-tools/src/tools/submission/explorer/submit_exploration_result.rs",
-              "module": "tools::submission::explorer::submit_exploration_result",
-              "line": 34
-            },
-            {
-              "kind": "fn",
-              "name": "register",
-              "visibility": "pub(super)",
-              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tools/src/tools/submission/explorer/submit_exploration_result.rs",
-              "module": "tools::submission::explorer::submit_exploration_result",
-              "line": 57
             }
           ]
         },
@@ -40181,6 +39414,132 @@
           ]
         },
         {
+          "path": "crates/eos-tools/src/tools/submission/subagent/mod.rs",
+          "module": "tools::submission::subagent",
+          "items": [
+            {
+              "kind": "fn",
+              "name": "register",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn register (registry : & mut eos_tool_ports :: ToolRegistry , config : & crate :: registry :: config :: ToolConfigSet ,)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-tools/src/tools/submission/subagent/mod.rs",
+              "module": "tools::submission::subagent",
+              "line": 3
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-tools/src/tools/submission/subagent/submit_subagent_result.rs",
+          "module": "tools::submission::subagent::submit_subagent_result",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "SubmitSubagentResultInput",
+              "visibility": "private",
+              "signature": "struct SubmitSubagentResultInput",
+              "fields": [
+                {
+                  "name": "summary",
+                  "visibility": "private",
+                  "ty": "String"
+                },
+                {
+                  "name": "findings",
+                  "visibility": "private",
+                  "ty": "Vec < String >"
+                },
+                {
+                  "name": "references",
+                  "visibility": "private",
+                  "ty": "Vec < String >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: JsonSchema",
+                "derive: Serialize",
+                "serde"
+              ],
+              "file": "crates/eos-tools/src/tools/submission/subagent/submit_subagent_result.rs",
+              "module": "tools::submission::subagent::submit_subagent_result",
+              "line": 23
+            },
+            {
+              "kind": "struct",
+              "name": "SubmitSubagentResult",
+              "visibility": "private",
+              "signature": "struct SubmitSubagentResult",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-tools/src/tools/submission/subagent/submit_subagent_result.rs",
+              "module": "tools::submission::subagent::submit_subagent_result",
+              "line": 32
+            },
+            {
+              "kind": "impl",
+              "name": "impl ToolExecutor for SubmitSubagentResult",
+              "visibility": "private",
+              "signature": "impl ToolExecutor for SubmitSubagentResult",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "execute",
+                  "signature": "async fn execute (& self , input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 36
+                }
+              ],
+              "impl_target": "SubmitSubagentResult",
+              "trait_name": "ToolExecutor",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-tools/src/tools/submission/subagent/submit_subagent_result.rs",
+              "module": "tools::submission::subagent::submit_subagent_result",
+              "line": 34
+            },
+            {
+              "kind": "fn",
+              "name": "register",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-tools/src/tools/submission/subagent/submit_subagent_result.rs",
+              "module": "tools::submission::subagent::submit_subagent_result",
+              "line": 57
+            }
+          ]
+        },
+        {
           "path": "crates/eos-tools/src/tools/terminal.rs",
           "module": "tools::terminal",
           "items": [
@@ -40212,7 +39571,7 @@
                   "fields": []
                 },
                 {
-                  "name": "ExplorationResult",
+                  "name": "SubagentResult",
                   "fields": []
                 }
               ],
@@ -40832,14 +40191,14 @@
       "path": "crates/eos-types",
       "stats": {
         "modules": 31,
-        "items": 142,
-        "structs": 32,
-        "enums": 25,
-        "traits": 10,
+        "items": 147,
+        "structs": 34,
+        "enums": 28,
+        "traits": 11,
         "functions": 32,
-        "impls": 41,
-        "fields": 165,
-        "methods": 129
+        "impls": 40,
+        "fields": 196,
+        "methods": 132
       },
       "modules": [
         {
@@ -40915,112 +40274,6 @@
               "line": 24
             },
             {
-              "kind": "enum",
-              "name": "AgentRole",
-              "visibility": "pub",
-              "signature": "pub enum AgentRole",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Root",
-                  "fields": []
-                },
-                {
-                  "name": "Planner",
-                  "fields": []
-                },
-                {
-                  "name": "Generator",
-                  "fields": []
-                },
-                {
-                  "name": "Reducer",
-                  "fields": []
-                },
-                {
-                  "name": "Helper",
-                  "fields": []
-                },
-                {
-                  "name": "Subagent",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Canonical category of an agent profile.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde",
-                "serde: rename_all"
-              ],
-              "file": "crates/eos-types/src/agent.rs",
-              "module": "agent",
-              "line": 30
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRole",
-              "visibility": "private",
-              "signature": "impl AgentRole",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "as_str",
-                  "signature": "pub const fn as_str (& self) -> & 'static str",
-                  "kind": "method",
-                  "docs": "The canonical `snake_case` token.",
-                  "line": 49
-                }
-              ],
-              "impl_target": "AgentRole",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-types/src/agent.rs",
-              "module": "agent",
-              "line": 48
-            },
-            {
-              "kind": "impl",
-              "name": "impl fmt :: Display for AgentRole",
-              "visibility": "private",
-              "signature": "impl fmt :: Display for AgentRole",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , formatter : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 64
-                }
-              ],
-              "impl_target": "AgentRole",
-              "trait_name": "fmt :: Display",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-types/src/agent.rs",
-              "module": "agent",
-              "line": 63
-            },
-            {
               "kind": "struct",
               "name": "AgentName",
               "visibility": "pub",
@@ -41054,7 +40307,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 69
+              "line": 30
             },
             {
               "kind": "impl",
@@ -41066,17 +40319,17 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (raw : impl Into < String >) -> Result < Self , AgentNameError >",
+                  "signature": "pub fn new (raw : impl AsRef < str >) -> Result < Self , AgentNameError >",
                   "kind": "constructor",
                   "docs": "Construct a name, trimming surrounding whitespace.\n\n# Errors\nReturns [`AgentNameError::Empty`] when the trimmed value is empty.",
-                  "line": 78
+                  "line": 39
                 },
                 {
                   "name": "as_str",
                   "signature": "pub fn as_str (& self) -> & str",
                   "kind": "method",
                   "docs": "Borrow the name as a string slice.",
-                  "line": 90
+                  "line": 51
                 }
               ],
               "impl_target": "AgentName",
@@ -41087,7 +40340,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 77
+              "line": 38
             },
             {
               "kind": "impl",
@@ -41102,7 +40355,7 @@
                   "signature": "fn fmt (& self , formatter : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 98
+                  "line": 59
                 }
               ],
               "impl_target": "AgentName",
@@ -41114,7 +40367,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 97
+              "line": 58
             },
             {
               "kind": "enum",
@@ -41144,7 +40397,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 103
+              "line": 64
             },
             {
               "kind": "struct",
@@ -41176,11 +40429,6 @@
                   "name": "tool_call_limit",
                   "visibility": "pub",
                   "ty": "NonZeroU32"
-                },
-                {
-                  "name": "role",
-                  "visibility": "pub",
-                  "ty": "AgentRole"
                 },
                 {
                   "name": "agent_type",
@@ -41230,7 +40478,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 112
+              "line": 73
             },
             {
               "kind": "struct",
@@ -41256,7 +40504,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 149
+              "line": 108
             },
             {
               "kind": "impl",
@@ -41271,21 +40519,21 @@
                   "signature": "pub fn new () -> Self",
                   "kind": "constructor",
                   "docs": "Start an empty builder.",
-                  "line": 157
+                  "line": 116
                 },
                 {
                   "name": "add",
                   "signature": "pub fn add (& mut self , definition : AgentDefinition) -> & mut Self",
                   "kind": "method",
                   "docs": "Register or replace a definition by its name.",
-                  "line": 163
+                  "line": 122
                 },
                 {
                   "name": "build",
                   "signature": "pub fn build (self) -> AgentRegistry",
                   "kind": "method",
                   "docs": "Finalize the immutable registry.",
-                  "line": 170
+                  "line": 129
                 }
               ],
               "impl_target": "AgentRegistryBuilder",
@@ -41296,7 +40544,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 156
+              "line": 115
             },
             {
               "kind": "impl",
@@ -41311,7 +40559,7 @@
                   "signature": "fn from_iter < I : IntoIterator < Item = AgentDefinition > > (iter : I) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 180
+                  "line": 139
                 }
               ],
               "impl_target": "AgentRegistry",
@@ -41323,7 +40571,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 179
+              "line": 138
             },
             {
               "kind": "struct",
@@ -41347,7 +40595,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 189
+              "line": 148
             },
             {
               "kind": "impl",
@@ -41362,21 +40610,21 @@
                   "signature": "pub fn get (& self , name : & AgentName) -> Option < & Arc < AgentDefinition > >",
                   "kind": "method",
                   "docs": "Look up a definition by name.",
-                  "line": 196
+                  "line": 155
                 },
                 {
                   "name": "list",
                   "signature": "pub fn list (& self) -> impl Iterator < Item = & Arc < AgentDefinition > >",
                   "kind": "method",
                   "docs": "Iterate every registered definition.",
-                  "line": 202
+                  "line": 161
                 },
                 {
                   "name": "dispatchable_subagent_names",
                   "signature": "pub fn dispatchable_subagent_names (& self) -> Vec < AgentName >",
                   "kind": "method",
                   "docs": "Subagent names targetable by `run_subagent`, sorted.",
-                  "line": 207
+                  "line": 166
                 }
               ],
               "impl_target": "AgentRegistry",
@@ -41387,7 +40635,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 195
+              "line": 154
             },
             {
               "kind": "fn",
@@ -41403,13 +40651,13 @@
               "tags": [],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent::tests",
-              "line": 229
+              "line": 188
             },
             {
               "kind": "fn",
-              "name": "role_and_type_serde_values",
+              "name": "agent_type_serde_values",
               "visibility": "private",
-              "signature": "fn role_and_type_serde_values ()",
+              "signature": "fn agent_type_serde_values ()",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -41421,7 +40669,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent::tests",
-              "line": 250
+              "line": 204
             },
             {
               "kind": "fn",
@@ -41439,7 +40687,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent::tests",
-              "line": 274
+              "line": 214
             },
             {
               "kind": "fn",
@@ -41457,7 +40705,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent::tests",
-              "line": 280
+              "line": 220
             },
             {
               "kind": "fn",
@@ -41475,7 +40723,701 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent::tests",
-              "line": 298
+              "line": 238
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-types/src/contracts.rs",
+          "module": "contracts",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "SpawnAgentRequest",
+              "visibility": "pub",
+              "signature": "pub struct SpawnAgentRequest",
+              "fields": [
+                {
+                  "name": "agent_name",
+                  "visibility": "pub",
+                  "ty": "AgentName"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "pub",
+                  "ty": "Option < AgentRunId >"
+                },
+                {
+                  "name": "initial_messages",
+                  "visibility": "pub",
+                  "ty": "Vec < Message >"
+                },
+                {
+                  "name": "parent_agent_run_id",
+                  "visibility": "pub",
+                  "ty": "Option < AgentRunId >"
+                },
+                {
+                  "name": "request_id",
+                  "visibility": "pub",
+                  "ty": "Option < RequestId >"
+                },
+                {
+                  "name": "task_id",
+                  "visibility": "pub",
+                  "ty": "Option < TaskId >"
+                },
+                {
+                  "name": "attempt_id",
+                  "visibility": "pub",
+                  "ty": "Option < AttemptId >"
+                },
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "Option < WorkflowId >"
+                },
+                {
+                  "name": "sandbox_id",
+                  "visibility": "pub",
+                  "ty": "Option < SandboxId >"
+                },
+                {
+                  "name": "workspace_root",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "is_isolated_workspace_mode",
+                  "visibility": "pub",
+                  "ty": "bool"
+                },
+                {
+                  "name": "persist",
+                  "visibility": "pub",
+                  "ty": "bool"
+                },
+                {
+                  "name": "record_kind",
+                  "visibility": "pub",
+                  "ty": "AgentRunMessageRecordKind"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Request to spawn any agent kind.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "dto"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 15
+            },
+            {
+              "kind": "enum",
+              "name": "AgentRunMessageRecordKind",
+              "visibility": "pub",
+              "signature": "pub enum AgentRunMessageRecordKind",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Root",
+                  "fields": []
+                },
+                {
+                  "name": "WorkflowTask",
+                  "fields": [
+                    {
+                      "name": "workflow_id",
+                      "visibility": "private",
+                      "ty": "WorkflowId"
+                    },
+                    {
+                      "name": "iteration_id",
+                      "visibility": "private",
+                      "ty": "IterationId"
+                    },
+                    {
+                      "name": "attempt_id",
+                      "visibility": "private",
+                      "ty": "AttemptId"
+                    },
+                    {
+                      "name": "role",
+                      "visibility": "private",
+                      "ty": "WorkflowTaskRole"
+                    }
+                  ]
+                },
+                {
+                  "name": "Subagent",
+                  "fields": [
+                    {
+                      "name": "parent_agent_run_id",
+                      "visibility": "private",
+                      "ty": "AgentRunId"
+                    }
+                  ]
+                },
+                {
+                  "name": "Advisor",
+                  "fields": [
+                    {
+                      "name": "parent_agent_run_id",
+                      "visibility": "private",
+                      "ty": "AgentRunId"
+                    }
+                  ]
+                },
+                {
+                  "name": "Agent",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Agent-run message-record layout choice carried by callers without exposing\nthe private message-record writer crate outside the runner.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 46
+            },
+            {
+              "kind": "enum",
+              "name": "WorkflowTaskRole",
+              "visibility": "pub",
+              "signature": "pub enum WorkflowTaskRole",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Planner",
+                  "fields": []
+                },
+                {
+                  "name": "Generator",
+                  "fields": []
+                },
+                {
+                  "name": "Reducer",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Workflow task role used for message-record path labels.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 78
+            },
+            {
+              "kind": "struct",
+              "name": "AgentRunOutcome",
+              "visibility": "pub",
+              "signature": "pub struct AgentRunOutcome",
+              "fields": [
+                {
+                  "name": "agent_run_id",
+                  "visibility": "pub",
+                  "ty": "AgentRunId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "pub",
+                  "ty": "AgentRunStatus"
+                },
+                {
+                  "name": "submission_payload",
+                  "visibility": "pub",
+                  "ty": "Option < JsonObject >"
+                },
+                {
+                  "name": "message_history",
+                  "visibility": "pub",
+                  "ty": "Vec < Message >"
+                },
+                {
+                  "name": "token_count",
+                  "visibility": "pub",
+                  "ty": "Option < i64 >"
+                },
+                {
+                  "name": "error",
+                  "visibility": "pub",
+                  "ty": "Option < String >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Terminal outcome for one agent run.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 90
+            },
+            {
+              "kind": "enum",
+              "name": "AgentRunStatus",
+              "visibility": "pub",
+              "signature": "pub enum AgentRunStatus",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Completed",
+                  "fields": []
+                },
+                {
+                  "name": "Failed",
+                  "fields": []
+                },
+                {
+                  "name": "Cancelled",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Agent-run terminal status.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 107
+            },
+            {
+              "kind": "enum",
+              "name": "AgentRunError",
+              "visibility": "pub",
+              "signature": "pub enum AgentRunError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "NotActiveInProcess",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "AgentRunId"
+                    }
+                  ]
+                },
+                {
+                  "name": "AgentNotRegistered",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "WrongAgentType",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "expected",
+                      "visibility": "private",
+                      "ty": "& 'static str"
+                    },
+                    {
+                      "name": "actual",
+                      "visibility": "private",
+                      "ty": "& 'static str"
+                    }
+                  ]
+                },
+                {
+                  "name": "RecursiveSubagent",
+                  "fields": []
+                },
+                {
+                  "name": "CompletionChannelClosed",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "AgentRunId"
+                    }
+                  ]
+                },
+                {
+                  "name": "Internal",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Error returned by the agent-run lifecycle API.",
+              "tags": [
+                "derive: Debug",
+                "derive: thiserror::Error",
+                "error",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 118
+            },
+            {
+              "kind": "trait",
+              "name": "AgentRunApi",
+              "visibility": "pub",
+              "signature": "pub trait AgentRunApi",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn_agent",
+                  "signature": "async fn spawn_agent (& self , request : SpawnAgentRequest) -> Result < AgentRunId , AgentRunError >",
+                  "kind": "required",
+                  "docs": "Spawn an agent and return its natural run id immediately.",
+                  "line": 158
+                },
+                {
+                  "name": "wait_for_agent_outcome",
+                  "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
+                  "kind": "required",
+                  "docs": "Wait for one agent run to publish a terminal outcome.",
+                  "line": 161
+                },
+                {
+                  "name": "poll_agent_run_outcome",
+                  "signature": "async fn poll_agent_run_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunOutcome > , AgentRunError >",
+                  "kind": "required",
+                  "docs": "Nonblocking terminal outcome poll for background managers.",
+                  "line": 167
+                },
+                {
+                  "name": "cancel_agent_run",
+                  "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
+                  "kind": "required",
+                  "docs": "Cancel one active agent run.",
+                  "line": 173
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Lifecycle API for spawning, waiting, polling, and cancelling agent runs.",
+              "tags": [
+                "async_trait"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 155
+            },
+            {
+              "kind": "struct",
+              "name": "StartWorkflowRequest",
+              "visibility": "pub",
+              "signature": "pub struct StartWorkflowRequest",
+              "fields": [
+                {
+                  "name": "parent_task_id",
+                  "visibility": "pub",
+                  "ty": "TaskId"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "pub",
+                  "ty": "AgentRunId"
+                },
+                {
+                  "name": "workflow_goal",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Request to start a delegated workflow.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq",
+                "dto"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 181
+            },
+            {
+              "kind": "struct",
+              "name": "StartedWorkflow",
+              "visibility": "pub",
+              "signature": "pub struct StartedWorkflow",
+              "fields": [
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "workflow_goal",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A started delegated workflow, keyed by its natural [`WorkflowId`].",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 192
+            },
+            {
+              "kind": "enum",
+              "name": "WorkflowTerminalStatus",
+              "visibility": "pub",
+              "signature": "pub enum WorkflowTerminalStatus",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Completed",
+                  "fields": []
+                },
+                {
+                  "name": "Failed",
+                  "fields": []
+                },
+                {
+                  "name": "Cancelled",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Terminal status for a delegated workflow.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 201
+            },
+            {
+              "kind": "struct",
+              "name": "TerminalWorkflow",
+              "visibility": "pub",
+              "signature": "pub struct TerminalWorkflow",
+              "fields": [
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "pub",
+                  "ty": "WorkflowTerminalStatus"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Terminal workflow facts for background accounting.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 212
+            },
+            {
+              "kind": "struct",
+              "name": "OutstandingWorkflow",
+              "visibility": "pub",
+              "signature": "pub struct OutstandingWorkflow",
+              "fields": [
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "workflow_goal",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One outstanding workflow launched by a parent task.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 221
+            },
+            {
+              "kind": "enum",
+              "name": "WorkflowApiError",
+              "visibility": "pub",
+              "signature": "pub enum WorkflowApiError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Store",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "CoreError"
+                    }
+                  ]
+                },
+                {
+                  "name": "Internal",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Error returned by the delegated-workflow API. Tool callers map this onto\ntheir own framework-fault enum at the tool boundary.",
+              "tags": [
+                "derive: Debug",
+                "derive: thiserror::Error",
+                "error",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 230
+            },
+            {
+              "kind": "trait",
+              "name": "WorkflowApi",
+              "visibility": "pub",
+              "signature": "pub trait WorkflowApi",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "start_workflow",
+                  "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Start a delegated workflow.",
+                  "line": 247
+                },
+                {
+                  "name": "check_workflow_status",
+                  "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId ,) -> Result < String , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Render workflow status for the model-facing check tool.",
+                  "line": 253
+                },
+                {
+                  "name": "cancel_workflow",
+                  "signature": "async fn cancel_workflow (& self , workflow_id : & WorkflowId , reason : & str ,) -> Result < String , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Cancel a workflow by its natural id, returning a model-facing message.",
+                  "line": 259
+                },
+                {
+                  "name": "poll_terminal_workflow",
+                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Poll terminal workflow state for background accounting.",
+                  "line": 266
+                },
+                {
+                  "name": "find_outstanding_workflows",
+                  "signature": "async fn find_outstanding_workflows (& self , parent_task_id : & TaskId , agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "All workflows this parent task still has outstanding for `agent_run_id`.",
+                  "line": 272
+                },
+                {
+                  "name": "workflow_depth",
+                  "signature": "async fn workflow_depth (& self , workflow_id : & WorkflowId) -> Result < u32 , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "The delegation-ancestry depth of `workflow_id` (1 = top-level).",
+                  "line": 279
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Delegated-workflow lifecycle operations used by the model-facing workflow\ntools and the engine background workflow manager.",
+              "tags": [
+                "async_trait"
+              ],
+              "file": "crates/eos-types/src/contracts.rs",
+              "module": "contracts",
+              "line": 243
             }
           ]
         },
@@ -43190,7 +43132,7 @@
               ],
               "file": "crates/eos-types/src/state/runtime/task.rs",
               "module": "state::runtime::task",
-              "line": 14
+              "line": 13
             },
             {
               "kind": "impl",
@@ -43205,7 +43147,7 @@
                   "signature": "pub const fn is_terminal_generator (self) -> bool",
                   "kind": "method",
                   "docs": "Whether this is a terminal generator status\n(Rust `TERMINAL_GENERATOR_STATUSES`).",
-                  "line": 34
+                  "line": 33
                 }
               ],
               "impl_target": "TaskStatus",
@@ -43216,7 +43158,7 @@
               ],
               "file": "crates/eos-types/src/state/runtime/task.rs",
               "module": "state::runtime::task",
-              "line": 33
+              "line": 32
             },
             {
               "kind": "enum",
@@ -43261,7 +43203,33 @@
               ],
               "file": "crates/eos-types/src/state/runtime/task.rs",
               "module": "state::runtime::task",
-              "line": 45
+              "line": 44
+            },
+            {
+              "kind": "impl",
+              "name": "impl TaskRole",
+              "visibility": "private",
+              "signature": "impl TaskRole",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "as_str",
+                  "signature": "pub const fn as_str (self) -> & 'static str",
+                  "kind": "method",
+                  "docs": "The canonical `snake_case` token.",
+                  "line": 61
+                }
+              ],
+              "impl_target": "TaskRole",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-types/src/state/runtime/task.rs",
+              "module": "state::runtime::task",
+              "line": 60
             },
             {
               "kind": "struct",
@@ -43346,7 +43314,7 @@
               ],
               "file": "crates/eos-types/src/state/runtime/task.rs",
               "module": "state::runtime::task",
-              "line": 69
+              "line": 81
             }
           ]
         },
@@ -45875,284 +45843,6 @@
               "line": 221
             }
           ]
-        },
-        {
-          "path": "crates/eos-types/src/workflow_api.rs",
-          "module": "workflow_api",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "StartWorkflowRequest",
-              "visibility": "pub",
-              "signature": "pub struct StartWorkflowRequest",
-              "fields": [
-                {
-                  "name": "parent_task_id",
-                  "visibility": "pub",
-                  "ty": "TaskId"
-                },
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "AgentRunId"
-                },
-                {
-                  "name": "workflow_goal",
-                  "visibility": "pub",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Request to start a delegated workflow.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "dto"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 19
-            },
-            {
-              "kind": "struct",
-              "name": "StartedWorkflow",
-              "visibility": "pub",
-              "signature": "pub struct StartedWorkflow",
-              "fields": [
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowId"
-                },
-                {
-                  "name": "workflow_goal",
-                  "visibility": "pub",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A started delegated workflow, keyed by its natural [`WorkflowId`].",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 30
-            },
-            {
-              "kind": "enum",
-              "name": "WorkflowTerminalStatus",
-              "visibility": "pub",
-              "signature": "pub enum WorkflowTerminalStatus",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Completed",
-                  "fields": []
-                },
-                {
-                  "name": "Failed",
-                  "fields": []
-                },
-                {
-                  "name": "Cancelled",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Terminal status for a delegated workflow.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 39
-            },
-            {
-              "kind": "struct",
-              "name": "TerminalWorkflow",
-              "visibility": "pub",
-              "signature": "pub struct TerminalWorkflow",
-              "fields": [
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowId"
-                },
-                {
-                  "name": "status",
-                  "visibility": "pub",
-                  "ty": "WorkflowTerminalStatus"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Terminal workflow facts for background accounting.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 50
-            },
-            {
-              "kind": "struct",
-              "name": "OutstandingWorkflow",
-              "visibility": "pub",
-              "signature": "pub struct OutstandingWorkflow",
-              "fields": [
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowId"
-                },
-                {
-                  "name": "workflow_goal",
-                  "visibility": "pub",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One outstanding workflow launched by a parent task.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 59
-            },
-            {
-              "kind": "enum",
-              "name": "WorkflowApiError",
-              "visibility": "pub",
-              "signature": "pub enum WorkflowApiError",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Store",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "CoreError"
-                    }
-                  ]
-                },
-                {
-                  "name": "Internal",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Error returned by the delegated-workflow API. Tool callers map this onto\ntheir own framework-fault enum at the tool boundary.",
-              "tags": [
-                "derive: Debug",
-                "derive: thiserror::Error",
-                "error",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 68
-            },
-            {
-              "kind": "trait",
-              "name": "WorkflowApi",
-              "visibility": "pub",
-              "signature": "pub trait WorkflowApi",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "start_workflow",
-                  "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
-                  "kind": "required",
-                  "docs": "Start a delegated workflow.",
-                  "line": 85
-                },
-                {
-                  "name": "check_workflow_status",
-                  "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId ,) -> Result < String , WorkflowApiError >",
-                  "kind": "required",
-                  "docs": "Render workflow status for the model-facing check tool.",
-                  "line": 91
-                },
-                {
-                  "name": "cancel_workflow",
-                  "signature": "async fn cancel_workflow (& self , workflow_id : & WorkflowId , reason : & str ,) -> Result < String , WorkflowApiError >",
-                  "kind": "required",
-                  "docs": "Cancel a workflow by its natural id, returning a model-facing message.",
-                  "line": 97
-                },
-                {
-                  "name": "poll_terminal_workflow",
-                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
-                  "kind": "required",
-                  "docs": "Poll terminal workflow state for background accounting.",
-                  "line": 104
-                },
-                {
-                  "name": "find_outstanding_workflows",
-                  "signature": "async fn find_outstanding_workflows (& self , parent_task_id : & TaskId , agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
-                  "kind": "required",
-                  "docs": "All workflows this parent task still has outstanding for `agent_run_id`.",
-                  "line": 110
-                },
-                {
-                  "name": "workflow_depth",
-                  "signature": "async fn workflow_depth (& self , workflow_id : & WorkflowId) -> Result < u32 , WorkflowApiError >",
-                  "kind": "required",
-                  "docs": "The delegation-ancestry depth of `workflow_id` (1 = top-level).",
-                  "line": 117
-                }
-              ],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Delegated-workflow lifecycle operations used by the model-facing workflow\ntools and the engine background workflow manager.",
-              "tags": [
-                "async_trait"
-              ],
-              "file": "crates/eos-types/src/workflow_api.rs",
-              "module": "workflow_api",
-              "line": 81
-            }
-          ]
         }
       ]
     },
@@ -46419,7 +46109,7 @@
                 {
                   "name": "role",
                   "visibility": "pub",
-                  "ty": "AgentRole"
+                  "ty": "TaskRole"
                 },
                 {
                   "name": "agent_name",
@@ -46476,9 +46166,9 @@
               "methods": [
                 {
                   "name": "role",
-                  "signature": "pub const fn role (& self) -> AgentRole",
+                  "signature": "pub const fn role (& self) -> TaskRole",
                   "kind": "method",
-                  "docs": "Agent role.",
+                  "docs": "Workflow task role.",
                   "line": 122
                 },
                 {
@@ -46770,7 +46460,7 @@
                 {
                   "name": "role",
                   "visibility": "private",
-                  "ty": "AgentRole"
+                  "ty": "TaskRole"
                 },
                 {
                   "name": "scope",
@@ -47492,7 +47182,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Validate every plan agent before any task row is written: each generator\nis bound to a registered generator-role profile (D6) and has a task spec,\nand the fixed `reducer` profile is registered. Runs after the pure shape\nchecks and before materialization so a rejected plan leaves no orphan rows.",
+              "docs": "Validate every plan agent before any task row is written: each generator\nis bound to a registered workflow-launchable profile and has a task spec,\nand the fixed `reducer` profile is registered. Runs after the pure shape\nchecks and before materialization so a rejected plan leaves no orphan rows.",
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag",
@@ -47512,7 +47202,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag",
-              "line": 280
+              "line": 286
             },
             {
               "kind": "fn",
@@ -47528,7 +47218,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 342
+              "line": 348
             },
             {
               "kind": "fn",
@@ -47544,7 +47234,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 346
+              "line": 352
             },
             {
               "kind": "fn",
@@ -47562,7 +47252,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 363
+              "line": 369
             },
             {
               "kind": "fn",
@@ -47580,7 +47270,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 380
+              "line": 386
             },
             {
               "kind": "fn",
@@ -47598,7 +47288,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 392
+              "line": 398
             },
             {
               "kind": "fn",
@@ -47614,7 +47304,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 413
+              "line": 419
             },
             {
               "kind": "fn",
@@ -47630,7 +47320,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 417
+              "line": 423
             },
             {
               "kind": "fn",
@@ -47646,7 +47336,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 425
+              "line": 431
             },
             {
               "kind": "fn",
@@ -47662,7 +47352,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 433
+              "line": 439
             },
             {
               "kind": "fn",
@@ -47680,7 +47370,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/plan_dag.rs",
               "module": "attempt::plan_dag::tests",
-              "line": 451
+              "line": 457
             }
           ]
         },
@@ -47711,7 +47401,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage",
-              "line": 24
+              "line": 23
             },
             {
               "kind": "impl",
@@ -47726,49 +47416,49 @@
                   "signature": "pub fn new (orchestrator : Arc < AttemptOrchestrator >) -> Self",
                   "kind": "constructor",
                   "docs": "Create a scheduler for an orchestrator.",
-                  "line": 31
+                  "line": 30
                 },
                 {
                   "name": "advance_run_stage",
                   "signature": "pub async fn advance_run_stage (& self) -> Result < () >",
                   "kind": "method",
                   "docs": "Drive RUN-stage tasks to quiescence or until no locally-spawned running\ntask is available to join.\n\n# Errors\nReturns [`WorkflowError`] for persisted DAG/store invariants.",
-                  "line": 37
+                  "line": 36
                 },
                 {
                   "name": "build_launch",
                   "signature": "async fn build_launch (& self , deps : & AttemptDeps , attempt : & Attempt , task : & Task ,) -> Result < AgentLaunch >",
                   "kind": "method",
                   "docs": null,
-                  "line": 139
+                  "line": 138
                 },
                 {
                   "name": "mark_launch_failed",
                   "signature": "async fn mark_launch_failed (& self , task : & Task , summary : & str) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 162
+                  "line": 161
                 },
                 {
                   "name": "emit_task_event",
                   "signature": "fn emit_task_event (& self , event_type : & str , task : & Task , extra : & [(& str , Value)])",
                   "kind": "method",
                   "docs": "Emit one `workflow.task.*` human diagnostic row. These lifecycle shadows\nare reconstructable from task state, so runner correctness must come from\nstate/transcript, not from this trace.",
-                  "line": 218
+                  "line": 217
                 },
                 {
                   "name": "settle_run_task",
                   "signature": "async fn settle_run_task (& self , launch : AgentLaunch , report : Result < AgentRunReport > ,) -> Result < () >",
                   "kind": "method",
                   "docs": "Settle a RUN-stage task after its run resolves (Path A-recording). The\nsubmit tool already recorded the agent's outcome (task Done/Failed) via\nthe recording port *during* the run, so the loop's only post-join job is\nRust's still-RUNNING exhaustion guard: a task still `Running` means the\nagent died without submitting -> synthesize `run_exhausted`. A recorded\ntask is a no-op (the tool already wrote it).",
-                  "line": 258
+                  "line": 257
                 },
                 {
                   "name": "synthesize_failure",
                   "signature": "async fn synthesize_failure (& self , launch : & AgentLaunch , summary : & str) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 288
+                  "line": 287
                 }
               ],
               "impl_target": "AttemptStageAdvancer",
@@ -47779,7 +47469,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage",
-              "line": 30
+              "line": 29
             },
             {
               "kind": "fn",
@@ -47795,7 +47485,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage",
-              "line": 331
+              "line": 330
             },
             {
               "kind": "fn",
@@ -47811,7 +47501,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 362
+              "line": 355
             },
             {
               "kind": "fn",
@@ -47827,7 +47517,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 366
+              "line": 359
             },
             {
               "kind": "fn",
@@ -47846,7 +47536,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 373
+              "line": 366
             },
             {
               "kind": "fn",
@@ -47865,7 +47555,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 418
+              "line": 411
             },
             {
               "kind": "fn",
@@ -47884,7 +47574,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 459
+              "line": 452
             },
             {
               "kind": "fn",
@@ -47903,7 +47593,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 496
+              "line": 489
             },
             {
               "kind": "fn",
@@ -47922,7 +47612,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/run_stage.rs",
               "module": "attempt::run_stage::tests",
-              "line": 543
+              "line": 536
             }
           ]
         },
@@ -48174,7 +47864,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 206
+              "line": 205
             },
             {
               "kind": "fn",
@@ -48190,7 +47880,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 222
+              "line": 221
             },
             {
               "kind": "fn",
@@ -48208,7 +47898,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 232
+              "line": 231
             },
             {
               "kind": "fn",
@@ -48226,7 +47916,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 241
+              "line": 240
             },
             {
               "kind": "fn",
@@ -48244,7 +47934,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 276
+              "line": 275
             },
             {
               "kind": "fn",
@@ -48263,7 +47953,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 294
+              "line": 293
             }
           ]
         },

@@ -241,7 +241,7 @@ mod tests {
                 | ToolName::SubmitReducerOutcome
                 | ToolName::SubmitPlannerOutcome
                 | ToolName::SubmitAdvisorFeedback
-                | ToolName::SubmitExplorationResult
+                | ToolName::SubmitSubagentResult
         )
     }
 

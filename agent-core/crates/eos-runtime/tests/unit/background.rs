@@ -14,7 +14,7 @@ mod command_session_delivery {
     use std::time::Duration;
 
     use async_trait::async_trait;
-    use eos_agent_def::{AgentRegistry, AgentRole};
+    use eos_agent_def::AgentRegistry;
     use eos_config::RuntimeConfig;
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
@@ -132,19 +132,13 @@ mod command_session_delivery {
     async fn backgrounded_completion_lands_as_system_notification() {
         let mut root = agent_def(
             "root",
-            AgentRole::Root,
             &["exec_command", "read_file", "ask_advisor"],
             &["submit_root_outcome"],
         );
         // Generous budget so the wait-loop never trips the no-terminal ceiling
         // before the (fast) heartbeat delivers.
         root.tool_call_limit = NonZeroU32::new(40).expect("nonzero");
-        let advisor = agent_def(
-            "advisor",
-            AgentRole::Helper,
-            &["read_file"],
-            &["submit_advisor_feedback"],
-        );
+        let advisor = agent_def("advisor", &["read_file"], &["submit_advisor_feedback"]);
 
         let started = Arc::new(AtomicBool::new(false));
         let asked_advisor = Arc::new(AtomicBool::new(false));

@@ -56,32 +56,26 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-agent-def-7" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_def pub pub fn agent_def (name : &amp; str , role : AgentRole , allowed : &amp; [&amp; str] , terminals : &amp; [&amp; str] ,) -&gt; AgentDefinition crates/eos-testkit/src/agents.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-agent-def-7" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_def pub pub fn agent_def (name : &amp; str , allowed : &amp; [&amp; str] , terminals : &amp; [&amp; str]) -&gt; AgentDefinition crates/eos-testkit/src/agents.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>agent_def</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit.html#item-fn-agent-def-7">agent_def</a> (name : &amp; str , role : AgentRole , allowed : &amp; [&amp; str] , terminals : &amp; [&amp; str] ,) -&gt; AgentDefinition</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit.html#item-fn-agent-def-7">agent_def</a> (name : &amp; str , allowed : &amp; [&amp; str] , terminals : &amp; [&amp; str]) -&gt; AgentDefinition</code>
   <p class="docstring">Build a minimal agent definition for tests.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Build a minimal agent definition for tests.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-agent-def-7">agent_def</a>(
-    name: &amp;str,
-    role: <span class="rs-type">AgentRole</span>,
-    allowed: &amp;[&amp;str],
-    terminals: &amp;[&amp;str],
-) -&gt; <span class="rs-type">AgentDefinition</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-agent-def-7">agent_def</a>(name: &amp;str, allowed: &amp;[&amp;str], terminals: &amp;[&amp;str]) -&gt; <span class="rs-type">AgentDefinition</span> {
     <span class="rs-type">AgentDefinition</span> {
         name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(name).expect(&quot;name&quot;),
         description: name.to_owned(),
         system_prompt: <span class="rs-type">Some</span>(&quot;test profile&quot;.to_owned()),
         model: <span class="rs-type">Some</span>(&quot;test-model&quot;.to_owned()),
         tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(8).expect(&quot;nonzero&quot;),
-        role,
         agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
         allowed_tools: allowed.iter().map(|s| (*s).to_owned()).collect(),
         terminals: terminals.iter().map(|s| (*s).to_owned()).collect(),
@@ -94,13 +88,13 @@
 </details>
 
   <p class="source">crates/eos-testkit/src/agents.rs:7</p>
-</article><article id="item-fn-test-tools-root-31" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_tools_root pub pub fn test_tools_root () -&gt; std :: path :: PathBuf crates/eos-testkit/src/agents.rs  ">
+</article><article id="item-fn-test-tools-root-25" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_tools_root pub pub fn test_tools_root () -&gt; std :: path :: PathBuf crates/eos-testkit/src/agents.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>test_tools_root</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit.html#item-fn-test-tools-root-31">test_tools_root</a> () -&gt; std :: path :: PathBuf</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit.html#item-fn-test-tools-root-25">test_tools_root</a> () -&gt; std :: path :: PathBuf</code>
   <p class="docstring">The repo's `.eos-agents/tools` tree, resolved relative to this crate's<br>manifest so the (mandatory) tool-config build path has a real source in tests<br>without depending on the process working directory.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -109,13 +103,13 @@
 <span class="rs-comment">/// manifest so the (mandatory) tool-config build path has a real source in tests</span>
 <span class="rs-comment">/// without depending on the process working directory.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-test-tools-root-31">test_tools_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-test-tools-root-25">test_tools_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
     std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-testkit/src/agents.rs:31</p>
+  <p class="source">crates/eos-testkit/src/agents.rs:25</p>
 </article></div>
 </section></div>
 </main>
@@ -128,23 +122,17 @@
 
 <span class="rs-kw">use</span> std::num::<span class="rs-type">NonZeroU32</span>;
 
-<span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRole</span>, <span class="rs-type">AgentType</span>};
+<span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentType</span>};
 
 <span class="rs-comment">/// Build a minimal agent definition for tests.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-agent-def-7">agent_def</a>(
-    name: &amp;str,
-    role: <span class="rs-type">AgentRole</span>,
-    allowed: &amp;[&amp;str],
-    terminals: &amp;[&amp;str],
-) -&gt; <span class="rs-type">AgentDefinition</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-agent-def-7">agent_def</a>(name: &amp;str, allowed: &amp;[&amp;str], terminals: &amp;[&amp;str]) -&gt; <span class="rs-type">AgentDefinition</span> {
     <span class="rs-type">AgentDefinition</span> {
         name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(name).expect(&quot;name&quot;),
         description: name.to_owned(),
         system_prompt: <span class="rs-type">Some</span>(&quot;test profile&quot;.to_owned()),
         model: <span class="rs-type">Some</span>(&quot;test-model&quot;.to_owned()),
         tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(8).expect(&quot;nonzero&quot;),
-        role,
         agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
         allowed_tools: allowed.iter().map(|s| (*s).to_owned()).collect(),
         terminals: terminals.iter().map(|s| (*s).to_owned()).collect(),
@@ -158,7 +146,7 @@
 <span class="rs-comment">/// manifest so the (mandatory) tool-config build path has a real source in tests</span>
 <span class="rs-comment">/// without depending on the process working directory.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-test-tools-root-31">test_tools_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-test-tools-root-25">test_tools_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
     std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;)
 }
 </code></pre>

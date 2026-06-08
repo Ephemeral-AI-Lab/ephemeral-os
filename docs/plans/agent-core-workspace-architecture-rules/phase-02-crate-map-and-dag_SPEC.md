@@ -162,6 +162,11 @@ removes the current profile-name convention where advisor is encoded as a plain
 `agent`, and lets `eos-agent-run` validate advisor launches the same way it
 validates subagent launches.
 
+The subagent class is the generic read-only worker launch class, not an
+explorer-specific class. The bundled profile is named `subagent`, and its
+terminal is `submit_subagent_result`; focused exploration is only one prompt a
+caller may give that general subagent.
+
 Behavior that previously keyed off `AgentDefinition.role` re-anchors on the
 task's `TaskRole` and the profile's `AgentType`: the planner's
 generator-capability check and the context-builder/context-recipe selection read
@@ -350,7 +355,8 @@ budget guard must confirm no logic lands there.
 | Ratify this DAG + contract floor into Phase 00 lock | Done (2026-06-09) |
 | Add target crate names to workspace guard | Done (2026-06-09; stale `eos-agent-api` retired alias removed) |
 | Sink LLM/agent/contract DTOs + frontmatter parser into `eos-types` | Done (2026-06-09; `AgentType::Advisor`, neutral LLM DTOs, `AgentRunApi` contracts, `WorkflowApi`, and pure frontmatter parser now live in `eos-types`) |
-| Remove agent-profile role axis (`AgentRole`, `AgentDefinition.role`, and `role:` frontmatter) | Not started |
+| Remove agent-profile role axis (`AgentRole`, `AgentDefinition.role`, and `role:` frontmatter) | Done (2026-06-09; workflow lineage now uses `TaskRole`, profiles expose `AgentType` only) |
+| Generalize explorer-specific subagent naming | Done (2026-06-09; profile/tool naming is `subagent` + `submit_subagent_result`, with advisor kept as a sibling `AgentType`) |
 | Fold `eos-runtime` lib into `eos-agent-core/src/runtime/`; relocate bin to backend-server | Not started |
 | Rename `eos-tools` → `eos-tool`; rename `eos-agent-runner` → `eos-agent-run` | Not started |
 | Fold `eos-tool-ports` into `eos-tool` (+ contracts to `eos-types`) | Not started |
@@ -382,6 +388,9 @@ budget guard must confirm no logic lands there.
 - Agent profiles and `AgentDefinition` expose `AgentType` only. There is no
   `AgentRole` enum, no `AgentDefinition.role`, and no `role:` frontmatter field;
   planner/generator/reducer/root are `TaskRole` lineage coordinates.
+- Active subagent profile/tool names are generic, not explorer-specific:
+  `subagent` + `submit_subagent_result`; advisor remains a separate sibling
+  `AgentType`, not a subagent specialization.
 - `eos-agent-core` ships as a library with no `main.rs`; the process binary lives
   in `backend-server`.
 - The internal DAG guard passes with the target edge set; `crate_inventory` and

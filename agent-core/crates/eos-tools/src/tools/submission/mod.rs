@@ -1,12 +1,12 @@
 //! Submission terminal tools.
 
 mod advisor;
-mod explorer;
 mod generator;
 mod lib;
 mod planner;
 mod reducer;
 mod root;
+mod subagent;
 
 pub(crate) fn register(
     registry: &mut eos_tool_ports::ToolRegistry,
@@ -19,5 +19,5 @@ pub(crate) fn register(
     generator::register(registry, config, attempt_submission.clone());
     reducer::register(registry, config, attempt_submission);
     advisor::register(registry, config);
-    explorer::register(registry, config);
+    subagent::register(registry, config);
 }

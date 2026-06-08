@@ -23,6 +23,6 @@ mod validation;
 
 pub use error::AgentDefError;
 pub use loader::{load_agents_dir, load_agents_tree};
-pub use model::{AgentDefinition, AgentName, AgentRole, AgentType};
+pub use model::{AgentDefinition, AgentName, AgentType};
 pub use registry::{AgentRegistry, AgentRegistryBuilder};
-pub use validation::{check_context_recipe_role, skill_lint};
+pub use validation::skill_lint;
