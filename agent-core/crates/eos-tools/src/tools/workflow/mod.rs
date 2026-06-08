@@ -12,7 +12,7 @@ use eos_types::WorkflowApi;
 use crate::WorkflowToolService;
 
 pub(crate) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     workflow_service: Option<Arc<dyn WorkflowApi>>,
     workflow_sessions: Option<WorkflowToolService>,

@@ -11,12 +11,13 @@ use eos_sandbox_port::{
 };
 use eos_skills::SkillRegistry;
 pub use eos_tool_ports::services::{
-    CommandSessionToolService, HookServices, SubagentToolService, WorkflowToolService,
+    CommandSessionToolService, HookServices, IsolatedWorkspaceToolService, SubagentToolService,
+    WorkflowToolService,
 };
-use eos_types::{JsonObject, SandboxId};
+use eos_types::{AgentRunId, JsonObject, SandboxId};
 use eos_types::{RequestStore, TaskStore};
 
-use crate::AttemptSubmissionPort;
+use eos_tool_ports::AttemptSubmissionPort;
 
 /// Store access for the root terminal.
 #[derive(Clone)]
@@ -68,13 +69,27 @@ impl fmt::Debug for AttemptSubmissionService {
 #[derive(Clone)]
 pub struct SandboxToolService {
     pub(crate) transport: Arc<dyn SandboxTransport>,
+    isolated_workspace: Option<IsolatedWorkspaceToolService>,
 }
 
 impl SandboxToolService {
     /// Build the sandbox tool service over the daemon transport.
     #[must_use]
     pub fn new(transport: Arc<dyn SandboxTransport>) -> Self {
-        Self { transport }
+        Self {
+            transport,
+            isolated_workspace: None,
+        }
+    }
+
+    /// Attach runtime-only isolated-workspace state updates.
+    #[must_use]
+    pub fn with_isolated_workspace_service(
+        mut self,
+        service: IsolatedWorkspaceToolService,
+    ) -> Self {
+        self.isolated_workspace = Some(service);
+        self
     }
 
     /// Clone the underlying sandbox transport for related service wiring.
@@ -82,11 +97,29 @@ impl SandboxToolService {
     pub fn transport(&self) -> Arc<dyn SandboxTransport> {
         self.transport.clone()
     }
+
+    pub(crate) async fn set_isolated_workspace_mode(
+        &self,
+        agent_run_id: &AgentRunId,
+        is_isolated: bool,
+    ) -> Result<(), eos_tool_ports::ToolError> {
+        let Some(isolated_workspace) = &self.isolated_workspace else {
+            return Ok(());
+        };
+        isolated_workspace
+            .set_isolated_workspace_mode(agent_run_id, is_isolated)
+            .await
+    }
 }
 
 impl fmt::Debug for SandboxToolService {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SandboxToolService").finish_non_exhaustive()
+        f.debug_struct("SandboxToolService")
+            .field(
+                "has_isolated_workspace_state",
+                &self.isolated_workspace.is_some(),
+            )
+            .finish_non_exhaustive()
     }
 }
 

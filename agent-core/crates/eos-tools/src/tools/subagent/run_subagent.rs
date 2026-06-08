@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_ports::{
-    AgentName, AgentRunApi, AgentRunError, AgentRunRecordKind, SpawnAgentRequest,
+    AgentName, AgentRunApi, AgentRunError, AgentRunMessageRecordKind, SpawnAgentRequest,
 };
 use eos_llm_client::Message;
 use eos_types::JsonObject;
@@ -13,16 +13,16 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use super::super::CallerScope;
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::{OutputShape, ToolResult};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec_with_agent_enum;
-use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
-use crate::runtime::executor::ToolExecutor;
 use crate::SubagentLaunchRejection;
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolError;
+use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolRegistry;
+use eos_tool_ports::{OutputShape, ToolResult};
 
 use super::super::SubagentToolService;
 
@@ -154,7 +154,7 @@ impl ToolExecutor for RunSubagent {
                 workspace_root: ctx.workspace_root.clone(),
                 is_isolated_workspace_mode: ctx.is_isolated_workspace_mode,
                 persist: true,
-                record_kind: AgentRunRecordKind::Subagent {
+                record_kind: AgentRunMessageRecordKind::Subagent {
                     parent_agent_run_id,
                 },
             })

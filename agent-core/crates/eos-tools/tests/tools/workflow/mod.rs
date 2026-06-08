@@ -13,9 +13,9 @@ use super::super::{
     cancel_workflow::CancelWorkflow, check_workflow_status::CheckWorkflowStatus,
     delegate_workflow::DelegateWorkflow,
 };
-use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
 use crate::WorkflowToolService;
+use eos_tool_ports::ToolExecutor;
 
 fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
     pairs

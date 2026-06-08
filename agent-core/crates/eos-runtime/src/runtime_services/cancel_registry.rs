@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use eos_tools::CancelPort;
+use eos_tool_ports::CancelPort;
 use eos_types::RequestId;
 
 /// Shared map from `RequestId` to the request's recursive cancellation port.

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_tools::ToolError;
+use eos_tool_ports::ToolError;
 use eos_types::WorkflowApi as _;
 use eos_types::{AttemptStatus, JsonObject, TaskStatus};
 use serde_json::json;

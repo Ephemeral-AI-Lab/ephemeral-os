@@ -23,5 +23,6 @@ pub use hooks::Hook;
 pub use registry::tool_registry::ToolRegistry;
 pub use runtime::executor::{RegisteredTool, ToolExecutor};
 pub use services::{
-    CommandSessionToolService, HookServices, SubagentToolService, WorkflowToolService,
+    CommandSessionToolService, HookServices, IsolatedWorkspaceToolService, SubagentToolService,
+    WorkflowToolService,
 };

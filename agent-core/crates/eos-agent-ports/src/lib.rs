@@ -25,6 +25,4 @@ pub use error::{AgentPortError, AgentRunError};
 pub use metadata_service::{
     AgentExecutionMetadataService, AuditNodeBuildInput, ExecutionMetadataBuildInput,
 };
-pub use spawn_agent_request::{
-    AgentRunMessageRecordKind, AgentRunRecordKind, SpawnAgentRequest, WorkflowTaskRole,
-};
+pub use spawn_agent_request::{AgentRunMessageRecordKind, SpawnAgentRequest, WorkflowTaskRole};

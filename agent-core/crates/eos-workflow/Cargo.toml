@@ -7,6 +7,7 @@ rust-version.workspace = true
 [dependencies]
 async-trait.workspace = true
 eos-types.workspace = true
+eos-tool-ports.workspace = true
 eos-tools.workspace = true
 eos-agent-def.workspace = true
 parking_lot.workspace = true

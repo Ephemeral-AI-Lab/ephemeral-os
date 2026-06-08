@@ -35,7 +35,7 @@ pub enum WorkflowError {
     Json(#[from] serde_json::Error),
     /// Tool framework fault while adapting a downstream-state port.
     #[error("{0}")]
-    Tool(#[from] eos_tools::ToolError),
+    Tool(#[from] eos_tool_ports::ToolError),
     /// A spawned agent task panicked or was cancelled.
     #[error("agent task join failed: {0}")]
     Join(String),

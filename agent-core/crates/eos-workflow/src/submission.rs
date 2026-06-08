@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_tools::{AttemptSubmissionPort, PlannerPlan, Sealed, SubmissionAck, ToolError};
+use eos_tool_ports::{AttemptSubmissionPort, PlannerPlan, Sealed, SubmissionAck, ToolError};
 use eos_types::{GeneratorSubmission, ReducerSubmission};
 
 use crate::attempt::AttemptOrchestratorRegistry;

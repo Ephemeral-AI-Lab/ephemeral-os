@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>19</b><span>items</span></div>
-  <div><b>4</b><span>fields</span></div>
-  <div><b>7</b><span>methods</span></div>
+  <div><b>14</b><span>items</span></div>
+  <div><b>2</b><span>fields</span></div>
+  <div><b>4</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-testkit.html"><span>agents.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-testkit--src-engine-rs.html"><span>engine.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-testkit--src-llm-rs.html"><span>llm.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-testkit--src-meta-rs.html"><span>meta.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="llm crates/eos-testkit/src/llm.rs ScriptedSource impl ScriptedSource impl EventSource for ScriptedSource ScriptedByAgentSource impl ScriptedByAgentSource impl EventSource for ScriptedByAgentSource factory_from factory_root_blocks_after factory_by_agent request_route_key request_route_candidates tool_use_turn text_turn">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-testkit.html"><span>agents.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-testkit--src-engine-rs.html"><span>engine.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-testkit--src-llm-rs.html"><span>llm.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-testkit--src-meta-rs.html"><span>meta.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="llm crates/eos-testkit/src/llm.rs ScriptedSource impl ScriptedSource impl EventSource for ScriptedSource factory_from factory_root_blocks_after factory_by_agent tool_use_turn text_turn">
   <div class="module-head">
     <div>
       <h2>src/llm.rs</h2>
@@ -50,10 +50,10 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>2 types</span>
-      <span>4 impls</span>
-      <span>7 fns</span>
-      <span>6 methods</span>
+      <span>1 types</span>
+      <span>2 impls</span>
+      <span>5 fns</span>
+      <span>3 methods</span>
     </div>
   </div>
   <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ScriptedSource-18" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ScriptedSource pub pub struct ScriptedSource crates/eos-testkit/src/llm.rs turns tokio :: sync :: Mutex &lt; Vec &lt; Vec &lt; StreamEvent &gt; &gt; &gt; block_when_empty bool ">
@@ -106,70 +106,20 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-testkit/src/llm.rs:18</p>
-</article><article id="item-struct-ScriptedByAgentSource-65" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ScriptedByAgentSource pub pub struct ScriptedByAgentSource crates/eos-testkit/src/llm.rs scripts tokio :: sync :: Mutex &lt; HashMap &lt; String , Vec &lt; Vec &lt; StreamEvent &gt; &gt; &gt; &gt; block_when_empty HashMap &lt; String , bool &gt; ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>ScriptedByAgentSource</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedByAgentSource-65">ScriptedByAgentSource</a></code>
-  <p class="docstring">A scripted event source that routes each model request by its terminal tool<br>set. Tests keep using agent-name keys such as `root`, `advisor`, `planner`,<br>`coder`, `reducer`, and `explorer` without exposing `AgentDefinition` to the<br>engine event-source seam.</p>
-  <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>scripts</td><td><code>tokio :: sync :: Mutex &lt; HashMap &lt; String , Vec &lt; Vec &lt; StreamEvent &gt; &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>block_when_empty</td><td><code>HashMap &lt; String , bool &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-76"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#method-new-29">new</a> (scripts : HashMap &lt; String , Vec &lt; Vec &lt; StreamEvent &gt; &gt; &gt;) -&gt; Self</code><p class="docstring">Build a routed source from per-agent scripts.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Build a routed source from per-agent scripts.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(scripts: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            scripts: tokio::sync::<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(scripts),
-            block_when_empty: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(),
-        }
-    }
-</code></pre>
-</details></td></tr><tr id="method-with-blocking-route-85"><td>method</td><td>with_blocking_route</td><td><code>pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#method-with-blocking-route-85">with_blocking_route</a> (mut self , agent_name : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Mark one route as blocking after its scripted turns are exhausted.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Mark one route as blocking after its scripted turns are exhausted.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-with-blocking-route-85">with_blocking_route</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, agent_name: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">self</span>.block_when_empty.insert(agent_name.into(), <span class="rs-kw">true</span>);
-        <span class="rs-self">self</span>
-    }
-</code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl EventSource for <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedByAgentSource-65">ScriptedByAgentSource</a></code></summary><table><tbody><tr id="method-stream-95"><td>method</td><td>stream</td><td><code>async fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#method-stream-50">stream</a> (&amp; self , request : &amp; LlmRequest) -&gt; Result &lt; EngineStream , EngineError &gt;</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-stream-50">stream</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">LlmRequest</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EngineStream</span>, <span class="rs-type">EngineError</span>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> scripts = <span class="rs-self">self</span>.scripts.lock().<span class="rs-kw">await</span>;
-        <span class="rs-kw">let</span> key = <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-key-152">request_route_key</a>(&amp;scripts, request);
-        <span class="rs-kw">let</span> turns = scripts.entry(key.clone()).or_default();
-        <span class="rs-kw">if</span> turns.is_empty() {
-            <span class="rs-kw">if</span> <span class="rs-self">self</span>.block_when_empty.get(&amp;key).copied().unwrap_or(<span class="rs-kw">false</span>) {
-                drop(scripts);
-                std::future::pending::&lt;()&gt;().<span class="rs-kw">await</span>;
-                unreachable!(&quot;pending future never resolves&quot;);
-            }
-            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::iter(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>())));
-        }
-        <span class="rs-kw">let</span> events = turns.remove(0);
-        <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::iter(events.into_iter().map(<span class="rs-type">Ok</span>))))
-    }
-</code></pre>
-</details></td></tr></tbody></table></details></div>
-
-  <p class="source">crates/eos-testkit/src/llm.rs:65</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-factory-from-112" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn factory_from pub pub fn factory_from (turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory crates/eos-testkit/src/llm.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-factory-from-65" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn factory_from pub pub fn factory_from (turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory crates/eos-testkit/src/llm.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>factory_from</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-factory-from-112">factory_from</a> (turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-factory-from-65">factory_from</a> (turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory</code>
   <p class="docstring">A factory that always returns the given scripted turns.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// A factory that always returns the given scripted turns.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-from-112">factory_from</a>(turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-from-65">factory_from</a>(turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
     <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<span class="rs-kw">move</span> |_request, _agent_state| {
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedSource-18">ScriptedSource</a>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(turns.clone())) <span class="rs-kw">as</span> <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">EventSource</span>&gt;
     })
@@ -177,14 +127,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-testkit/src/llm.rs:112</p>
-</article><article id="item-fn-factory-root-blocks-after-120" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn factory_root_blocks_after pub pub fn factory_root_blocks_after (root_turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory crates/eos-testkit/src/llm.rs  ">
+  <p class="source">crates/eos-testkit/src/llm.rs:65</p>
+</article><article id="item-fn-factory-root-blocks-after-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn factory_root_blocks_after pub pub fn factory_root_blocks_after (root_turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory crates/eos-testkit/src/llm.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>factory_root_blocks_after</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-factory-root-blocks-after-120">factory_root_blocks_after</a> (root_turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-factory-root-blocks-after-73">factory_root_blocks_after</a> (root_turns : Vec &lt; Vec &lt; StreamEvent &gt; &gt;) -&gt; EventSourceFactory</code>
   <p class="docstring">A factory where the `root` agent plays `root_turns` then blocks (stays<br>running), and every other agent gets an empty (first-turn-erroring) source.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -192,7 +142,7 @@
   <pre><code><span class="rs-comment">/// A factory where the `root` agent plays `root_turns` then blocks (stays</span>
 <span class="rs-comment">/// running), and every other agent gets an empty (first-turn-erroring) source.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-root-blocks-after-120">factory_root_blocks_after</a>(root_turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-root-blocks-after-73">factory_root_blocks_after</a>(root_turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
     <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<span class="rs-kw">move</span> |_request, agent_state| {
         <span class="rs-kw">if</span> agent_state.agent_name == &quot;root&quot; {
             <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedSource-18">ScriptedSource</a>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-blocking-38">new_blocking</a>(root_turns.clone())) <span class="rs-kw">as</span> <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">EventSource</span>&gt;
@@ -204,14 +154,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-testkit/src/llm.rs:120</p>
-</article><article id="item-fn-factory-by-agent-133" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn factory_by_agent pub pub fn factory_by_agent (by_agent : Vec &lt; (&amp; 'static str , Vec &lt; Vec &lt; StreamEvent &gt; &gt;) &gt; ,) -&gt; EventSourceFactory crates/eos-testkit/src/llm.rs  ">
+  <p class="source">crates/eos-testkit/src/llm.rs:73</p>
+</article><article id="item-fn-factory-by-agent-86" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn factory_by_agent pub pub fn factory_by_agent (by_agent : Vec &lt; (&amp; 'static str , Vec &lt; Vec &lt; StreamEvent &gt; &gt;) &gt; ,) -&gt; EventSourceFactory crates/eos-testkit/src/llm.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>factory_by_agent</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-factory-by-agent-133">factory_by_agent</a> (by_agent : Vec &lt; (&amp; &#x27;static str , Vec &lt; Vec &lt; StreamEvent &gt; &gt;) &gt; ,) -&gt; EventSourceFactory</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-factory-by-agent-86">factory_by_agent</a> (by_agent : Vec &lt; (&amp; &#x27;static str , Vec &lt; Vec &lt; StreamEvent &gt; &gt;) &gt; ,) -&gt; EventSourceFactory</code>
   <p class="docstring">A factory that dispatches scripted turns by agent name; an agent absent from<br>the map gets an empty (first-turn-erroring) source.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -219,7 +169,7 @@
   <pre><code><span class="rs-comment">/// A factory that dispatches scripted turns by agent name; an agent absent from</span>
 <span class="rs-comment">/// the map gets an empty (first-turn-erroring) source.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-by-agent-133">factory_by_agent</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-by-agent-86">factory_by_agent</a>(
     by_agent: <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;)&gt;,
 ) -&gt; <span class="rs-type">EventSourceFactory</span> {
     <span class="rs-kw">let</span> scripts: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt; = by_agent
@@ -237,14 +187,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-testkit/src/llm.rs:133</p>
-</article><article id="item-fn-tool-use-turn-188" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_use_turn pub pub fn tool_use_turn (tool_use_id : &amp; str , tool_name : &amp; str , input : serde_json :: Value ,) -&gt; Vec &lt; StreamEvent &gt; crates/eos-testkit/src/llm.rs  ">
+  <p class="source">crates/eos-testkit/src/llm.rs:86</p>
+</article><article id="item-fn-tool-use-turn-105" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_use_turn pub pub fn tool_use_turn (tool_use_id : &amp; str , tool_name : &amp; str , input : serde_json :: Value ,) -&gt; Vec &lt; StreamEvent &gt; crates/eos-testkit/src/llm.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_use_turn</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-tool-use-turn-188">tool_use_turn</a> (tool_use_id : &amp; str , tool_name : &amp; str , input : serde_json :: Value ,) -&gt; Vec &lt; StreamEvent &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-tool-use-turn-105">tool_use_turn</a> (tool_use_id : &amp; str , tool_name : &amp; str , input : serde_json :: Value ,) -&gt; Vec &lt; StreamEvent &gt;</code>
   <p class="docstring">One model turn that calls `tool_name` with `input` (a non-object `input`<br>lowers to an empty object).</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -252,7 +202,7 @@
   <pre><code><span class="rs-comment">/// One model turn that calls `tool_name` with `input` (a non-object `input`</span>
 <span class="rs-comment">/// lowers to an empty object).</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-tool-use-turn-188">tool_use_turn</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-tool-use-turn-105">tool_use_turn</a>(
     tool_use_id: &amp;str,
     tool_name: &amp;str,
     input: serde_json::<span class="rs-type">Value</span>,
@@ -281,21 +231,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-testkit/src/llm.rs:188</p>
-</article><article id="item-fn-text-turn-218" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text_turn pub pub fn text_turn (text : &amp; str) -&gt; Vec &lt; StreamEvent &gt; crates/eos-testkit/src/llm.rs  ">
+  <p class="source">crates/eos-testkit/src/llm.rs:105</p>
+</article><article id="item-fn-text-turn-135" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text_turn pub pub fn text_turn (text : &amp; str) -&gt; Vec &lt; StreamEvent &gt; crates/eos-testkit/src/llm.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>text_turn</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-text-turn-218">text_turn</a> (text : &amp; str) -&gt; Vec &lt; StreamEvent &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-text-turn-135">text_turn</a> (text : &amp; str) -&gt; Vec &lt; StreamEvent &gt;</code>
   <p class="docstring">One assistant text turn (no tool call).</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// One assistant text turn (no tool call).</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-text-turn-218">text_turn</a>(text: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-text-turn-135">text_turn</a>(text: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt; {
     vec![<span class="rs-type">StreamEvent</span>::<span class="rs-type">AssistantMessageComplete</span> {
         agent_name: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(),
         agent_run_id: <span class="rs-type">None</span>,
@@ -314,69 +264,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-testkit/src/llm.rs:218</p>
-</article><article id="item-fn-request-route-key-152" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_route_key private fn request_route_key (scripts : &amp; HashMap &lt; String , Vec &lt; Vec &lt; StreamEvent &gt; &gt; &gt; , request : &amp; LlmRequest ,) -&gt; String crates/eos-testkit/src/llm.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>request_route_key</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-request-route-key-152">request_route_key</a> (scripts : &amp; HashMap &lt; String , Vec &lt; Vec &lt; StreamEvent &gt; &gt; &gt; , request : &amp; LlmRequest ,) -&gt; String</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-key-152">request_route_key</a>(
-    scripts: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt;,
-    request: &amp;<span class="rs-type">LlmRequest</span>,
-) -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> candidates = <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-candidates-165">request_route_candidates</a>(request);
-    <span class="rs-kw">for</span> &amp;candidate <span class="rs-kw">in</span> candidates {
-        <span class="rs-kw">if</span> scripts.contains_key(candidate) {
-            <span class="rs-kw">return</span> candidate.to_owned();
-        }
-    }
-    candidates.first().copied().unwrap_or(&quot;root&quot;).to_owned()
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-testkit/src/llm.rs:152</p>
-</article><article id="item-fn-request-route-candidates-165" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_route_candidates private fn request_route_candidates (request : &amp; LlmRequest) -&gt; &amp; 'static [&amp; 'static str] crates/eos-testkit/src/llm.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>request_route_candidates</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-testkit--src-llm-rs.html#item-fn-request-route-candidates-165">request_route_candidates</a> (request : &amp; LlmRequest) -&gt; &amp; &#x27;static [&amp; &#x27;static str]</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-candidates-165">request_route_candidates</a>(request: &amp;<span class="rs-type">LlmRequest</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> [&amp;&#x27;<span class="rs-kw">static</span> str] {
-    <span class="rs-kw">let</span> has_tool = |name: &amp;str| request.tools.iter().any(|tool| tool.name == name);
-    <span class="rs-kw">if</span> has_tool(&quot;submit_advisor_feedback&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;advisor&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_planner_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;planner&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_generator_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;coder&quot;, &quot;generator&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_reducer_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;reducer&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_exploration_result&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;explorer&quot;, &quot;subagent&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_root_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;root&quot;];
-    }
-    &amp;[&quot;root&quot;]
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-testkit/src/llm.rs:165</p>
+  <p class="source">crates/eos-testkit/src/llm.rs:135</p>
 </article></div>
 </section></div>
 </main>
@@ -449,56 +337,9 @@
     }
 }
 
-<span class="rs-comment">/// A scripted event source that routes each model request by its terminal tool</span>
-<span class="rs-comment">/// set. Tests keep using agent-name keys such as `root`, `advisor`, `planner`,</span>
-<span class="rs-comment">/// `coder`, `reducer`, and `explorer` without exposing `AgentDefinition` to the</span>
-<span class="rs-comment">/// engine event-source seam.</span>
-#[derive(<span class="rs-type">Debug</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedByAgentSource-65">ScriptedByAgentSource</a> {
-    scripts: tokio::sync::<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt;&gt;,
-    block_when_empty: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, bool&gt;,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedByAgentSource-65">ScriptedByAgentSource</a> {
-    <span class="rs-comment">/// Build a routed source from per-agent scripts.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(scripts: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            scripts: tokio::sync::<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(scripts),
-            block_when_empty: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(),
-        }
-    }
-
-    <span class="rs-comment">/// Mark one route as blocking after its scripted turns are exhausted.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-with-blocking-route-85">with_blocking_route</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, agent_name: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">self</span>.block_when_empty.insert(agent_name.into(), <span class="rs-kw">true</span>);
-        <span class="rs-self">self</span>
-    }
-}
-
-#[async_trait]
-<span class="rs-kw">impl</span> <span class="rs-type">EventSource</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedByAgentSource-65">ScriptedByAgentSource</a> {
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-stream-50">stream</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">LlmRequest</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EngineStream</span>, <span class="rs-type">EngineError</span>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> scripts = <span class="rs-self">self</span>.scripts.lock().<span class="rs-kw">await</span>;
-        <span class="rs-kw">let</span> key = <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-key-152">request_route_key</a>(&amp;scripts, request);
-        <span class="rs-kw">let</span> turns = scripts.entry(key.clone()).or_default();
-        <span class="rs-kw">if</span> turns.is_empty() {
-            <span class="rs-kw">if</span> <span class="rs-self">self</span>.block_when_empty.get(&amp;key).copied().unwrap_or(<span class="rs-kw">false</span>) {
-                drop(scripts);
-                std::future::pending::&lt;()&gt;().<span class="rs-kw">await</span>;
-                unreachable!(&quot;pending future never resolves&quot;);
-            }
-            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::iter(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>())));
-        }
-        <span class="rs-kw">let</span> events = turns.remove(0);
-        <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::iter(events.into_iter().map(<span class="rs-type">Ok</span>))))
-    }
-}
-
 <span class="rs-comment">/// A factory that always returns the given scripted turns.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-from-112">factory_from</a>(turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-from-65">factory_from</a>(turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
     <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<span class="rs-kw">move</span> |_request, _agent_state| {
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedSource-18">ScriptedSource</a>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(turns.clone())) <span class="rs-kw">as</span> <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">EventSource</span>&gt;
     })
@@ -507,7 +348,7 @@
 <span class="rs-comment">/// A factory where the `root` agent plays `root_turns` then blocks (stays</span>
 <span class="rs-comment">/// running), and every other agent gets an empty (first-turn-erroring) source.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-root-blocks-after-120">factory_root_blocks_after</a>(root_turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-root-blocks-after-73">factory_root_blocks_after</a>(root_turns: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;) -&gt; <span class="rs-type">EventSourceFactory</span> {
     <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<span class="rs-kw">move</span> |_request, agent_state| {
         <span class="rs-kw">if</span> agent_state.agent_name == &quot;root&quot; {
             <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(<a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedSource-18">ScriptedSource</a>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-blocking-38">new_blocking</a>(root_turns.clone())) <span class="rs-kw">as</span> <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">EventSource</span>&gt;
@@ -520,7 +361,7 @@
 <span class="rs-comment">/// A factory that dispatches scripted turns by agent name; an agent absent from</span>
 <span class="rs-comment">/// the map gets an empty (first-turn-erroring) source.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-by-agent-133">factory_by_agent</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-factory-by-agent-86">factory_by_agent</a>(
     by_agent: <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;)&gt;,
 ) -&gt; <span class="rs-type">EventSourceFactory</span> {
     <span class="rs-kw">let</span> scripts: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt; = by_agent
@@ -536,46 +377,10 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-key-152">request_route_key</a>(
-    scripts: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;&gt;&gt;,
-    request: &amp;<span class="rs-type">LlmRequest</span>,
-) -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> candidates = <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-candidates-165">request_route_candidates</a>(request);
-    <span class="rs-kw">for</span> &amp;candidate <span class="rs-kw">in</span> candidates {
-        <span class="rs-kw">if</span> scripts.contains_key(candidate) {
-            <span class="rs-kw">return</span> candidate.to_owned();
-        }
-    }
-    candidates.first().copied().unwrap_or(&quot;root&quot;).to_owned()
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-request-route-candidates-165">request_route_candidates</a>(request: &amp;<span class="rs-type">LlmRequest</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> [&amp;&#x27;<span class="rs-kw">static</span> str] {
-    <span class="rs-kw">let</span> has_tool = |name: &amp;str| request.tools.iter().any(|tool| tool.name == name);
-    <span class="rs-kw">if</span> has_tool(&quot;submit_advisor_feedback&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;advisor&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_planner_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;planner&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_generator_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;coder&quot;, &quot;generator&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_reducer_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;reducer&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_exploration_result&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;explorer&quot;, &quot;subagent&quot;];
-    }
-    <span class="rs-kw">if</span> has_tool(&quot;submit_root_outcome&quot;) {
-        <span class="rs-kw">return</span> &amp;[&quot;root&quot;];
-    }
-    &amp;[&quot;root&quot;]
-}
-
 <span class="rs-comment">/// One model turn that calls `tool_name` with `input` (a non-object `input`</span>
 <span class="rs-comment">/// lowers to an empty object).</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-tool-use-turn-188">tool_use_turn</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-tool-use-turn-105">tool_use_turn</a>(
     tool_use_id: &amp;str,
     tool_name: &amp;str,
     input: serde_json::<span class="rs-type">Value</span>,
@@ -604,7 +409,7 @@
 
 <span class="rs-comment">/// One assistant text turn (no tool call).</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-text-turn-218">text_turn</a>(text: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#item-fn-text-turn-135">text_turn</a>(text: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt; {
     vec![<span class="rs-type">StreamEvent</span>::<span class="rs-type">AssistantMessageComplete</span> {
         agent_name: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(),
         agent_run_id: <span class="rs-type">None</span>,

@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_tools::CancelPort;
+use eos_tool_ports::CancelPort;
 use eos_types::{
     AgentRunId, AttemptClosure, IterationStatus, OutstandingWorkflow, StartWorkflowRequest,
     StartedWorkflow, TaskId, TaskStore, TerminalWorkflow, WorkflowApi, WorkflowApiError,

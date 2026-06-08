@@ -9,10 +9,10 @@ use super::super::exec_command::ExecCommand;
 use super::super::read_command_progress::ReadCommandProgress;
 use super::super::read_file::ReadFile;
 use super::super::write_stdin::WriteStdin;
-use crate::core::metadata::ExecutionMetadata;
-use crate::runtime::executor::ToolExecutor;
 use crate::support::{test_agent_run_id, FakeTransport};
 use crate::tools::{CommandToolService, SandboxToolService};
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolExecutor;
 
 fn metadata() -> ExecutionMetadata {
     let agent_run_id = test_agent_run_id();

@@ -1,5 +1,5 @@
 use super::*;
-use crate::hooks::Hook;
+use eos_tool_ports::Hook;
 
 mod helper_terminals;
 mod isolated_workspace;
@@ -142,7 +142,7 @@ fn no_background_sessions_precedes_advisor_on_gated_terminals() {
 // isolated-mode block, or a no-inflight guard, or flip an intent.
 #[test]
 fn security_policy_wiring_is_locked() {
-    use crate::core::intent::ToolIntent;
+    use eos_tool_ports::ToolIntent;
     let registry = build_default_registry(&repo_tools_config(), &CallerScope::default());
     let hooks = |name: ToolName| registry.get(name).expect("registered").hooks.clone();
     let intent = |name: ToolName| registry.get(name).expect("registered").intent;

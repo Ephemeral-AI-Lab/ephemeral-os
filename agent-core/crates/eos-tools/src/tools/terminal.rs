@@ -8,7 +8,7 @@
 //! authored so the fallback branch disappears. Totality is a compile-time
 //! exhaustive `match` over the [`TerminalTool`] enum.
 
-use crate::core::name::ToolName;
+use eos_tool_ports::ToolName;
 
 /// The closed set of terminal tools. `#[non_exhaustive]` for additive growth,
 /// but every variant has a descriptor (compile-time totality).
@@ -162,7 +162,7 @@ pub fn render_tool_instruction(terminals: &[ToolName], focus: ToolInstructions) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::name::ToolName;
+    use eos_tool_ports::ToolName;
 
     // AC-tools-07: every TerminalTool has non-empty descriptor fields; every
     // terminal ToolName maps to a TerminalTool (and back).

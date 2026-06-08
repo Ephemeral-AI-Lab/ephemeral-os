@@ -144,7 +144,10 @@ impl AgentLoopToolRegistryFactory for RuntimeToolRegistryFactory {
         &self,
         input: AgentLoopToolRegistryBuildInput,
     ) -> Result<ToolRegistry, eos_engine::EngineError> {
-        let sandbox_service = SandboxToolService::new(self.services.sandbox.transport.clone());
+        let sandbox_service = SandboxToolService::new(self.services.sandbox.transport.clone())
+            .with_isolated_workspace_service(
+                self.services.agent_state.isolated_workspace_tool_service(),
+            );
         let plugin_sandbox_service = sandbox_service.clone();
         let caller = CallerScope {
             dispatchable_subagents: self
@@ -192,15 +195,28 @@ impl RuntimeExecutionMetadataService {
         &self,
         agent_run_id: &eos_types::AgentRunId,
     ) -> Result<AgentState, AgentPortError> {
+        let runtime_state = self.services.agent_state.get(agent_run_id);
         let run = self
             .services
             .db
             .agent_run_store
             .get(agent_run_id)
             .await
-            .map_err(|err| AgentPortError::Internal(err.to_string()))?
+            .map_err(|err| AgentPortError::Internal(err.to_string()))?;
+        let agent_name = run
+            .as_ref()
+            .map(|run| run.agent_name.clone())
+            .or_else(|| runtime_state.as_ref().map(|state| state.agent_name.clone()))
             .ok_or_else(|| AgentPortError::Internal(format!("agent run {agent_run_id} missing")))?;
-        let task = match &run.task_id {
+        let task_id = run
+            .as_ref()
+            .and_then(|run| run.task_id.clone())
+            .or_else(|| {
+                runtime_state
+                    .as_ref()
+                    .and_then(|state| state.task_id.clone())
+            });
+        let task = match &task_id {
             Some(task_id) => self
                 .services
                 .db
@@ -210,30 +226,73 @@ impl RuntimeExecutionMetadataService {
                 .map_err(|err| AgentPortError::Internal(err.to_string()))?,
             None => None,
         };
-        let request = match task.as_ref() {
-            Some(task) => self
+        let request_id = task
+            .as_ref()
+            .map(|task| task.request_id.clone())
+            .or_else(|| {
+                runtime_state
+                    .as_ref()
+                    .and_then(|state| state.request_id.clone())
+            });
+        let request = match &request_id {
+            Some(request_id) => self
                 .services
                 .db
                 .request_store
-                .get(&task.request_id)
+                .get(request_id)
                 .await
                 .map_err(|err| AgentPortError::Internal(err.to_string()))?,
             None => None,
         };
+        let runtime_workspace_root = runtime_state
+            .as_ref()
+            .map(|state| state.workspace_root.as_str())
+            .filter(|workspace_root| !workspace_root.trim().is_empty());
 
         Ok(AgentState {
             agent_run_id: agent_run_id.clone(),
-            agent_name: run.agent_name,
-            request_id: task.as_ref().map(|task| task.request_id.clone()),
-            task_id: run.task_id,
-            workflow_id: task.as_ref().and_then(|task| task.workflow_id.clone()),
-            iteration_id: task.as_ref().and_then(|task| task.iteration_id.clone()),
-            attempt_id: task.as_ref().and_then(|task| task.attempt_id.clone()),
-            sandbox_id: request
+            agent_name,
+            request_id,
+            task_id,
+            workflow_id: task
                 .as_ref()
-                .and_then(|request| request.sandbox_id.clone()),
-            workspace_root: request.map_or_else(String::new, |request| request.cwd),
-            is_isolated_workspace_mode: false,
+                .and_then(|task| task.workflow_id.clone())
+                .or_else(|| {
+                    runtime_state
+                        .as_ref()
+                        .and_then(|state| state.workflow_id.clone())
+                }),
+            iteration_id: task
+                .as_ref()
+                .and_then(|task| task.iteration_id.clone())
+                .or_else(|| {
+                    runtime_state
+                        .as_ref()
+                        .and_then(|state| state.iteration_id.clone())
+                }),
+            attempt_id: task
+                .as_ref()
+                .and_then(|task| task.attempt_id.clone())
+                .or_else(|| {
+                    runtime_state
+                        .as_ref()
+                        .and_then(|state| state.attempt_id.clone())
+                }),
+            sandbox_id: runtime_state
+                .as_ref()
+                .and_then(|state| state.sandbox_id.clone())
+                .or_else(|| {
+                    request
+                        .as_ref()
+                        .and_then(|request| request.sandbox_id.clone())
+                }),
+            workspace_root: runtime_workspace_root.map_or_else(
+                || request.map_or_else(String::new, |request| request.cwd),
+                str::to_owned,
+            ),
+            is_isolated_workspace_mode: runtime_state
+                .as_ref()
+                .is_some_and(|state| state.is_isolated_workspace_mode),
         })
     }
 }

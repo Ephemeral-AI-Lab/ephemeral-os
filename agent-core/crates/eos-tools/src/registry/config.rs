@@ -22,10 +22,10 @@ use eos_config::parse_markdown_frontmatter;
 use serde_yaml::{Mapping, Value};
 use thiserror::Error;
 
-use crate::core::intent::ToolIntent;
-use crate::core::name::ToolName;
-use crate::hooks::Hook;
 use crate::tools::terminal::TerminalTool;
+use eos_tool_ports::Hook;
+use eos_tool_ports::ToolIntent;
+use eos_tool_ports::ToolName;
 
 /// One tool's loaded configuration: the model-facing description plus the policy
 /// the registry stamps onto its `RegisteredTool`.

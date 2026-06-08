@@ -7,7 +7,7 @@ use eos_agent_def::{AgentDefinition, AgentName as DefinitionAgentName, AgentRegi
 use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
 use eos_agent_ports::{
     AgentLoopLauncher, AgentLoopOutcome, AgentLoopOutcomeKind, AgentRunApi, AgentRunError,
-    AgentRunOutcome, AgentRunRecordKind, AgentRunStatus, SpawnAgentRequest,
+    AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,
 };
 use eos_llm_client::Message;
 use eos_types::{AgentRunId, AgentRunStore};
@@ -21,6 +21,10 @@ use crate::agent_run_persistence::{
 };
 use crate::to_message_record_kind;
 
+type RuntimeStateRecorder =
+    Arc<dyn Fn(&SpawnAgentRequest, &AgentRunId) -> Result<(), AgentRunError> + Send + Sync>;
+type RuntimeStateRemover = Arc<dyn Fn(&AgentRunId) + Send + Sync>;
+
 /// Agent-run lifecycle service.
 #[derive(Clone)]
 pub struct AgentRunService {
@@ -29,6 +33,8 @@ pub struct AgentRunService {
     agent_run_store: Arc<dyn AgentRunStore>,
     message_records: Option<AgentMessageRecords>,
     active_agent_runs: ActiveAgentRuns,
+    runtime_state_recorder: Option<RuntimeStateRecorder>,
+    runtime_state_remover: Option<RuntimeStateRemover>,
 }
 
 impl std::fmt::Debug for AgentRunService {
@@ -52,7 +58,31 @@ impl AgentRunService {
             agent_run_store,
             message_records,
             active_agent_runs: ActiveAgentRuns::new(),
+            runtime_state_recorder: None,
+            runtime_state_remover: None,
         }
+    }
+
+    /// Attach runtime-only state hooks used by the production composition layer.
+    ///
+    /// The runner still owns agent-run lifecycle state; these hooks only record
+    /// and remove mutable execution facts such as workspace/isolation metadata.
+    #[must_use]
+    pub fn with_runtime_state_hooks<Record, Remove>(
+        mut self,
+        record: Record,
+        remove: Remove,
+    ) -> Self
+    where
+        Record: Fn(&SpawnAgentRequest, &AgentRunId) -> Result<(), AgentRunError>
+            + Send
+            + Sync
+            + 'static,
+        Remove: Fn(&AgentRunId) + Send + Sync + 'static,
+    {
+        self.runtime_state_recorder = Some(Arc::new(record));
+        self.runtime_state_remover = Some(Arc::new(remove));
+        self
     }
 
     async fn start_message_record(
@@ -191,8 +221,10 @@ impl AgentRunApi for AgentRunService {
         let Some(agent_def) = self.agent_registry.get(&agent_name) else {
             return Err(AgentRunError::AgentNotRegistered(requested_agent_name));
         };
-        if matches!(request.record_kind, AgentRunRecordKind::Subagent { .. })
-            && agent_def.agent_type != AgentType::Subagent
+        if matches!(
+            request.record_kind,
+            AgentRunMessageRecordKind::Subagent { .. }
+        ) && agent_def.agent_type != AgentType::Subagent
         {
             return Err(AgentRunError::WrongAgentType {
                 agent_name: requested_agent_name,
@@ -217,6 +249,9 @@ impl AgentRunApi for AgentRunService {
         let message_record = self
             .start_message_record(&request, &agent_def, &agent_run_id)
             .await?;
+        if let Some(record_runtime_state) = &self.runtime_state_recorder {
+            record_runtime_state(&request, &agent_run_id)?;
+        }
         let start_request =
             build_start_agent_loop_request(&agent_def, request, agent_run_id.clone());
         let started = self.agent_loop_launcher.start_agent_loop(start_request);
@@ -300,6 +335,9 @@ impl AgentRunApi for AgentRunService {
         if let Some(completion) = completion {
             completion.publish(outcome);
         }
+        if let Some(remove_runtime_state) = &self.runtime_state_remover {
+            remove_runtime_state(agent_run_id);
+        }
         Ok(())
     }
 }
@@ -337,6 +375,9 @@ async fn forward_agent_loop_outcome(
         .finish_message_record(completion.take_message_record(), &outcome)
         .await;
     completion.publish(outcome);
+    if let Some(remove_runtime_state) = &service.runtime_state_remover {
+        remove_runtime_state(&agent_run_id);
+    }
 }
 
 fn agent_run_outcome_from_loop(

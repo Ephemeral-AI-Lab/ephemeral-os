@@ -1,4 +1,3 @@
-//! Tool executor compatibility and concrete-tool parsing helpers.
+//! Concrete-tool parsing helpers.
 
 pub(crate) mod execution;
-pub(crate) mod executor;

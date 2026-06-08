@@ -11,7 +11,7 @@ use eos_types::JsonObject;
 use schemars::schema::RootSchema;
 use serde_json::Value;
 
-use crate::core::name::ToolName;
+use eos_tool_ports::ToolName;
 
 /// Convert a `schemars` schema into the `ToolSpec` `input_schema`/`output_schema`
 /// object shape.

@@ -14,7 +14,7 @@ mod write_file;
 mod write_stdin;
 
 pub(crate) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     sandbox_service: super::SandboxToolService,
     command_service: super::CommandToolService,

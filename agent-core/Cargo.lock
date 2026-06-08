@@ -639,7 +639,7 @@ dependencies = [
  "eos-engine",
  "eos-llm-client",
  "eos-sandbox-port",
- "eos-tools",
+ "eos-tool-ports",
  "eos-types",
  "futures",
  "serde_json",
@@ -701,6 +701,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
+ "eos-tool-ports",
  "eos-tools",
  "eos-types",
  "parking_lot",

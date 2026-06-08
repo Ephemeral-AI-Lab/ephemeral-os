@@ -7,7 +7,7 @@ use eos_sandbox_port::{
 };
 use serde_json::{json, Value};
 
-use crate::{ToolError, ToolResult};
+use eos_tool_ports::{ToolError, ToolResult};
 
 mod enter_isolated_workspace;
 mod exit_isolated_workspace;
@@ -15,7 +15,7 @@ mod exit_isolated_workspace;
 const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/state/layer-stack";
 
 pub(crate) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     sandbox_service: super::SandboxToolService,
 ) {

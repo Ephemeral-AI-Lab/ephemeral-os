@@ -68,9 +68,6 @@ pub enum AgentRunMessageRecordKind {
     Agent,
 }
 
-/// Backwards-compatible short name while callers migrate.
-pub use AgentRunMessageRecordKind as AgentRunRecordKind;
-
 /// Workflow task role used for message-record path labels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]

@@ -8,16 +8,16 @@ use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::{OutputShape, ToolResult};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
-use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
-use crate::runtime::executor::ToolExecutor;
 use crate::tools::SandboxToolService;
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolError;
+use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolRegistry;
+use eos_tool_ports::{OutputShape, ToolResult};
 
 use super::{effective_layer_stack_root, render_enter_api_failure, render_enter_result};
 
@@ -65,6 +65,11 @@ impl ToolExecutor for EnterIsolatedWorkspace {
             Ok(result) => result,
             Err(err) => return render_enter_api_failure(&err),
         };
+        if result.base.success {
+            self.service
+                .set_isolated_workspace_mode(agent_run_id, true)
+                .await?;
+        }
         render_enter_result(&result)
     }
 }

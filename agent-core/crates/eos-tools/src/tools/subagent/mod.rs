@@ -11,7 +11,7 @@ use eos_agent_ports::AgentRunApi;
 use super::{CallerScope, SubagentToolService};
 
 pub(crate) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     caller: &CallerScope,
     agent_run_service: Option<Arc<dyn AgentRunApi>>,

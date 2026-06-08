@@ -1,10 +1,11 @@
 //! Prompt and transcript construction for the `ask_advisor` helper.
 
 use eos_llm_client::{ContentBlock, Message, MessageRole};
+use eos_tool_ports::{ExecutionMetadata, ToolName};
 use eos_types::JsonObject;
 use serde_json::Value;
 
-use crate::{render_tool_instruction, ExecutionMetadata, ToolInstructions, ToolName};
+use crate::{render_tool_instruction, ToolInstructions};
 
 const MAX_TRANSCRIPT_MESSAGES: usize = 40;
 const MAX_TOOL_RESULT_CHARS: usize = 4096;

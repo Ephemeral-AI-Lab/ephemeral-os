@@ -1,4 +1,4 @@
-//! Agent-run lifecycle adapter and compatibility exports.
+//! Agent-run lifecycle adapter.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -17,6 +17,6 @@ pub use eos_agent_message_records::{
     NodeFinishStatus,
 };
 pub use eos_agent_ports::{
-    AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunRecordKind,
-    AgentRunStatus, SpawnAgentRequest, WorkflowTaskRole,
+    AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus,
+    SpawnAgentRequest, WorkflowTaskRole,
 };

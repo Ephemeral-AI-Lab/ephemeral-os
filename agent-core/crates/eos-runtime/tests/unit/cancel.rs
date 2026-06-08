@@ -4,7 +4,7 @@
 use std::sync::Mutex;
 
 use async_trait::async_trait;
-use eos_tools::{CancelPort, ToolError};
+use eos_tool_ports::{CancelPort, ToolError};
 use eos_types::{AgentRunId, TaskId};
 
 use super::*;

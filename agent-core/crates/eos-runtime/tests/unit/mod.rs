@@ -13,7 +13,7 @@ use eos_config::{DatabaseConfig, DatabaseUrl, ProvidersConfig, WorkflowConfig};
 use eos_db::Database;
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmClient, LlmRequest, LlmStream, ProviderError};
-use eos_tools::{Hook, ToolName};
+use eos_tool_ports::{Hook, ToolName};
 use eos_types::RequestId;
 use eos_types::{
     AgentRunId, Page, RequestListFilter, RequestStatus, Task, TaskRole, TaskStatus, WorkflowStatus,

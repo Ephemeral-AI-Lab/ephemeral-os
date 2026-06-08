@@ -16,11 +16,7 @@ eos-agent-def = { workspace = true }
 eos-engine = { workspace = true }
 eos-llm-client = { workspace = true }
 eos-sandbox-port = { workspace = true }
-# `metadata()` builds a real `eos_tools::ExecutionMetadata` fixture; its types are
-# external to `eos-engine`, so an engine in-crate test can consume this crate (the
-# dev-only `eos-engine -> eos-testkit -> eos-engine` cycle is Cargo-legal and
-# carries no `eos-engine` type across the boundary).
-eos-tools = { workspace = true }
+eos-tool-ports = { workspace = true }
 
 [dev-dependencies]
 eos-agent-ports = { workspace = true }

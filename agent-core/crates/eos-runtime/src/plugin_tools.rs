@@ -14,10 +14,11 @@ use eos_sandbox_port::{
     Intent, PluginDispatchRequest, PluginPackageDescriptor, PluginPackageEnsureRequest,
     SandboxRequestBase,
 };
-use eos_tools::{
-    ExecutionMetadata, OutputShape, RegisteredTool, SandboxToolService, ToolError, ToolExecutor,
-    ToolIntent, ToolKey, ToolRegistry, ToolResult,
+use eos_tool_ports::{
+    ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolIntent, ToolKey,
+    ToolRegistry, ToolResult,
 };
+use eos_tools::SandboxToolService;
 use eos_types::JsonObject;
 use serde_json::Value;
 

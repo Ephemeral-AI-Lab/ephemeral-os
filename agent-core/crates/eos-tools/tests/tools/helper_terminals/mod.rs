@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 
 use crate::support::{metadata, FakeTransport};
 use crate::tools::{CallerScope, SandboxToolService, SkillToolService};
-use crate::{ToolName, ToolRegistry};
+use eos_tool_ports::{ToolName, ToolRegistry};
 
 fn obj(pairs: &[(&str, Value)]) -> JsonObject {
     pairs
@@ -32,7 +32,7 @@ fn registry() -> ToolRegistry {
     )
 }
 
-async fn execute(name: ToolName, input: JsonObject) -> crate::ToolResult {
+async fn execute(name: ToolName, input: JsonObject) -> eos_tool_ports::ToolResult {
     let registry = registry();
     registry
         .get(name)

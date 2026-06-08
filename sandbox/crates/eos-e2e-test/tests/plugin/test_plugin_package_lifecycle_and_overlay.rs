@@ -772,10 +772,13 @@ SH
 chmod +x "$pkg/setup.sh"
 "#
     );
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("package staging command failed: {response}");
-    }
+    // Stage through the daemon container directly: a model-facing `exec_command`
+    // runs in the fresh namespace where `/eos` is a masked empty tmpfs and cannot
+    // write the upload tree the daemon reads back.
+    lease
+        .container()
+        .exec(&["sh", "-lc", &cmd])
+        .context("stage generic package")?;
     Ok(staged)
 }
 
@@ -921,10 +924,10 @@ PY
 chmod +x "$pkg/runtime/server.py"
 "#
     );
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("service package staging command failed: {response}");
-    }
+    lease
+        .container()
+        .exec(&["sh", "-lc", &cmd])
+        .context("stage generic service package")?;
     Ok(staged)
 }
 
@@ -962,32 +965,28 @@ PY
 chmod +x "$pkg/runtime/oneshot.py"
 "#
     );
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("oneshot package staging command failed: {response}");
-    }
+    lease
+        .container()
+        .exec(&["sh", "-lc", &cmd])
+        .context("stage generic oneshot package")?;
     Ok(staged)
 }
 
 fn assert_container_path(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
-    let response = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": format!("test -f {}", shell_quote(path))}),
-    )?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("expected container path {path}: {response}");
-    }
+    // Probe the real container filesystem: published packages and upload roots
+    // live under the masked `/eos`, invisible to a model-facing `exec_command`.
+    lease
+        .container()
+        .exec(&["sh", "-lc", &format!("test -f {}", shell_quote(path))])
+        .with_context(|| format!("expected container path {path}"))?;
     Ok(())
 }
 
 fn assert_container_absent(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
-    let response = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": format!("test ! -e {}", shell_quote(path))}),
-    )?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("expected container path to be absent {path}: {response}");
-    }
+    lease
+        .container()
+        .exec(&["sh", "-lc", &format!("test ! -e {}", shell_quote(path))])
+        .with_context(|| format!("expected container path to be absent {path}"))?;
     Ok(())
 }
 
@@ -1005,16 +1004,12 @@ fn wait_for_container_path_absent(lease: &eos_e2e_test::NodeLease<'_>, path: &st
 }
 
 fn read_container_file(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<String> {
-    let response = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": format!("cat {}", shell_quote(path))}),
-    )?;
-    response
-        .get("output")
-        .and_then(|output| output.get("stdout"))
-        .and_then(Value::as_str)
-        .map(ToOwned::to_owned)
-        .with_context(|| format!("stdout missing in {response}"))
+    // Read the real container filesystem: setup writes the count under the masked
+    // `/eos`, invisible to a model-facing `exec_command`.
+    lease
+        .container()
+        .exec(&["sh", "-lc", &format!("cat {}", shell_quote(path))])
+        .with_context(|| format!("read container file {path}"))
 }
 
 fn running_service_pid(status: &Value) -> Result<i64> {

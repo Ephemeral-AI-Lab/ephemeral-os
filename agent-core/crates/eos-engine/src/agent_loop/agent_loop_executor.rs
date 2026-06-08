@@ -82,23 +82,20 @@ impl AgentLoopExecutor {
         };
         let event_source = self.resolve_event_source(&request, &event_identity);
         let run_services = self.build_run_services(&request.agent_run_id);
-        let mut state = match AgentLoopState::from_request(
-            request,
-            &*self.tool_registry_factory,
-            Arc::clone(&self.metadata_service),
-            run_services,
-        ) {
-            Ok(state) => state,
-            Err(error) => {
-                return AgentLoopOutcome {
-                    kind: eos_agent_ports::AgentLoopOutcomeKind::LoopFailed {
-                        error_summary: error.to_string(),
-                    },
-                    final_conversation_messages: Vec::new(),
-                    total_token_count: None,
-                };
-            }
-        };
+        let mut state =
+            match AgentLoopState::from_request(request, &*self.tool_registry_factory, run_services)
+            {
+                Ok(state) => state,
+                Err(error) => {
+                    return AgentLoopOutcome {
+                        kind: eos_agent_ports::AgentLoopOutcomeKind::LoopFailed {
+                            error_summary: error.to_string(),
+                        },
+                        final_conversation_messages: Vec::new(),
+                        total_token_count: None,
+                    };
+                }
+            };
 
         self.loop_hooks.on_start(&state).await;
 
@@ -378,7 +375,6 @@ impl AgentLoopExecutor {
 }
 
 /// Result of one private assistant turn.
-#[allow(dead_code)] // Phase 2 API shell; variants are produced by Phase 5 wiring.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AssistantTurnResult {
     /// Continue the agent loop.

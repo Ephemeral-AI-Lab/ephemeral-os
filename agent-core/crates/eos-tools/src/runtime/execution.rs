@@ -4,8 +4,8 @@ use eos_types::JsonObject;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::core::name::ToolName;
-use crate::core::result::ToolResult;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolResult;
 
 /// Parse-and-validate raw tool input into a typed DTO, rendering the Rust
 /// "Invalid input for X" in-band message on failure.

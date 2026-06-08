@@ -8,8 +8,8 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, stdout,
-    wait_for_session_count,
+    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip,
+    wait_for_command_stdout_contains, wait_for_session_count,
 };
 
 #[test]
@@ -254,8 +254,12 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
             "timeout_seconds": 30,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    assert!(stdout(&exec).contains("SNAPSHOT_READY"), "{exec}");
     let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    // The marker can slip past the 500ms yield window under emulation (a slow
+    // boot-to-dispatch leaves stdout uncaptured at yield), so poll read_progress
+    // until it surfaces instead of asserting on the yielded snapshot. This also
+    // pins the snapshot-taken sync point before the concurrent direct write below.
+    wait_for_command_stdout_contains(&lease, &session_id, "SNAPSHOT_READY")?;
 
     let body = (|| -> Result<()> {
         lease.call_ok(

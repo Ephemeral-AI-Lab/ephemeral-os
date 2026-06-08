@@ -10,9 +10,9 @@ use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
 
 use super::super::{cancel_subagent::CancelSubagent, run_subagent::RunSubagent};
-use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
 use crate::SubagentToolService;
+use eos_tool_ports::ToolExecutor;
 
 #[derive(Default)]
 struct FakeBackgroundSession {

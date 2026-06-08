@@ -8,8 +8,10 @@ use eos_types::{JsonObject, SandboxId};
 use serde_json::{json, Value};
 
 use crate::support::metadata;
-use crate::tools::{CallerScope, SandboxToolService, SkillToolService};
-use crate::{ToolName, ToolRegistry};
+use crate::tools::{
+    CallerScope, IsolatedWorkspaceToolService, SandboxToolService, SkillToolService,
+};
+use eos_tool_ports::{ToolName, ToolRegistry};
 
 #[derive(Debug, Clone)]
 struct Call {
@@ -78,10 +80,14 @@ fn obj(pairs: &[(&str, Value)]) -> JsonObject {
 }
 
 fn registry(transport: Arc<dyn SandboxTransport>) -> ToolRegistry {
+    registry_with_sandbox_service(SandboxToolService::new(transport))
+}
+
+fn registry_with_sandbox_service(sandbox_service: SandboxToolService) -> ToolRegistry {
     crate::tools::build_default_registry_with_services(
         &crate::tools::repo_tools_config(),
         &CallerScope::default(),
-        SandboxToolService::new(transport),
+        sandbox_service,
         None,
         None,
         None,
@@ -93,13 +99,29 @@ fn registry(transport: Arc<dyn SandboxTransport>) -> ToolRegistry {
     )
 }
 
-fn ctx() -> crate::ExecutionMetadata {
+fn registry_with_state_updates(
+    transport: Arc<dyn SandboxTransport>,
+    updates: Arc<Mutex<Vec<bool>>>,
+) -> ToolRegistry {
+    let state_service = IsolatedWorkspaceToolService::new(move |_agent_run_id, is_isolated| {
+        let updates = updates.clone();
+        async move {
+            updates.lock().unwrap().push(is_isolated);
+            Ok(())
+        }
+    });
+    registry_with_sandbox_service(
+        SandboxToolService::new(transport).with_isolated_workspace_service(state_service),
+    )
+}
+
+fn ctx() -> eos_tool_ports::ExecutionMetadata {
     let mut ctx = metadata();
     ctx.sandbox_id = Some("sb-1".parse().unwrap());
     ctx
 }
 
-async fn execute(registry: &ToolRegistry, name: ToolName, input: JsonObject) -> crate::ToolResult {
+async fn execute(registry: &ToolRegistry, name: ToolName, input: JsonObject) -> eos_tool_ports::ToolResult {
     registry
         .get(name)
         .expect("registered")
@@ -107,6 +129,23 @@ async fn execute(registry: &ToolRegistry, name: ToolName, input: JsonObject) -> 
         .execute(&input, &ctx())
         .await
         .expect("tool execution")
+}
+
+#[tokio::test]
+async fn enter_isolated_workspace_marks_agent_isolated_on_success() {
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({"success": true}));
+    let updates = Arc::new(Mutex::new(Vec::new()));
+    let registry = registry_with_state_updates(transport, updates.clone());
+
+    let res = execute(
+        &registry,
+        ToolName::EnterIsolatedWorkspace,
+        JsonObject::new(),
+    )
+    .await;
+
+    assert!(!res.is_error, "{res:?}");
+    assert_eq!(*updates.lock().unwrap(), vec![true]);
 }
 
 #[tokio::test]
@@ -181,7 +220,8 @@ async fn enter_isolated_workspace_renders_api_failure_as_tool_error() {
         Some("already_active".to_owned()),
         "isolated workspace already active",
     ));
-    let registry = registry(transport);
+    let updates = Arc::new(Mutex::new(Vec::new()));
+    let registry = registry_with_state_updates(transport, updates.clone());
 
     let res = execute(
         &registry,
@@ -198,6 +238,24 @@ async fn enter_isolated_workspace_renders_api_failure_as_tool_error() {
         payload["error"]["message"],
         json!("isolated workspace already active")
     );
+    assert!(updates.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn exit_isolated_workspace_clears_agent_isolated_on_success() {
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({"success": true}));
+    let updates = Arc::new(Mutex::new(Vec::new()));
+    let registry = registry_with_state_updates(transport, updates.clone());
+
+    let res = execute(
+        &registry,
+        ToolName::ExitIsolatedWorkspace,
+        JsonObject::new(),
+    )
+    .await;
+
+    assert!(!res.is_error, "{res:?}");
+    assert_eq!(*updates.lock().unwrap(), vec![false]);
 }
 
 #[tokio::test]
@@ -266,7 +324,8 @@ async fn exit_isolated_workspace_renders_success_payload() {
 async fn exit_isolated_workspace_renders_api_failure_as_tool_error() {
     let transport =
         IsolatedWorkspaceTestTransport::err(SandboxPortError::decode("bad lifecycle payload"));
-    let registry = registry(transport);
+    let updates = Arc::new(Mutex::new(Vec::new()));
+    let registry = registry_with_state_updates(transport, updates.clone());
 
     let res = execute(
         &registry,
@@ -280,4 +339,5 @@ async fn exit_isolated_workspace_renders_api_failure_as_tool_error() {
     assert_eq!(payload["success"], json!(false));
     assert_eq!(payload["error"]["kind"], json!("decode_error"));
     assert_eq!(payload["error"]["message"], json!("bad lifecycle payload"));
+    assert!(updates.lock().unwrap().is_empty());
 }

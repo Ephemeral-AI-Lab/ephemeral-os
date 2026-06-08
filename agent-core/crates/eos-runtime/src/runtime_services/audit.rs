@@ -7,7 +7,7 @@ use eos_audit::{AuditSink, BufferedAuditShutdown};
 /// Audit sink and buffered-writer shutdown lifecycle.
 #[derive(Clone)]
 pub(crate) struct AuditService {
-    #[allow(dead_code)] // Read once audit publishing is wired into the new loop path.
+    #[allow(dead_code)] // Retained so the configured audit sink stays alive until shutdown.
     pub(crate) sink: Arc<dyn AuditSink>,
     pub(crate) shutdown: Arc<StdMutex<Option<BufferedAuditShutdown>>>,
 }

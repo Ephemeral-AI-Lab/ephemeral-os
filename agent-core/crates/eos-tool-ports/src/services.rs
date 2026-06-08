@@ -10,6 +10,8 @@ use eos_types::{AgentRunId, CommandSessionId, SandboxId, StartedWorkflow, Workfl
 use crate::ToolError;
 
 type BoxServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
+type UpdateIsolatedWorkspaceMode =
+    Arc<dyn Fn(AgentRunId, bool) -> BoxServiceFuture<Result<(), ToolError>> + Send + Sync>;
 type RegisterSubagentSession = Arc<dyn Fn(AgentRunId) -> BoxServiceFuture<()> + Send + Sync>;
 type CancelSubagentSession =
     Arc<dyn Fn(AgentRunId, String) -> BoxServiceFuture<bool> + Send + Sync>;
@@ -18,6 +20,51 @@ type CancelAllSubagentSessions = Arc<dyn Fn(String) -> BoxServiceFuture<()> + Se
 type RegisterWorkflowSession = Arc<dyn Fn(StartedWorkflow) -> BoxServiceFuture<()> + Send + Sync>;
 type RegisterCommandSession =
     Arc<dyn Fn(CommandSessionId, SandboxId) -> BoxServiceFuture<()> + Send + Sync>;
+
+/// Runtime-only isolated-workspace state captured by lifecycle tools.
+#[derive(Clone, Default)]
+pub struct IsolatedWorkspaceToolService {
+    update_mode: Option<UpdateIsolatedWorkspaceMode>,
+}
+
+impl IsolatedWorkspaceToolService {
+    /// Build isolated-workspace state updates from a runtime callback.
+    #[must_use]
+    pub fn new<Update, UpdateFuture>(update_mode: Update) -> Self
+    where
+        Update: Fn(AgentRunId, bool) -> UpdateFuture + Send + Sync + 'static,
+        UpdateFuture: Future<Output = Result<(), ToolError>> + Send + 'static,
+    {
+        Self {
+            update_mode: Some(Arc::new(move |agent_run_id, is_isolated| {
+                Box::pin(update_mode(agent_run_id, is_isolated))
+            })),
+        }
+    }
+
+    /// Update whether the calling agent currently has an isolated workspace.
+    ///
+    /// # Errors
+    /// Returns [`ToolError::MissingPort`] when the callback is absent.
+    pub async fn set_isolated_workspace_mode(
+        &self,
+        agent_run_id: &AgentRunId,
+        is_isolated: bool,
+    ) -> Result<(), ToolError> {
+        let Some(update_mode) = &self.update_mode else {
+            return Err(ToolError::MissingPort("isolated_workspace_state"));
+        };
+        update_mode(agent_run_id.clone(), is_isolated).await
+    }
+}
+
+impl fmt::Debug for IsolatedWorkspaceToolService {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IsolatedWorkspaceToolService")
+            .field("has_update_mode", &self.update_mode.is_some())
+            .finish()
+    }
+}
 
 /// Command-session background tracking captured by shell tools.
 #[derive(Clone, Default)]

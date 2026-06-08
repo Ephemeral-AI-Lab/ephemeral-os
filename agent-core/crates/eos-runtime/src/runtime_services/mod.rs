@@ -2,6 +2,7 @@
 
 mod agent_core_registry;
 mod agent_loop;
+mod agent_state;
 mod audit;
 mod builder;
 mod cancel_port;
@@ -16,6 +17,7 @@ use eos_agent_runner::AgentMessageRecords;
 
 pub(crate) use agent_core_registry::AgentCoreRegistryService;
 pub(crate) use agent_loop::build_agent_loop_launcher;
+pub(crate) use agent_state::RuntimeAgentStateService;
 pub(crate) use audit::AuditService;
 pub use builder::RuntimeServicesBuilder;
 pub(crate) use cancel_port::RuntimeCancelPort;
@@ -43,6 +45,7 @@ pub struct RuntimeServices {
     pub(crate) sandbox: SandboxService,
     pub(crate) audit: AuditService,
     pub(crate) message_records: MessageRecordService,
+    pub(crate) agent_state: RuntimeAgentStateService,
     /// Per-request cancellation ports, so `cancel_agent_core_user_request` can
     /// reach a live request's recursive `CancelPort` from another task.
     pub(crate) cancel_registry: RequestCancelRegistry,

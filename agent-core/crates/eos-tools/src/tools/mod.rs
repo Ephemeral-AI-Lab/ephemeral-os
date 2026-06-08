@@ -1,6 +1,6 @@
 //! The model-facing tools: backend-shaped category folders with one file per
 //! model-callable tool. Each tool authors its Input/Output DTOs and a
-//! [`ToolExecutor`](crate::ToolExecutor) impl; the description and the intent /
+//! [`ToolExecutor`](eos_tool_ports::ToolExecutor) impl; the description and the intent /
 //! terminal flag / hooks come from the externalized
 //! [`ToolConfigSet`](crate::registry::config::ToolConfigSet) (`.eos-agents/tools/*.md`),
 //! which the registry builder stamps onto each `RegisteredTool`.
@@ -20,17 +20,17 @@ use std::sync::Arc;
 use eos_agent_ports::AgentRunApi;
 use eos_llm_client::ToolSpec;
 
-use crate::core::name::ToolName;
-use crate::core::result::OutputShape;
 use crate::registry::config::{ToolConfig, ToolConfigSet};
-use crate::registry::ToolRegistry;
-use crate::runtime::executor::{RegisteredTool, ToolExecutor};
+use eos_tool_ports::OutputShape;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolRegistry;
+use eos_tool_ports::{RegisteredTool, ToolExecutor};
 
 use services::InertSandboxTransport;
 pub use services::{
     AttemptSubmissionService, CommandSessionToolService, CommandToolService, HookServices,
-    RootSubmissionService, SandboxToolService, SkillToolService, SubagentToolService,
-    WorkflowToolService,
+    IsolatedWorkspaceToolService, RootSubmissionService, SandboxToolService, SkillToolService,
+    SubagentToolService, WorkflowToolService,
 };
 
 /// The per-caller scope a tool registry is built for: the caller's

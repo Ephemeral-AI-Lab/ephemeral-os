@@ -10,7 +10,7 @@ use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRegistryBuilder, AgentRole};
-use eos_tools::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan};
+use eos_tool_ports::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan};
 use eos_types::{
     DeferredGoal, GeneratorSubmission, JsonObject, PlanDisposition, PlanNodeId, ReducerSubmission,
     RequestId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,

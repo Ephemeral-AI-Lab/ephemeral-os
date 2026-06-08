@@ -10,16 +10,16 @@ use serde_json::json;
 
 use eos_types::{StartWorkflowRequest, WorkflowApi};
 
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::{OutputShape, ToolResult};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
-use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
-use crate::runtime::executor::ToolExecutor;
 use crate::WorkflowToolService;
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolError;
+use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolRegistry;
+use eos_tool_ports::{OutputShape, ToolResult};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct DelegateWorkflowInput {

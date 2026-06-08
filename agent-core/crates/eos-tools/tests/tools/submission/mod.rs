@@ -11,8 +11,8 @@ use serde_json::{json, Value};
 
 use crate::support::{metadata, FakeTransport};
 use crate::tools::{AttemptSubmissionService, CallerScope, SandboxToolService, SkillToolService};
-use crate::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, Sealed, SubmissionAck};
-use crate::{ToolError, ToolName, ToolRegistry};
+use eos_tool_ports::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, Sealed, SubmissionAck};
+use eos_tool_ports::{ToolError, ToolName, ToolRegistry};
 
 #[derive(Debug)]
 struct RecordingAttemptPort {
@@ -94,7 +94,7 @@ fn registry(port: Option<Arc<dyn AttemptSubmissionPort>>) -> ToolRegistry {
     )
 }
 
-fn attempt_ctx() -> crate::ExecutionMetadata {
+fn attempt_ctx() -> eos_tool_ports::ExecutionMetadata {
     let mut ctx = metadata();
     ctx.attempt_id = Some(AttemptId::new_v4());
     ctx.task_id = Some(TaskId::new_v4());
@@ -105,8 +105,8 @@ async fn execute(
     registry: &ToolRegistry,
     name: ToolName,
     input: JsonObject,
-    ctx: &crate::ExecutionMetadata,
-) -> Result<crate::ToolResult, ToolError> {
+    ctx: &eos_tool_ports::ExecutionMetadata,
+) -> Result<eos_tool_ports::ToolResult, ToolError> {
     registry
         .get(name)
         .expect("registered")

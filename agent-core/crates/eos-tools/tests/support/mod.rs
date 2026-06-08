@@ -17,11 +17,7 @@ use eos_types::{
     RequestStore, Sealed, Task, TaskStatus, TaskStore,
 };
 
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::{OutputShape, ToolResult};
-use crate::runtime::executor::{RegisteredTool, ToolExecutor};
+use eos_tool_ports::ExecutionMetadata;
 
 type Handler = dyn Fn(DaemonOp, &JsonObject) -> Result<JsonObject, SandboxPortError> + Send + Sync;
 
@@ -265,46 +261,4 @@ pub(crate) fn metadata() -> ExecutionMetadata {
         workspace_root: String::new(),
         conversation: Arc::from(Vec::new()),
     }
-}
-
-/// A no-op executor returning a fixed success output (for registry/dispatch
-/// stubs).
-struct NoopExecutor;
-
-#[async_trait]
-impl ToolExecutor for NoopExecutor {
-    async fn execute(
-        &self,
-        _input: &JsonObject,
-        _ctx: &ExecutionMetadata,
-    ) -> Result<ToolResult, ToolError> {
-        Ok(ToolResult::ok("ok"))
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-struct StubInput {}
-
-/// A registry of stub tools (correct intent/terminal/hooks, no-op bodies) for the
-/// named tools — used by the dispatch predicate tests.
-pub(crate) fn registry_with(names: &[ToolName]) -> crate::registry::ToolRegistry {
-    // Stub specs, but real intent/terminal/hooks sourced from the externalized
-    // config so the dispatch-predicate tests see production policy.
-    let config = crate::tools::repo_tools_config();
-    let mut registry = crate::registry::ToolRegistry::new();
-    for &name in names {
-        let cfg = config.get(name);
-        let spec = crate::registry::spec::text_spec(name, "stub", schemars::schema_for!(StubInput));
-        let tool = RegisteredTool::new(
-            name,
-            cfg.intent,
-            cfg.terminal,
-            spec,
-            OutputShape::Text,
-            Arc::new(NoopExecutor),
-        )
-        .with_hooks(cfg.hooks.clone());
-        registry.register(tool);
-    }
-    registry
 }

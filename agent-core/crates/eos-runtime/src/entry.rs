@@ -12,7 +12,7 @@ use std::sync::{Arc, OnceLock};
 use anyhow::{Context, Result};
 use eos_agent_def::AgentName;
 use eos_agent_ports::{
-    AgentName as AgentPortName, AgentRunApi, AgentRunRecordKind, SpawnAgentRequest,
+    AgentName as AgentPortName, AgentRunApi, AgentRunMessageRecordKind, SpawnAgentRequest,
 };
 use eos_agent_runner::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
@@ -206,12 +206,26 @@ pub async fn run_request(
     // completion through the `AgentLoopLauncher` outcome channel.
     let summary = match AgentName::new("root") {
         Ok(root_name) => {
-            let agent_runs = Arc::new(RunnerAgentRunService::new(
-                services.agent_core.agent_registry.clone(),
-                loop_launcher,
-                services.db.agent_run_store.clone(),
-                services.message_records.message_records.clone(),
-            ));
+            let agent_runs = Arc::new(
+                RunnerAgentRunService::new(
+                    services.agent_core.agent_registry.clone(),
+                    loop_launcher,
+                    services.db.agent_run_store.clone(),
+                    services.message_records.message_records.clone(),
+                )
+                .with_runtime_state_hooks(
+                    {
+                        let agent_state = services.agent_state.clone();
+                        move |request, agent_run_id| {
+                            agent_state.record_spawn_request(request, agent_run_id)
+                        }
+                    },
+                    {
+                        let agent_state = services.agent_state.clone();
+                        move |agent_run_id| agent_state.remove(agent_run_id)
+                    },
+                ),
+            );
             let agent_run_api: Arc<dyn AgentRunApi> = agent_runs.clone();
             let _ = agent_run_api_cell.set(agent_run_api);
             match agent_runs
@@ -229,7 +243,7 @@ pub async fn run_request(
                     workspace_root: workspace_root.clone(),
                     is_isolated_workspace_mode: false,
                     persist: true,
-                    record_kind: AgentRunRecordKind::Root,
+                    record_kind: AgentRunMessageRecordKind::Root,
                 })
                 .await
             {

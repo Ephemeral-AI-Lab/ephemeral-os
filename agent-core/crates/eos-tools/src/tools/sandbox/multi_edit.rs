@@ -4,12 +4,12 @@ use eos_types::JsonObject;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::ToolResult;
 use crate::runtime::execution::parse_input;
-use crate::runtime::executor::ToolExecutor;
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolError;
+use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolResult;
 
 use super::super::SandboxToolService;
 use super::lib::{default_empty, default_false, edit_output, request_base, resolve_path};

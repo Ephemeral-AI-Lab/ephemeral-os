@@ -1,5 +1,5 @@
-use crate::core::name::ToolName;
-use crate::core::result::ToolResult;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolResult;
 
 #[cfg(test)]
 #[path = "../../../tests/tools/subagent/mod.rs"]

@@ -17,7 +17,6 @@ pub(crate) trait AgentLoopHooks: Send + Sync {
 }
 
 /// Hook implementation that does nothing.
-#[allow(dead_code)] // Used by tests/runtime composition once the launcher is wired.
 #[derive(Debug, Default)]
 pub(crate) struct NoopAgentLoopHooks;
 

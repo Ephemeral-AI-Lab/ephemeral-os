@@ -9,7 +9,7 @@ mod reducer;
 mod root;
 
 pub(crate) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     root_submission: Option<super::RootSubmissionService>,
     attempt_submission: Option<super::AttemptSubmissionService>,

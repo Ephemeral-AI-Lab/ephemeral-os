@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use eos_tools::PlannerPlan;
+use eos_tool_ports::PlannerPlan;
 use eos_types::{
     execution_outcome_for_submission, Attempt, AttemptClosure, AttemptFailReason, AttemptId,
     AttemptStage, ExecutionRole, GeneratorSubmission, MaterializedPlan, PlannerFailReason,

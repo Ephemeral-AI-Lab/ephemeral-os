@@ -3,7 +3,7 @@
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
 use eos_protocol::ops;
 use serde_json::{json, Value};
@@ -182,10 +182,15 @@ PY
 chmod +x "$pkg/runtime/server.py"
 "#
     );
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        bail!("slow plugin staging command failed: {response}");
-    }
+    // Stage the package on the real container filesystem via the daemon
+    // container directly: a model-facing `exec_command` runs in the fresh
+    // namespace where `/eos` is masked (an empty read-only tmpfs), so it cannot
+    // write the upload tree the daemon reads back. Container exec runs in the
+    // container's main namespace where `/eos/scratch` is the real writable tmpfs.
+    lease
+        .container()
+        .exec(&["sh", "-lc", &cmd])
+        .context("stage slow plugin package")?;
     Ok(staged)
 }
 

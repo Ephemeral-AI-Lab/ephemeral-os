@@ -8,7 +8,7 @@ use std::sync::Arc;
 use eos_agent_ports::AgentRunApi;
 
 pub(crate) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     agent_run_service: Option<Arc<dyn AgentRunApi>>,
 ) {

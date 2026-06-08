@@ -19,12 +19,13 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use eos_agent_def::AgentRole;
 use eos_agent_ports::{
-    AgentName as AgentPortName, AgentRunApi, AgentRunRecordKind, SpawnAgentRequest,
+    AgentName as AgentPortName, AgentRunApi, AgentRunMessageRecordKind, SpawnAgentRequest,
     WorkflowTaskRole,
 };
 use eos_agent_runner::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
-use eos_tools::{AttemptSubmissionPort, AttemptSubmissionService};
+use eos_tool_ports::AttemptSubmissionPort;
+use eos_tools::AttemptSubmissionService;
 use eos_types::{AgentRunId, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
@@ -92,12 +93,26 @@ impl AgentRunner for RuntimeAgentRunner {
             self.workflow_service.clone(),
             self.event_callback.clone(),
         );
-        let agent_runs = Arc::new(RunnerAgentRunService::new(
-            self.services.agent_core.agent_registry.clone(),
-            loop_launcher,
-            self.services.db.agent_run_store.clone(),
-            self.services.message_records.message_records.clone(),
-        ));
+        let agent_runs = Arc::new(
+            RunnerAgentRunService::new(
+                self.services.agent_core.agent_registry.clone(),
+                loop_launcher,
+                self.services.db.agent_run_store.clone(),
+                self.services.message_records.message_records.clone(),
+            )
+            .with_runtime_state_hooks(
+                {
+                    let agent_state = self.services.agent_state.clone();
+                    move |request, agent_run_id| {
+                        agent_state.record_spawn_request(request, agent_run_id)
+                    }
+                },
+                {
+                    let agent_state = self.services.agent_state.clone();
+                    move |agent_run_id| agent_state.remove(agent_run_id)
+                },
+            ),
+        );
         let agent_run_api: Arc<dyn AgentRunApi> = agent_runs.clone();
         let _ = agent_run_api_cell.set(agent_run_api);
         let failure_summary = match agent_runs
@@ -115,7 +130,7 @@ impl AgentRunner for RuntimeAgentRunner {
                 workspace_root: self.workspace_root.clone(),
                 is_isolated_workspace_mode: false,
                 persist: true,
-                record_kind: AgentRunRecordKind::WorkflowTask {
+                record_kind: AgentRunMessageRecordKind::WorkflowTask {
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),

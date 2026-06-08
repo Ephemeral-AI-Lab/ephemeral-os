@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use schemars::schema_for;
 
-use crate::core::name::ToolName;
-use crate::core::result::OutputShape;
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::json_spec;
-use crate::registry::ToolRegistry;
+use eos_tool_ports::OutputShape;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolRegistry;
 
 use super::super::super::register_tool;
 use super::super::{

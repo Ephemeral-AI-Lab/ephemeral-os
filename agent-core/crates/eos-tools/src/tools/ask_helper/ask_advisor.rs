@@ -8,22 +8,23 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_ports::{
-    AgentName, AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunRecordKind, SpawnAgentRequest,
+    AgentName, AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome,
+    SpawnAgentRequest,
 };
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::{OutputShape, ToolResult};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
-use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
-use crate::runtime::executor::ToolExecutor;
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolError;
+use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolRegistry;
+use eos_tool_ports::{OutputShape, ToolResult};
 
 use super::advisor_prompt::build_advisor_messages;
 
@@ -86,10 +87,10 @@ impl ToolExecutor for AskAdvisor {
                 is_isolated_workspace_mode: false,
                 persist: true,
                 record_kind: parent_agent_run_id
-                    .map(|parent_agent_run_id| AgentRunRecordKind::Advisor {
+                    .map(|parent_agent_run_id| AgentRunMessageRecordKind::Advisor {
                         parent_agent_run_id,
                     })
-                    .unwrap_or(AgentRunRecordKind::Agent),
+                    .unwrap_or(AgentRunMessageRecordKind::Agent),
             })
             .await
         {

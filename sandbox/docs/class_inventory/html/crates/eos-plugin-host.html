@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin-host · src/lib.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin-host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>50</b><span>items</span></div>
+  <div><b>23</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-plugin-host.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin-host--src-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_router</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin-host--src-ppc-router-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-plugin-host--src-ppc-router-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-plugin-host--src-ppc-router-rs.html"><span>ppc_router.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-plugin-host/src/lib.rs PpcError">
+  <div class="module-head">
+    <div>
+      <h2>src/lib.rs</h2>
+      <p class="path">module <code>lib</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-PpcError-28" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PpcError pub pub enum PpcError crates/eos-plugin-host/src/lib.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>PpcError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-plugin-host.html#item-enum-PpcError-28">PpcError</a></code>
+  <p class="docstring">Failures surfaced by the plugin PPC transport and package pipeline.<br>This is the local error the moved transport/package code raises in place of<br>the daemon's `DaemonError`; the daemon re-maps each variant back onto its own<br>error (preserving the inner [`eos_plugin::PluginError`], so the dispatcher<br>still classifies `ForbiddenInIsolatedWorkspace` correctly).</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Plugin</td><td><code>0: eos_plugin :: PluginError</code></td></tr><tr><td>Protocol</td><td><code>0: eos_protocol :: ProtocolError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>LockPoisoned</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>Callback</td><td><code>0: String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-plugin-host/src/lib.rs:28</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin-host/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Host-neutral plugin PPC transport and package publish/setup.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This intermediate host crate sits between the contract-only `eos-plugin`</span>
+<span class="rs-comment">//! leaf and the daemon: `eos-daemon` → this crate → `eos-plugin`. It owns the</span>
+<span class="rs-comment">//! pieces of the plugin facade that are pure host glue with no OCC / overlay /</span>
+<span class="rs-comment">//! daemon-state edge:</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! * [`PpcClient`] — the daemon-side PPC request/reply transport over a</span>
+<span class="rs-comment">//!   connected service socket, including the multiplexing reader thread and the</span>
+<span class="rs-comment">//!   plugin-originated callback bridge.</span>
+<span class="rs-comment">//! * package publish/setup ([`ensure_package`], [`package_roots`], …).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The OCC single writer, the per-op overlay, the live process registry, and the</span>
+<span class="rs-comment">//! OCC callback body stay **daemon-owned**: the daemon injects its callback as a</span>
+<span class="rs-comment">//! plain `FnMut(PpcEnvelope) -&gt; Result&lt;_, PpcError&gt;` closure, never a second</span>
+<span class="rs-comment">//! commit queue. This crate gains no dependency toward the daemon; the daemon</span>
+<span class="rs-comment">//! folds [`PpcError`] onto its own `DaemonError`.</span>
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">mod</span> package;
+<span class="rs-kw">mod</span> ppc_router;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> package::{
+    ensure_package, needs_upload_response, package_roots, <a class="symbol-link rs-type" href="eos-plugin-host--src-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>, <a class="symbol-link rs-type" href="eos-plugin-host--src-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ppc_router::{read_frame, <a class="symbol-link rs-type" href="eos-plugin-host--src-ppc-router-rs.html#item-struct-PpcClient-29">PpcClient</a>};
+
+<span class="rs-comment">/// Failures surfaced by the plugin PPC transport and package pipeline.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// This is the local error the moved transport/package code raises in place of</span>
+<span class="rs-comment">/// the daemon's `DaemonError`; the daemon re-maps each variant back onto its own</span>
+<span class="rs-comment">/// error (preserving the inner [`eos_plugin::PluginError`], so the dispatcher</span>
+<span class="rs-comment">/// still classifies `ForbiddenInIsolatedWorkspace` correctly).</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin-host.html#item-enum-PpcError-28">PpcError</a> {
+    <span class="rs-comment">/// A typed plugin-contract failure (PPC framing, ensure, manifest, …).</span>
+    #[error(transparent)]
+    <span class="rs-type">Plugin</span>(#[from] eos_plugin::<span class="rs-type">PluginError</span>),
+
+    <span class="rs-comment">/// A PPC envelope could not be framed / parsed.</span>
+    #[error(transparent)]
+    <span class="rs-type">Protocol</span>(#[from] eos_protocol::<span class="rs-type">ProtocolError</span>),
+
+    <span class="rs-comment">/// A socket / filesystem I/O operation failed.</span>
+    #[error(&quot;plugin ppc io error: {0}&quot;)]
+    <span class="rs-type">Io</span>(#[from] std::io::<span class="rs-type">Error</span>),
+
+    <span class="rs-comment">/// A process-local PPC state mutex was poisoned.</span>
+    #[error(&quot;daemon state lock poisoned: {0}&quot;)]
+    <span class="rs-type">LockPoisoned</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
+
+    <span class="rs-comment">/// An injected callback handler failed; carries the handler's message text</span>
+    <span class="rs-comment">/// verbatim so the daemon's re-map reproduces the original error string.</span>
+    #[error(&quot;{0}&quot;)]
+    <span class="rs-type">Callback</span>(<span class="rs-type">String</span>),
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

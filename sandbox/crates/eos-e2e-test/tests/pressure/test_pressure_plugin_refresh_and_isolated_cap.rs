@@ -485,10 +485,13 @@ PY
 chmod +x "$pkg/runtime/server.py"
 "#
     );
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        bail!("service package staging command failed: {response}");
-    }
+    // Stage through the daemon container directly: a model-facing `exec_command`
+    // runs in the fresh namespace where `/eos` is a masked empty tmpfs and cannot
+    // write the upload tree the daemon reads back.
+    lease
+        .container()
+        .exec(&["sh", "-lc", &cmd])
+        .context("stage generic service package")?;
     Ok(staged)
 }
 

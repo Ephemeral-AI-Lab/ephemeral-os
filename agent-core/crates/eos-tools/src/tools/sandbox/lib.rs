@@ -5,10 +5,10 @@ use eos_types::JsonObject;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::core::error::ToolError;
-use crate::core::metadata::ExecutionMetadata;
-use crate::core::name::ToolName;
-use crate::core::result::ToolResult;
+use eos_tool_ports::ExecutionMetadata;
+use eos_tool_ports::ToolError;
+use eos_tool_ports::ToolName;
+use eos_tool_ports::ToolResult;
 
 pub(super) mod outputs;
 mod registration;
@@ -23,7 +23,7 @@ pub(super) const MAX_READ_FILE_LINES: u32 = 200;
 pub(super) const MAX_YIELD_TIME_MS: u32 = 30_000;
 
 pub(super) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     sandbox_service: super::super::SandboxToolService,
     command_service: super::super::CommandToolService,

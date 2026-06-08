@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use eos_agent_def::{AgentName, AgentRegistry, AgentRole};
-use eos_tools::PlannerPlan;
+use eos_tool_ports::PlannerPlan;
 use eos_types::{PlanNodeId, Task, TaskId, TaskStatus};
 
 use crate::{Result, WorkflowError};
@@ -414,16 +414,16 @@ mod tests {
         PlanNodeId::new(id).expect("plan node id")
     }
 
-    fn gen(id: &str, needs: &[&str]) -> eos_tools::PlanTask {
-        eos_tools::PlanTask {
+    fn gen(id: &str, needs: &[&str]) -> eos_tool_ports::PlanTask {
+        eos_tool_ports::PlanTask {
             id: pnode(id),
             agent_name: "coder".to_owned(),
             needs: needs.iter().map(|n| pnode(n)).collect(),
         }
     }
 
-    fn red(id: &str, needs: &[&str]) -> eos_tools::PlanReducer {
-        eos_tools::PlanReducer {
+    fn red(id: &str, needs: &[&str]) -> eos_tool_ports::PlanReducer {
+        eos_tool_ports::PlanReducer {
             id: pnode(id),
             needs: needs.iter().map(|n| pnode(n)).collect(),
             prompt: "reduce".to_owned(),
@@ -431,8 +431,8 @@ mod tests {
     }
 
     fn shape_plan(
-        tasks: Vec<eos_tools::PlanTask>,
-        reducers: Vec<eos_tools::PlanReducer>,
+        tasks: Vec<eos_tool_ports::PlanTask>,
+        reducers: Vec<eos_tool_ports::PlanReducer>,
     ) -> PlannerPlan {
         let task_specs = tasks
             .iter()

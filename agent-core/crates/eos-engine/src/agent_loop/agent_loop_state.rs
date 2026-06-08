@@ -4,8 +4,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use eos_agent_ports::{
-    AgentExecutionMetadataService, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind,
-    StartAgentLoopRequest,
+    AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind, StartAgentLoopRequest,
 };
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_tool_ports::{
@@ -24,7 +23,6 @@ use super::{AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory};
 use crate::EngineError;
 
 /// Engine-private mutable loop state.
-#[allow(dead_code)] // Phase 2 API shell; read by the production turn executor in Phase 5.
 pub(crate) struct AgentLoopState {
     /// Agent-run id.
     pub(crate) agent_run_id: AgentRunId,
@@ -38,8 +36,6 @@ pub(crate) struct AgentLoopState {
     pub(crate) tool_call_limit: u32,
     /// Concrete registry for this loop.
     pub(crate) tool_registry: ToolRegistry,
-    /// Metadata rendering service.
-    pub(crate) metadata_service: Arc<dyn AgentExecutionMetadataService>,
     /// Total provider token count when known.
     pub(crate) total_token_count: Option<i64>,
     /// Counted model-requested tool calls.
@@ -84,7 +80,6 @@ impl AgentLoopState {
     pub(crate) fn from_request(
         request: StartAgentLoopRequest,
         tool_registry_factory: &dyn AgentLoopToolRegistryFactory,
-        metadata_service: Arc<dyn AgentExecutionMetadataService>,
         run_services: AgentLoopRunServices,
     ) -> Result<Self, EngineError> {
         let tool_registry =
@@ -106,7 +101,6 @@ impl AgentLoopState {
             max_completion_tokens: request.max_completion_tokens,
             tool_call_limit: request.tool_call_limit,
             tool_registry,
-            metadata_service,
             total_token_count: None,
             tool_calls_used: 0,
             text_only_no_terminal_turns: 0,

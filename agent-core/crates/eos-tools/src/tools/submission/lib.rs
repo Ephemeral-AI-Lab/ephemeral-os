@@ -4,8 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::result::ToolResult;
-use crate::SubmissionAck;
+use eos_tool_ports::SubmissionAck;
+use eos_tool_ports::ToolResult;
 
 /// `Literal["success", "failed"]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]

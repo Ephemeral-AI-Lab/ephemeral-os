@@ -342,32 +342,31 @@ fn stage_lsp_package(lease: &eos_e2e_test::NodeLease<'_>, digest: &str) -> Resul
             cmd.push_str(&format!("chmod +x \"$pkg/{}\"\n", file.path));
         }
     }
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("LSP package staging command failed: {response}");
-    }
+    // Provision the upload tree through the daemon container directly: a
+    // model-facing `exec_command` runs in the fresh namespace where `/eos` is a
+    // masked empty tmpfs, so it cannot write the staged package the daemon reads.
+    lease
+        .container()
+        .exec(&["sh", "-lc", &cmd])
+        .context("stage LSP package")?;
     Ok(staged)
 }
 
 fn assert_container_path(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
-    let response = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": format!("test -f {}", shell_quote(path))}),
-    )?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("expected container path {path}: {response}");
-    }
+    // Probe the real container filesystem (the published package lives under the
+    // masked `/eos`, invisible to a model-facing `exec_command`).
+    lease
+        .container()
+        .exec(&["sh", "-lc", &format!("test -f {}", shell_quote(path))])
+        .with_context(|| format!("expected container path {path}"))?;
     Ok(())
 }
 
 fn assert_container_dir(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
-    let response = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({"cmd": format!("test -d {}", shell_quote(path))}),
-    )?;
-    if response.get("status").and_then(Value::as_str) == Some("error") {
-        anyhow::bail!("expected container dir {path}: {response}");
-    }
+    lease
+        .container()
+        .exec(&["sh", "-lc", &format!("test -d {}", shell_quote(path))])
+        .with_context(|| format!("expected container dir {path}"))?;
     Ok(())
 }
 

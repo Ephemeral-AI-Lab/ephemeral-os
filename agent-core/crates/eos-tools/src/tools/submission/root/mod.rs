@@ -1,7 +1,7 @@
 mod submit_root_outcome;
 
 pub(super) fn register(
-    registry: &mut crate::registry::ToolRegistry,
+    registry: &mut eos_tool_ports::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     root_submission: Option<super::super::RootSubmissionService>,
 ) {

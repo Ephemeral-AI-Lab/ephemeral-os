@@ -24,9 +24,8 @@ use eos_sandbox_port::{
     SandboxProvisionError, SandboxTransport,
 };
 use eos_skills::SkillRegistry;
-use eos_tools::{
-    build_default_registry, CallerScope, SandboxToolService, ToolConfigSet, ToolKey, ToolRegistry,
-};
+use eos_tool_ports::{ToolKey, ToolRegistry};
+use eos_tools::{build_default_registry, CallerScope, SandboxToolService, ToolConfigSet};
 use eos_types::{JsonObject, RequestId, SandboxId};
 
 use super::{
@@ -375,6 +374,7 @@ impl RuntimeServicesBuilder {
             message_records: MessageRecordService {
                 message_records: self.message_records_root.map(AgentMessageRecords::new),
             },
+            agent_state: super::RuntimeAgentStateService::default(),
             cancel_registry: super::RequestCancelRegistry::new(),
         })
     }
