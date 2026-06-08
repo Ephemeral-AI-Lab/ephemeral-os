@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 AGENT_CORE_DIR="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-OUTPUT_DIR="$AGENT_CORE_DIR/docs/class-inventory"
+OUTPUT_DIR="$AGENT_CORE_DIR/docs/class-inventory/html"
 
 BIND="${CLASS_INVENTORY_BIND:-127.0.0.1}"
 PORT="${CLASS_INVENTORY_PORT:-8787}"
@@ -20,7 +20,7 @@ Usage:
 Starts the class-inventory refresh server if needed and opens it in Chrome.
 
 Arguments:
-  page    Optional page under agent-core/docs/class-inventory.
+  page    Optional page under agent-core/docs/class-inventory/html.
           Defaults to index.html.
 
 Examples:

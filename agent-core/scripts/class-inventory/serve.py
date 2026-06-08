@@ -15,7 +15,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 WORKSPACE = SCRIPT_DIR.parents[1]
 MANIFEST = SCRIPT_DIR / "Cargo.toml"
-OUTPUT_DIR = WORKSPACE / "docs" / "class-inventory"
+OUTPUT_DIR = WORKSPACE / "docs" / "class-inventory" / "html"
 CRATES_DIR = OUTPUT_DIR / "crates"
 
 

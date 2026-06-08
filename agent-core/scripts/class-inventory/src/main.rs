@@ -14,7 +14,7 @@ use walkdir::WalkDir;
 
 fn main() -> Result<()> {
     let workspace = find_agent_core_root()?;
-    let out_dir = workspace.join("docs/class-inventory");
+    let out_dir = workspace.join("docs/class-inventory/html");
     let mut inventory = Inventory {
         workspace: "agent-core".to_string(),
         generated_by: "scripts/class-inventory".to_string(),
