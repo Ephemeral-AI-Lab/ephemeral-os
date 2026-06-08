@@ -155,14 +155,12 @@ fn ctx(registry: ToolRegistry) -> QueryContext {
         submission_outcome: None,
         event_source: None,
         prompt_report: None,
-        message_record: None,
         notification_rules: Vec::new(),
         notification_fired: BTreeSet::new(),
         notifier: crate::NotificationService::new(),
         cancellation: crate::AgentRunCancellation::new(),
         foreground: Arc::new(crate::ForegroundExecutorFactory.create(AgentRunId::new_v4())),
         audit: None,
-        run_handles: None,
     }
 }
 
@@ -348,7 +346,6 @@ async fn ask_advisor_dispatches_as_normal_tool() {
         ToolResult::ok("advisor result"),
     ));
     let mut ctx = ctx(registry);
-    ctx.run_handles = None;
 
     let calls = [ToolUseRequest {
         tool_use_id: "toolu-advisor".parse().expect("valid id"),

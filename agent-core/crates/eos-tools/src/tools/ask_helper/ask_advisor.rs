@@ -7,9 +7,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_def::AgentName;
-use eos_agent_runner::{
-    AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunRecordKind, SpawnAgentRequest,
+use eos_agent_ports::{
+    AgentName, AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunRecordKind, SpawnAgentRequest,
 };
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
@@ -67,16 +66,10 @@ impl ToolExecutor for AskAdvisor {
                 "ask_advisor is unavailable: the agent-run service is not wired for this run",
             ));
         };
-        let Ok(advisor_name) = AgentName::new("advisor") else {
-            return Ok(ToolResult::error(
-                "ask_advisor: agent definition 'advisor' not registered.",
-            ));
-        };
-
         let parent_agent_run_id = ctx.agent_run_id.clone();
         let advisor_run_id = match agent_run_service
             .spawn_agent(SpawnAgentRequest {
-                agent_name: advisor_name,
+                agent_name: AgentName::new("advisor").expect("advisor agent name is valid"),
                 agent_run_id: None,
                 initial_messages: build_advisor_messages(
                     ctx,

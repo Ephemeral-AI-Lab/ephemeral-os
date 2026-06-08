@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-engine · src/agent_loop/assistant_turn_executor.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-engine File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>48</b><span>modules</span></div>
+  <div><b>324</b><span>items</span></div>
+  <div><b>317</b><span>fields</span></div>
+  <div><b>244</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">agent_loop</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-agent-loop-agent-loop-executor-rs.html"><span>agent_loop_executor.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html"><span>agent_loop_state.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html"><span>assistant_turn_executor.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-agent-loop-contracts-rs.html"><span>contracts.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-engine--src-agent-loop-launcher-rs.html"><span>launcher.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-agent-loop-loop-hooks-rs.html"><span>loop_hooks.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-engine--src-agent-loop-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><span class="folder">background_session_manager</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html"><span>command_session_manager.rs</span><small>5/5</small></a></li><li><a class="file-link" href="eos-engine--src-background-background-session-manager-mod-rs.html"><span>mod.rs</span><small>7/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html"><span>subagent_session_manager.rs</span><small>6/12</small></a></li><li><a class="file-link" href="eos-engine--src-background-background-session-manager-workflow-session-manager-rs.html"><span>workflow_session_manager.rs</span><small>5/2</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-notification-rs.html"><span>notification.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>4/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="agent_loop::assistant_turn_executor crates/eos-engine/src/agent_loop/assistant_turn_executor.rs AssistantTurnResult AssistantTurnExecutor ProviderToolAssistantTurnExecutor impl ProviderToolAssistantTurnExecutor impl AssistantTurnExecutor for ProviderToolAssistantTurnExecutor">
+  <div class="module-head">
+    <div>
+      <h2>src/agent_loop/assistant_turn_executor.rs</h2>
+      <p class="path">module <code>agent_loop::assistant_turn_executor</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>2 impls</span>
+      <span>0 fns</span>
+      <span>3 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ProviderToolAssistantTurnExecutor-32" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct ProviderToolAssistantTurnExecutor pub(crate) pub(crate) struct ProviderToolAssistantTurnExecutor crates/eos-engine/src/agent_loop/assistant_turn_executor.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProviderToolAssistantTurnExecutor</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-struct-ProviderToolAssistantTurnExecutor-32">ProviderToolAssistantTurnExecutor</a></code>
+  <p class="docstring">Provider/tool implementation placeholder for production composition.</p>
+  <div class="tags"><span>allow: dead_code</span><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-38"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-executor-rs.html#method-new-27">new</a> () -&gt; Self</code><p class="docstring">Build the provider/tool assistant-turn executor.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build the provider/tool assistant-turn executor.</span>
+    #[allow(dead_code)] <span class="rs-comment">// Called by the runtime composition phase of this migration.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-executor-rs.html#method-new-27">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-trait-AssistantTurnExecutor-22">AssistantTurnExecutor</a> for <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-struct-ProviderToolAssistantTurnExecutor-32">ProviderToolAssistantTurnExecutor</a></code></summary><table><tbody><tr id="method-execute-assistant-turn-48"><td>method</td><td>execute_assistant_turn</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#method-execute-assistant-turn-25">execute_assistant_turn</a> (&amp; self , _state : &amp; mut <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a> , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#method-execute-assistant-turn-25">execute_assistant_turn</a>(
+        &amp;<span class="rs-self">self</span>,
+        _state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>::<span class="rs-type">Internal</span>(
+            &quot;provider/tool assistant-turn executor is not wired yet&quot;.to_owned(),
+        ))
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/agent_loop/assistant_turn_executor.rs:32</p>
+</article><article id="item-enum-AssistantTurnResult-9" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AssistantTurnResult pub(crate) pub(crate) enum AssistantTurnResult crates/eos-engine/src/agent_loop/assistant_turn_executor.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>AssistantTurnResult</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a></code>
+  <p class="docstring">Result of one assistant turn.</p>
+  <div class="tags"><span>allow: dead_code</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Continue</td><td><code></code></td></tr><tr><td>TerminalToolSubmitted</td><td><code>outcome: ToolResult</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-engine/src/agent_loop/assistant_turn_executor.rs:9</p>
+</article><article id="item-trait-AssistantTurnExecutor-22" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AssistantTurnExecutor pub(crate) pub(crate) trait AssistantTurnExecutor crates/eos-engine/src/agent_loop/assistant_turn_executor.rs  execute_assistant_turn async fn execute_assistant_turn (&amp; self , state : &amp; mut AgentLoopState ,) -&gt; Result &lt; AssistantTurnResult , EngineError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>AssistantTurnExecutor</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) trait <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-trait-AssistantTurnExecutor-22">AssistantTurnExecutor</a></code>
+  <p class="docstring">Executes one complete assistant/model response cycle.</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-execute-assistant-turn-25"><td>required</td><td>execute_assistant_turn</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#method-execute-assistant-turn-25">execute_assistant_turn</a> (&amp; self , state : &amp; mut <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a> , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><p class="docstring">Execute one assistant turn against mutable loop state.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Execute one assistant turn against mutable loop state.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#method-execute-assistant-turn-25">execute_assistant_turn</a>(
+        &amp;<span class="rs-self">self</span>,
+        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-engine/src/agent_loop/assistant_turn_executor.rs:22</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-engine/src/agent_loop/assistant_turn_executor.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! One assistant/model response cycle executor.</span>
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolResult</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>;
+
+<span class="rs-comment">/// Result of one assistant turn.</span>
+#[allow(dead_code)] <span class="rs-comment">// Phase 2 API shell; variants are produced by Phase 5 wiring.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a> {
+    <span class="rs-comment">/// Continue the agent loop.</span>
+    <span class="rs-type">Continue</span>,
+    <span class="rs-comment">/// A terminal tool submitted successfully.</span>
+    <span class="rs-type">TerminalToolSubmitted</span> {
+        <span class="rs-comment">/// Terminal tool result.</span>
+        outcome: <span class="rs-type">ToolResult</span>,
+    },
+}
+
+<span class="rs-comment">/// Executes one complete assistant/model response cycle.</span>
+#[async_trait]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-trait-AssistantTurnExecutor-22">AssistantTurnExecutor</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Execute one assistant turn against mutable loop state.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#method-execute-assistant-turn-25">execute_assistant_turn</a>(
+        &amp;<span class="rs-self">self</span>,
+        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt;;
+}
+
+<span class="rs-comment">/// Provider/tool implementation placeholder for production composition.</span>
+#[allow(dead_code)] <span class="rs-comment">// Constructed when runtime composition switches to AgentLoopLauncher.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-struct-ProviderToolAssistantTurnExecutor-32">ProviderToolAssistantTurnExecutor</a>;
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-struct-ProviderToolAssistantTurnExecutor-32">ProviderToolAssistantTurnExecutor</a> {
+    <span class="rs-comment">/// Build the provider/tool assistant-turn executor.</span>
+    #[allow(dead_code)] <span class="rs-comment">// Called by the runtime composition phase of this migration.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-executor-rs.html#method-new-27">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>
+    }
+}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-trait-AssistantTurnExecutor-22">AssistantTurnExecutor</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-struct-ProviderToolAssistantTurnExecutor-32">ProviderToolAssistantTurnExecutor</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#method-execute-assistant-turn-25">execute_assistant_turn</a>(
+        &amp;<span class="rs-self">self</span>,
+        _state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-16">AgentLoopState</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-assistant-turn-executor-rs.html#item-enum-AssistantTurnResult-9">AssistantTurnResult</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>::<span class="rs-type">Internal</span>(
+            &quot;provider/tool assistant-turn executor is not wired yet&quot;.to_owned(),
+        ))
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

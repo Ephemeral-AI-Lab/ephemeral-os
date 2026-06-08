@@ -9,9 +9,9 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_agent_runner::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
+use eos_agent_ports::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tools::{
+use eos_tool_ports::{
     BackgroundSessionCounts, CommandSessionToolService, SubagentToolService, WorkflowToolService,
 };
 use eos_types::AgentRunId;
@@ -25,8 +25,6 @@ use self::workflow_session_manager::{
 use super::notification::BackgroundNotificationEmitter;
 use crate::notifications::NotificationService;
 use crate::query::{QueryContext, QueryExitReason};
-use crate::runtime::{AgentRunControlFactory, AgentRunService};
-use crate::EngineRunHandles;
 
 type BackgroundTeardownFuture = Pin<Box<dyn Future<Output = BackgroundSessionCounts> + Send>>;
 type BackgroundTeardownCallback = Arc<dyn Fn(String) -> BackgroundTeardownFuture + Send + Sync>;
@@ -80,7 +78,7 @@ trait BackgroundSessionManager {
 /// Per-agent-run aggregate for background session accounting and lifecycle.
 pub(super) struct BackgroundSessionRuntime {
     agent_run_id: AgentRunId,
-    agent_run_service: Arc<AgentRunService>,
+    agent_run_service: Arc<dyn AgentRunApi>,
     subagent_session_manager: SubagentSessionManager,
     workflow_session_manager: WorkflowSessionManager,
     command_session_manager: CommandSessionManager,
@@ -92,7 +90,7 @@ pub(super) struct BackgroundSessionRuntime {
 impl BackgroundSessionRuntime {
     pub(super) fn new(
         agent_run_id: AgentRunId,
-        agent_run_service: Arc<AgentRunService>,
+        agent_run_service: Arc<dyn AgentRunApi>,
         command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         notifications: NotificationService,
@@ -141,7 +139,7 @@ impl BackgroundSessionRuntime {
         &self.subagent_session_manager
     }
 
-    pub(super) fn agent_run_service(&self) -> &Arc<AgentRunService> {
+    pub(super) fn agent_run_service(&self) -> &Arc<dyn AgentRunApi> {
         &self.agent_run_service
     }
 
@@ -184,17 +182,16 @@ impl BackgroundManagers {
     #[must_use]
     pub fn new(
         agent_run_id: AgentRunId,
-        handles: EngineRunHandles,
+        agent_run_service: Arc<dyn AgentRunApi>,
         command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         notifications: NotificationService,
-        control_factory: AgentRunControlFactory,
         workflow_service: &Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     ) -> Self {
         Self {
             runtime: Arc::new(BackgroundSessionRuntime::new(
                 agent_run_id,
-                Arc::new(AgentRunService::new(handles, control_factory)),
+                agent_run_service,
                 command_service,
                 completion_poll_interval,
                 notifications,

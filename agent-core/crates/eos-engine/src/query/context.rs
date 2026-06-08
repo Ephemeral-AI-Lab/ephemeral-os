@@ -6,21 +6,28 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_runner::AgentRunRecordHandle;
+use eos_agent_ports::StartAgentLoopRequest;
 use eos_audit::AuditSink;
 use eos_llm_client::LlmRequest;
-use eos_tools::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
+use eos_tool_ports::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
 use eos_types::{AgentRunId, TaskId};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AgentRunCancellation, EngineError, EngineRunHandles, ForegroundExecutor, NotificationRule,
-    NotificationService, PromptReportRecorder, StreamEvent,
+    AgentRunCancellation, EngineError, ForegroundExecutor, NotificationRule, NotificationService,
+    PromptReportRecorder, StreamEvent,
 };
 
 /// The engine stream returned by one model turn.
 pub type EngineStream = Pin<Box<dyn Stream<Item = Result<StreamEvent, EngineError>> + Send>>;
+
+/// Per-loop event source factory.
+pub type EventSourceFactory =
+    Arc<dyn Fn(&StartAgentLoopRequest) -> Arc<dyn EventSource> + Send + Sync>;
+
+/// Per-run stream-event callback.
+pub type EventCallback = Arc<dyn Fn(&StreamEvent) + Send + Sync>;
 
 /// A per-agent stream source. Production adapts an `LlmClient`; tests can replay
 /// scripted engine events while still exercising the real loop.
@@ -80,8 +87,6 @@ pub struct QueryContext {
     pub event_source: Option<Arc<dyn EventSource>>,
     /// Optional prompt-report recorder.
     pub prompt_report: Option<PromptReportRecorder>,
-    /// Optional file-backed message-record handle for this agent run.
-    pub message_record: Option<AgentRunRecordHandle>,
     /// Declarative notification rules.
     pub notification_rules: Vec<Arc<dyn NotificationRule>>,
     /// Fire-once notification names already emitted.
@@ -100,11 +105,6 @@ pub struct QueryContext {
     pub foreground: Arc<ForegroundExecutor>,
     /// Optional agent-core observability sink.
     pub audit: Option<Arc<dyn AuditSink>>,
-    /// The explicit run handles the engine-driven advisor dispatch needs to
-    /// spawn a child `run_agent`. `None` in tests that never exercise
-    /// `ask_advisor`; the gate itself reads only the transcript, never these
-    /// handles.
-    pub run_handles: Option<EngineRunHandles>,
 }
 
 impl std::fmt::Debug for QueryContext {

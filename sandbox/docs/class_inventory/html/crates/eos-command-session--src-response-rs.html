@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>12</b><span>modules</span></div>
-  <div><b>65</b><span>items</span></div>
-  <div><b>77</b><span>fields</span></div>
+  <div><b>68</b><span>items</span></div>
+  <div><b>76</b><span>fields</span></div>
   <div><b>58</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>5/7</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link active" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>6/9</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link active" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="response crates/eos-command-session/src/response.rs CommandResponse impl CommandResponse CommandSessionCompletion CollectCompletedResponse">
   <div class="module-head">
     <div>
@@ -171,7 +171,7 @@
             status: &quot;running&quot;.to_owned(),
             exit_code: <span class="rs-type">None</span>,
             stdout,
-            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             command_session_id: <span class="rs-type">Some</span>(command_session_id),
             workspace_mode: <span class="rs-type">None</span>,
             metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
@@ -186,7 +186,7 @@
             status: &quot;cancelled&quot;.to_owned(),
             exit_code: <span class="rs-type">None</span>,
             stdout,
-            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             command_session_id: <span class="rs-type">None</span>,
             workspace_mode: <span class="rs-type">None</span>,
             metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
@@ -200,7 +200,7 @@
         <span class="rs-self">Self</span> {
             status: &quot;error&quot;.to_owned(),
             exit_code: <span class="rs-type">None</span>,
-            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             stderr: stderr.into(),
             command_session_id: <span class="rs-type">None</span>,
             workspace_mode: <span class="rs-type">None</span>,
@@ -211,7 +211,7 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-command-session/src/response.rs:8</p>
-</article><article id="item-struct-CommandSessionCompletion-157" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionCompletion pub pub struct CommandSessionCompletion crates/eos-command-session/src/response.rs command_session_id String caller_id String command String result CommandResponse notification_result CommandResponse ">
+</article><article id="item-struct-CommandSessionCompletion-157" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionCompletion pub pub struct CommandSessionCompletion crates/eos-command-session/src/response.rs command_session_id String caller_id String command String result CommandResponse ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandSessionCompletion</h3>
@@ -220,20 +220,20 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a></code>
   <p class="docstring">A settled command session parked for the agent-core heartbeat to drain. The<br>daemon's workspace-run registry owns the completion queue; this is the shared<br>DTO it stores and the wire layer serializes.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>result</td><td><code><a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code></td></tr><tr><td>pub</td><td>notification_result</td><td><code><a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>result</td><td><code><a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code></td></tr></tbody></table>
 
   <p class="source">crates/eos-command-session/src/response.rs:157</p>
-</article><article id="item-struct-CollectCompletedResponse-169" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CollectCompletedResponse pub pub struct CollectCompletedResponse crates/eos-command-session/src/response.rs success bool completions Vec &lt; CommandSessionCompletion &gt; ">
+</article><article id="item-struct-CollectCompletedResponse-168" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CollectCompletedResponse pub pub struct CollectCompletedResponse crates/eos-command-session/src/response.rs success bool completions Vec &lt; CommandSessionCompletion &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CollectCompletedResponse</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-169">CollectCompletedResponse</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-168">CollectCompletedResponse</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>completions</td><td><code>Vec &lt; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a> &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-command-session/src/response.rs:169</p>
+  <p class="source">crates/eos-command-session/src/response.rs:168</p>
 </article></div>
 </section></div>
 </main>
@@ -271,7 +271,7 @@
             status: &quot;running&quot;.to_owned(),
             exit_code: <span class="rs-type">None</span>,
             stdout,
-            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             command_session_id: <span class="rs-type">Some</span>(command_session_id),
             workspace_mode: <span class="rs-type">None</span>,
             metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
@@ -284,7 +284,7 @@
             status: &quot;cancelled&quot;.to_owned(),
             exit_code: <span class="rs-type">None</span>,
             stdout,
-            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             command_session_id: <span class="rs-type">None</span>,
             workspace_mode: <span class="rs-type">None</span>,
             metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
@@ -296,7 +296,7 @@
         <span class="rs-self">Self</span> {
             status: &quot;error&quot;.to_owned(),
             exit_code: <span class="rs-type">None</span>,
-            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             stderr: stderr.into(),
             command_session_id: <span class="rs-type">None</span>,
             workspace_mode: <span class="rs-type">None</span>,
@@ -407,11 +407,10 @@
     <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> command: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> result: <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
-    <span class="rs-kw">pub</span> notification_result: <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-169">CollectCompletedResponse</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-168">CollectCompletedResponse</a> {
     <span class="rs-kw">pub</span> success: bool,
     <span class="rs-kw">pub</span> completions: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a>&gt;,
 }

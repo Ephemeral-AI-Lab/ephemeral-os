@@ -44,7 +44,7 @@ mod tests {
     use std::sync::Arc;
 
     use eos_llm_client::{ContentBlock, MessageRole};
-    use eos_tools::ToolRegistry;
+    use eos_tool_ports::ToolRegistry;
     use eos_types::{AgentRunId, JsonObject};
 
     use super::*;
@@ -70,14 +70,12 @@ mod tests {
             submission_outcome: None,
             event_source: None,
             prompt_report: None,
-            message_record: None,
             notification_rules: Vec::new(),
             notification_fired: BTreeSet::new(),
             notifier: NotificationService::new(),
             cancellation: crate::AgentRunCancellation::new(),
             foreground: Arc::new(crate::ForegroundExecutorFactory.create(AgentRunId::new_v4())),
             audit: None,
-            run_handles: None,
         }
     }
 

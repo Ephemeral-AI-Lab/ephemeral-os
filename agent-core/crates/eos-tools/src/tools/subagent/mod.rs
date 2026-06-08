@@ -6,7 +6,7 @@ mod run_subagent;
 
 use std::sync::Arc;
 
-use eos_agent_runner::AgentRunApi;
+use eos_agent_ports::AgentRunApi;
 
 use super::{CallerScope, SubagentToolService};
 

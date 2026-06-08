@@ -5,7 +5,7 @@ use std::pin::Pin;
 
 use async_stream::try_stream;
 use eos_llm_client::{ContentBlock, Message, MessageRole, UsageSnapshot};
-use eos_tools::SystemNotification;
+use eos_tool_ports::SystemNotification;
 use eos_types::{JsonObject, ToolUseId};
 use futures::{Stream, StreamExt};
 
@@ -100,26 +100,19 @@ fn tool_result_message(tool_results: Vec<ContentBlock>) -> Message {
 }
 
 async fn append_transcript_message(
-    ctx: &QueryContext,
     messages: &mut Vec<Message>,
     message: Message,
 ) -> Result<(), EngineError> {
-    if let Some(message_record) = &ctx.message_record {
-        message_record
-            .append_messages(std::slice::from_ref(&message))
-            .await?;
-    }
     messages.push(message);
     Ok(())
 }
 
 async fn append_notifications(
-    ctx: &QueryContext,
     messages: &mut Vec<Message>,
     notifications: &[SystemNotification],
 ) -> Result<(), EngineError> {
     if let Some(message) = notification_message(notifications) {
-        append_transcript_message(ctx, messages, message).await?;
+        append_transcript_message(messages, message).await?;
     }
     Ok(())
 }
@@ -154,7 +147,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 for notification in &notifications {
                     yield (notification_event(ctx, notification), None);
                 }
-                append_notifications(ctx, messages, &notifications).await?;
+                append_notifications(messages, &notifications).await?;
                 yield (terminal_not_submitted_event(ctx)?, None);
                 break;
             }
@@ -163,7 +156,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
             for notification in &notifications {
                 yield (notification_event(ctx, notification), None);
             }
-            append_notifications(ctx, messages, &notifications).await?;
+            append_notifications(messages, &notifications).await?;
 
             let run_request = build_query_run_request(ctx, messages).await;
             if let Some(recorder) = &ctx.prompt_report {
@@ -222,7 +215,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 }
             }
 
-            append_transcript_message(ctx, messages, message.clone()).await?;
+            append_transcript_message(messages, message.clone()).await?;
             if tool_uses.is_empty() {
                 ctx.record_text_only_turn();
                 if terminal_submission_failed(ctx) {
@@ -230,7 +223,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                     for notification in &notifications {
                         yield (notification_event(ctx, notification), None);
                     }
-                    append_notifications(ctx, messages, &notifications).await?;
+                    append_notifications(messages, &notifications).await?;
                     yield (terminal_not_submitted_event(ctx)?, None);
                     break;
                 }
@@ -248,7 +241,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                     .await?;
             }
             let result_message = tool_result_message(outcome.tool_results);
-            append_transcript_message(ctx, messages, result_message).await?;
+            append_transcript_message(messages, result_message).await?;
 
             if outcome
                 .submission_outcome
@@ -260,7 +253,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 for notification in &notifications {
                     yield (notification_event(ctx, notification), None);
                 }
-                append_notifications(ctx, messages, &notifications).await?;
+                append_notifications(messages, &notifications).await?;
                 break;
             }
         }

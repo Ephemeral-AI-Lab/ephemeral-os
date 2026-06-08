@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-tool-ports · src/core/intent.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tool-ports File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>15</b><span>modules</span></div>
+  <div><b>72</b><span>items</span></div>
+  <div><b>73</b><span>fields</span></div>
+  <div><b>76</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-tool-ports--src-core-intent-rs.html"><span>intent.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-metadata-rs.html"><span>metadata.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-name-rs.html"><span>name.rs</span><small>2/5</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-core-ports-agent-run-rs.html"><span>agent_run.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-ports-mod-rs.html"><span>mod.rs</span><small>10/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-core-result-rs.html"><span>result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">hooks</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-hooks-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">registry</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-registry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-registry-tool-registry-rs.html"><span>tool_registry.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-runtime-executor-rs.html"><span>executor.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-services-rs.html"><span>services.rs</span><small>4/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::intent crates/eos-tool-ports/src/core/intent.rs ToolIntent impl ToolIntent impl From &lt; Intent &gt; for ToolIntent impl From &lt; ToolIntent &gt; for Intent round_trips_with_sandbox_intent from_wire_round_trips_and_rejects_unknown wire_values_match_rust">
+  <div class="module-head">
+    <div>
+      <h2>src/core/intent.rs</h2>
+      <p class="path">module <code>core::intent</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>3 impls</span>
+      <span>3 fns</span>
+      <span>4 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-ToolIntent-14" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ToolIntent pub pub enum ToolIntent crates/eos-tool-ports/src/core/intent.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ToolIntent</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a></code>
+  <p class="docstring">How a tool is classified for batch-dispatch policy and sandbox routing.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>ReadOnly</td><td><code></code></td></tr><tr><td>WriteAllowed</td><td><code></code></td></tr><tr><td>Lifecycle</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-wire-52"><td>constructor</td><td>from_wire</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a> (value : &amp; str) -&gt; Option &lt; Self &gt;</code><p class="docstring">Parse a wire string into a [`ToolIntent`], or `None` when unknown,<br>reusing [`as_str`](ToolIntent::as_str) as the single source of spelling.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse a wire string into a [`ToolIntent`], or `None` when unknown,</span>
+    <span class="rs-comment">/// reusing [`as_str`](ToolIntent::as_str) as the single source of spelling.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<span class="rs-type">ALL</span>
+            .into_iter()
+            .find(|intent| intent.<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>() == value)
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-42"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The wire string for this intent (the serde `snake_case` form).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The wire string for this intent (the serde `snake_case` form).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span> =&gt; &quot;read_only&quot;,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span> =&gt; &quot;write_allowed&quot;,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span> =&gt; &quot;lifecycle&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; Intent &gt; for <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a></code></summary><table><tbody><tr id="method-from-63"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-tool-ports.html#method-from-37">from</a> (intent : Intent) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports.html#method-from-37">from</a>(intent: <span class="rs-type">Intent</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> intent {
+            <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> =&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>,
+            <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span> =&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>,
+            <span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span> =&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tool-ports/src/core/intent.rs:14</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-round-trips-with-sandbox-intent-87" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn round_trips_with_sandbox_intent private fn round_trips_with_sandbox_intent () crates/eos-tool-ports/src/core/intent.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>round_trips_with_sandbox_intent</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-fn-round-trips-with-sandbox-intent-87">round_trips_with_sandbox_intent</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#item-fn-round-trips-with-sandbox-intent-87">round_trips_with_sandbox_intent</a>() {
+        <span class="rs-kw">for</span> intent <span class="rs-kw">in</span> [
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>,
+        ] {
+            <span class="rs-kw">let</span> sandbox: <span class="rs-type">Intent</span> = intent.into();
+            assert_eq!(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tool-ports.html#method-from-37">from</a>(sandbox), intent);
+            assert_eq!(intent.<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>(), sandbox.as_wire());
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tool-ports/src/core/intent.rs:87</p>
+</article><article id="item-fn-from-wire-round-trips-and-rejects-unknown-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn from_wire_round_trips_and_rejects_unknown private fn from_wire_round_trips_and_rejects_unknown () crates/eos-tool-ports/src/core/intent.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>from_wire_round_trips_and_rejects_unknown</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-fn-from-wire-round-trips-and-rejects-unknown-100">from_wire_round_trips_and_rejects_unknown</a> ()</code>
+  <div class="tags"><span>constructor</span><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#item-fn-from-wire-round-trips-and-rejects-unknown-100">from_wire_round_trips_and_rejects_unknown</a>() {
+        <span class="rs-kw">for</span> intent <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ALL</span> {
+            assert_eq!(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(intent.<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>()), <span class="rs-type">Some</span>(intent));
+        }
+        assert_eq!(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;nope&quot;), <span class="rs-type">None</span>);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tool-ports/src/core/intent.rs:100</p>
+</article><article id="item-fn-wire-values-match-rust-108" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wire_values_match_rust private fn wire_values_match_rust () crates/eos-tool-ports/src/core/intent.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>wire_values_match_rust</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-fn-wire-values-match-rust-108">wire_values_match_rust</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#item-fn-wire-values-match-rust-108">wire_values_match_rust</a>() {
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>).unwrap(),
+            &quot;read_only&quot;
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>).unwrap(),
+            &quot;write_allowed&quot;
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>).unwrap(),
+            &quot;lifecycle&quot;
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tool-ports/src/core/intent.rs:108</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-From---ToolIntent---for-Intent-72" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl From &lt; ToolIntent &gt; for Intent private impl From &lt; ToolIntent &gt; for Intent crates/eos-tool-ports/src/core/intent.rs  from fn from (intent : ToolIntent) -&gt; Self">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl From &lt; ToolIntent &gt; for Intent</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl From &lt; <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a> &gt; for Intent</code>
+  <div class="tags"><span>impl</span><span>trait-impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-from-73"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-tool-ports.html#method-from-37">from</a> (intent : <a class="symbol-link" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports.html#method-from-37">from</a>(intent: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> intent {
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span> =&gt; <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span> =&gt; <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span> =&gt; <span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tool-ports/src/core/intent.rs:72</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tool-ports/src/core/intent.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`ToolIntent`] — the tool-classification intent (read-only / write / lifecycle).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `eos-tools` owns this enum (anchor §5). It shares the three values of</span>
+<span class="rs-comment">//! `eos_sandbox_port::Intent` (the foreground sandbox-call intent) but is a</span>
+<span class="rs-comment">//! distinct, locally-owned contract; the sandbox boundary converts via</span>
+<span class="rs-comment">//! [`From`]/[`Into`] rather than aliasing another crate's type (GC: avoids an</span>
+<span class="rs-comment">//! unrecorded cross-crate ownership inversion). The lifecycle-batch predicate</span>
+<span class="rs-comment">//! (`runtime/dispatch.rs`) and sandbox routing both read this.</span>
+
+<span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">Intent</span>;
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-comment">/// How a tool is classified for batch-dispatch policy and sandbox routing.</span>
+#[derive(
+    <span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>,
+)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a> {
+    <span class="rs-comment">/// Read-only operation (no mutations) — `Intent.READ_ONLY`.</span>
+    <span class="rs-type">ReadOnly</span>,
+    <span class="rs-comment">/// Operation permitted to mutate the workspace — `Intent.WRITE_ALLOWED`.</span>
+    <span class="rs-type">WriteAllowed</span>,
+    <span class="rs-comment">/// Workspace lifecycle operation — `Intent.LIFECYCLE`. Drives the</span>
+    <span class="rs-comment">/// lifecycle-batch policy (§6.6): a lifecycle call executes solo so later</span>
+    <span class="rs-comment">/// calls observe new routing state.</span>
+    <span class="rs-type">Lifecycle</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a> {
+    <span class="rs-comment">/// Every intent, in a stable order — the canonical iteration order, mirrored</span>
+    <span class="rs-comment">/// from [`ToolName::ALL`](crate::ToolName) for totality and [`from_wire`].</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// [`from_wire`]: ToolIntent::from_wire</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">ALL</span>: [<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>; 3] = [
+        <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>,
+        <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>,
+        <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>,
+    ];
+
+    <span class="rs-comment">/// The wire string for this intent (the serde `snake_case` form).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span> =&gt; &quot;read_only&quot;,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span> =&gt; &quot;write_allowed&quot;,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span> =&gt; &quot;lifecycle&quot;,
+        }
+    }
+
+    <span class="rs-comment">/// Parse a wire string into a [`ToolIntent`], or `None` when unknown,</span>
+    <span class="rs-comment">/// reusing [`as_str`](ToolIntent::as_str) as the single source of spelling.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<span class="rs-type">ALL</span>
+            .into_iter()
+            .find(|intent| intent.<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>() == value)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<span class="rs-type">Intent</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports.html#method-from-37">from</a>(intent: <span class="rs-type">Intent</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> intent {
+            <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> =&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>,
+            <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span> =&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>,
+            <span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span> =&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>&gt; <span class="rs-kw">for</span> <span class="rs-type">Intent</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports.html#method-from-37">from</a>(intent: <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> intent {
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span> =&gt; <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span> =&gt; <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span> =&gt; <span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span>,
+        }
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#item-fn-round-trips-with-sandbox-intent-87">round_trips_with_sandbox_intent</a>() {
+        <span class="rs-kw">for</span> intent <span class="rs-kw">in</span> [
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>,
+            <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>,
+        ] {
+            <span class="rs-kw">let</span> sandbox: <span class="rs-type">Intent</span> = intent.into();
+            assert_eq!(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tool-ports.html#method-from-37">from</a>(sandbox), intent);
+            assert_eq!(intent.<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>(), sandbox.as_wire());
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#item-fn-from-wire-round-trips-and-rejects-unknown-100">from_wire_round_trips_and_rejects_unknown</a>() {
+        <span class="rs-kw">for</span> intent <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ALL</span> {
+            assert_eq!(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(intent.<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-as-str-42">as_str</a>()), <span class="rs-type">Some</span>(intent));
+        }
+        assert_eq!(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;nope&quot;), <span class="rs-type">None</span>);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-intent-rs.html#item-fn-wire-values-match-rust-108">wire_values_match_rust</a>() {
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">ReadOnly</span>).unwrap(),
+            &quot;read_only&quot;
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>).unwrap(),
+            &quot;write_allowed&quot;
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-tool-ports--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">Lifecycle</span>).unwrap(),
+            &quot;lifecycle&quot;
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

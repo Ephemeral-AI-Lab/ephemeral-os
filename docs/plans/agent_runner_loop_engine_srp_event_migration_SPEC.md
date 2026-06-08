@@ -48,8 +48,9 @@ Out of scope for this spec:
 
 This spec intentionally avoids an internal type named `AgentRunner` because the
 crate name `eos-agent-runner` already means "agent-run lifecycle". Inside
-`eos-engine`, the full-loop execution type is `AgentLoopExecutor` and the
-one-assistant-turn execution contract is `AssistantTurnExecutor`.
+`eos-engine`, the full-loop execution type is `AgentLoopExecutor`; one
+assistant/model response cycle is a private `AgentLoopExecutor` method, not a
+separate executor trait.
 
 ## 2. Design Rules
 
@@ -57,22 +58,21 @@ one-assistant-turn execution contract is `AssistantTurnExecutor`.
   `eos-agent-ports` launcher contract.
 - `AgentLoopExecutor` owns the full loop from `StartAgentLoopRequest` to
   `AgentLoopOutcome`: control flow, tick sequencing, async polling, lifecycle
-  hooks, and conversion from turn results into loop outcomes.
-- `AssistantTurnExecutor` owns exactly one complete assistant/model response
-  cycle: model request assembly, provider-stream consumption, tool-call batch
-  dispatch, tool-call result incorporation, and terminal submission detection.
-- `AgentLoopExecutor` depends on `AssistantTurnExecutor` through an object-safe
-  trait. The default production dispatch is `Arc<dyn AssistantTurnExecutor>`
-  because runtime wiring selects provider/tool behavior and tests need
-  substitute turn executors.
-- Do not collapse `AssistantTurnExecutor` into `AgentLoopExecutor`. The full
-  loop executor owns when the loop continues or exits; the assistant-turn
-  executor owns the per-response-cycle model/tool mechanics.
+  hooks, private assistant-turn execution, and conversion from turn results into
+  loop outcomes.
+- `AgentLoopExecutor::execute_assistant_turn` owns exactly one complete
+  assistant/model response cycle: model request assembly, provider-stream
+  consumption, tool-call batch dispatch, tool-call result incorporation, and
+  terminal submission detection.
+- Do not introduce a separate assistant-turn executor trait, file, or sibling
+  executor. Tests should substitute lower-level ports such as
+  `ProviderStreamSource`, `ToolRegistry` entries, and hooks.
 - Do not introduce another sibling state object for assistant turns.
-  `AssistantTurnExecutor` receives `&mut AgentLoopState`, uses local variables
-  for one provider response, and commits only durable loop changes back into
-  `AgentLoopState`. If provider-stream parsing needs a helper, name it by the
-  narrow job, for example `ProviderStreamAccumulator` or `ToolCallBatch`.
+  `AgentLoopExecutor::execute_assistant_turn` receives `&mut AgentLoopState`,
+  uses local variables for one provider response, and commits only durable loop
+  changes back into `AgentLoopState`. If provider-stream parsing needs a
+  helper, name it by the narrow job, for example `ProviderStreamAccumulator` or
+  `ToolCallBatch`.
 - `eos-engine` never imports `eos-agent-runner`, `eos-agent-def`, or
   `eos-tools`.
 - `eos-agent-runner` may depend on `eos-agent-ports` and `eos-agent-def`.
@@ -125,8 +125,8 @@ Naming rules for this migration:
   event type, unless a real event bus or queue is introduced.
 - Avoid `AgentManager`, `LoopHandler`, bare `Engine`, `DecisionEngine`,
   `Processor`, `Data`, and `Context` for new target code. Prefer
-  `AgentLoopExecutor`, `AssistantTurnExecutor`, `AgentLoopState`,
-  `AssistantTurnResult`, and `ToolRegistry`.
+  `AgentLoopExecutor`, `AgentLoopState`, `AssistantTurnResult`, and
+  `ToolRegistry`.
 - Lifecycle hooks use the same verb pattern: `on_start`, `on_step`, and
   `on_complete`.
 - Values returned from `submit_*_outcome` tools use the field name `outcome`.
@@ -171,8 +171,7 @@ agent-core/crates/
         mod.rs
         launcher.rs           # TokioAgentLoopLauncher, start_agent_loop facade
         contracts.rs          # AgentLoopToolRegistryFactory and build input
-        agent_loop_executor.rs # AgentLoopExecutor full-loop control flow
-        assistant_turn_executor.rs # AssistantTurnExecutor, AssistantTurnResult, ProviderToolAssistantTurnExecutor
+        agent_loop_executor.rs # AgentLoopExecutor + private assistant-turn execution
         agent_loop_state.rs        # AgentLoopState
         loop_hooks.rs         # AgentLoopHooks, NoopAgentLoopHooks
       query/
@@ -314,7 +313,7 @@ pub struct StartedAgentLoop {
 
 ```rust
 pub struct TokioAgentLoopLauncher {
-    assistant_turn_executor: Arc<dyn AssistantTurnExecutor>,
+    provider_stream_source: Arc<dyn ProviderStreamSource>,
     loop_hooks: Arc<dyn AgentLoopHooks>,
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
     metadata_service: Arc<dyn AgentExecutionMetadataService>,
@@ -324,7 +323,7 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
     fn start_agent_loop(&self, request: StartAgentLoopRequest) -> StartedAgentLoop {
         let (outcome_sender, outcome_receiver) = oneshot::channel();
         let loop_executor = AgentLoopExecutor::new(
-            Arc::clone(&self.assistant_turn_executor),
+            Arc::clone(&self.provider_stream_source),
             Arc::clone(&self.loop_hooks),
             Arc::clone(&self.tool_registry_factory),
             Arc::clone(&self.metadata_service),
@@ -408,7 +407,7 @@ returns a terminal `AgentLoopOutcome`. Its input boundary is the runner-prepared
 
 ```rust
 pub(crate) struct AgentLoopExecutor {
-    assistant_turn_executor: Arc<dyn AssistantTurnExecutor>,
+    provider_stream_source: Arc<dyn ProviderStreamSource>,
     loop_hooks: Arc<dyn AgentLoopHooks>,
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
     metadata_service: Arc<dyn AgentExecutionMetadataService>,
@@ -416,13 +415,13 @@ pub(crate) struct AgentLoopExecutor {
 
 impl AgentLoopExecutor {
     pub(crate) fn new(
-        assistant_turn_executor: Arc<dyn AssistantTurnExecutor>,
+        provider_stream_source: Arc<dyn ProviderStreamSource>,
         loop_hooks: Arc<dyn AgentLoopHooks>,
         tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
         metadata_service: Arc<dyn AgentExecutionMetadataService>,
     ) -> Self {
         Self {
-            assistant_turn_executor,
+            provider_stream_source,
             loop_hooks,
             tool_registry_factory,
             metadata_service,
@@ -447,11 +446,7 @@ impl AgentLoopExecutor {
         loop {
             self.loop_hooks.on_step(&state).await;
 
-            let turn_result = match self
-                .assistant_turn_executor
-                .execute_assistant_turn(&mut state)
-                .await
-            {
+            let turn_result = match self.execute_assistant_turn(&mut state).await {
                 Ok(turn_result) => turn_result,
                 Err(error) => {
                     let outcome = state.loop_failed(error);
@@ -470,36 +465,7 @@ impl AgentLoopExecutor {
             }
         }
     }
-}
-```
 
-An assistant turn is one complete model response cycle, not one user input, not
-one tool call, and not one stream event. One user input can drive many assistant
-turns before the terminal submission. One assistant turn can consume many stream
-events such as thinking deltas, text deltas, and tool-call deltas, then execute
-zero tools, one tool, or a tool-call batch returned by that model response.
-A completed tool call is therefore work inside an assistant turn; it is not the
-loop boundary unless the tool is the terminal submission that produces the final
-`AgentLoopOutcome`.
-
-`AssistantTurnExecutor` is the one-turn execution contract. It does not own loop
-lifecycle, persistence, active-run tracking, or caller waiters:
-
-```rust
-#[async_trait]
-pub trait AssistantTurnExecutor: Send + Sync {
-    async fn execute_assistant_turn(
-        &self,
-        state: &mut AgentLoopState,
-    ) -> Result<AssistantTurnResult, EngineError>;
-}
-
-pub struct ProviderToolAssistantTurnExecutor {
-    provider_stream_source: Arc<dyn ProviderStreamSource>,
-}
-
-#[async_trait]
-impl AssistantTurnExecutor for ProviderToolAssistantTurnExecutor {
     async fn execute_assistant_turn(
         &self,
         state: &mut AgentLoopState,
@@ -523,6 +489,18 @@ impl AssistantTurnExecutor for ProviderToolAssistantTurnExecutor {
 }
 ```
 
+An assistant turn is one complete model response cycle, not one user input, not
+one tool call, and not one stream event. One user input can drive many assistant
+turns before the terminal submission. One assistant turn can consume many stream
+events such as thinking deltas, text deltas, and tool-call deltas, then execute
+zero tools, one tool, or a tool-call batch returned by that model response.
+A completed tool call is therefore work inside an assistant turn; it is not the
+loop boundary unless the tool is the terminal submission that produces the final
+`AgentLoopOutcome`.
+
+`execute_assistant_turn` is private to `AgentLoopExecutor`. It does not own
+persistence, active-run tracking, caller waiters, or a separate state object.
+
 The loop state has a domain name and no generic `Context` suffix:
 
 ```rust
@@ -535,7 +513,7 @@ pub struct AgentLoopState {
     pub completed_turns: u32,
 }
 
-pub enum AssistantTurnResult {
+enum AssistantTurnResult {
     Continue,
     TerminalToolSubmitted {
         outcome: ToolResult,
@@ -906,7 +884,7 @@ boundaries such as `run_subagent` or `ask_advisor`.
 
 | Current | Action | Target |
 | --- | --- | --- |
-| `runtime/agent_loop.rs` | split | `agent_loop/agent_loop_executor.rs` + `agent_loop/assistant_turn_executor.rs` |
+| `runtime/agent_loop.rs` | split | `agent_loop/agent_loop_executor.rs` plus narrow helper modules only when they own a distinct engine-internal job |
 | `runtime/agent_run_service.rs` | remove from engine | runner `agent_run_service.rs` |
 | `runtime/types.rs` | delete/split | `agent_loop/contracts.rs`, runner types |
 | `runtime/control.rs` | delete as bag type | narrow pieces only if still needed |
@@ -969,7 +947,6 @@ Engine crate-internal loop-control names should include:
 ```text
 AgentLoopExecutor
 AgentLoopState
-AssistantTurnExecutor
 AssistantTurnResult
 AgentLoopHooks
 ```
@@ -997,7 +974,6 @@ Move agent/run/loop contracts into a contract-only crate:
 AgentRunService
 ActiveAgentRuns
 AgentLoopExecutor
-AssistantTurnExecutor
 AgentLoopState
 TokioAgentLoopLauncher
 AgentDefinition
@@ -1217,8 +1193,8 @@ boundary:
 | `QueryContext.tool_metadata` / prebuilt `ExecutionMetadata` | `AgentExecutionMetadataService::build_execution_metadata` per tool call |
 | duplicated metadata ids on loop/query state | `AgentExecutionMetadataService::agent_state(agent_run_id)` |
 | prebuilt audit node/correlation fields | `AgentExecutionMetadataService::build_audit_node` per audit event |
-| batch-level `ToolExecutor` on `ProviderToolAssistantTurnExecutor` | engine `tool_call` dispatch over `AgentLoopState.tool_registry` |
-| `AssistantTurnResult::TurnFailed` | `Result<AssistantTurnResult, EngineError>` from `AssistantTurnExecutor` |
+| separate assistant-turn executor abstraction | private `AgentLoopExecutor::execute_assistant_turn` plus engine `tool_call` dispatch over `AgentLoopState.tool_registry` |
+| `AssistantTurnResult::TurnFailed` | `Result<AssistantTurnResult, EngineError>` from private `AgentLoopExecutor::execute_assistant_turn` |
 
 These files can be merged without breaking SRP:
 
@@ -1226,7 +1202,7 @@ These files can be merged without breaking SRP:
 | --- | --- |
 | `start.rs` and `started_loop.rs` into `agent_loop/launcher.rs` | they are one public launch boundary |
 | `start_agent_loop_request.rs`, `agent_loop_outcome.rs`, and `agent_loop_tool_registry_factory.rs` into `agent_loop/contracts.rs` | they are public agent-loop DTO/contract definitions, not execution logic |
-| `assistant_turn_result.rs` into `assistant_turn_executor.rs` | the result type exists only for the one-turn executor contract |
+| `assistant_turn_result.rs` into `agent_loop_executor.rs` | the result type exists only for `AgentLoopExecutor::execute_assistant_turn` |
 | `completion_events.rs` into no file | direct forwarding removes the event wrapper |
 
 Do not merge `query/`, `background/`, `notifications/`, `tool_call/`, or
@@ -1265,8 +1241,8 @@ cargo check -p eos-tools --all-targets
 - Add `AgentLoopLauncher` in `eos-agent-ports`.
 - Add `TokioAgentLoopLauncher` in `eos-engine`.
 - Add `AgentLoopExecutor` for full-loop execution.
-- Add `AssistantTurnExecutor` and its result type for one complete
-  assistant/model response cycle.
+- Add private `AgentLoopExecutor::execute_assistant_turn` and its internal
+  result type for one complete assistant/model response cycle.
 - Add `AgentLoopState` as the mutable loop state.
 - Add `AgentLoopHooks` with `on_start`, `on_step`, and `on_complete`.
 - Add `StartAgentLoopRequest`, `StartedAgentLoop`, `AgentLoopOutcome`, and
@@ -1354,7 +1330,8 @@ agent-port API types instead.
 - Wire isolated-workspace tool success paths to update the same per-run runtime
   state source read by `AgentExecutionMetadataService`.
 - Construct the production `TokioAgentLoopLauncher` with
-  `ProviderToolAssistantTurnExecutor`.
+  `ProviderStreamSource`, `AgentLoopHooks`, `AgentLoopToolRegistryFactory`, and
+  `AgentExecutionMetadataService`.
 - Wire root requests, workflow launches, subagent tools, and advisor tools to
   `AgentRunApi::spawn_agent`.
 
@@ -1375,8 +1352,9 @@ cargo check --workspace --all-targets
   `eos-engine`.
 - `AgentLoopExecutor` owns full-loop control flow, tick sequencing, async
   polling, and lifecycle hooks.
-- `AssistantTurnExecutor` owns one complete assistant/model response cycle and
-  never mutates agent-run persistence or active-run waiter state.
+- `AgentLoopExecutor::execute_assistant_turn` owns one complete assistant/model
+  response cycle and never mutates agent-run persistence or active-run waiter
+  state.
 - One user input can produce many assistant turns; one assistant turn can
   consume many stream events and execute zero, one, or many tool calls from
   that model response.
@@ -1427,11 +1405,54 @@ cargo check --workspace --all-targets
 
 ## 15. Progress Tracker
 
-- [ ] Phase 1 - Extract `eos-tool-ports` and `eos-agent-ports`.
+- [x] Phase 1 - Extract `eos-tool-ports` and `eos-agent-ports`.
+      Completed 2026-06-08: `eos-tool-ports` and `eos-agent-ports` crates
+      exist; `AgentName`, agent-run API DTOs, agent-loop DTOs,
+      `AgentExecutionMetadataService`, tool core values, `ToolRegistry`,
+      `RegisteredTool`, `ToolExecutor`, hook declarations, session service
+      wrappers, and tool port contracts are owned by the ports crates;
+      `eos-tools` keeps concrete tool construction with compatibility
+      re-exports. Verified with `cargo check -p eos-tool-ports --all-targets`,
+      `cargo check -p eos-agent-ports --all-targets`, and
+      `cargo check -p eos-tools --all-targets`.
 - [ ] Phase 2 - Add non-blocking agent-loop API and engine implementation.
+      In progress: `eos-agent-ports` owns the loop launcher/outcome DTOs and
+      `eos-engine::agent_loop` exposes `TokioAgentLoopLauncher`,
+      `AgentLoopExecutor` with private assistant-turn execution, and loop
+      hooks; private `AgentLoopExecutor::execute_assistant_turn` now assembles
+      provider requests, consumes provider completion events, dispatches tool
+      batches through engine-owned policy, renders per-call metadata through
+      `AgentExecutionMetadataService`, and detects terminal submissions.
+      Legacy `QueryContext.tool_metadata` cleanup and production wiring are
+      pending.
 - [ ] Phase 3 - Rename/expand `eos-agent-runner`.
-- [ ] Phase 4 - Remove engine back-edges to runner/agent/tools.
+      In progress: crate/package/import rename from `eos-agent-run` to
+      `eos-agent-runner` is complete; runner-owned `AgentRunService`,
+      `ActiveAgentRuns`, loop-request, persistence, and message-record adapter
+      modules exist; runtime root/workflow agent launches now use the runner
+      service through the injected loop launcher. Runner-owned message-record
+      write integration remains pending.
+- [x] Phase 4 - Remove engine back-edges to runner/agent/tools.
+      Completed 2026-06-08: `eos-engine` no longer has normal dependency edges
+      to `eos-agent-runner`, `eos-agent-def`, `eos-tools`, or
+      `eos-agent-message-records`; old engine `runtime/*` agent-run modules,
+      agent-definition context builder, prompt helper, runtime integration test,
+      and message-record query handle were removed. `eos-tools`,
+      `eos-tool-ports`, and `eos-agent-ports` do not show
+      `eos-agent-message-records`; `eos-runtime` shows it only transitively
+      through the target `eos-agent-runner -> eos-agent-message-records` edge.
+      Verified with `cargo tree -p eos-engine --edges normal`,
+      `cargo check -p eos-engine --all-targets`, and
+      `cargo test -p workspace-guard -- --nocapture`.
 - [ ] Phase 5 - Recompose through `eos-runtime`.
+      In progress: runtime now provides `AgentLoopToolRegistryFactory` and
+      `AgentExecutionMetadataService` implementations, builds
+      `TokioAgentLoopLauncher`, and launches root/workflow agents through the
+      runner-owned `eos_agent_runner::AgentRunService`. Compatibility
+      cancellation registry cleanup, event callback forwarding, production
+      background-session manager wiring into the new loop path, and
+      runner-owned message-record writer integration are pending; old engine
+      runtime exports have been removed.
 - [ ] Final verification - dependency tree gates pass.
 - [ ] Final verification - workspace cargo check passes or documented
       pre-existing failures are isolated.
@@ -1445,9 +1466,8 @@ flowchart LR
     RunService --> LauncherPort["AgentLoopLauncher (eos-agent-ports)"]
     LauncherPort --> Launcher["TokioAgentLoopLauncher"]
     Launcher --> LoopExecutor["AgentLoopExecutor"]
-    LoopExecutor --> Turn["AssistantTurnExecutor"]
-    Turn --> Provider["ProviderStreamSource"]
-    Turn --> Tools["engine tool dispatch / ToolRegistry"]
+    LoopExecutor --> Provider["ProviderStreamSource"]
+    LoopExecutor --> Tools["engine tool dispatch / ToolRegistry"]
     Tools --> Metadata["AgentExecutionMetadataService"]
     Metadata --> State["AgentState"]
     Metadata --> ToolFacts["ExecutionMetadata / AuditNode"]
@@ -1462,14 +1482,14 @@ flowchart LR
 | `AgentRunApi` | agent-run spawn/wait/poll port in `eos-agent-ports` | concrete persistence, message records, model streaming |
 | `AgentLoopLauncher` | public agent-loop launch port in `eos-agent-ports` | agent definition lookup, persistence, tool construction |
 | `TokioAgentLoopLauncher` | engine implementation of `AgentLoopLauncher`, Tokio task spawn, returned outcome receiver | agent definition lookup, persistence, concrete tools |
-| `AgentLoopExecutor` | full-loop control flow, state-machine ticks, async polling, lifecycle hooks, outcome conversion | model request assembly details, tool execution details, agent-run persistence |
-| `AssistantTurnExecutor` | one complete assistant/model response cycle, provider-stream consumption, tool-call batch execution, state updates for that turn | spawning runs, parking waiters, finalizing durable agent-run rows |
+| `AgentLoopExecutor` | full-loop control flow, state-machine ticks, async polling, lifecycle hooks, private assistant-turn execution, outcome conversion | spawning runs, parking waiters, finalizing durable agent-run rows |
 | `AgentLoopToolRegistryFactory` | runtime-provided concrete tool registry creation through a narrow engine-owned input | service bags, agent lifecycle state, engine back-edges to `eos-tools` |
 | `AgentExecutionMetadataService` | load current `AgentState` by `agent_run_id`; render `ExecutionMetadata` and `AuditNode` from that state | loop control flow, durable run finalization, message-record layout |
 
 The core flow is: `spawn_agent` creates the durable run and starts the loop;
 `AgentLoopExecutor` executes ticks until a terminal or failure outcome; each
-tick delegates one assistant/model response cycle to `AssistantTurnExecutor`;
+tick calls private `AgentLoopExecutor::execute_assistant_turn` for one
+assistant/model response cycle;
 the returned `AgentLoopOutcome` is forwarded back to `AgentRunService`, which
 finalizes the durable run and wakes waiters.
 
@@ -1510,9 +1530,10 @@ finalizes the durable run and wakes waiters.
 - `AgentState` for metadata/audit and `AgentLoopState` for engine control flow:
   prevents the service-fetched runtime facts from being confused with the
   loop-private transcript/tool/counter state.
-- `AssistantTurnExecutor`: new engine-owned trait for one complete
-  assistant/model response cycle, including provider-stream consumption and
-  tool-call batch execution.
-- `AssistantTurnResult`: new turn-level return value used by
-  `AgentLoopExecutor` to decide whether to continue or finish; failures use the
-  `Result` error channel.
+- separate assistant-turn executor type/file -> private
+  `AgentLoopExecutor::execute_assistant_turn`: merges the one-response-cycle
+  implementation into the full-loop executor instead of adding a sibling
+  executor.
+- `AssistantTurnResult`: internal return value used by
+  `AgentLoopExecutor::execute_assistant_turn` to decide whether to continue or
+  finish; failures use the `Result` error channel.

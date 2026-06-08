@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-tool-ports · src/core/ports/agent_run.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tool-ports File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>15</b><span>modules</span></div>
+  <div><b>72</b><span>items</span></div>
+  <div><b>73</b><span>fields</span></div>
+  <div><b>76</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-intent-rs.html"><span>intent.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-metadata-rs.html"><span>metadata.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-name-rs.html"><span>name.rs</span><small>2/5</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link active" href="eos-tool-ports--src-core-ports-agent-run-rs.html"><span>agent_run.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-ports-mod-rs.html"><span>mod.rs</span><small>10/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-core-result-rs.html"><span>result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">hooks</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-hooks-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">registry</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-registry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-registry-tool-registry-rs.html"><span>tool_registry.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-runtime-executor-rs.html"><span>executor.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-services-rs.html"><span>services.rs</span><small>4/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::ports::agent_run crates/eos-tool-ports/src/core/ports/agent_run.rs SubagentLaunchRejection SubagentSessionStatus BackgroundSessionCounts">
+  <div class="module-head">
+    <div>
+      <h2>src/core/ports/agent_run.rs</h2>
+      <p class="path">module <code>core::ports::agent_run</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-BackgroundSessionCounts-39" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BackgroundSessionCounts pub pub struct BackgroundSessionCounts crates/eos-tool-ports/src/core/ports/agent_run.rs total usize subagents usize workflows usize command_sessions usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>BackgroundSessionCounts</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool-ports--src-core-ports-agent-run-rs.html#item-struct-BackgroundSessionCounts-39">BackgroundSessionCounts</a></code>
+  <p class="docstring">Per-kind in-flight background-session count for one agent run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>total</td><td><code>usize</code></td></tr><tr><td>pub</td><td>subagents</td><td><code>usize</code></td></tr><tr><td>pub</td><td>workflows</td><td><code>usize</code></td></tr><tr><td>pub</td><td>command_sessions</td><td><code>usize</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tool-ports/src/core/ports/agent_run.rs:39</p>
+</article><article id="item-enum-SubagentLaunchRejection-5" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SubagentLaunchRejection pub pub enum SubagentLaunchRejection crates/eos-tool-ports/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>SubagentLaunchRejection</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tool-ports--src-core-ports-agent-run-rs.html#item-enum-SubagentLaunchRejection-5">SubagentLaunchRejection</a></code>
+  <p class="docstring">Typed launch rejection facts.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Recursive</td><td><code></code></td></tr><tr><td>NotRegistered</td><td><code>agent_name: String</code></td></tr><tr><td>NotSubagent</td><td><code>agent_name: String, agent_type: String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tool-ports/src/core/ports/agent_run.rs:5</p>
+</article><article id="item-enum-SubagentSessionStatus-24" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SubagentSessionStatus pub pub enum SubagentSessionStatus crates/eos-tool-ports/src/core/ports/agent_run.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>SubagentSessionStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tool-ports--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-24">SubagentSessionStatus</a></code>
+  <p class="docstring">Terminal background status facts.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Completed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr><tr><td>Delivered</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-tool-ports/src/core/ports/agent_run.rs:24</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tool-ports/src/core/ports/agent_run.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Agent-run transition contracts used by model-facing tools.</span>
+
+<span class="rs-kw">use</span> serde::<span class="rs-type">Serialize</span>;
+
+<span class="rs-comment">/// Typed launch rejection facts.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-agent-run-rs.html#item-enum-SubagentLaunchRejection-5">SubagentLaunchRejection</a> {
+    <span class="rs-comment">/// The caller is already a subagent.</span>
+    <span class="rs-type">Recursive</span>,
+    <span class="rs-comment">/// The requested agent name is not registered.</span>
+    <span class="rs-type">NotRegistered</span> {
+        <span class="rs-comment">/// Requested agent name.</span>
+        agent_name: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// The requested agent exists but is not subagent-typed.</span>
+    <span class="rs-type">NotSubagent</span> {
+        <span class="rs-comment">/// Requested agent name.</span>
+        agent_name: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// Registered agent type string.</span>
+        agent_type: <span class="rs-type">String</span>,
+    },
+}
+
+<span class="rs-comment">/// Terminal background status facts.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-agent-run-rs.html#item-enum-SubagentSessionStatus-24">SubagentSessionStatus</a> {
+    <span class="rs-comment">/// The subagent is still running.</span>
+    <span class="rs-type">Running</span>,
+    <span class="rs-comment">/// The subagent called its terminal tool.</span>
+    <span class="rs-type">Completed</span>,
+    <span class="rs-comment">/// The subagent crashed or exited without terminal output.</span>
+    <span class="rs-type">Failed</span>,
+    <span class="rs-comment">/// The subagent was cancelled.</span>
+    <span class="rs-type">Cancelled</span>,
+    <span class="rs-comment">/// The subagent result was already delivered.</span>
+    <span class="rs-type">Delivered</span>,
+}
+
+<span class="rs-comment">/// Per-kind in-flight background-session count for one agent run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-core-ports-agent-run-rs.html#item-struct-BackgroundSessionCounts-39">BackgroundSessionCounts</a> {
+    <span class="rs-comment">/// `subagents + workflows + command_sessions`.</span>
+    <span class="rs-kw">pub</span> total: usize,
+    <span class="rs-comment">/// In-flight subagent runs for this agent run.</span>
+    <span class="rs-kw">pub</span> subagents: usize,
+    <span class="rs-comment">/// Outstanding delegated workflows for this agent run.</span>
+    <span class="rs-kw">pub</span> workflows: usize,
+    <span class="rs-comment">/// In-flight background-tracked command sessions for this agent run.</span>
+    <span class="rs-kw">pub</span> command_sessions: usize,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

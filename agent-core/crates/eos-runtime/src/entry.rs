@@ -11,13 +11,10 @@ use std::sync::{Arc, OnceLock};
 
 use anyhow::{Context, Result};
 use eos_agent_def::AgentName;
-use eos_agent_runner::{AgentRunApi, AgentRunRecordKind, SpawnAgentRequest};
-use eos_engine::{
-    AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
-    EngineCancelPort, ForegroundExecutorFactory,
-};
+use eos_agent_ports::{AgentName as AgentPortName, AgentRunApi, AgentRunRecordKind, SpawnAgentRequest};
+use eos_agent_runner::AgentRunService as RunnerAgentRunService;
+use eos_engine::{AgentRunRegistry, EngineCancelPort};
 use eos_llm_client::Message;
-use eos_sandbox_port::SandboxCommandService;
 use eos_tools::{AttemptSubmissionPort, CancelPort};
 use eos_types::{AgentRunId, JsonObject, RequestId, TaskId, WorkflowApi};
 use eos_types::{RequestStatus, Task, TaskRole, TaskStatus};
@@ -30,7 +27,7 @@ use serde_json::json;
 
 use crate::agent_runner::RuntimeAgentRunner;
 use crate::request_input::RequestRunInput;
-use crate::runtime_services::{EventCallback, RuntimeServices};
+use crate::runtime_services::{build_agent_loop_launcher, EventCallback, RuntimeServices};
 
 /// The terminal outcome of a completed top-level request — the root's outcome
 /// (canonical flow step 7). The ids are caller-known (`request_id` is injected,
@@ -71,7 +68,7 @@ pub(crate) fn root_task_id_for(request_id: &RequestId) -> TaskId {
 pub async fn run_request(
     services: &RuntimeServices,
     input: RequestRunInput,
-    on_event: Option<EventCallback>,
+    _on_event: Option<EventCallback>,
 ) -> Result<RequestOutcome> {
     let RequestRunInput {
         request_id,
@@ -100,25 +97,13 @@ pub async fn run_request(
         .await
         .context("creating the request row")?;
 
-    // GUARDRAIL: workflow service construction closes over the starter/control
-    // adapter built below, while the runner/control factory need a handle up
-    // front. The cell is set before any root or workflow agent starts.
+    // GUARDRAIL: workflow service construction closes over the starter built
+    // below, while workflow-agent tools need a handle up front. The cell is set
+    // before any root or workflow agent starts.
     let workflow_service_cell: Arc<OnceLock<Arc<dyn WorkflowApi>>> = Arc::new(OnceLock::new());
-    // Per-agent-run runtime. The request owns only the shared, immutable factory
-    // and the live-run registry — never per-agent mutable state. Each
-    // root/workflow/subagent run mints one fresh `AgentRunControl` (its own
-    // notifier, foreground executor, background supervisor, command-completion
-    // heartbeat, workflow-completion poller, and cancellation token); the registry
-    // makes live runs addressable for recursive cancellation.
-    let control_factory = Arc::new(AgentRunControlFactory::new(
-        ForegroundExecutorFactory,
-        services.engine_run_handles(&workspace_root),
-        Arc::new(SandboxCommandService::new(
-            services.sandbox.transport.clone(),
-        )),
-        services.engine.command_session_completion_poll_interval(),
-        workflow_service_cell.clone(),
-    ));
+    // Compatibility cancellation registry. The new agent-runner lifecycle owns
+    // run finalization; recursive cancellation cleanup is still pending under the
+    // migration's engine-back-edge removal phase.
     let agent_run_registry = AgentRunRegistry::new();
     let iteration_coordinators = Arc::new(OpenIterationCoordinatorRegistry::new());
     let orchestrator_registry = Arc::new(AttemptOrchestratorRegistry::new());
@@ -142,8 +127,6 @@ pub async fn run_request(
         workspace_root.clone(),
         attempt_submission,
         workflow_service_cell.clone(),
-        control_factory.clone(),
-        agent_run_registry.clone(),
     ));
     // `attempt_deps` is a local moved into the starter (no clone, never returned).
     let attempt_deps = AttemptDeps::new(
@@ -160,10 +143,10 @@ pub async fn run_request(
     .with_composer(composer)
     .with_max_concurrent_task_runs(workflow_config.attempt.max_concurrent_task_runs);
     let starter = WorkflowStarter::new(attempt_deps);
-    // The recursive cancellation port (spec §7.2/§12). It must wrap the SAME
-    // `agent_run_registry` the runner inserts live runs into, or `cancel_task`
-    // would find no live run and only flip DB state. It reads the workflow service
-    // cell late (set below) so workflow cancellation can recurse back through it.
+    // Compatibility recursive cancellation port. It still reads the workflow
+    // service cell late (set below) so workflow cancellation can recurse back
+    // through it; live-run registry integration moves with the old engine
+    // cancellation cleanup.
     let cancel_port: Arc<dyn CancelPort> = Arc::new(EngineCancelPort::new(
         agent_run_registry.clone(),
         services.db.task_store.clone(),
@@ -215,25 +198,24 @@ pub async fn run_request(
         .await
         .context("recording the root task id")?;
 
-    // [3][4][5] RUN — task-trigger the root through AgentRunApi. The service
-    // registers the live run before the provider loop starts and `run_agent`
-    // owns row finalization + child teardown inside the spawned task.
+    // [3][4][5] RUN — task-trigger the root through the runner-owned
+    // AgentRunApi. The runner owns the durable row lifecycle and receives loop
+    // completion through the `AgentLoopLauncher` outcome channel.
     let summary = match AgentName::new("root") {
         Ok(root_name) => {
-            let handles = services.engine_run_handles(&workspace_root);
-            let agent_runs = AgentRunService::with_run_services(
-                handles,
-                (*control_factory).clone(),
-                AgentRunServiceOptions {
-                    agent_run_registry: Some(agent_run_registry.clone()),
-                    workflow_service: Some(workflow_service.clone()),
-                    event_callback: on_event.clone(),
-                    ..AgentRunServiceOptions::default()
-                },
-            );
+            let (loop_launcher, agent_run_api_cell) =
+                build_agent_loop_launcher(services.clone(), None, workflow_service_cell.clone());
+            let agent_runs = Arc::new(RunnerAgentRunService::new(
+                services.agent_core.agent_registry.clone(),
+                loop_launcher,
+                services.db.agent_run_store.clone(),
+            ));
+            let agent_run_api: Arc<dyn AgentRunApi> = agent_runs.clone();
+            let _ = agent_run_api_cell.set(agent_run_api);
             match agent_runs
                 .spawn_agent(SpawnAgentRequest {
-                    agent_name: root_name,
+                    agent_name: AgentPortName::new(root_name.as_str())
+                        .expect("root agent name is valid"),
                     agent_run_id: Some(AgentRunId::new_v4()),
                     initial_messages: vec![Message::from_user_text(prompt.clone())],
                     parent_agent_run_id: None,
@@ -268,10 +250,9 @@ pub async fn run_request(
         Err(err) => format!("invalid root agent name: {err}"),
     };
 
-    // [6] FINALIZE / CLEANUP. Per-agent-run background teardown (heartbeat abort +
-    // subagent/workflow/command cancellation) already ran inside each run's own
-    // `run_agent` finalizer — there is no request-level supervisor sweep or
-    // heartbeat to abort here.
+    // [6] FINALIZE / CLEANUP. Agent-run row finalization has already happened in
+    // the runner. The request-level root guard below remains the idempotent
+    // protection against a root that exits without submitting.
     // The single framework-side closure guard, called unconditionally: a no-op once
     // submit_root_outcome has closed the task; otherwise marks the root Failed +
     // finish_request(Failed).

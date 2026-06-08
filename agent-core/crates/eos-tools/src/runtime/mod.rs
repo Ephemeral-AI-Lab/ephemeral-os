@@ -1,5 +1,4 @@
-//! Tool execution and dispatch lifecycle.
+//! Tool executor compatibility and concrete-tool parsing helpers.
 
-pub(crate) mod dispatch;
 pub(crate) mod execution;
 pub(crate) mod executor;

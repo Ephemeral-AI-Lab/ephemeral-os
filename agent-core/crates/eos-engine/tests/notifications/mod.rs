@@ -30,14 +30,12 @@ fn ctx() -> QueryContext {
         submission_outcome: None,
         event_source: None,
         prompt_report: None,
-        message_record: None,
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
         notifier: NotificationService::new(),
         cancellation: crate::AgentRunCancellation::new(),
         foreground: Arc::new(crate::ForegroundExecutorFactory.create(AgentRunId::new_v4())),
         audit: None,
-        run_handles: None,
     }
 }
 

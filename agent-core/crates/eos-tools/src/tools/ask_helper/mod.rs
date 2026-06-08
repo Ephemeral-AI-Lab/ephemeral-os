@@ -5,7 +5,7 @@ mod ask_advisor;
 
 use std::sync::Arc;
 
-use eos_agent_runner::AgentRunApi;
+use eos_agent_ports::AgentRunApi;
 
 pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,

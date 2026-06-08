@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-tool-ports · src/services.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tool-ports File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>15</b><span>modules</span></div>
+  <div><b>72</b><span>items</span></div>
+  <div><b>73</b><span>fields</span></div>
+  <div><b>76</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-intent-rs.html"><span>intent.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-metadata-rs.html"><span>metadata.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-name-rs.html"><span>name.rs</span><small>2/5</small></a></li><li><span class="folder">ports</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-core-ports-agent-run-rs.html"><span>agent_run.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-core-ports-mod-rs.html"><span>mod.rs</span><small>10/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-core-result-rs.html"><span>result.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">hooks</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-hooks-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-tool-ports--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">registry</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-registry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-registry-tool-registry-rs.html"><span>tool_registry.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-tool-ports--src-runtime-executor-rs.html"><span>executor.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-tool-ports--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link active" href="eos-tool-ports--src-services-rs.html"><span>services.rs</span><small>4/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="services crates/eos-tool-ports/src/services.rs BoxServiceFuture RegisterSubagentSession CancelSubagentSession CountSubagentSessions CancelAllSubagentSessions RegisterWorkflowSession RegisterCommandSession CommandSessionToolService impl CommandSessionToolService impl fmt :: Debug for CommandSessionToolService SubagentToolService impl SubagentToolService impl fmt :: Debug for SubagentToolService WorkflowToolService impl WorkflowToolService impl fmt :: Debug for WorkflowToolService HookServices impl HookServices impl fmt :: Debug for HookServices">
+  <div class="module-head">
+    <div>
+      <h2>src/services.rs</h2>
+      <p class="path">module <code>services</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>8 impls</span>
+      <span>0 fns</span>
+      <span>17 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommandSessionToolService-22" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionToolService pub pub struct CommandSessionToolService crates/eos-tool-ports/src/services.rs register Option &lt; RegisterCommandSession &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandSessionToolService</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a></code>
+  <p class="docstring">Command-session background tracking captured by shell tools.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Default</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>register</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-RegisterCommandSession-19">RegisterCommandSession</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-29"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a> &lt; Register , RegisterFuture &gt; (register : Register) -&gt; Self where Register : Fn (CommandSessionId , SandboxId) -&gt; RegisterFuture + Send + Sync + &#x27;static , RegisterFuture : Future &lt; Output = () &gt; + Send + &#x27;static ,</code><p class="docstring">Build command-session tracking from a run-local registration callback.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build command-session tracking from a run-local registration callback.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new&lt;<span class="rs-type">Register</span>, <span class="rs-type">RegisterFuture</span>&gt;(register: <span class="rs-type">Register</span>) -&gt; <span class="rs-self">Self</span>
+    <span class="rs-kw">where</span>
+        <span class="rs-type">Register</span>: <span class="rs-type">Fn</span>(<span class="rs-type">CommandSessionId</span>, <span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">RegisterFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">RegisterFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">Self</span> {
+            register: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |command_session_id, sandbox_id| {
+                <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(command_session_id, sandbox_id))
+            })),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-background-session-43"><td>method</td><td>register_background_session</td><td><code>pub async fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a> (&amp; self , command_session_id : &amp; CommandSessionId , sandbox_id : &amp; SandboxId ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a background command session.<br># Errors<br>Returns [`ToolError::MissingPort`] when the callback is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register a background command session.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        command_session_id: &amp;<span class="rs-type">CommandSessionId</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(register) = &amp;<span class="rs-self">self</span>.register <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;command_sessions&quot;));
+        };
+        <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(command_session_id.clone(), sandbox_id.clone()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a></code></summary><table><tbody><tr id="method-fmt-61"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a>&quot;)
+            .field(&quot;has_register&quot;, &amp;<span class="rs-self">self</span>.register.is_some())
+            .finish()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:22</p>
+</article><article id="item-struct-SubagentToolService-68" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SubagentToolService pub pub struct SubagentToolService crates/eos-tool-ports/src/services.rs register Option &lt; RegisterSubagentSession &gt; cancel_one Option &lt; CancelSubagentSession &gt; count Option &lt; CountSubagentSessions &gt; cancel_all Option &lt; CancelAllSubagentSessions &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SubagentToolService</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a></code>
+  <p class="docstring">Subagent background-session dependencies captured by subagent tools and hooks.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Default</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>register</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-RegisterSubagentSession-13">RegisterSubagentSession</a> &gt;</code></td></tr><tr><td>private</td><td>cancel_one</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-CancelSubagentSession-14">CancelSubagentSession</a> &gt;</code></td></tr><tr><td>private</td><td>count</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-CountSubagentSessions-16">CountSubagentSessions</a> &gt;</code></td></tr><tr><td>private</td><td>cancel_all</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-CancelAllSubagentSessions-17">CancelAllSubagentSessions</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-78"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a> &lt; Register , RegisterFuture , Cancel , CancelFuture , Count , CountFuture , CancelAll , CancelAllFuture , &gt; (register : Register , cancel_one : Cancel , count : Count , cancel_all : CancelAll ,) -&gt; Self where Register : Fn (AgentRunId) -&gt; RegisterFuture + Send + Sync + &#x27;static , RegisterFuture : Future &lt; Output = () &gt; + Send + &#x27;static , Cancel : Fn (AgentRunId , String) -&gt; CancelFuture + Send + Sync + &#x27;static , CancelFuture : Future &lt; Output = bool &gt; + Send + &#x27;static , Count : Fn () -&gt; CountFuture + Send + Sync + &#x27;static , CountFuture : Future &lt; Output = usize &gt; + Send + &#x27;static , CancelAll : Fn (String) -&gt; CancelAllFuture + Send + Sync + &#x27;static , CancelAllFuture : Future &lt; Output = () &gt; + Send + &#x27;static ,</code><p class="docstring">Build a subagent tool service from run-local callbacks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a subagent tool service from run-local callbacks.</span>
+    #[allow(clippy::too_many_arguments)]
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new&lt;
+        <span class="rs-type">Register</span>,
+        <span class="rs-type">RegisterFuture</span>,
+        <span class="rs-type">Cancel</span>,
+        <span class="rs-type">CancelFuture</span>,
+        <span class="rs-type">Count</span>,
+        <span class="rs-type">CountFuture</span>,
+        <span class="rs-type">CancelAll</span>,
+        <span class="rs-type">CancelAllFuture</span>,
+    &gt;(
+        register: <span class="rs-type">Register</span>,
+        cancel_one: <span class="rs-type">Cancel</span>,
+        count: <span class="rs-type">Count</span>,
+        cancel_all: <span class="rs-type">CancelAll</span>,
+    ) -&gt; <span class="rs-self">Self</span>
+    <span class="rs-kw">where</span>
+        <span class="rs-type">Register</span>: <span class="rs-type">Fn</span>(<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">RegisterFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">RegisterFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">Cancel</span>: <span class="rs-type">Fn</span>(<span class="rs-type">AgentRunId</span>, <span class="rs-type">String</span>) -&gt; <span class="rs-type">CancelFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CancelFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = bool&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">Count</span>: <span class="rs-type">Fn</span>() -&gt; <span class="rs-type">CountFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CountFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = usize&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CancelAll</span>: <span class="rs-type">Fn</span>(<span class="rs-type">String</span>) -&gt; <span class="rs-type">CancelAllFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CancelAllFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">Self</span> {
+            register: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |agent_run_id| {
+                <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(agent_run_id))
+            })),
+            cancel_one: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |agent_run_id, reason| {
+                <span class="rs-type">Box</span>::pin(cancel_one(agent_run_id, reason))
+            })),
+            count: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> || <span class="rs-type">Box</span>::pin(count()))),
+            cancel_all: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |reason| <span class="rs-type">Box</span>::pin(cancel_all(reason)))),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-background-session-118"><td>method</td><td>register_background_session</td><td><code>pub async fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a background subagent run.<br># Errors<br>Returns [`ToolError::MissingPort`] when the callback is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register a background subagent run.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(register) = &amp;<span class="rs-self">self</span>.register <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(agent_run_id.clone()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-background-agent-run-133"><td>method</td><td>cancel_background_agent_run</td><td><code>pub async fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-cancel-background-agent-run-133">cancel_background_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel one background subagent run.<br># Errors<br>Returns [`ToolError::MissingPort`] when the callback is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel one background subagent run.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-cancel-background-agent-run-133">cancel_background_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cancel_one) = &amp;<span class="rs-self">self</span>.cancel_one <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        <span class="rs-type">Ok</span>(cancel_one(agent_run_id.clone(), reason.to_owned()).<span class="rs-kw">await</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-background-sessions-148"><td>method</td><td>count_background_sessions</td><td><code>pub async fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-count-background-sessions-148">count_background_sessions</a> (&amp; self) -&gt; Result &lt; usize , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Count background subagent runs.<br># Errors<br>Returns [`ToolError::MissingPort`] when the callback is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Count background subagent runs.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-count-background-sessions-148">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(count) = &amp;<span class="rs-self">self</span>.count <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        <span class="rs-type">Ok</span>(count().<span class="rs-kw">await</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-all-background-sessions-159"><td>method</td><td>cancel_all_background_sessions</td><td><code>pub async fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-cancel-all-background-sessions-159">cancel_all_background_sessions</a> (&amp; self , reason : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel all background subagent runs.<br># Errors<br>Returns [`ToolError::MissingPort`] when the callback is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel all background subagent runs.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-cancel-all-background-sessions-159">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cancel_all) = &amp;<span class="rs-self">self</span>.cancel_all <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        cancel_all(reason.to_owned()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a></code></summary><table><tbody><tr id="method-fmt-173"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&quot;)
+            .field(&quot;has_register&quot;, &amp;<span class="rs-self">self</span>.register.is_some())
+            .field(&quot;has_cancel_one&quot;, &amp;<span class="rs-self">self</span>.cancel_one.is_some())
+            .field(&quot;has_count&quot;, &amp;<span class="rs-self">self</span>.count.is_some())
+            .field(&quot;has_cancel_all&quot;, &amp;<span class="rs-self">self</span>.cancel_all.is_some())
+            .finish()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:68</p>
+</article><article id="item-struct-WorkflowToolService-183" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowToolService pub pub struct WorkflowToolService crates/eos-tool-ports/src/services.rs register Option &lt; RegisterWorkflowSession &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkflowToolService</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a></code>
+  <p class="docstring">Workflow background-session dependencies captured by workflow tools.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Default</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>register</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-RegisterWorkflowSession-18">RegisterWorkflowSession</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-190"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a> &lt; Register , RegisterFuture &gt; (register : Register) -&gt; Self where Register : Fn (StartedWorkflow) -&gt; RegisterFuture + Send + Sync + &#x27;static , RegisterFuture : Future &lt; Output = () &gt; + Send + &#x27;static ,</code><p class="docstring">Build a workflow tool service from a run-local registration callback.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a workflow tool service from a run-local registration callback.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new&lt;<span class="rs-type">Register</span>, <span class="rs-type">RegisterFuture</span>&gt;(register: <span class="rs-type">Register</span>) -&gt; <span class="rs-self">Self</span>
+    <span class="rs-kw">where</span>
+        <span class="rs-type">Register</span>: <span class="rs-type">Fn</span>(<span class="rs-type">StartedWorkflow</span>) -&gt; <span class="rs-type">RegisterFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">RegisterFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">Self</span> {
+            register: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |workflow| <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(workflow)))),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-background-session-202"><td>method</td><td>register_background_session</td><td><code>pub async fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a> (&amp; self , workflow : &amp; StartedWorkflow ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a background workflow.<br># Errors<br>Returns [`ToolError::MissingPort`] when the callback is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register a background workflow.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow: &amp;<span class="rs-type">StartedWorkflow</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(register) = &amp;<span class="rs-self">self</span>.register <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;workflow_sessions&quot;));
+        };
+        <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(workflow.clone()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a></code></summary><table><tbody><tr id="method-fmt-219"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a>&quot;)
+            .field(&quot;has_register&quot;, &amp;<span class="rs-self">self</span>.register.is_some())
+            .finish()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:183</p>
+</article><article id="item-struct-HookServices-226" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct HookServices pub pub struct HookServices crates/eos-tool-ports/src/services.rs sandbox_transport Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt; workflow_service Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt; subagent_sessions Option &lt; SubagentToolService &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>HookServices</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a></code>
+  <p class="docstring">State-dependent pre-hook dependencies.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sandbox_transport</td><td><code>Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt;</code></td></tr><tr><td>private</td><td>workflow_service</td><td><code>Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt;</code></td></tr><tr><td>private</td><td>subagent_sessions</td><td><code>Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-235"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a> (sandbox_transport : Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt; , workflow_service : Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt; , subagent_sessions : Option &lt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a> &gt; ,) -&gt; Self</code><p class="docstring">Build hook services for tools that need downstream state during pre-hooks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build hook services for tools that need downstream state during pre-hooks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(
+        sandbox_transport: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt;,
+        workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,
+        subagent_sessions: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            sandbox_transport,
+            workflow_service,
+            subagent_sessions,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-sandbox-transport-249"><td>method</td><td>sandbox_transport</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-sandbox-transport-249">sandbox_transport</a> (&amp; self) -&gt; Option &lt; &amp; Arc &lt; dyn SandboxTransport &gt; &gt;</code><p class="docstring">Sandbox transport used by command-session hook checks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Sandbox transport used by command-session hook checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-sandbox-transport-249">sandbox_transport</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt; {
+        <span class="rs-self">self</span>.sandbox_transport.as_ref()
+    }
+</code></pre>
+</details></td></tr><tr id="method-workflow-service-255"><td>method</td><td>workflow_service</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-workflow-service-255">workflow_service</a> (&amp; self) -&gt; Option &lt; &amp; Arc &lt; dyn WorkflowApi &gt; &gt;</code><p class="docstring">Workflow state API used by workflow hook checks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Workflow state API used by workflow hook checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-workflow-service-255">workflow_service</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt; {
+        <span class="rs-self">self</span>.workflow_service.as_ref()
+    }
+</code></pre>
+</details></td></tr><tr id="method-subagent-sessions-261"><td>method</td><td>subagent_sessions</td><td><code>pub fn <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#method-subagent-sessions-261">subagent_sessions</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a> &gt;</code><p class="docstring">Subagent background-session service used by hook checks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Subagent background-session service used by hook checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-subagent-sessions-261">subagent_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&gt; {
+        <span class="rs-self">self</span>.subagent_sessions.as_ref()
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a></code></summary><table><tbody><tr id="method-fmt-269"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a>&quot;)
+            .field(&quot;has_sandbox_transport&quot;, &amp;<span class="rs-self">self</span>.sandbox_transport.is_some())
+            .field(&quot;has_workflow_service&quot;, &amp;<span class="rs-self">self</span>.workflow_service.is_some())
+            .field(&quot;has_subagent_sessions&quot;, &amp;<span class="rs-self">self</span>.subagent_sessions.is_some())
+            .finish()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:226</p>
+</article><div class="group-label">Aliases</div><article id="item-type-BoxServiceFuture-12" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type BoxServiceFuture private type BoxServiceFuture&lt; T &gt; = Pin &lt; Box &lt; dyn Future &lt; Output = T &gt; + Send + 'static &gt; &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>BoxServiceFuture</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt; T &gt; = Pin &lt; Box &lt; dyn Future &lt; Output = T &gt; + Send + &#x27;static &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:12</p>
+</article><article id="item-type-RegisterSubagentSession-13" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type RegisterSubagentSession private type RegisterSubagentSession = Arc &lt; dyn Fn (AgentRunId) -&gt; BoxServiceFuture &lt; () &gt; + Send + Sync &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>RegisterSubagentSession</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-RegisterSubagentSession-13">RegisterSubagentSession</a> = Arc &lt; dyn Fn (AgentRunId) -&gt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a> &lt; () &gt; + Send + Sync &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:13</p>
+</article><article id="item-type-CancelSubagentSession-14" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type CancelSubagentSession private type CancelSubagentSession = Arc &lt; dyn Fn (AgentRunId , String) -&gt; BoxServiceFuture &lt; bool &gt; + Send + Sync &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>CancelSubagentSession</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-CancelSubagentSession-14">CancelSubagentSession</a> = Arc &lt; dyn Fn (AgentRunId , String) -&gt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a> &lt; bool &gt; + Send + Sync &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:14</p>
+</article><article id="item-type-CountSubagentSessions-16" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type CountSubagentSessions private type CountSubagentSessions = Arc &lt; dyn Fn () -&gt; BoxServiceFuture &lt; usize &gt; + Send + Sync &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>CountSubagentSessions</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-CountSubagentSessions-16">CountSubagentSessions</a> = Arc &lt; dyn Fn () -&gt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a> &lt; usize &gt; + Send + Sync &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:16</p>
+</article><article id="item-type-CancelAllSubagentSessions-17" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type CancelAllSubagentSessions private type CancelAllSubagentSessions = Arc &lt; dyn Fn (String) -&gt; BoxServiceFuture &lt; () &gt; + Send + Sync &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>CancelAllSubagentSessions</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-CancelAllSubagentSessions-17">CancelAllSubagentSessions</a> = Arc &lt; dyn Fn (String) -&gt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a> &lt; () &gt; + Send + Sync &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:17</p>
+</article><article id="item-type-RegisterWorkflowSession-18" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type RegisterWorkflowSession private type RegisterWorkflowSession = Arc &lt; dyn Fn (StartedWorkflow) -&gt; BoxServiceFuture &lt; () &gt; + Send + Sync &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>RegisterWorkflowSession</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-RegisterWorkflowSession-18">RegisterWorkflowSession</a> = Arc &lt; dyn Fn (StartedWorkflow) -&gt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a> &lt; () &gt; + Send + Sync &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:18</p>
+</article><article id="item-type-RegisterCommandSession-19" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type RegisterCommandSession private type RegisterCommandSession = Arc &lt; dyn Fn (CommandSessionId , SandboxId) -&gt; BoxServiceFuture &lt; () &gt; + Send + Sync &gt; crates/eos-tool-ports/src/services.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>RegisterCommandSession</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-RegisterCommandSession-19">RegisterCommandSession</a> = Arc &lt; dyn Fn (CommandSessionId , SandboxId) -&gt; <a class="symbol-link" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a> &lt; () &gt; + Send + Sync &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-tool-ports/src/services.rs:19</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tool-ports/src/services.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Family-specific tool session service wrappers.</span>
+
+<span class="rs-kw">use</span> std::future::<span class="rs-type">Future</span>;
+<span class="rs-kw">use</span> std::pin::<span class="rs-type">Pin</span>;
+<span class="rs-kw">use</span> std::{fmt, sync::<span class="rs-type">Arc</span>};
+
+<span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">SandboxTransport</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">CommandSessionId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">WorkflowApi</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>;
+
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;<span class="rs-type">T</span>&gt; = <span class="rs-type">Pin</span>&lt;<span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = <span class="rs-type">T</span>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>&gt;&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-RegisterSubagentSession-13">RegisterSubagentSession</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;()&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-CancelSubagentSession-14">CancelSubagentSession</a> =
+    <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<span class="rs-type">AgentRunId</span>, <span class="rs-type">String</span>) -&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;bool&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-CountSubagentSessions-16">CountSubagentSessions</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>() -&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;usize&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-CancelAllSubagentSessions-17">CancelAllSubagentSessions</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<span class="rs-type">String</span>) -&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;()&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-RegisterWorkflowSession-18">RegisterWorkflowSession</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<span class="rs-type">StartedWorkflow</span>) -&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;()&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-RegisterCommandSession-19">RegisterCommandSession</a> =
+    <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<span class="rs-type">CommandSessionId</span>, <span class="rs-type">SandboxId</span>) -&gt; <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-BoxServiceFuture-12">BoxServiceFuture</a>&lt;()&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+
+<span class="rs-comment">/// Command-session background tracking captured by shell tools.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a> {
+    register: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-RegisterCommandSession-19">RegisterCommandSession</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a> {
+    <span class="rs-comment">/// Build command-session tracking from a run-local registration callback.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new&lt;<span class="rs-type">Register</span>, <span class="rs-type">RegisterFuture</span>&gt;(register: <span class="rs-type">Register</span>) -&gt; <span class="rs-self">Self</span>
+    <span class="rs-kw">where</span>
+        <span class="rs-type">Register</span>: <span class="rs-type">Fn</span>(<span class="rs-type">CommandSessionId</span>, <span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">RegisterFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">RegisterFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">Self</span> {
+            register: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |command_session_id, sandbox_id| {
+                <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(command_session_id, sandbox_id))
+            })),
+        }
+    }
+
+    <span class="rs-comment">/// Register a background command session.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        command_session_id: &amp;<span class="rs-type">CommandSessionId</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(register) = &amp;<span class="rs-self">self</span>.register <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;command_sessions&quot;));
+        };
+        <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(command_session_id.clone(), sandbox_id.clone()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-CommandSessionToolService-22">CommandSessionToolService</a>&quot;)
+            .field(&quot;has_register&quot;, &amp;<span class="rs-self">self</span>.register.is_some())
+            .finish()
+    }
+}
+
+<span class="rs-comment">/// Subagent background-session dependencies captured by subagent tools and hooks.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a> {
+    register: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-RegisterSubagentSession-13">RegisterSubagentSession</a>&gt;,
+    cancel_one: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-CancelSubagentSession-14">CancelSubagentSession</a>&gt;,
+    count: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-CountSubagentSessions-16">CountSubagentSessions</a>&gt;,
+    cancel_all: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-CancelAllSubagentSessions-17">CancelAllSubagentSessions</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a> {
+    <span class="rs-comment">/// Build a subagent tool service from run-local callbacks.</span>
+    #[allow(clippy::too_many_arguments)]
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new&lt;
+        <span class="rs-type">Register</span>,
+        <span class="rs-type">RegisterFuture</span>,
+        <span class="rs-type">Cancel</span>,
+        <span class="rs-type">CancelFuture</span>,
+        <span class="rs-type">Count</span>,
+        <span class="rs-type">CountFuture</span>,
+        <span class="rs-type">CancelAll</span>,
+        <span class="rs-type">CancelAllFuture</span>,
+    &gt;(
+        register: <span class="rs-type">Register</span>,
+        cancel_one: <span class="rs-type">Cancel</span>,
+        count: <span class="rs-type">Count</span>,
+        cancel_all: <span class="rs-type">CancelAll</span>,
+    ) -&gt; <span class="rs-self">Self</span>
+    <span class="rs-kw">where</span>
+        <span class="rs-type">Register</span>: <span class="rs-type">Fn</span>(<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">RegisterFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">RegisterFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">Cancel</span>: <span class="rs-type">Fn</span>(<span class="rs-type">AgentRunId</span>, <span class="rs-type">String</span>) -&gt; <span class="rs-type">CancelFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CancelFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = bool&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">Count</span>: <span class="rs-type">Fn</span>() -&gt; <span class="rs-type">CountFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CountFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = usize&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CancelAll</span>: <span class="rs-type">Fn</span>(<span class="rs-type">String</span>) -&gt; <span class="rs-type">CancelAllFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">CancelAllFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">Self</span> {
+            register: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |agent_run_id| {
+                <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(agent_run_id))
+            })),
+            cancel_one: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |agent_run_id, reason| {
+                <span class="rs-type">Box</span>::pin(cancel_one(agent_run_id, reason))
+            })),
+            count: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> || <span class="rs-type">Box</span>::pin(count()))),
+            cancel_all: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |reason| <span class="rs-type">Box</span>::pin(cancel_all(reason)))),
+        }
+    }
+
+    <span class="rs-comment">/// Register a background subagent run.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(register) = &amp;<span class="rs-self">self</span>.register <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(agent_run_id.clone()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Cancel one background subagent run.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-cancel-background-agent-run-133">cancel_background_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cancel_one) = &amp;<span class="rs-self">self</span>.cancel_one <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        <span class="rs-type">Ok</span>(cancel_one(agent_run_id.clone(), reason.to_owned()).<span class="rs-kw">await</span>)
+    }
+
+    <span class="rs-comment">/// Count background subagent runs.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-count-background-sessions-148">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(count) = &amp;<span class="rs-self">self</span>.count <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        <span class="rs-type">Ok</span>(count().<span class="rs-kw">await</span>)
+    }
+
+    <span class="rs-comment">/// Cancel all background subagent runs.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-cancel-all-background-sessions-159">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cancel_all) = &amp;<span class="rs-self">self</span>.cancel_all <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;subagent_sessions&quot;));
+        };
+        cancel_all(reason.to_owned()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&quot;)
+            .field(&quot;has_register&quot;, &amp;<span class="rs-self">self</span>.register.is_some())
+            .field(&quot;has_cancel_one&quot;, &amp;<span class="rs-self">self</span>.cancel_one.is_some())
+            .field(&quot;has_count&quot;, &amp;<span class="rs-self">self</span>.count.is_some())
+            .field(&quot;has_cancel_all&quot;, &amp;<span class="rs-self">self</span>.cancel_all.is_some())
+            .finish()
+    }
+}
+
+<span class="rs-comment">/// Workflow background-session dependencies captured by workflow tools.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a> {
+    register: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-type-RegisterWorkflowSession-18">RegisterWorkflowSession</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a> {
+    <span class="rs-comment">/// Build a workflow tool service from a run-local registration callback.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new&lt;<span class="rs-type">Register</span>, <span class="rs-type">RegisterFuture</span>&gt;(register: <span class="rs-type">Register</span>) -&gt; <span class="rs-self">Self</span>
+    <span class="rs-kw">where</span>
+        <span class="rs-type">Register</span>: <span class="rs-type">Fn</span>(<span class="rs-type">StartedWorkflow</span>) -&gt; <span class="rs-type">RegisterFuture</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">RegisterFuture</span>: <span class="rs-type">Future</span>&lt;<span class="rs-type">Output</span> = ()&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-self">Self</span> {
+            register: <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(<span class="rs-kw">move</span> |workflow| <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(workflow)))),
+        }
+    }
+
+    <span class="rs-comment">/// Register a background workflow.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ToolError::MissingPort`] when the callback is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-register-background-session-43">register_background_session</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow: &amp;<span class="rs-type">StartedWorkflow</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(register) = &amp;<span class="rs-self">self</span>.register <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tool-ports.html#item-enum-ToolError-6">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;workflow_sessions&quot;));
+        };
+        <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-register-32">register</a>(workflow.clone()).<span class="rs-kw">await</span>;
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-WorkflowToolService-183">WorkflowToolService</a>&quot;)
+            .field(&quot;has_register&quot;, &amp;<span class="rs-self">self</span>.register.is_some())
+            .finish()
+    }
+}
+
+<span class="rs-comment">/// State-dependent pre-hook dependencies.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a> {
+    sandbox_transport: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt;,
+    workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,
+    subagent_sessions: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a> {
+    <span class="rs-comment">/// Build hook services for tools that need downstream state during pre-hooks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-registry-tool-registry-rs.html#method-new-26">new</a>(
+        sandbox_transport: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt;,
+        workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,
+        subagent_sessions: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            sandbox_transport,
+            workflow_service,
+            subagent_sessions,
+        }
+    }
+
+    <span class="rs-comment">/// Sandbox transport used by command-session hook checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-sandbox-transport-249">sandbox_transport</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt; {
+        <span class="rs-self">self</span>.sandbox_transport.as_ref()
+    }
+
+    <span class="rs-comment">/// Workflow state API used by workflow hook checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-workflow-service-255">workflow_service</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt; {
+        <span class="rs-self">self</span>.workflow_service.as_ref()
+    }
+
+    <span class="rs-comment">/// Subagent background-session service used by hook checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-services-rs.html#method-subagent-sessions-261">subagent_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-SubagentToolService-68">SubagentToolService</a>&gt; {
+        <span class="rs-self">self</span>.subagent_sessions.as_ref()
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool-ports--src-core-metadata-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool-ports--src-services-rs.html#item-struct-HookServices-226">HookServices</a>&quot;)
+            .field(&quot;has_sandbox_transport&quot;, &amp;<span class="rs-self">self</span>.sandbox_transport.is_some())
+            .field(&quot;has_workflow_service&quot;, &amp;<span class="rs-self">self</span>.workflow_service.is_some())
+            .field(&quot;has_subagent_sessions&quot;, &amp;<span class="rs-self">self</span>.subagent_sessions.is_some())
+            .finish()
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

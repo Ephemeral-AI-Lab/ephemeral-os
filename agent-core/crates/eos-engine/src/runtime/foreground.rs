@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use eos_tools::{CancelPort, CancelableResource, ToolError};
+use eos_tool_ports::{CancelPort, CancelableResource, ToolError};
 use eos_types::AgentRunId;
 
 /// Request-scoped, stateless factory for per-run [`ForegroundExecutor`]s.

@@ -1,6 +1,7 @@
 //! Runtime service composition surface.
 
 mod agent_core_registry;
+mod agent_loop;
 mod audit;
 mod builder;
 mod cancel_registry;
@@ -10,14 +11,10 @@ mod message_records;
 mod sandbox;
 mod state_reader;
 
-use std::sync::Arc;
-
 use eos_agent_runner::AgentMessageRecords;
-use eos_tools::{RootSubmissionService, SandboxToolService, SkillToolService};
-
-use crate::plugin_tools::register_plugin_tools;
 
 pub(crate) use agent_core_registry::AgentCoreRegistryService;
+pub(crate) use agent_loop::build_agent_loop_launcher;
 pub(crate) use audit::AuditService;
 pub use builder::RuntimeServicesBuilder;
 pub(crate) use cancel_registry::RequestCancelRegistry;
@@ -71,31 +68,6 @@ impl RuntimeServices {
     #[must_use]
     pub fn message_records(&self) -> Option<AgentMessageRecords> {
         self.message_records.message_records.clone()
-    }
-
-    /// Bundle the explicit run handles `eos_engine::run_agent` needs.
-    pub(crate) fn engine_run_handles(&self, workspace_root: &str) -> eos_engine::EngineRunHandles {
-        let sandbox_service = SandboxToolService::new(self.sandbox.transport.clone());
-        let plugin_sandbox_service = sandbox_service.clone();
-        eos_engine::EngineRunHandles {
-            agent_run_store: self.db.agent_run_store.clone(),
-            llm_client: self.engine.llm_client.clone(),
-            event_source_factory: self.engine.event_source_factory.clone(),
-            agent_registry: self.agent_core.agent_registry.clone(),
-            tool_config: self.agent_core.tool_config.clone(),
-            sandbox_service,
-            root_submission: Some(RootSubmissionService::new(
-                self.db.task_store.clone(),
-                self.db.request_store.clone(),
-            )),
-            skill_service: SkillToolService::new(self.agent_core.skill_registry.clone()),
-            tool_registry_extender: Some(Arc::new(move |registry| {
-                register_plugin_tools(registry, &plugin_sandbox_service);
-            })),
-            audit: self.audit.sink.clone(),
-            message_records: self.message_records.message_records.clone(),
-            workspace_root: workspace_root.to_owned(),
-        }
     }
 
     /// Flush and join the buffered audit writer thread, if any.

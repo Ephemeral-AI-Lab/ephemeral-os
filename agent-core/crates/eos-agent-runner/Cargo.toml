@@ -7,10 +7,14 @@ rust-version.workspace = true
 [dependencies]
 async-trait.workspace = true
 eos-agent-def.workspace = true
+eos-agent-ports.workspace = true
 eos-agent-message-records.workspace = true
 eos-llm-client.workspace = true
+eos-tool-ports.workspace = true
 eos-types.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true

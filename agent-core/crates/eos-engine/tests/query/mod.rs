@@ -186,14 +186,12 @@ fn ctx(
         submission_outcome: None,
         event_source: Some(source),
         prompt_report: None,
-        message_record: None,
         notification_rules: Vec::new(),
         notification_fired: BTreeSet::new(),
         notifier: NotificationService::new(),
         cancellation: eos_engine::AgentRunCancellation::new(),
         foreground: Arc::new(eos_engine::ForegroundExecutorFactory.create(AgentRunId::new_v4())),
         audit: None,
-        run_handles: None,
     }
 }
 

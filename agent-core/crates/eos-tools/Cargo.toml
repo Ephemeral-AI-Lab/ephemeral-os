@@ -12,8 +12,8 @@ path = "src/mod.rs"
 # WorkflowSessionId, CommandSessionId, AgentRunId, and JsonObject/CoreError
 # in its own signatures. Mirrors the eos-plugin-catalog precedent.
 eos-types.workspace = true
-eos-agent-runner.workspace = true
-eos-agent-def.workspace = true
+eos-tool-ports.workspace = true
+eos-agent-ports.workspace = true
 eos-sandbox-port.workspace = true
 eos-skills.workspace = true
 eos-llm-client.workspace = true

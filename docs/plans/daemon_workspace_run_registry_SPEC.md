@@ -1,6 +1,6 @@
 # Daemon Workspace-Run Registry — Migration SPEC
 
-Status: complete — Phases 1–8 landed. Phase 8 was completed via the full §3.4 migration (not the earlier re-keyed-in-place divergence): the caller-keyed registry + manager were relocated from `eos-command-session` into `eos-daemon/src/services/workspace_run/`, `CommandSession` was reduced to a pure PTY substrate (`reap`/`persist_final`, no policy) with the publish-vs-discard decision lifted into the daemon-side run, `command_session/` + `isolated_workspace/` were merged under `services/workspace_run/`, and `OnceLock<CommandSessionManager>` became the daemon-owned `OnceLock<WorkspaceRunManager>`. Wire-op strings and the `cancel_workspace_runs[_by_caller_id]` coordinator are unchanged. (See Progress tracker below.) A post-landing audit hardened five gaps — most notably a silent timeout-completion loss and a cancel lease leak — and recorded the real spec-vs-impl divergences; see **§10**.
+Status: complete — Phases 1–8 landed. Phase 8 was completed via the full §3.4 migration (not the earlier re-keyed-in-place divergence): the caller-keyed registry + manager were relocated from `eos-command-session` into `eos-daemon/src/services/workspace_run/`, `CommandSession` was reduced to a pure PTY substrate (`reap`/`persist_final`, no policy) with the publish-vs-discard decision lifted into the daemon-side run, `command_session/` + `isolated_workspace/` were merged under `services/workspace_run/`, and `OnceLock<CommandSessionManager>` became the daemon-owned `OnceLock<WorkspaceRunManager>`. Wire-op strings and the `cancel_workspace_runs[_by_caller_id]` coordinator are unchanged. (See Progress tracker below.) A post-landing audit hardened five gaps — most notably a silent timeout-completion loss and a cancel lease leak — and recorded the real spec-vs-impl divergences (§10); a later independent pass re-verified the F1–F5 fixes + named tests and removed migration-orphaned dead code (net −78 LOC); see **§10–§11**.
 Owner: sandbox (daemon substrate)
 Scope: `sandbox/crates/eos-daemon`, `eos-command-session`,
 `eos-ephemeral-workspace`, `eos-isolated-workspace`, `eos-workspace-api`
@@ -599,3 +599,49 @@ documented process/signal/PTY flake set.
   surfaced to the model twice; (2) a per-session Ctrl-C/cancel on an already-parked session removes
   the completion inline but the agent-core tool never flips the background session off `Running`.
   Both fixes belong in the agent-core background supervisor, not this daemon spec.
+
+## 11. Independent re-verification & dead-code cleanup (2026-06-08)
+
+A second, independent pass re-checked the §10 audit's *claims* (not just the code) and then
+removed migration-orphaned dead code. The model and the F1–F5 fixes hold exactly as §10 records.
+
+### Re-verified (no change)
+
+- **F1–F5 present and correct at file:line**: `force_discard` (reap-independent removal + lease/dir
+  release), the `CallerRuns(HashMap)` total-insert newtype, `kill: Option<KillReason>` with
+  timeout-parks-completion, `notification_result` fully gone, the eviction comment.
+- **Named tests exist and assert the claimed invariants** (read, not just grepped):
+  `cancel_workspace_runs_by_caller_id_discards_overlay_writes` asserts the shared `manifest_version`
+  is **unchanged** *and* the file is unpublished; `background_timeout_parks_collectable_completion`
+  asserts a timeout parks a single collectable (non-redelivered) completion; the F3 host unit test
+  `kill_reason_maps_to_terminal_status` locks `Cancelled→cancelled/130`, `TimedOut→timed_out/124`;
+  `collect_completed_drains` confirms drain-and-remove.
+- **Floor**: `cargo check --all-targets` + `clippy -D warnings` clean on `x86_64-unknown-linux-musl`.
+
+### Dead code removed (net −78 LOC; behavior-neutral, compiler + host-test verified)
+
+| Item | Home | Why dead |
+|---|---|---|
+| `WorkspaceRunManager::release_lease` inherent method | `eos-daemon` `manager.rs` | byte-identical duplicate of the module free `release_lease`; 2 callers redirected to the free fn |
+| `CommandSession::elapsed_s` (`cfg(not linux)`) | `eos-command-session` | zero callers on any target/test/trait/serde path |
+| 7 `EphemeralWorkspaceError` variants (`InvalidArgument`, `SnapshotAcquire`, `LeaseRelease`, `RunnerFailed`, `CleanupFailed`, `Io`, `Serde`) + the dead `ephemeral_daemon_error` match arms | `eos-ephemeral-workspace` / `eos-daemon` | never constructed — orphaned when lease/runner/cleanup orchestration moved to the daemon run; `ephemeral_daemon_error` collapses to the `OverlayPipeline` catch-all (behavior-identical) |
+| `EphemeralTimings` fields `lease_acquire_s`/`runner_s`/`capture_s`/`cleanup_s`/`total_s`/`extra` + `new`/`insert_extra` | `eos-ephemeral-workspace` `timings.rs` | write-only/never-written; only `publish_s` is read (the OCC-timing fallback), kept |
+| `FinalizeRequest.command_started_at` + its `insert_extra` block | `eos-ephemeral-workspace` `finalize.rs` | `None` at both call sites — fully dead plumbing |
+| `IsolatedNetwork::initialized()` public getter | `eos-isolated-workspace` `network.rs` | zero callers (the `initialized` field is still read internally at the `install_veth` guard, so only the getter is removed) — pre-existing dead surface, swept here since the crate is in scope |
+
+The sweep removed dead code in the in-scope crates regardless of whether it was orphaned by *this*
+registry migration or the earlier crate-boundary refactor; all removals are zero-referrer and
+behavior-neutral.
+
+Verification: musl `check --all-targets` + `clippy -D warnings` clean; host `check` (compiles the
+`cfg(not linux)` paths) clean; host unit suites green (`eos-command-session`, `eos-ephemeral-workspace`
+finalize/command, `eos-workspace-api`, the daemon `workspace_run` registry scaffold); whole-repo grep
+confirms zero remaining referrers to any removed symbol. No behavioral path changed, so the §8/§10 E2E
+results stand without a rebuild (the only live timing surface, `publish_s`, is unchanged on the wire).
+
+### Left as-is (deliberate)
+
+- All §10 "Acknowledged divergences" above (file-split, `EphemeralSnapshot` alias, `Lifecycle`,
+  `session_dir`) — prose-conformance churn, no production cost.
+- `test_runtime_stub_enabled()` vs inline `env_true(TEST_HARNESS_ENV)` — not a duplicate; the former is
+  the named domain wrapper (7 call sites), the latter a shared env primitive.

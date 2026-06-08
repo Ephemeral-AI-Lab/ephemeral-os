@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
   "crates/eos-types", "crates/eos-config",
+  "crates/eos-tool-ports",
+  "crates/eos-agent-ports",
   "crates/eos-agent-runner",
   "crates/eos-agent-message-records",
   "crates/eos-db", "crates/eos-audit", "crates/eos-llm-client",
@@ -66,6 +68,8 @@ tempfile          = "3"
 # internal crates — these path edges ARE the dependency DAG
 eos-types          = { path = "crates/eos-types" }
 eos-config         = { path = "crates/eos-config" }
+eos-tool-ports     = { path = "crates/eos-tool-ports" }
+eos-agent-ports    = { path = "crates/eos-agent-ports" }
 eos-agent-runner      = { path = "crates/eos-agent-runner" }
 eos-agent-message-records      = { path = "crates/eos-agent-message-records" }
 eos-db             = { path = "crates/eos-db" }

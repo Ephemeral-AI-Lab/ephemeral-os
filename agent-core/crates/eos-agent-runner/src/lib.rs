@@ -1,18 +1,22 @@
-//! Agent-run lifecycle API.
+//! Agent-run lifecycle adapter and compatibility exports.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod error;
-mod outcome;
-mod request;
-mod service;
+mod active_agent_runs;
+mod agent_loop_request;
+mod agent_run_persistence;
+mod agent_run_records;
+mod agent_run_service;
 
-pub use error::AgentRunError;
-pub use eos_agent_message_records::{
-    AgentMessageRecords, AgentRunRecordHandle, AgentRunRecordKind, AgentRunRecordStart,
-    MessageRecordError, NodeFinishStatus, WorkflowTaskRole,
+pub use eos_agent_ports::{
+    AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunRecordKind,
+    AgentRunStatus, SpawnAgentRequest, WorkflowTaskRole,
 };
-pub use outcome::{AgentRunOutcome, AgentRunStatus};
-pub use request::SpawnAgentRequest;
-pub use service::AgentRunApi;
+pub use eos_agent_message_records::{
+    AgentMessageRecords, AgentRunRecordHandle, AgentRunRecordStart, MessageRecordError,
+    NodeFinishStatus,
+};
+pub use active_agent_runs::ActiveAgentRuns;
+pub use agent_run_records::to_message_record_kind;
+pub use agent_run_service::AgentRunService;

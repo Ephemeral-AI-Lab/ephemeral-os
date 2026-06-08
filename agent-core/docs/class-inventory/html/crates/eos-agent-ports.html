@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-agent-ports · src/agent_loop/contracts.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-agent-ports File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>11</b><span>modules</span></div>
+  <div><b>22</b><span>items</span></div>
+  <div><b>65</b><span>fields</span></div>
+  <div><b>11</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent_loop</span><ul class="file-tree"><li><a class="file-link active" href="eos-agent-ports.html"><span>contracts.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-agent-loop-launcher-rs.html"><span>launcher.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-agent-loop-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-ports--src-agent-name-rs.html"><span>agent_name.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-agent-run-api-rs.html"><span>agent_run_api.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-agent-run-outcome-rs.html"><span>agent_run_outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-agent-state-rs.html"><span>agent_state.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-error-rs.html"><span>error.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-metadata-service-rs.html"><span>metadata_service.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-ports--src-spawn-agent-request-rs.html"><span>spawn_agent_request.rs</span><small>3/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="agent_loop::contracts crates/eos-agent-ports/src/agent_loop/contracts.rs StartAgentLoopRequest AgentLoopMessage AgentLoopOutcome AgentLoopOutcomeKind">
+  <div class="module-head">
+    <div>
+      <h2>src/agent_loop/contracts.rs</h2>
+      <p class="path">module <code>agent_loop::contracts</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-StartAgentLoopRequest-7" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StartAgentLoopRequest pub pub struct StartAgentLoopRequest crates/eos-agent-ports/src/agent_loop/contracts.rs agent_run_id AgentRunId initial_messages Vec &lt; AgentLoopMessage &gt; model_key String max_completion_tokens u32 tool_call_limit u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StartAgentLoopRequest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-ports.html#item-struct-StartAgentLoopRequest-7">StartAgentLoopRequest</a></code>
+  <p class="docstring">Thin request to start one agent loop.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>initial_messages</td><td><code>Vec &lt; <a class="symbol-link" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a> &gt;</code></td></tr><tr><td>pub</td><td>model_key</td><td><code>String</code></td></tr><tr><td>pub</td><td>max_completion_tokens</td><td><code>u32</code></td></tr><tr><td>pub</td><td>tool_call_limit</td><td><code>u32</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-ports/src/agent_loop/contracts.rs:7</p>
+</article><article id="item-struct-AgentLoopOutcome-33" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentLoopOutcome pub pub struct AgentLoopOutcome crates/eos-agent-ports/src/agent_loop/contracts.rs kind AgentLoopOutcomeKind final_conversation_messages Vec &lt; AgentLoopMessage &gt; total_token_count Option &lt; i64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AgentLoopOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-agent-ports.html#item-struct-AgentLoopOutcome-33">AgentLoopOutcome</a></code>
+  <p class="docstring">Terminal loop outcome envelope.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-agent-ports.html#item-enum-AgentLoopOutcomeKind-44">AgentLoopOutcomeKind</a></code></td></tr><tr><td>pub</td><td>final_conversation_messages</td><td><code>Vec &lt; <a class="symbol-link" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a> &gt;</code></td></tr><tr><td>pub</td><td>total_token_count</td><td><code>Option &lt; i64 &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-ports/src/agent_loop/contracts.rs:33</p>
+</article><article id="item-enum-AgentLoopMessage-22" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentLoopMessage pub pub enum AgentLoopMessage crates/eos-agent-ports/src/agent_loop/contracts.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>AgentLoopMessage</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a></code>
+  <p class="docstring">Engine-local loop message wrapper.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>SystemPrompt</td><td><code>0: String</code></td></tr><tr><td>UserMessage</td><td><code>0: Message</code></td></tr><tr><td>AssistantMessage</td><td><code>0: Message</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-ports/src/agent_loop/contracts.rs:22</p>
+</article><article id="item-enum-AgentLoopOutcomeKind-44" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentLoopOutcomeKind pub pub enum AgentLoopOutcomeKind crates/eos-agent-ports/src/agent_loop/contracts.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>AgentLoopOutcomeKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-ports.html#item-enum-AgentLoopOutcomeKind-44">AgentLoopOutcomeKind</a></code>
+  <p class="docstring">Narrow loop outcome kinds for this migration.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>TerminalToolSubmitted</td><td><code>outcome: ToolResult</code></td></tr><tr><td>LoopFailed</td><td><code>error_summary: String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-agent-ports/src/agent_loop/contracts.rs:44</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-agent-ports/src/agent_loop/contracts.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Agent-loop DTOs.</span>
+
+<span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">Message</span>;
+<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolResult</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
+
+<span class="rs-comment">/// Thin request to start one agent loop.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-ports.html#item-struct-StartAgentLoopRequest-7">StartAgentLoopRequest</a> {
+    <span class="rs-comment">/// Agent-run id.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
+    <span class="rs-comment">/// Runner-prepared initial messages.</span>
+    <span class="rs-kw">pub</span> initial_messages: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a>&gt;,
+    <span class="rs-comment">/// Resolved model key.</span>
+    <span class="rs-kw">pub</span> model_key: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Completion token cap.</span>
+    <span class="rs-kw">pub</span> max_completion_tokens: u32,
+    <span class="rs-comment">/// Tool-call limit.</span>
+    <span class="rs-kw">pub</span> tool_call_limit: u32,
+}
+
+<span class="rs-comment">/// Engine-local loop message wrapper.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a> {
+    <span class="rs-comment">/// System prompt text.</span>
+    <span class="rs-type">SystemPrompt</span>(<span class="rs-type">String</span>),
+    <span class="rs-comment">/// User message.</span>
+    <span class="rs-type">UserMessage</span>(<span class="rs-type">Message</span>),
+    <span class="rs-comment">/// Assistant message.</span>
+    <span class="rs-type">AssistantMessage</span>(<span class="rs-type">Message</span>),
+}
+
+<span class="rs-comment">/// Terminal loop outcome envelope.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-agent-ports.html#item-struct-AgentLoopOutcome-33">AgentLoopOutcome</a> {
+    <span class="rs-comment">/// Outcome kind.</span>
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopOutcomeKind-44">AgentLoopOutcomeKind</a>,
+    <span class="rs-comment">/// Final loop transcript.</span>
+    <span class="rs-kw">pub</span> final_conversation_messages: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopMessage-22">AgentLoopMessage</a>&gt;,
+    <span class="rs-comment">/// Total provider token count when known.</span>
+    <span class="rs-kw">pub</span> total_token_count: <span class="rs-type">Option</span>&lt;i64&gt;,
+}
+
+<span class="rs-comment">/// Narrow loop outcome kinds for this migration.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-ports.html#item-enum-AgentLoopOutcomeKind-44">AgentLoopOutcomeKind</a> {
+    <span class="rs-comment">/// A terminal tool submitted successfully.</span>
+    <span class="rs-type">TerminalToolSubmitted</span> {
+        <span class="rs-comment">/// Terminal tool result.</span>
+        outcome: <span class="rs-type">ToolResult</span>,
+    },
+    <span class="rs-comment">/// The loop failed or exited without a valid terminal submission.</span>
+    <span class="rs-type">LoopFailed</span> {
+        <span class="rs-comment">/// Human-readable error summary.</span>
+        error_summary: <span class="rs-type">String</span>,
+    },
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

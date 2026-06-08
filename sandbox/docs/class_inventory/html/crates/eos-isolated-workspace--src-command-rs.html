@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-isolated-workspace · src/command.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-isolated-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>19</b><span>modules</span></div>
+  <div><b>140</b><span>items</span></div>
+  <div><b>74</b><span>fields</span></div>
+  <div><b>64</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link active" href="eos-isolated-workspace--src-command-rs.html"><span>command.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-isolated-workspace--src-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-isolated-workspace--src-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-isolated-workspace--src-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="command crates/eos-isolated-workspace/src/command.rs IsolatedCommandPrepareContext IsolatedCommandFinalizeContext prepare_isolated_command finalize_isolated_command take_isolated_audit merge_changed_paths prepare_error finalize_error path_changes_to_wire merge_runner_timings ns_fds_value namespace_fd prepare_builds_setns_runner_request_without_publish finalize_captures_audit_only_changes_without_publish">
+  <div class="module-head">
+    <div>
+      <h2>src/command.rs</h2>
+      <p class="path">module <code>command</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>0 impls</span>
+      <span>12 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-IsolatedCommandPrepareContext-21" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedCommandPrepareContext pub pub struct IsolatedCommandPrepareContext crates/eos-isolated-workspace/src/command.rs workspace_handle_id String workspace_root PathBuf scratch_dir PathBuf layer_paths Vec &lt; PathBuf &gt; upperdir PathBuf workdir PathBuf ns_fds HashMap &lt; String , i32 &gt; cgroup_path Option &lt; PathBuf &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IsolatedCommandPrepareContext</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a></code>
+  <p class="docstring">Daemon-supplied facts needed to prepare an isolated command workspace.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_handle_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>scratch_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>ns_fds</td><td><code>HashMap &lt; String , i32 &gt;</code></td></tr><tr><td>pub</td><td>cgroup_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:21</p>
+</article><article id="item-struct-IsolatedCommandFinalizeContext-34" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedCommandFinalizeContext pub pub struct IsolatedCommandFinalizeContext crates/eos-isolated-workspace/src/command.rs caller_id String workspace_handle_id String manifest_version i64 manifest_root_hash String upperdir PathBuf base_timings WorkspaceTimings ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IsolatedCommandFinalizeContext</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a></code>
+  <p class="docstring">Daemon-supplied facts needed to finalize an isolated command workspace.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_handle_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>manifest_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>manifest_root_hash</td><td><code>String</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>base_timings</td><td><code>WorkspaceTimings</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:34</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-prepare-isolated-command-45" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_isolated_command pub pub fn prepare_isolated_command (context : IsolatedCommandPrepareContext , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt; crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prepare_isolated_command</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-isolated-command-45">prepare_isolated_command</a> (context : <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a> , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt;</code>
+  <p class="docstring">Build the set-ns/fresh-ns runner request + session scaffolding for one<br>isolated command session.<br># Errors<br>Returns [`WorkspaceApiError`] when the session dir or metadata cannot be<br>created.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build the set-ns/fresh-ns runner request + session scaffolding for one</span>
+<span class="rs-comment">/// isolated command session.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`WorkspaceApiError`] when the session dir or metadata cannot be</span>
+<span class="rs-comment">/// created.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-isolated-command-45">prepare_isolated_command</a>(
+    context: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a>,
+    request: <span class="rs-type">PrepareCommandRequest</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    <span class="rs-kw">let</span> mode = <span class="rs-kw">if</span> context.ns_fds.is_empty() {
+        &quot;fresh_ns&quot;
+    } <span class="rs-kw">else</span> {
+        &quot;set_ns&quot;
+    };
+    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-ns-fds-value-276">ns_fds_value</a>(&amp;context.ns_fds);
+    <span class="rs-kw">let</span> <span class="rs-type">PrepareCommandRequest</span> {
+        caller_id,
+        command_session_id,
+        invocation_id,
+        cmd,
+        timeout_seconds,
+    } = request;
+    <span class="rs-kw">let</span> session_dir = context
+        .scratch_dir
+        .join(&quot;command-sessions&quot;)
+        .join(&amp;command_session_id);
+    std::fs::create_dir_all(&amp;session_dir).map_err(|error| {
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-error-238">prepare_error</a>(format!(
+            &quot;create command session dir {}: {error}&quot;,
+            session_dir.display()
+        ))
+    })?;
+    std::fs::write(
+        session_dir.join(&quot;metadata.json&quot;),
+        serde_json::to_vec_pretty(&amp;json!({
+            &quot;command_session_id&quot;: &amp;command_session_id,
+            &quot;caller_id&quot;: &amp;caller_id,
+            &quot;invocation_id&quot;: &amp;invocation_id,
+            &quot;workspace&quot;: &quot;isolated&quot;,
+            &quot;workspace_handle_id&quot;: &amp;context.workspace_handle_id,
+            &quot;command&quot;: &amp;cmd,
+            &quot;status&quot;: &quot;running&quot;,
+        }))
+        .map_err(prepare_error)?,
+    )
+    .map_err(prepare_error)?;
+    <span class="rs-kw">let</span> run_request = json!({
+        &quot;mode&quot;: mode,
+        &quot;tool_call&quot;: {
+            &quot;invocation_id&quot;: &amp;invocation_id,
+            &quot;caller_id&quot;: &amp;caller_id,
+            &quot;verb&quot;: &quot;exec_command&quot;,
+            &quot;intent&quot;: &quot;write_allowed&quot;,
+            &quot;args&quot;: {
+                &quot;command&quot;: &amp;cmd,
+                &quot;cwd&quot;: &quot;.&quot;,
+            },
+            &quot;background&quot;: <span class="rs-kw">false</span>,
+        },
+        &quot;workspace_root&quot;: context.workspace_root,
+        &quot;layer_paths&quot;: context.layer_paths,
+        &quot;upperdir&quot;: context.upperdir,
+        &quot;workdir&quot;: context.workdir,
+        &quot;ns_fds&quot;: ns_fds,
+        &quot;cgroup_path&quot;: context.cgroup_path,
+        &quot;timeout_seconds&quot;: timeout_seconds,
+    });
+
+    <span class="rs-type">Ok</span>(<span class="rs-type">PreparedCommandWorkspace</span> {
+        run_request,
+        request_path: session_dir.join(&quot;runner-request.json&quot;),
+        output_path: session_dir.join(&quot;runner-result.json&quot;),
+        final_path: session_dir.join(&quot;final.json&quot;),
+        session_dir: session_dir.clone(),
+        transcript_path: session_dir.join(&quot;transcript.log&quot;),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:45</p>
+</article><article id="item-fn-finalize-isolated-command-125" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_isolated_command pub pub fn finalize_isolated_command (context : IsolatedCommandFinalizeContext , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_isolated_command</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-isolated-command-125">finalize_isolated_command</a> (context : <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a> , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
+  <p class="docstring">Capture the isolated command's upperdir for AUDIT ONLY (never published) and<br>shape the command outcome. The returned outcome carries an `audit` block in<br>`metadata` that the daemon run extracts and records before responding; cancel<br>skips this path entirely so a cancelled command captures nothing.<br># Errors<br>Returns [`WorkspaceApiError`] when capturing the upperdir fails.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Capture the isolated command's upperdir for AUDIT ONLY (never published) and</span>
+<span class="rs-comment">/// shape the command outcome. The returned outcome carries an `audit` block in</span>
+<span class="rs-comment">/// `metadata` that the daemon run extracts and records before responding; cancel</span>
+<span class="rs-comment">/// skips this path entirely so a cancelled command captures nothing.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`WorkspaceApiError`] when capturing the upperdir fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-isolated-command-125">finalize_isolated_command</a>(
+    context: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a>,
+    request: <span class="rs-type">FinalizeCommandRequest</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    <span class="rs-kw">let</span> capture_start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(&amp;context.upperdir)
+        .map_err(|err| <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-error-242">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
+    <span class="rs-kw">let</span> capture_s = capture_start.elapsed().as_secs_f64();
+    <span class="rs-kw">let</span> path_kinds = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-path-changes-to-wire-246">path_changes_to_wire</a>(&amp;changes);
+    <span class="rs-kw">let</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = path_kinds.iter().map(|(path, _)| path.clone()).collect();
+    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = context.base_timings;
+    <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-runner-timings-253">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
+    timings.insert(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(usize_to_f64_saturating(changed_paths.len())),
+    );
+    timings.insert(&quot;command_exec.capture_upperdir_s&quot;.to_owned(), json!(capture_s));
+    timings.insert(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(0.0));
+    timings.insert(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        &quot;api.exec_command.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        &quot;api.exec_command.dispatch_total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    <span class="rs-kw">let</span> command_success = request.command_succeeded();
+    <span class="rs-kw">let</span> exit_code = request.exit_code.unwrap_or(1);
+    <span class="rs-kw">let</span> duration_ms = request.command_elapsed_s * 1000.0;
+    <span class="rs-kw">let</span> status = request.status;
+    <span class="rs-kw">let</span> command_session_id = request.command_session_id;
+    <span class="rs-kw">let</span> audit_command_session_id = command_session_id.clone().unwrap_or_default();
+    <span class="rs-kw">let</span> caller_id = context.caller_id;
+    <span class="rs-kw">let</span> workspace_handle_id = context.workspace_handle_id;
+    <span class="rs-kw">let</span> manifest_version = context.manifest_version;
+    <span class="rs-kw">let</span> manifest_root_hash = context.manifest_root_hash;
+    <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span> {
+        mode: <span class="rs-type">WorkspaceMode</span>::<span class="rs-type">Isolated</span>,
+        success: command_success,
+        status: status.clone(),
+        exit_code: <span class="rs-type">Some</span>(exit_code),
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id,
+        changed_paths,
+        changed_path_kinds,
+        mutation_source: &quot;isolated_workspace&quot;.to_owned(),
+        conflict: <span class="rs-type">None</span>,
+        conflict_reason: <span class="rs-type">None</span>,
+        timings,
+        metadata: json!({
+            &quot;isolated_workspace&quot;: {
+                &quot;caller_id&quot;: caller_id,
+                &quot;workspace_handle_id&quot;: workspace_handle_id.clone(),
+                &quot;manifest_version&quot;: manifest_version,
+                &quot;manifest_root_hash&quot;: manifest_root_hash,
+                &quot;published&quot;: <span class="rs-kw">false</span>,
+            },
+            &quot;warnings&quot;: [],
+            &quot;audit&quot;: {
+                &quot;workspace_handle_id&quot;: workspace_handle_id,
+                &quot;exit_code&quot;: exit_code,
+                &quot;argv0&quot;: &quot;bash&quot;,
+                &quot;status&quot;: status,
+                &quot;published&quot;: <span class="rs-kw">false</span>,
+                &quot;command_session_id&quot;: audit_command_session_id,
+                &quot;duration_s&quot;: request.command_elapsed_s,
+                &quot;total_ms&quot;: duration_ms,
+                &quot;phases_ms&quot;: {
+                    &quot;exec&quot;: duration_ms,
+                },
+            },
+        }),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:125</p>
+</article><article id="item-fn-take-isolated-audit-214" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn take_isolated_audit pub pub fn take_isolated_audit (outcome : &amp; mut WorkspaceCommandOutcome) -&gt; Value crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>take_isolated_audit</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-take-isolated-audit-214">take_isolated_audit</a> (outcome : &amp; mut WorkspaceCommandOutcome) -&gt; Value</code>
+  <p class="docstring">Split the `audit` block out of a finalized isolated outcome's metadata,<br>folding the captured `changed_paths` into it. Returns the audit payload the<br>daemon records, leaving `outcome.metadata` without the `audit` key.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Split the `audit` block out of a finalized isolated outcome's metadata,</span>
+<span class="rs-comment">/// folding the captured `changed_paths` into it. Returns the audit payload the</span>
+<span class="rs-comment">/// daemon records, leaving `outcome.metadata` without the `audit` key.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-take-isolated-audit-214">take_isolated_audit</a>(outcome: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceCommandOutcome</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> audit = outcome
+        .metadata
+        .get(&quot;audit&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(metadata) = outcome.metadata.as_object_mut() {
+        metadata.remove(&quot;audit&quot;);
+    }
+    <span class="rs-kw">let</span> changed_paths = json!(outcome.changed_paths);
+    <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-changed-paths-231">merge_changed_paths</a>(audit, changed_paths)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:214</p>
+</article><article id="item-fn-merge-changed-paths-231" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_changed_paths private fn merge_changed_paths (mut audit : Value , changed_paths : Value) -&gt; Value crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>merge_changed_paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-changed-paths-231">merge_changed_paths</a> (mut audit : Value , changed_paths : Value) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-changed-paths-231">merge_changed_paths</a>(<span class="rs-kw">mut</span> audit: <span class="rs-type">Value</span>, changed_paths: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = audit.as_object_mut() {
+        object.insert(&quot;changed_paths&quot;.to_owned(), changed_paths);
+    }
+    audit
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:231</p>
+</article><article id="item-fn-prepare-error-238" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_error private fn prepare_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prepare_error</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-error-238">prepare_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-error-238">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(&quot;isolated_command_prepare_failed&quot;, error.to_string())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:238</p>
+</article><article id="item-fn-finalize-error-242" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_error private fn finalize_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_error</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-error-242">finalize_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-error-242">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(&quot;isolated_command_finalize_failed&quot;, error.to_string())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:242</p>
+</article><article id="item-fn-path-changes-to-wire-246" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_changes_to_wire private fn path_changes_to_wire (changes : &amp; [LayerChange]) -&gt; Vec &lt; (String , String) &gt; crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_changes_to_wire</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-path-changes-to-wire-246">path_changes_to_wire</a> (changes : &amp; [LayerChange]) -&gt; Vec &lt; (String , String) &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-path-changes-to-wire-246">path_changes_to_wire</a>(changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Vec</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
+    changes
+        .iter()
+        .map(|change| (change.path().as_str().to_owned(), change.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-error-rs.html#method-kind-82">kind</a>().to_owned()))
+        .collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:246</p>
+</article><article id="item-fn-merge-runner-timings-253" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_runner_timings private fn merge_runner_timings (timings : &amp; mut WorkspaceTimings , runner_result : Option &lt; &amp; Value &gt;) crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>merge_runner_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-runner-timings-253">merge_runner_timings</a> (timings : &amp; mut WorkspaceTimings , runner_result : Option &lt; &amp; Value &gt;)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-runner-timings-253">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner_result
+        .and_then(|runner| runner.get(&quot;tool_result&quot;))
+        .and_then(|tool_result| tool_result.get(&quot;timings&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_object)
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> runner_timings {
+        timings.entry(key.clone()).or_insert_with(|| value.clone());
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.get(&quot;workspace.mount_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.mount_workspace_s&quot;.to_owned())
+            .or_insert(value);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.get(&quot;workspace.tool_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.run_command_s&quot;.to_owned())
+            .or_insert(value);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:253</p>
+</article><article id="item-fn-ns-fds-value-276" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ns_fds_value private fn ns_fds_value (map : &amp; HashMap &lt; String , i32 &gt;) -&gt; Value crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ns_fds_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-ns-fds-value-276">ns_fds_value</a> (map : &amp; HashMap &lt; String , i32 &gt;) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-ns-fds-value-276">ns_fds_value</a>(map: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> map.is_empty() {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span>
+    } <span class="rs-kw">else</span> {
+        json!({
+            &quot;user&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;user&quot;),
+            &quot;mnt&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;mnt&quot;),
+            &quot;pid&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;pid&quot;),
+            &quot;net&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;net&quot;),
+        })
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:276</p>
+</article><article id="item-fn-namespace-fd-289" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn namespace_fd private fn namespace_fd (map : &amp; HashMap &lt; String , i32 &gt; , name : &amp; str) -&gt; Value crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>namespace_fd</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a> (map : &amp; HashMap &lt; String , i32 &gt; , name : &amp; str) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;, name: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    map.get(name).map_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>, |fd| json!(*fd))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:289</p>
+</article><article id="item-fn-prepare-builds-setns-runner-request-without-publish-299" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_builds_setns_runner_request_without_publish private fn prepare_builds_setns_runner_request_without_publish () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>prepare_builds_setns_runner_request_without_publish</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-builds-setns-runner-request-without-publish-299">prepare_builds_setns_runner_request_without_publish</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-builds-setns-runner-request-without-publish-299">prepare_builds_setns_runner_request_without_publish</a>(
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
+        <span class="rs-kw">let</span> scratch_dir = std::env::temp_dir().join(format!(
+            &quot;eos-isolated-command-prepare-{}&quot;,
+            std::process::id()
+        ));
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::from(&quot;/configured-workspace&quot;);
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;scratch_dir);
+
+        <span class="rs-kw">let</span> prepared = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-isolated-command-45">prepare_isolated_command</a>(
+            <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a> {
+                workspace_handle_id: &quot;iws-1&quot;.to_owned(),
+                workspace_root: workspace_root.clone(),
+                scratch_dir: scratch_dir.clone(),
+                layer_paths: vec![<span class="rs-type">PathBuf</span>::from(&quot;/lower/a&quot;)],
+                upperdir: scratch_dir.join(&quot;upper&quot;),
+                workdir: scratch_dir.join(&quot;work&quot;),
+                ns_fds: <span class="rs-type">HashMap</span>::from([
+                    (&quot;user&quot;.to_owned(), 10),
+                    (&quot;mnt&quot;.to_owned(), 11),
+                    (&quot;pid&quot;.to_owned(), 12),
+                    (&quot;net&quot;.to_owned(), 13),
+                ]),
+                cgroup_path: <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(&quot;/sys/fs/cgroup/eos/iws-1&quot;)),
+            },
+            <span class="rs-type">PrepareCommandRequest</span> {
+                caller_id: &quot;caller-1&quot;.to_owned(),
+                command_session_id: &quot;cmd-1&quot;.to_owned(),
+                invocation_id: &quot;inv-1&quot;.to_owned(),
+                cmd: &quot;pwd&quot;.to_owned(),
+                timeout_seconds: <span class="rs-type">Some</span>(4.0),
+            },
+        )?;
+
+        assert_eq!(prepared.run_request[&quot;mode&quot;], &quot;set_ns&quot;);
+        assert_eq!(
+            prepared.run_request[&quot;workspace_root&quot;],
+            workspace_root.to_string_lossy().as_ref()
+        );
+        assert_eq!(prepared.run_request[&quot;ns_fds&quot;][&quot;user&quot;], 10);
+        assert_eq!(prepared.run_request[&quot;tool_call&quot;][&quot;args&quot;][&quot;command&quot;], &quot;pwd&quot;);
+        assert_eq!(prepared.run_request[&quot;layer_paths&quot;][0], &quot;/lower/a&quot;);
+        assert_eq!(
+            prepared.session_dir,
+            scratch_dir.join(&quot;command-sessions&quot;).join(&quot;cmd-1&quot;)
+        );
+
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(scratch_dir);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:299</p>
+</article><article id="item-fn-finalize-captures-audit-only-changes-without-publish-351" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_captures_audit_only_changes_without_publish private fn finalize_captures_audit_only_changes_without_publish () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-isolated-workspace/src/command.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_captures_audit_only_changes_without_publish</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-captures-audit-only-changes-without-publish-351">finalize_captures_audit_only_changes_without_publish</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-captures-audit-only-changes-without-publish-351">finalize_captures_audit_only_changes_without_publish</a>(
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
+        <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
+            &quot;eos-isolated-command-finalize-{}&quot;,
+            std::process::id()
+        ));
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+        <span class="rs-kw">let</span> upperdir = root.join(&quot;upper&quot;);
+        std::fs::create_dir_all(&amp;upperdir)?;
+        std::fs::write(upperdir.join(&quot;private.txt&quot;), b&quot;private&quot;)?;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-isolated-command-125">finalize_isolated_command</a>(
+            <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a> {
+                caller_id: &quot;caller-1&quot;.to_owned(),
+                workspace_handle_id: &quot;iws-1&quot;.to_owned(),
+                manifest_version: 7,
+                manifest_root_hash: &quot;hash&quot;.to_owned(),
+                upperdir,
+                base_timings: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(),
+            },
+            <span class="rs-type">FinalizeCommandRequest</span> {
+                runner_result: <span class="rs-type">Some</span>(json!({
+                    &quot;tool_result&quot;: {&quot;timings&quot;: {&quot;workspace.mount_s&quot;: 0.1, &quot;workspace.tool_s&quot;: 0.2}},
+                    &quot;exit_code&quot;: 0,
+                })),
+                command_elapsed_s: 1.25,
+                status: &quot;ok&quot;.to_owned(),
+                exit_code: <span class="rs-type">Some</span>(0),
+                stdout: &quot;done&quot;.to_owned(),
+                stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(),
+                command_session_id: <span class="rs-type">Some</span>(&quot;cmd-1&quot;.to_owned()),
+            },
+        )?;
+
+        assert_eq!(outcome.mode, <span class="rs-type">WorkspaceMode</span>::<span class="rs-type">Isolated</span>);
+        assert!(outcome.success);
+        assert_eq!(outcome.changed_paths, vec![&quot;private.txt&quot;]);
+        assert_eq!(outcome.changed_path_kinds[&quot;private.txt&quot;], &quot;write&quot;);
+        assert_eq!(outcome.timings[&quot;command_exec.occ_apply_s&quot;], 0.0);
+        assert_eq!(outcome.timings[&quot;command_exec.mount_workspace_s&quot;], 0.1);
+        assert_eq!(outcome.metadata[&quot;isolated_workspace&quot;][&quot;published&quot;], <span class="rs-kw">false</span>);
+
+        <span class="rs-comment">// The audit block is extractable and carries the captured changed paths.</span>
+        <span class="rs-kw">let</span> audit = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-take-isolated-audit-214">take_isolated_audit</a>(&amp;<span class="rs-kw">mut</span> outcome);
+        assert_eq!(audit[&quot;published&quot;], <span class="rs-kw">false</span>);
+        assert_eq!(audit[&quot;changed_paths&quot;][0], &quot;private.txt&quot;);
+        assert!(outcome.metadata.get(&quot;audit&quot;).is_none());
+
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(root);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-isolated-workspace/src/command.rs:351</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-isolated-workspace/src/command.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Isolated command-workspace lifecycle as free functions.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The daemon's isolated workspace run owns the namespace/lease handle and calls</span>
+<span class="rs-comment">//! these directly: [`prepare_isolated_command`] builds the set-ns runner request,</span>
+<span class="rs-comment">//! and [`finalize_isolated_command`] captures the upperdir for AUDIT ONLY. There</span>
+<span class="rs-comment">//! is NO publish path here — isolated writes are never merged into the shared</span>
+<span class="rs-comment">//! LayerStack (see the crate-level no-publish guarantee); the upperdir is torn</span>
+<span class="rs-comment">//! down with the namespace on exit. Cancel skips capture entirely.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> eos_workspace_api::{
+    usize_to_f64_saturating, <span class="rs-type">ChangedPathKinds</span>, <span class="rs-type">FinalizeCommandRequest</span>, <span class="rs-type">PrepareCommandRequest</span>,
+    <span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceMode</span>,
+    <span class="rs-type">WorkspaceTimings</span>,
+};
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-comment">/// Daemon-supplied facts needed to prepare an isolated command workspace.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a> {
+    <span class="rs-kw">pub</span> workspace_handle_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> workspace_root: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> scratch_dir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> layer_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-kw">pub</span> upperdir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> workdir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> ns_fds: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;,
+    <span class="rs-kw">pub</span> cgroup_path: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+}
+
+<span class="rs-comment">/// Daemon-supplied facts needed to finalize an isolated command workspace.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a> {
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> workspace_handle_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> manifest_version: i64,
+    <span class="rs-kw">pub</span> manifest_root_hash: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> upperdir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> base_timings: <span class="rs-type">WorkspaceTimings</span>,
+}
+
+<span class="rs-comment">/// Build the set-ns/fresh-ns runner request + session scaffolding for one</span>
+<span class="rs-comment">/// isolated command session.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`WorkspaceApiError`] when the session dir or metadata cannot be</span>
+<span class="rs-comment">/// created.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-isolated-command-45">prepare_isolated_command</a>(
+    context: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a>,
+    request: <span class="rs-type">PrepareCommandRequest</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    <span class="rs-kw">let</span> mode = <span class="rs-kw">if</span> context.ns_fds.is_empty() {
+        &quot;fresh_ns&quot;
+    } <span class="rs-kw">else</span> {
+        &quot;set_ns&quot;
+    };
+    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-ns-fds-value-276">ns_fds_value</a>(&amp;context.ns_fds);
+    <span class="rs-kw">let</span> <span class="rs-type">PrepareCommandRequest</span> {
+        caller_id,
+        command_session_id,
+        invocation_id,
+        cmd,
+        timeout_seconds,
+    } = request;
+    <span class="rs-kw">let</span> session_dir = context
+        .scratch_dir
+        .join(&quot;command-sessions&quot;)
+        .join(&amp;command_session_id);
+    std::fs::create_dir_all(&amp;session_dir).map_err(|error| {
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-error-238">prepare_error</a>(format!(
+            &quot;create command session dir {}: {error}&quot;,
+            session_dir.display()
+        ))
+    })?;
+    std::fs::write(
+        session_dir.join(&quot;metadata.json&quot;),
+        serde_json::to_vec_pretty(&amp;json!({
+            &quot;command_session_id&quot;: &amp;command_session_id,
+            &quot;caller_id&quot;: &amp;caller_id,
+            &quot;invocation_id&quot;: &amp;invocation_id,
+            &quot;workspace&quot;: &quot;isolated&quot;,
+            &quot;workspace_handle_id&quot;: &amp;context.workspace_handle_id,
+            &quot;command&quot;: &amp;cmd,
+            &quot;status&quot;: &quot;running&quot;,
+        }))
+        .map_err(prepare_error)?,
+    )
+    .map_err(prepare_error)?;
+    <span class="rs-kw">let</span> run_request = json!({
+        &quot;mode&quot;: mode,
+        &quot;tool_call&quot;: {
+            &quot;invocation_id&quot;: &amp;invocation_id,
+            &quot;caller_id&quot;: &amp;caller_id,
+            &quot;verb&quot;: &quot;exec_command&quot;,
+            &quot;intent&quot;: &quot;write_allowed&quot;,
+            &quot;args&quot;: {
+                &quot;command&quot;: &amp;cmd,
+                &quot;cwd&quot;: &quot;.&quot;,
+            },
+            &quot;background&quot;: <span class="rs-kw">false</span>,
+        },
+        &quot;workspace_root&quot;: context.workspace_root,
+        &quot;layer_paths&quot;: context.layer_paths,
+        &quot;upperdir&quot;: context.upperdir,
+        &quot;workdir&quot;: context.workdir,
+        &quot;ns_fds&quot;: ns_fds,
+        &quot;cgroup_path&quot;: context.cgroup_path,
+        &quot;timeout_seconds&quot;: timeout_seconds,
+    });
+
+    <span class="rs-type">Ok</span>(<span class="rs-type">PreparedCommandWorkspace</span> {
+        run_request,
+        request_path: session_dir.join(&quot;runner-request.json&quot;),
+        output_path: session_dir.join(&quot;runner-result.json&quot;),
+        final_path: session_dir.join(&quot;final.json&quot;),
+        session_dir: session_dir.clone(),
+        transcript_path: session_dir.join(&quot;transcript.log&quot;),
+    })
+}
+
+<span class="rs-comment">/// Capture the isolated command's upperdir for AUDIT ONLY (never published) and</span>
+<span class="rs-comment">/// shape the command outcome. The returned outcome carries an `audit` block in</span>
+<span class="rs-comment">/// `metadata` that the daemon run extracts and records before responding; cancel</span>
+<span class="rs-comment">/// skips this path entirely so a cancelled command captures nothing.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`WorkspaceApiError`] when capturing the upperdir fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-isolated-command-125">finalize_isolated_command</a>(
+    context: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a>,
+    request: <span class="rs-type">FinalizeCommandRequest</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    <span class="rs-kw">let</span> capture_start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(&amp;context.upperdir)
+        .map_err(|err| <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-error-242">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
+    <span class="rs-kw">let</span> capture_s = capture_start.elapsed().as_secs_f64();
+    <span class="rs-kw">let</span> path_kinds = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-path-changes-to-wire-246">path_changes_to_wire</a>(&amp;changes);
+    <span class="rs-kw">let</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = path_kinds.iter().map(|(path, _)| path.clone()).collect();
+    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = context.base_timings;
+    <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-runner-timings-253">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
+    timings.insert(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(usize_to_f64_saturating(changed_paths.len())),
+    );
+    timings.insert(&quot;command_exec.capture_upperdir_s&quot;.to_owned(), json!(capture_s));
+    timings.insert(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(0.0));
+    timings.insert(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        &quot;api.exec_command.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        &quot;api.exec_command.dispatch_total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    <span class="rs-kw">let</span> command_success = request.command_succeeded();
+    <span class="rs-kw">let</span> exit_code = request.exit_code.unwrap_or(1);
+    <span class="rs-kw">let</span> duration_ms = request.command_elapsed_s * 1000.0;
+    <span class="rs-kw">let</span> status = request.status;
+    <span class="rs-kw">let</span> command_session_id = request.command_session_id;
+    <span class="rs-kw">let</span> audit_command_session_id = command_session_id.clone().unwrap_or_default();
+    <span class="rs-kw">let</span> caller_id = context.caller_id;
+    <span class="rs-kw">let</span> workspace_handle_id = context.workspace_handle_id;
+    <span class="rs-kw">let</span> manifest_version = context.manifest_version;
+    <span class="rs-kw">let</span> manifest_root_hash = context.manifest_root_hash;
+    <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span> {
+        mode: <span class="rs-type">WorkspaceMode</span>::<span class="rs-type">Isolated</span>,
+        success: command_success,
+        status: status.clone(),
+        exit_code: <span class="rs-type">Some</span>(exit_code),
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id,
+        changed_paths,
+        changed_path_kinds,
+        mutation_source: &quot;isolated_workspace&quot;.to_owned(),
+        conflict: <span class="rs-type">None</span>,
+        conflict_reason: <span class="rs-type">None</span>,
+        timings,
+        metadata: json!({
+            &quot;isolated_workspace&quot;: {
+                &quot;caller_id&quot;: caller_id,
+                &quot;workspace_handle_id&quot;: workspace_handle_id.clone(),
+                &quot;manifest_version&quot;: manifest_version,
+                &quot;manifest_root_hash&quot;: manifest_root_hash,
+                &quot;published&quot;: <span class="rs-kw">false</span>,
+            },
+            &quot;warnings&quot;: [],
+            &quot;audit&quot;: {
+                &quot;workspace_handle_id&quot;: workspace_handle_id,
+                &quot;exit_code&quot;: exit_code,
+                &quot;argv0&quot;: &quot;bash&quot;,
+                &quot;status&quot;: status,
+                &quot;published&quot;: <span class="rs-kw">false</span>,
+                &quot;command_session_id&quot;: audit_command_session_id,
+                &quot;duration_s&quot;: request.command_elapsed_s,
+                &quot;total_ms&quot;: duration_ms,
+                &quot;phases_ms&quot;: {
+                    &quot;exec&quot;: duration_ms,
+                },
+            },
+        }),
+    })
+}
+
+<span class="rs-comment">/// Split the `audit` block out of a finalized isolated outcome's metadata,</span>
+<span class="rs-comment">/// folding the captured `changed_paths` into it. Returns the audit payload the</span>
+<span class="rs-comment">/// daemon records, leaving `outcome.metadata` without the `audit` key.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-take-isolated-audit-214">take_isolated_audit</a>(outcome: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceCommandOutcome</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> audit = outcome
+        .metadata
+        .get(&quot;audit&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(metadata) = outcome.metadata.as_object_mut() {
+        metadata.remove(&quot;audit&quot;);
+    }
+    <span class="rs-kw">let</span> changed_paths = json!(outcome.changed_paths);
+    <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-changed-paths-231">merge_changed_paths</a>(audit, changed_paths)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-changed-paths-231">merge_changed_paths</a>(<span class="rs-kw">mut</span> audit: <span class="rs-type">Value</span>, changed_paths: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = audit.as_object_mut() {
+        object.insert(&quot;changed_paths&quot;.to_owned(), changed_paths);
+    }
+    audit
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-error-238">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(&quot;isolated_command_prepare_failed&quot;, error.to_string())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-error-242">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(&quot;isolated_command_finalize_failed&quot;, error.to_string())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-path-changes-to-wire-246">path_changes_to_wire</a>(changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Vec</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
+    changes
+        .iter()
+        .map(|change| (change.path().as_str().to_owned(), change.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-error-rs.html#method-kind-82">kind</a>().to_owned()))
+        .collect()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-merge-runner-timings-253">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner_result
+        .and_then(|runner| runner.get(&quot;tool_result&quot;))
+        .and_then(|tool_result| tool_result.get(&quot;timings&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_object)
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> runner_timings {
+        timings.entry(key.clone()).or_insert_with(|| value.clone());
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.get(&quot;workspace.mount_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.mount_workspace_s&quot;.to_owned())
+            .or_insert(value);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.get(&quot;workspace.tool_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.run_command_s&quot;.to_owned())
+            .or_insert(value);
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-ns-fds-value-276">ns_fds_value</a>(map: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> map.is_empty() {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span>
+    } <span class="rs-kw">else</span> {
+        json!({
+            &quot;user&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;user&quot;),
+            &quot;mnt&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;mnt&quot;),
+            &quot;pid&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;pid&quot;),
+            &quot;net&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map, &quot;net&quot;),
+        })
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-namespace-fd-289">namespace_fd</a>(map: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;, name: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    map.get(name).map_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>, |fd| json!(*fd))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-builds-setns-runner-request-without-publish-299">prepare_builds_setns_runner_request_without_publish</a>(
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
+        <span class="rs-kw">let</span> scratch_dir = std::env::temp_dir().join(format!(
+            &quot;eos-isolated-command-prepare-{}&quot;,
+            std::process::id()
+        ));
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::from(&quot;/configured-workspace&quot;);
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;scratch_dir);
+
+        <span class="rs-kw">let</span> prepared = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-prepare-isolated-command-45">prepare_isolated_command</a>(
+            <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandPrepareContext-21">IsolatedCommandPrepareContext</a> {
+                workspace_handle_id: &quot;iws-1&quot;.to_owned(),
+                workspace_root: workspace_root.clone(),
+                scratch_dir: scratch_dir.clone(),
+                layer_paths: vec![<span class="rs-type">PathBuf</span>::from(&quot;/lower/a&quot;)],
+                upperdir: scratch_dir.join(&quot;upper&quot;),
+                workdir: scratch_dir.join(&quot;work&quot;),
+                ns_fds: <span class="rs-type">HashMap</span>::from([
+                    (&quot;user&quot;.to_owned(), 10),
+                    (&quot;mnt&quot;.to_owned(), 11),
+                    (&quot;pid&quot;.to_owned(), 12),
+                    (&quot;net&quot;.to_owned(), 13),
+                ]),
+                cgroup_path: <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(&quot;/sys/fs/cgroup/eos/iws-1&quot;)),
+            },
+            <span class="rs-type">PrepareCommandRequest</span> {
+                caller_id: &quot;caller-1&quot;.to_owned(),
+                command_session_id: &quot;cmd-1&quot;.to_owned(),
+                invocation_id: &quot;inv-1&quot;.to_owned(),
+                cmd: &quot;pwd&quot;.to_owned(),
+                timeout_seconds: <span class="rs-type">Some</span>(4.0),
+            },
+        )?;
+
+        assert_eq!(prepared.run_request[&quot;mode&quot;], &quot;set_ns&quot;);
+        assert_eq!(
+            prepared.run_request[&quot;workspace_root&quot;],
+            workspace_root.to_string_lossy().as_ref()
+        );
+        assert_eq!(prepared.run_request[&quot;ns_fds&quot;][&quot;user&quot;], 10);
+        assert_eq!(prepared.run_request[&quot;tool_call&quot;][&quot;args&quot;][&quot;command&quot;], &quot;pwd&quot;);
+        assert_eq!(prepared.run_request[&quot;layer_paths&quot;][0], &quot;/lower/a&quot;);
+        assert_eq!(
+            prepared.session_dir,
+            scratch_dir.join(&quot;command-sessions&quot;).join(&quot;cmd-1&quot;)
+        );
+
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(scratch_dir);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-captures-audit-only-changes-without-publish-351">finalize_captures_audit_only_changes_without_publish</a>(
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
+        <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
+            &quot;eos-isolated-command-finalize-{}&quot;,
+            std::process::id()
+        ));
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+        <span class="rs-kw">let</span> upperdir = root.join(&quot;upper&quot;);
+        std::fs::create_dir_all(&amp;upperdir)?;
+        std::fs::write(upperdir.join(&quot;private.txt&quot;), b&quot;private&quot;)?;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-finalize-isolated-command-125">finalize_isolated_command</a>(
+            <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-rs.html#item-struct-IsolatedCommandFinalizeContext-34">IsolatedCommandFinalizeContext</a> {
+                caller_id: &quot;caller-1&quot;.to_owned(),
+                workspace_handle_id: &quot;iws-1&quot;.to_owned(),
+                manifest_version: 7,
+                manifest_root_hash: &quot;hash&quot;.to_owned(),
+                upperdir,
+                base_timings: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(),
+            },
+            <span class="rs-type">FinalizeCommandRequest</span> {
+                runner_result: <span class="rs-type">Some</span>(json!({
+                    &quot;tool_result&quot;: {&quot;timings&quot;: {&quot;workspace.mount_s&quot;: 0.1, &quot;workspace.tool_s&quot;: 0.2}},
+                    &quot;exit_code&quot;: 0,
+                })),
+                command_elapsed_s: 1.25,
+                status: &quot;ok&quot;.to_owned(),
+                exit_code: <span class="rs-type">Some</span>(0),
+                stdout: &quot;done&quot;.to_owned(),
+                stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(),
+                command_session_id: <span class="rs-type">Some</span>(&quot;cmd-1&quot;.to_owned()),
+            },
+        )?;
+
+        assert_eq!(outcome.mode, <span class="rs-type">WorkspaceMode</span>::<span class="rs-type">Isolated</span>);
+        assert!(outcome.success);
+        assert_eq!(outcome.changed_paths, vec![&quot;private.txt&quot;]);
+        assert_eq!(outcome.changed_path_kinds[&quot;private.txt&quot;], &quot;write&quot;);
+        assert_eq!(outcome.timings[&quot;command_exec.occ_apply_s&quot;], 0.0);
+        assert_eq!(outcome.timings[&quot;command_exec.mount_workspace_s&quot;], 0.1);
+        assert_eq!(outcome.metadata[&quot;isolated_workspace&quot;][&quot;published&quot;], <span class="rs-kw">false</span>);
+
+        <span class="rs-comment">// The audit block is extractable and carries the captured changed paths.</span>
+        <span class="rs-kw">let</span> audit = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-rs.html#item-fn-take-isolated-audit-214">take_isolated_audit</a>(&amp;<span class="rs-kw">mut</span> outcome);
+        assert_eq!(audit[&quot;published&quot;], <span class="rs-kw">false</span>);
+        assert_eq!(audit[&quot;changed_paths&quot;][0], &quot;private.txt&quot;);
+        assert!(outcome.metadata.get(&quot;audit&quot;).is_none());
+
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(root);
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

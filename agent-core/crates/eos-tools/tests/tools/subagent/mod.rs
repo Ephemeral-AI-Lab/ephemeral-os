@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_agent_runner::{
+use eos_agent_ports::{
     AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,
 };
 use eos_types::{AgentRunId, JsonObject};

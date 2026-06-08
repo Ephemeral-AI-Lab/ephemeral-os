@@ -1,16 +1,8 @@
-//! `eos-tools` — the tool **model surface**: the typed [`ToolName`] set, the
-//! [`ToolIntent`] classification, the [`ToolError`] framework-fault enum, the
-//! [`ToolExecutor`] seam, the [`ToolRegistry`], the colocated `ToolSpec` sources
-//! (one per model-facing tool), the terminal-descriptor catalog, the inner
-//! [`execute_tool_once`] pipeline (reject background → pre-hooks on raw input →
-//! execute/body parse → validate output → stamp-terminal-on-success), and the
-//! pure batch-dispatch decision functions
-//! ([`reject_terminal_batch`], [`lifecycle_batch_decision`]).
+//! `eos-tools` — concrete model-facing tool construction.
 //!
-//! It owns the *decisions*; `eos-engine` owns the async query/dispatch *loop*,
-//! background-session runtime, stream events, and `ToolResultBlock`. Tools that
-//! need downstream state depend on a **narrow [port trait](core::ports)** defined here
-//! and implemented downstream.
+//! Shared tool contracts live in `eos-tool-ports`; engine tool-call policy lives
+//! in `eos-engine`. This crate owns concrete tool DTOs, specs, executors, and
+//! default registry assembly.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -39,14 +31,9 @@ pub use core::ports::{
     SubagentSessionStatus, SubmissionAck, SystemNotification,
 };
 pub use core::result::{OutputShape, ToolResult};
-pub use hooks::{Hook, HookDenial, HookOutcome};
+pub use hooks::Hook;
 pub use registry::config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use registry::tool_registry::ToolRegistry;
-pub use runtime::dispatch::{
-    lifecycle_batch_decision, reject_terminal_batch, BatchRejection, DispatchCall,
-    LifecycleBatchDecision,
-};
-pub use runtime::execution::{execute_tool_once, run_pre_hooks};
 pub use runtime::executor::{RegisteredTool, ToolExecutor};
 pub use tools::terminal::{
     descriptor, render_tool_instruction, TerminalDescriptor, TerminalTool, ToolInstructions,

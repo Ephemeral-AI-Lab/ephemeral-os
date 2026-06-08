@@ -18,16 +18,18 @@ use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use eos_agent_def::AgentRole;
-use eos_agent_runner::{AgentRunApi, AgentRunRecordKind, SpawnAgentRequest, WorkflowTaskRole};
-use eos_engine::{
-    AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
+use eos_agent_ports::{
+    AgentName as AgentPortName, AgentRunApi, AgentRunRecordKind, SpawnAgentRequest,
+    WorkflowTaskRole,
 };
+use eos_agent_runner::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
 use eos_tools::{AttemptSubmissionPort, AttemptSubmissionService};
 use eos_types::{AgentRunId, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
 use crate::runtime_services::RuntimeServices;
+use crate::runtime_services::build_agent_loop_launcher;
 
 /// Runtime adapter over the shared engine loop, supplied to `AttemptDeps.runner`.
 pub(crate) struct RuntimeAgentRunner {
@@ -41,12 +43,6 @@ pub(crate) struct RuntimeAgentRunner {
     /// `get()` is `Some` by the time any run starts, so workflow agents' hooks
     /// can read `workflow_depth` (deferral) and `find_outstanding` (no-inflight).
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
-    /// Request-scoped factory that mints one fresh `AgentRunControl` (notifier,
-    /// foreground, background supervisor, heartbeat, cancellation) per run — the
-    /// runner stores no per-agent mutable supervisor or notifier.
-    control_factory: Arc<AgentRunControlFactory>,
-    /// Live-run registry for recursive cancellation.
-    agent_run_registry: AgentRunRegistry,
 }
 
 impl std::fmt::Debug for RuntimeAgentRunner {
@@ -61,16 +57,12 @@ impl RuntimeAgentRunner {
         workspace_root: impl Into<String>,
         attempt_submission: Arc<dyn AttemptSubmissionPort>,
         workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
-        control_factory: Arc<AgentRunControlFactory>,
-        agent_run_registry: AgentRunRegistry,
     ) -> Self {
         Self {
             services,
             workspace_root: workspace_root.into(),
             attempt_submission,
             workflow_service,
-            control_factory,
-            agent_run_registry,
         }
     }
 }
@@ -89,21 +81,22 @@ impl AgentRunner for RuntimeAgentRunner {
             prompt.push_str(skill);
         }
 
-        let agent_runs = AgentRunService::with_run_services(
-            self.services.engine_run_handles(&self.workspace_root),
-            (*self.control_factory).clone(),
-            AgentRunServiceOptions {
-                agent_run_registry: Some(self.agent_run_registry.clone()),
-                attempt_submission: Some(AttemptSubmissionService::new(
-                    self.attempt_submission.clone(),
-                )),
-                workflow_service: self.workflow_service.get().cloned(),
-                ..AgentRunServiceOptions::default()
-            },
+        let (loop_launcher, agent_run_api_cell) = build_agent_loop_launcher(
+            self.services.clone(),
+            Some(AttemptSubmissionService::new(self.attempt_submission.clone())),
+            self.workflow_service.clone(),
         );
+        let agent_runs = Arc::new(RunnerAgentRunService::new(
+            self.services.agent_core.agent_registry.clone(),
+            loop_launcher,
+            self.services.db.agent_run_store.clone(),
+        ));
+        let agent_run_api: Arc<dyn AgentRunApi> = agent_runs.clone();
+        let _ = agent_run_api_cell.set(agent_run_api);
         let failure_summary = match agent_runs
             .spawn_agent(SpawnAgentRequest {
-                agent_name: launch.agent_def().name.clone(),
+                agent_name: AgentPortName::new(launch.agent_def().name.as_str())
+                    .expect("loaded agent name is valid"),
                 agent_run_id: Some(agent_run_id),
                 initial_messages: vec![Message::from_user_text(prompt)],
                 parent_agent_run_id: None,

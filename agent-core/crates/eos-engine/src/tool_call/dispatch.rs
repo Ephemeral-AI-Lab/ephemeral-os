@@ -7,10 +7,7 @@ use std::time::Instant;
 use eos_audit::TOOL_CALL_COMPLETED;
 use eos_audit::{AuditEvent, AuditNode, AuditSource};
 use eos_llm_client::{ContentBlock, Message};
-use eos_tools::{
-    execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
-    ExecutionMetadata, RegisteredTool, ToolResult,
-};
+use eos_tool_ports::{ExecutionMetadata, RegisteredTool, ToolResult};
 use eos_types::{JsonObject, SystemClock, ToolUseId};
 use serde_json::{json, Value};
 use tokio::sync::mpsc;
@@ -19,6 +16,9 @@ use tokio::task::JoinSet;
 use crate::query::QueryContext;
 use crate::telemetry::StreamEvent;
 use crate::EngineError;
+
+use super::batch::{lifecycle_batch_decision, reject_terminal_batch, DispatchCall};
+use super::execution::execute_tool_once;
 
 /// One model-emitted tool request.
 #[derive(Debug, Clone, PartialEq, Eq)]

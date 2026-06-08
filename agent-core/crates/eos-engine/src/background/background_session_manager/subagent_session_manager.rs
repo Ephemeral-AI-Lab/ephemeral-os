@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_agent_runner::{AgentRunApi, AgentRunOutcome, AgentRunStatus};
-use eos_tools::ToolResult;
+use eos_agent_ports::{AgentRunApi, AgentRunOutcome, AgentRunStatus};
+use eos_tool_ports::ToolResult;
 #[cfg(test)]
 use eos_types::AgentRun;
 use eos_types::{AgentRunId, JsonObject};
@@ -456,7 +456,7 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
-    use eos_agent_runner::{AgentRunError, SpawnAgentRequest};
+    use eos_agent_ports::{AgentRunError, SpawnAgentRequest};
     use eos_types::{AgentRun, UtcDateTime};
 
     use crate::NotificationService;

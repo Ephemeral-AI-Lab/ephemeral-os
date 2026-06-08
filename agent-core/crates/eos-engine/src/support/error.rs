@@ -1,7 +1,7 @@
 //! Engine error type.
 
 use eos_llm_client::ProviderError;
-use eos_tools::ToolError;
+use eos_tool_ports::ToolError;
 use eos_types::CoreError;
 
 /// A framework error raised by the engine loop or one of its owned helpers.
@@ -19,10 +19,6 @@ pub enum EngineError {
     /// Shared value/store error.
     #[error("core error: {0}")]
     Core(#[from] CoreError),
-
-    /// Agent-node message-record error.
-    #[error("message record error: {0}")]
-    MessageRecord(#[from] eos_agent_runner::MessageRecordError),
 
     /// Prompt-report file I/O error.
     #[error("prompt report io error: {0}")]

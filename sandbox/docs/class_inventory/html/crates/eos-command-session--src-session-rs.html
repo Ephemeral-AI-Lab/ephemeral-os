@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>12</b><span>modules</span></div>
-  <div><b>65</b><span>items</span></div>
-  <div><b>77</b><span>fields</span></div>
+  <div><b>68</b><span>items</span></div>
+  <div><b>76</b><span>fields</span></div>
   <div><b>58</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>5/7</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>6/9</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="session crates/eos-command-session/src/session.rs ReapedCommand CommandSession CommandSessionSpec RunningCommandSessionParts impl CommandSession transcript_len write_final_response impl CommandSessionWaitTarget &lt; ReapedCommand &gt; for CommandSession duration_from_secs_f64 inactive_process_parts lock session_exposes_identity_and_expiry reap_reads_transcript_and_persist_removes_it">
   <div class="module-head">
     <div>
@@ -56,7 +56,7 @@
       <span>23 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ReapedCommand-23" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReapedCommand pub pub struct ReapedCommand crates/eos-command-session/src/session.rs status String exit_code i64 runner_result Option &lt; Value &gt; stdout String elapsed_s f64 cancelled bool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ReapedCommand-23" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReapedCommand pub pub struct ReapedCommand crates/eos-command-session/src/session.rs status String exit_code i64 runner_result Option &lt; Value &gt; stdout String elapsed_s f64 kill Option &lt; KillReason &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReapedCommand</h3>
@@ -65,78 +65,86 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a></code>
   <p class="docstring">The raw, policy-free result of reaping a finished command process. The<br>substrate produces this; the owning workspace run turns it into a<br>`CommandResponse` by publishing (complete) or discarding (cancel). Keeping the<br>publish/discard decision out of the session is the structural guarantee that a<br>cancelled command never reaches the OCC merge.</p>
   <div class="tags"><span>cfg: target_os</span><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>cancelled</td><td><code>bool</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>kill</td><td><code>Option &lt; <a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a> &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-command-session/src/session.rs:23</p>
-</article><article id="item-struct-CommandSession-39" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSession pub pub struct CommandSession crates/eos-command-session/src/session.rs id String caller_id String command String process CommandSessionProcess output_path PathBuf final_path PathBuf transcript_path PathBuf cancelled Mutex &lt; bool &gt; output_drain_grace_ms u64 reaped Mutex &lt; bool &gt; started_at Instant timeout Option &lt; Duration &gt; ">
+</article><article id="item-struct-CommandSession-42" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSession pub pub struct CommandSession crates/eos-command-session/src/session.rs id String caller_id String command String process CommandSessionProcess output_path PathBuf final_path PathBuf transcript_path PathBuf kill Mutex &lt; Option &lt; KillReason &gt; &gt; output_drain_grace_ms u64 reaped Mutex &lt; bool &gt; started_at Instant timeout Option &lt; Duration &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandSession</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a></code>
   <p class="docstring">PTY/process substrate for one command session. It owns the child process,<br>the transcript, and the cancel flag — but **no** workspace policy: the run<br>that owns this session decides publish-vs-discard.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>id</td><td><code>String</code></td></tr><tr><td>private</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>private</td><td>command</td><td><code>String</code></td></tr><tr><td>private</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a></code></td></tr><tr><td>private</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>cancelled</td><td><code>Mutex &lt; bool &gt;</code></td></tr><tr><td>private</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>private</td><td>reaped</td><td><code>Mutex &lt; bool &gt;</code></td></tr><tr><td>private</td><td>started_at</td><td><code>Instant</code></td></tr><tr><td>private</td><td>timeout</td><td><code>Option &lt; Duration &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-82"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-82">new</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>id</td><td><code>String</code></td></tr><tr><td>private</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>private</td><td>command</td><td><code>String</code></td></tr><tr><td>private</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a></code></td></tr><tr><td>private</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kill</td><td><code>Mutex &lt; Option &lt; <a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>private</td><td>reaped</td><td><code>Mutex &lt; bool &gt;</code></td></tr><tr><td>private</td><td>started_at</td><td><code>Instant</code></td></tr><tr><td>private</td><td>timeout</td><td><code>Option &lt; Duration &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-88"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-88">new</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
     #[cfg(any(not(target_os = &quot;linux&quot;), test))]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-94">new_scaffold</a>(spec)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-100">new_scaffold</a>(spec)
     }
 </code></pre>
-</details></td></tr><tr id="method-id-139"><td>method</td><td>id</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-id-139">id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+</details></td></tr><tr id="method-id-145"><td>method</td><td>id</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-id-145">id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-145">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.id
     }
 </code></pre>
-</details></td></tr><tr id="method-caller-id-144"><td>method</td><td>caller_id</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+</details></td></tr><tr id="method-caller-id-150"><td>method</td><td>caller_id</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-caller-id-150">caller_id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-150">caller_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.caller_id
     }
 </code></pre>
-</details></td></tr><tr id="method-command-149"><td>method</td><td>command</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-command-149">command</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+</details></td></tr><tr id="method-command-155"><td>method</td><td>command</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-command-155">command</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-149">command</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-155">command</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.command
     }
 </code></pre>
-</details></td></tr><tr id="method-elapsed-s-154"><td>method</td><td>elapsed_s</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-elapsed-s-154">elapsed_s</a> (&amp; self) -&gt; f64</code><p class="docstring">Seconds since the session started — the elapsed time the scaffold cancel<br>path records on the workspace outcome. (On Linux the reaped command<br>carries its own elapsed time.)</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Seconds since the session started — the elapsed time the scaffold cancel</span>
-    <span class="rs-comment">/// path records on the workspace outcome. (On Linux the reaped command</span>
-    <span class="rs-comment">/// carries its own elapsed time.)</span>
-    #[cfg(not(target_os = &quot;linux&quot;))]
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-elapsed-s-154">elapsed_s</a>(&amp;<span class="rs-self">self</span>) -&gt; f64 {
-        <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64()
-    }
-</code></pre>
-</details></td></tr><tr id="method-write-process-stdin-163"><td>method</td><td>write_process_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-write-process-stdin-163">write_process_stdin</a> (&amp; self , chars : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-write-process-stdin-160"><td>method</td><td>write_process_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-write-process-stdin-160">write_process_stdin</a> (&amp; self , chars : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-write-process-stdin-163">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a>&gt; {
-        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-write-stdin-163">write_stdin</a>(chars.as_bytes())?;
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-write-process-stdin-160">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a>&gt; {
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-write-stdin-182">write_stdin</a>(chars.as_bytes())?;
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-process-169"><td>method</td><td>cancel_process</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-cancel-process-169">cancel_process</a> (&amp; self)</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-process-166"><td>method</td><td>cancel_process</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-cancel-process-166">cancel_process</a> (&amp; self)</code><p class="docstring">Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run<br>teardown): record the reason and kill the process group. A cancel always<br>wins over a later timeout mark.</p><details class="function-source">
   <summary>code</summary>
-  <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-cancel-process-169">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
-        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>(&amp;<span class="rs-self">self</span>.cancelled) = <span class="rs-kw">true</span>;
-        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-201">terminate</a>();
+  <pre><code>    <span class="rs-comment">/// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run</span>
+    <span class="rs-comment">/// teardown): record the reason and kill the process group. A cancel always</span>
+    <span class="rs-comment">/// wins over a later timeout mark.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-cancel-process-166">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
+        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-220">terminate</a>();
     }
 </code></pre>
-</details></td></tr><tr id="method-read-recent-output-175"><td>method</td><td>read_recent_output</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-recent-output-175">read_recent_output</a> (&amp; self , last_n_lines : usize) -&gt; String</code><details class="function-source">
+</details></td></tr><tr id="method-time-out-process-175"><td>method</td><td>time_out_process</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-time-out-process-175">time_out_process</a> (&amp; self)</code><p class="docstring">Kill a session that exceeded its deadline (the reaper backstop). Records<br>`TimedOut` only if no kill reason is set yet, so a prior user cancel keeps<br>its `Cancelled` label; either way the process group is killed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Kill a session that exceeded its deadline (the reaper backstop). Records</span>
+    <span class="rs-comment">/// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps</span>
+    <span class="rs-comment">/// its `Cancelled` label; either way the process group is killed.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-time-out-process-175">time_out_process</a>(&amp;<span class="rs-self">self</span>) {
+        {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.kill);
+            <span class="rs-kw">if</span> kill.is_none() {
+                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>);
+            }
+        }
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-220">terminate</a>();
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-recent-output-189"><td>method</td><td>read_recent_output</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-recent-output-189">read_recent_output</a> (&amp; self , last_n_lines : usize) -&gt; String</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-recent-output-175">read_recent_output</a>(&amp;<span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-recent-output-189">read_recent_output</a>(&amp;<span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
         #[cfg(target_os = &quot;linux&quot;)]
         {
             <a class="symbol-link rs-fn" href="eos-command-session--src-transcript-rs.html#item-fn-read-transcript-tail-84">read_transcript_tail</a>(&amp;<span class="rs-self">self</span>.transcript_path, last_n_lines)
@@ -144,135 +152,132 @@
         #[cfg(not(target_os = &quot;linux&quot;))]
         {
             <span class="rs-kw">let</span> _ = last_n_lines;
-            <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
+            <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>()
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-read-output-since-188"><td>method</td><td>read_output_since</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
+</details></td></tr><tr id="method-read-output-since-202"><td>method</td><td>read_output_since</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
         <a class="symbol-link rs-fn" href="eos-command-session--src-transcript-rs.html#item-fn-read-transcript-since-80">read_transcript_since</a>(&amp;<span class="rs-self">self</span>.transcript_path, start_offset)
     }
 </code></pre>
-</details></td></tr><tr id="method-transcript-len-194"><td>method</td><td>transcript_len</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
+</details></td></tr><tr id="method-transcript-len-208"><td>method</td><td>transcript_len</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
-        <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(&amp;<span class="rs-self">self</span>.transcript_path)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(&amp;<span class="rs-self">self</span>.transcript_path)
     }
 </code></pre>
-</details></td></tr><tr id="method-started-at-200"><td>method</td><td>started_at</td><td><code>pub const fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-started-at-200">started_at</a> (&amp; self) -&gt; Instant</code><details class="function-source">
+</details></td></tr><tr id="method-started-at-214"><td>method</td><td>started_at</td><td><code>pub const fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-started-at-214">started_at</a> (&amp; self) -&gt; Instant</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(test)]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-200">started_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Instant</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-214">started_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Instant</span> {
         <span class="rs-self">self</span>.started_at
     }
 </code></pre>
-</details></td></tr><tr id="method-is-expired-206"><td>method</td><td>is_expired</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-is-expired-206">is_expired</a> (&amp; self , now : Instant) -&gt; bool</code><details class="function-source">
+</details></td></tr><tr id="method-is-expired-220"><td>method</td><td>is_expired</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-is-expired-220">is_expired</a> (&amp; self , now : Instant) -&gt; bool</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(any(not(target_os = &quot;linux&quot;), test))]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-206">is_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; bool {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-220">is_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; bool {
         <span class="rs-self">self</span>.timeout
             .is_some_and(|timeout| now.duration_since(<span class="rs-self">self</span>.started_at) &gt;= timeout)
     }
 </code></pre>
-</details></td></tr><tr id="method-is-past-deadline-213"><td>method</td><td>is_past_deadline</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-is-past-deadline-213">is_past_deadline</a> (&amp; self , now : Instant , max_session_s : u64) -&gt; bool</code><details class="function-source">
+</details></td></tr><tr id="method-is-past-deadline-227"><td>method</td><td>is_past_deadline</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-is-past-deadline-227">is_past_deadline</a> (&amp; self , now : Instant , max_session_s : u64) -&gt; bool</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-past-deadline-213">is_past_deadline</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>, max_session_s: u64) -&gt; bool {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-past-deadline-227">is_past_deadline</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>, max_session_s: u64) -&gt; bool {
         <span class="rs-kw">let</span> timeout = <span class="rs-self">self</span>
             .timeout
             .unwrap_or_else(|| <span class="rs-type">Duration</span>::from_secs(max_session_s));
         now.duration_since(<span class="rs-self">self</span>.started_at) &gt;= timeout
     }
 </code></pre>
-</details></td></tr><tr id="method-reap-222"><td>method</td><td>reap</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> &gt;</code><p class="docstring">Reap the child if it has exited, returning the raw command result. Returns<br>`None` while the process is still running or has already been reaped. This<br>only reaps the substrate — it does not publish or discard; the owning run<br>decides that from `ReapedCommand::cancelled`.</p><details class="function-source">
+</details></td></tr><tr id="method-reap-236"><td>method</td><td>reap</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> &gt;</code><p class="docstring">Reap the child if it has exited, returning the raw command result. Returns<br>`None` while the process is still running or has already been reaped. This<br>only reaps the substrate — it does not publish or discard; the owning run<br>decides that from `ReapedCommand::kill`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Reap the child if it has exited, returning the raw command result. Returns</span>
     <span class="rs-comment">/// `None` while the process is still running or has already been reaped. This</span>
     <span class="rs-comment">/// only reaps the substrate — it does not publish or discard; the owning run</span>
-    <span class="rs-comment">/// decides that from `ReapedCommand::cancelled`.</span>
+    <span class="rs-comment">/// decides that from `ReapedCommand::kill`.</span>
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>(&amp;<span class="rs-self">self</span>.reaped);
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.reaped);
         <span class="rs-kw">if</span> *reaped {
             <span class="rs-kw">return</span> <span class="rs-type">None</span>;
         }
-        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-try-reap-207">try_reap</a>() {
+        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-try-reap-226">try_reap</a>() {
             <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
             <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
         };
         *reaped = <span class="rs-kw">true</span>;
         drop(reaped);
-        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-201">terminate</a>();
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-220">terminate</a>();
         <span class="rs-self">self</span>.process
-            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-wait-for-reader-done-226">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.output_drain_grace_ms));
-        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandRunnerResult-101">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-read-from-path-109">read_from_path</a>(&amp;<span class="rs-self">self</span>.output_path);
-        <span class="rs-kw">let</span> cancelled = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>(&amp;<span class="rs-self">self</span>.cancelled);
-        <span class="rs-kw">let</span> completion = <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandCompletionStatus-62">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-from-process-and-runner-69">from_process_and_runner</a>(
-            process_exit,
-            runner.as_ref(),
-            cancelled,
-        );
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-wait-for-reader-done-245">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.output_drain_grace_ms));
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-read-from-path-128">read_from_path</a>(&amp;<span class="rs-self">self</span>.output_path);
+        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.kill);
+        <span class="rs-kw">let</span> completion =
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
         <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> {
-            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-90">status</a>().to_owned(),
+            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>().to_owned(),
             exit_code: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>(),
-            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-value-146">value</a>().clone()),
-            stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-276">final_stdout</a>(),
+            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-value-165">value</a>().clone()),
+            stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-287">final_stdout</a>(),
             elapsed_s: <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64(),
-            cancelled,
+            kill,
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-persist-final-258"><td>method</td><td>persist_final</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-persist-final-258">persist_final</a> (&amp; self , response : &amp; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>)</code><p class="docstring">Persist the run's final response to `final_path` for crash recovery and<br>remove the transcript. Best-effort: `final_path` is only a crash-recovery<br>convenience, so a write failure does not undo the already-decided<br>publish/discard or fail the operation.</p><details class="function-source">
+</details></td></tr><tr id="method-persist-final-269"><td>method</td><td>persist_final</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-persist-final-269">persist_final</a> (&amp; self , response : &amp; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>)</code><p class="docstring">Persist the run's final response to `final_path` for crash recovery and<br>remove the transcript. Best-effort: `final_path` is only a crash-recovery<br>convenience, so a write failure does not undo the already-decided<br>publish/discard or fail the operation.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Persist the run's final response to `final_path` for crash recovery and</span>
     <span class="rs-comment">/// remove the transcript. Best-effort: `final_path` is only a crash-recovery</span>
     <span class="rs-comment">/// convenience, so a write failure does not undo the already-decided</span>
     <span class="rs-comment">/// publish/discard or fail the operation.</span>
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-258">persist_final</a>(&amp;<span class="rs-self">self</span>, response: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>) {
-        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-290">write_final_response</a>(&amp;<span class="rs-self">self</span>.final_path, response);
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-268">remove_transcript_file</a>();
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-269">persist_final</a>(&amp;<span class="rs-self">self</span>, response: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>) {
+        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-301">write_final_response</a>(&amp;<span class="rs-self">self</span>.final_path, response);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-279">remove_transcript_file</a>();
     }
 </code></pre>
-</details></td></tr><tr id="method-remove-transcript-file-268"><td>method</td><td>remove_transcript_file</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-268">remove_transcript_file</a> (&amp; self)</code><details class="function-source">
+</details></td></tr><tr id="method-remove-transcript-file-279"><td>method</td><td>remove_transcript_file</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-279">remove_transcript_file</a> (&amp; self)</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-268">remove_transcript_file</a>(&amp;<span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-279">remove_transcript_file</a>(&amp;<span class="rs-self">self</span>) {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.transcript_path.as_os_str().is_empty() {
             <span class="rs-kw">return</span>;
         }
         <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;<span class="rs-self">self</span>.transcript_path);
     }
 </code></pre>
-</details></td></tr><tr id="method-final-stdout-276"><td>method</td><td>final_stdout</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-final-stdout-276">final_stdout</a> (&amp; self) -&gt; String</code><details class="function-source">
+</details></td></tr><tr id="method-final-stdout-287"><td>method</td><td>final_stdout</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-final-stdout-287">final_stdout</a> (&amp; self) -&gt; String</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-276">final_stdout</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-287">final_stdout</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <a class="symbol-link rs-fn" href="eos-command-session--src-transcript-rs.html#item-fn-read-transcript-stdout-76">read_transcript_stdout</a>(&amp;<span class="rs-self">self</span>.transcript_path)
     }
 </code></pre>
-</details></td></tr><tr id="method-new-running-88"><td>associated-fn</td><td>new_running</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-running-88">new_running</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> , parts : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a>) -&gt; Self</code><details class="function-source">
+</details></td></tr><tr id="method-new-running-94"><td>associated-fn</td><td>new_running</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-running-94">new_running</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> , parts : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-88">new_running</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>, parts: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-121">new_with_process</a>(spec, parts)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-94">new_running</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>, parts: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-127">new_with_process</a>(spec, parts)
     }
 </code></pre>
-</details></td></tr><tr id="method-new-scaffold-94"><td>associated-fn</td><td>new_scaffold</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-scaffold-94">new_scaffold</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>) -&gt; Self</code><details class="function-source">
+</details></td></tr><tr id="method-new-scaffold-100"><td>associated-fn</td><td>new_scaffold</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-scaffold-100">new_scaffold</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(any(not(target_os = &quot;linux&quot;), test))]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-94">new_scaffold</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-100">new_scaffold</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
         #[cfg(target_os = &quot;linux&quot;)]
-        <span class="rs-kw">let</span> inactive = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-328">inactive_process_parts</a>();
+        <span class="rs-kw">let</span> inactive = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-339">inactive_process_parts</a>();
         <span class="rs-self">Self</span> {
             id: spec.id,
             caller_id: spec.caller_id,
@@ -286,20 +291,20 @@
             #[cfg(target_os = &quot;linux&quot;)]
             transcript_path: inactive.transcript_path,
             #[cfg(target_os = &quot;linux&quot;)]
-            cancelled: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            kill: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-type">None</span>),
             #[cfg(target_os = &quot;linux&quot;)]
             output_drain_grace_ms: inactive.output_drain_grace_ms,
             #[cfg(target_os = &quot;linux&quot;)]
-            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-kw">false</span>),
             started_at: <span class="rs-type">Instant</span>::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-new-with-process-121"><td>associated-fn</td><td>new_with_process</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-with-process-121">new_with_process</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> , running : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a>) -&gt; Self</code><details class="function-source">
+</details></td></tr><tr id="method-new-with-process-127"><td>associated-fn</td><td>new_with_process</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-with-process-127">new_with_process</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> , running : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-121">new_with_process</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>, running: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-127">new_with_process</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>, running: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             id: spec.id,
             caller_id: spec.caller_id,
@@ -308,69 +313,69 @@
             output_path: running.output_path,
             final_path: running.final_path,
             transcript_path: running.transcript_path,
-            cancelled: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            kill: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-type">None</span>),
             output_drain_grace_ms: running.output_drain_grace_ms,
-            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-kw">false</span>),
             started_at: <span class="rs-type">Instant</span>::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-command-session--src-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a> &lt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> &gt; for <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a></code></summary><table><tbody><tr id="method-try-finalize-307"><td>method</td><td>try_finalize</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-try-finalize-307">try_finalize</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-command-session--src-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a> &lt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> &gt; for <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a></code></summary><table><tbody><tr id="method-try-finalize-318"><td>method</td><td>try_finalize</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-try-finalize-318">try_finalize</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-try-finalize-307">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>()
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-try-finalize-318">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>()
     }
 </code></pre>
-</details></td></tr><tr id="method-transcript-len-311"><td>method</td><td>transcript_len</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
+</details></td></tr><tr id="method-transcript-len-322"><td>method</td><td>transcript_len</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(<span class="rs-self">self</span>)
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(<span class="rs-self">self</span>)
     }
 </code></pre>
-</details></td></tr><tr id="method-read-output-since-315"><td>method</td><td>read_output_since</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
+</details></td></tr><tr id="method-read-output-since-326"><td>method</td><td>read_output_since</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a>(<span class="rs-self">self</span>, start_offset)
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a>(<span class="rs-self">self</span>, start_offset)
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
-  <p class="source">crates/eos-command-session/src/session.rs:39</p>
-</article><article id="item-struct-CommandSessionSpec-65" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionSpec pub pub struct CommandSessionSpec crates/eos-command-session/src/session.rs id String caller_id String command String timeout_seconds Option &lt; f64 &gt; ">
+  <p class="source">crates/eos-command-session/src/session.rs:42</p>
+</article><article id="item-struct-CommandSessionSpec-71" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionSpec pub pub struct CommandSessionSpec crates/eos-command-session/src/session.rs id String caller_id String command String timeout_seconds Option &lt; f64 &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandSessionSpec</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a></code>
   <div class="tags"></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-command-session/src/session.rs:65</p>
-</article><article id="item-struct-RunningCommandSessionParts-72" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunningCommandSessionParts pub pub struct RunningCommandSessionParts crates/eos-command-session/src/session.rs process CommandSessionProcess output_path PathBuf final_path PathBuf transcript_path PathBuf output_drain_grace_ms u64 ">
+  <p class="source">crates/eos-command-session/src/session.rs:71</p>
+</article><article id="item-struct-RunningCommandSessionParts-78" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunningCommandSessionParts pub pub struct RunningCommandSessionParts crates/eos-command-session/src/session.rs process CommandSessionProcess output_path PathBuf final_path PathBuf transcript_path PathBuf output_drain_grace_ms u64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RunningCommandSessionParts</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a></code>
   <div class="tags"><span>cfg: target_os</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a></code></td></tr><tr><td>pub</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-command-session/src/session.rs:72</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-transcript-len-282" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn transcript_len private fn transcript_len (path : &amp; Path) -&gt; u64 crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:78</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-transcript-len-293" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn transcript_len private fn transcript_len (path : &amp; Path) -&gt; u64 crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>transcript_len</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a> (path : &amp; Path) -&gt; u64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a> (path : &amp; Path) -&gt; u64</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; u64 {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; u64 {
     <span class="rs-kw">if</span> path.as_os_str().is_empty() {
         <span class="rs-kw">return</span> 0;
     }
@@ -379,19 +384,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:282</p>
-</article><article id="item-fn-write-final-response-290" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_final_response private fn write_final_response (path : &amp; Path , response : &amp; CommandResponse ,) -&gt; Result &lt; () , CommandSessionError &gt; crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:293</p>
+</article><article id="item-fn-write-final-response-301" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_final_response private fn write_final_response (path : &amp; Path , response : &amp; CommandResponse ,) -&gt; Result &lt; () , CommandSessionError &gt; crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_final_response</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-290">write_final_response</a> (path : &amp; Path , response : &amp; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-301">write_final_response</a> (path : &amp; Path , response : &amp; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-290">write_final_response</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-301">write_final_response</a>(
     path: &amp;<span class="rs-type">Path</span>,
     response: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a>&gt; {
@@ -407,18 +412,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:290</p>
-</article><article id="item-fn-duration-from-secs-f64-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn duration_from_secs_f64 private fn duration_from_secs_f64 (seconds : f64) -&gt; Option &lt; Duration &gt; crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:301</p>
+</article><article id="item-fn-duration-from-secs-f64-331" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn duration_from_secs_f64 private fn duration_from_secs_f64 (seconds : f64) -&gt; Option &lt; Duration &gt; crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>duration_from_secs_f64</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-duration-from-secs-f64-320">duration_from_secs_f64</a> (seconds : f64) -&gt; Option &lt; Duration &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-duration-from-secs-f64-331">duration_from_secs_f64</a> (seconds : f64) -&gt; Option &lt; Duration &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-duration-from-secs-f64-320">duration_from_secs_f64</a>(seconds: f64) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-duration-from-secs-f64-331">duration_from_secs_f64</a>(seconds: f64) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt; {
     <span class="rs-kw">if</span> seconds.is_finite() &amp;&amp; seconds &gt; 0.0 {
         <span class="rs-type">Some</span>(<span class="rs-type">Duration</span>::from_secs_f64(seconds))
     } <span class="rs-kw">else</span> {
@@ -428,98 +433,98 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:320</p>
-</article><article id="item-fn-inactive-process-parts-328" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn inactive_process_parts private fn inactive_process_parts () -&gt; RunningCommandSessionParts crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:331</p>
+</article><article id="item-fn-inactive-process-parts-339" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn inactive_process_parts private fn inactive_process_parts () -&gt; RunningCommandSessionParts crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>inactive_process_parts</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-328">inactive_process_parts</a> () -&gt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-339">inactive_process_parts</a> () -&gt; <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a></code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(all(target_os = &quot;linux&quot;, test))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-328">inactive_process_parts</a>() -&gt; <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
-    <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-339">inactive_process_parts</a>() -&gt; <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
+    <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>()
         .read(<span class="rs-kw">true</span>)
         .write(<span class="rs-kw">true</span>)
         .open(&quot;/dev/null&quot;)
         .expect(&quot;open /dev/null <span class="rs-kw">for</span> inactive command session process&quot;);
-    <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
-        process: <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-153">inactive</a>(writer),
-        output_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
-        final_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
-        transcript_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+    <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
+        process: <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-172">inactive</a>(writer),
+        output_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
+        final_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
+        transcript_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
         output_drain_grace_ms: 0,
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:328</p>
-</article><article id="item-fn-lock-344" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:339</p>
+</article><article id="item-fn-lock-355" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lock</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
-    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:344</p>
-</article><article id="item-fn-session-exposes-identity-and-expiry-353" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn session_exposes_identity_and_expiry private fn session_exposes_identity_and_expiry () crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:355</p>
+</article><article id="item-fn-session-exposes-identity-and-expiry-364" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn session_exposes_identity_and_expiry private fn session_exposes_identity_and_expiry () crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>session_exposes_identity_and_expiry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-session-exposes-identity-and-expiry-353">session_exposes_identity_and_expiry</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-session-exposes-identity-and-expiry-364">session_exposes_identity_and_expiry</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-session-exposes-identity-and-expiry-353">session_exposes_identity_and_expiry</a>() {
-        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-session-exposes-identity-and-expiry-364">session_exposes_identity_and_expiry</a>() {
+        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> {
             id: &quot;cmd_1&quot;.to_owned(),
             caller_id: &quot;caller&quot;.to_owned(),
             command: &quot;echo ok&quot;.to_owned(),
             timeout_seconds: <span class="rs-type">Some</span>(0.001),
         });
 
-        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>(), &quot;cmd_1&quot;);
-        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a>(), &quot;caller&quot;);
-        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-149">command</a>(), &quot;echo ok&quot;);
-        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-206">is_expired</a>(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-200">started_at</a>() + <span class="rs-type">Duration</span>::from_millis(2)));
+        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-145">id</a>(), &quot;cmd_1&quot;);
+        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-150">caller_id</a>(), &quot;caller&quot;);
+        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-155">command</a>(), &quot;echo ok&quot;);
+        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-220">is_expired</a>(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-214">started_at</a>() + <span class="rs-type">Duration</span>::from_millis(2)));
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:353</p>
-</article><article id="item-fn-reap-reads-transcript-and-persist-removes-it-368" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_reads_transcript_and_persist_removes_it private fn reap_reads_transcript_and_persist_removes_it () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-command-session/src/session.rs  ">
+  <p class="source">crates/eos-command-session/src/session.rs:364</p>
+</article><article id="item-fn-reap-reads-transcript-and-persist-removes-it-379" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_reads_transcript_and_persist_removes_it private fn reap_reads_transcript_and_persist_removes_it () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-command-session/src/session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reap_reads_transcript_and_persist_removes_it</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-reap-reads-transcript-and-persist-removes-it-368">reap_reads_transcript_and_persist_removes_it</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-fn-reap-reads-transcript-and-persist-removes-it-379">reap_reads_transcript_and_persist_removes_it</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
   <div class="tags"><span>cfg: target_os</span><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[cfg(target_os = &quot;linux&quot;)]
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-reap-reads-transcript-and-persist-removes-it-368">reap_reads_transcript_and_persist_removes_it</a>() -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-reap-reads-transcript-and-persist-removes-it-379">reap_reads_transcript_and_persist_removes_it</a>() -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
             &quot;eos-command-session-reap-{}-{}&quot;,
-            std::process::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>(),
+            std::process::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-145">id</a>(),
             std::time::<span class="rs-type">SystemTime</span>::now()
                 .duration_since(std::time::<span class="rs-type">UNIX_EPOCH</span>)?
                 .as_nanos()
@@ -529,19 +534,19 @@
         <span class="rs-kw">let</span> final_path = root.join(&quot;final.json&quot;);
         std::fs::write(&amp;transcript_path, b&quot;captured transcript output&quot;)?;
 
-        <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
+        <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>()
             .read(<span class="rs-kw">true</span>)
             .write(<span class="rs-kw">true</span>)
             .open(&quot;/dev/null&quot;)?;
-        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-88">new_running</a>(
-            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> {
+        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-94">new_running</a>(
+            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> {
                 id: &quot;cmd_1&quot;.to_owned(),
                 caller_id: &quot;caller&quot;.to_owned(),
                 command: &quot;echo ok&quot;.to_owned(),
                 timeout_seconds: <span class="rs-type">None</span>,
             },
-            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
-                process: <span class="rs-kw">crate</span>::process::<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-153">inactive</a>(writer),
+            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
+                process: <span class="rs-kw">crate</span>::process::<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-172">inactive</a>(writer),
                 output_path: root.join(&quot;runner-result.json&quot;),
                 final_path: final_path.clone(),
                 transcript_path: transcript_path.clone(),
@@ -549,22 +554,22 @@
             },
         );
 
-        <span class="rs-kw">let</span> reaped = session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>().expect(&quot;inactive process reaps&quot;);
+        <span class="rs-kw">let</span> reaped = session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>().expect(&quot;inactive process reaps&quot;);
         assert_eq!(reaped.stdout, &quot;captured transcript output&quot;);
-        assert!(!reaped.cancelled);
+        assert!(reaped.kill.is_none());
         <span class="rs-comment">// Reaping is idempotent.</span>
-        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>().is_none());
+        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>().is_none());
 
         <span class="rs-kw">let</span> response = <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> {
             status: &quot;ok&quot;.to_owned(),
             exit_code: <span class="rs-type">Some</span>(0),
             stdout: reaped.stdout.clone(),
-            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             command_session_id: <span class="rs-type">Some</span>(&quot;cmd_1&quot;.to_owned()),
             workspace_mode: <span class="rs-type">Some</span>(eos_workspace_api::<span class="rs-type">WorkspaceMode</span>::default()),
             metadata: serde_json::<span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
         };
-        session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-258">persist_final</a>(&amp;response);
+        session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-269">persist_final</a>(&amp;response);
 
         assert!(final_path.exists());
         <span class="rs-kw">let</span> final_response: serde_json::<span class="rs-type">Value</span> =
@@ -584,7 +589,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-command-session/src/session.rs:368</p>
+  <p class="source">crates/eos-command-session/src/session.rs:379</p>
 </article></div>
 </section></div>
 </main>
@@ -604,7 +609,7 @@
 
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::process::{
-    <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandCompletionStatus-62">CommandCompletionStatus</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandRunnerResult-101">CommandRunnerResult</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>,
+    <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>,
 };
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
@@ -628,13 +633,16 @@
     <span class="rs-kw">pub</span> runner_result: <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;,
     <span class="rs-kw">pub</span> stdout: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> elapsed_s: f64,
-    <span class="rs-kw">pub</span> cancelled: bool,
+    <span class="rs-comment">/// Why the substrate killed this session, if it did. `None` is a natural</span>
+    <span class="rs-comment">/// exit; `Some(_)` means a kill (cancel or timeout) and the owning run</span>
+    <span class="rs-comment">/// DISCARDS rather than publishes.</span>
+    <span class="rs-kw">pub</span> kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>&gt;,
 }
 
 <span class="rs-comment">/// PTY/process substrate for one command session. It owns the child process,</span>
 <span class="rs-comment">/// the transcript, and the cancel flag — but **no** workspace policy: the run</span>
 <span class="rs-comment">/// that owns this session decides publish-vs-discard.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a> {
     id: <span class="rs-type">String</span>,
     caller_id: <span class="rs-type">String</span>,
     command: <span class="rs-type">String</span>,
@@ -646,8 +654,11 @@
     final_path: <span class="rs-type">PathBuf</span>,
     #[cfg(target_os = &quot;linux&quot;)]
     transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-comment">/// Why this session was killed, if it has been. Set once by `cancel_process`</span>
+    <span class="rs-comment">/// (user cancel) or `time_out_process` (deadline backstop); a user cancel</span>
+    <span class="rs-comment">/// wins, so a cancelled session is never relabeled as timed-out.</span>
     #[cfg(target_os = &quot;linux&quot;)]
-    cancelled: <span class="rs-type">Mutex</span>&lt;bool&gt;,
+    kill: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>&gt;&gt;,
     #[cfg(target_os = &quot;linux&quot;)]
     output_drain_grace_ms: u64,
     <span class="rs-comment">/// Reaped-once guard so two pollers can't both finalize the same child.</span>
@@ -657,7 +668,7 @@
     timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;,
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> {
     <span class="rs-kw">pub</span> id: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> command: <span class="rs-type">String</span>,
@@ -665,7 +676,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
     <span class="rs-kw">pub</span> process: <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>,
     <span class="rs-kw">pub</span> output_path: <span class="rs-type">PathBuf</span>,
     <span class="rs-kw">pub</span> final_path: <span class="rs-type">PathBuf</span>,
@@ -673,23 +684,23 @@
     <span class="rs-kw">pub</span> output_drain_grace_ms: u64,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a> {
     #[must_use]
     #[cfg(any(not(target_os = &quot;linux&quot;), test))]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-94">new_scaffold</a>(spec)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-100">new_scaffold</a>(spec)
     }
 
     #[cfg(target_os = &quot;linux&quot;)]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-88">new_running</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>, parts: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-121">new_with_process</a>(spec, parts)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-94">new_running</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>, parts: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-127">new_with_process</a>(spec, parts)
     }
 
     #[cfg(any(not(target_os = &quot;linux&quot;), test))]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-94">new_scaffold</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-scaffold-100">new_scaffold</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
         #[cfg(target_os = &quot;linux&quot;)]
-        <span class="rs-kw">let</span> inactive = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-328">inactive_process_parts</a>();
+        <span class="rs-kw">let</span> inactive = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-339">inactive_process_parts</a>();
         <span class="rs-self">Self</span> {
             id: spec.id,
             caller_id: spec.caller_id,
@@ -703,18 +714,18 @@
             #[cfg(target_os = &quot;linux&quot;)]
             transcript_path: inactive.transcript_path,
             #[cfg(target_os = &quot;linux&quot;)]
-            cancelled: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            kill: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-type">None</span>),
             #[cfg(target_os = &quot;linux&quot;)]
             output_drain_grace_ms: inactive.output_drain_grace_ms,
             #[cfg(target_os = &quot;linux&quot;)]
-            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-kw">false</span>),
             started_at: <span class="rs-type">Instant</span>::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
     }
 
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-121">new_with_process</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a>, running: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-with-process-127">new_with_process</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a>, running: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             id: spec.id,
             caller_id: spec.caller_id,
@@ -723,52 +734,60 @@
             output_path: running.output_path,
             final_path: running.final_path,
             transcript_path: running.transcript_path,
-            cancelled: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            kill: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-type">None</span>),
             output_drain_grace_ms: running.output_drain_grace_ms,
-            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<span class="rs-kw">false</span>),
+            reaped: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<span class="rs-kw">false</span>),
             started_at: <span class="rs-type">Instant</span>::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-145">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.id
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-150">caller_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.caller_id
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-149">command</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-155">command</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.command
     }
 
-    <span class="rs-comment">/// Seconds since the session started — the elapsed time the scaffold cancel</span>
-    <span class="rs-comment">/// path records on the workspace outcome. (On Linux the reaped command</span>
-    <span class="rs-comment">/// carries its own elapsed time.)</span>
-    #[cfg(not(target_os = &quot;linux&quot;))]
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-elapsed-s-154">elapsed_s</a>(&amp;<span class="rs-self">self</span>) -&gt; f64 {
-        <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64()
-    }
-
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-write-process-stdin-163">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a>&gt; {
-        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-write-stdin-163">write_stdin</a>(chars.as_bytes())?;
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-write-process-stdin-160">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a>&gt; {
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-write-stdin-182">write_stdin</a>(chars.as_bytes())?;
         <span class="rs-type">Ok</span>(())
     }
 
+    <span class="rs-comment">/// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run</span>
+    <span class="rs-comment">/// teardown): record the reason and kill the process group. A cancel always</span>
+    <span class="rs-comment">/// wins over a later timeout mark.</span>
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-cancel-process-169">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
-        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>(&amp;<span class="rs-self">self</span>.cancelled) = <span class="rs-kw">true</span>;
-        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-201">terminate</a>();
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-cancel-process-166">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
+        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-220">terminate</a>();
+    }
+
+    <span class="rs-comment">/// Kill a session that exceeded its deadline (the reaper backstop). Records</span>
+    <span class="rs-comment">/// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps</span>
+    <span class="rs-comment">/// its `Cancelled` label; either way the process group is killed.</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-time-out-process-175">time_out_process</a>(&amp;<span class="rs-self">self</span>) {
+        {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.kill);
+            <span class="rs-kw">if</span> kill.is_none() {
+                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>);
+            }
+        }
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-220">terminate</a>();
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-recent-output-175">read_recent_output</a>(&amp;<span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-recent-output-189">read_recent_output</a>(&amp;<span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
         #[cfg(target_os = &quot;linux&quot;)]
         {
             <a class="symbol-link rs-fn" href="eos-command-session--src-transcript-rs.html#item-fn-read-transcript-tail-84">read_transcript_tail</a>(&amp;<span class="rs-self">self</span>.transcript_path, last_n_lines)
@@ -776,38 +795,38 @@
         #[cfg(not(target_os = &quot;linux&quot;))]
         {
             <span class="rs-kw">let</span> _ = last_n_lines;
-            <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
+            <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>()
         }
     }
 
     #[must_use]
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
         <a class="symbol-link rs-fn" href="eos-command-session--src-transcript-rs.html#item-fn-read-transcript-since-80">read_transcript_since</a>(&amp;<span class="rs-self">self</span>.transcript_path, start_offset)
     }
 
     #[must_use]
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
-        <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(&amp;<span class="rs-self">self</span>.transcript_path)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(&amp;<span class="rs-self">self</span>.transcript_path)
     }
 
     #[cfg(test)]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-200">started_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Instant</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-214">started_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Instant</span> {
         <span class="rs-self">self</span>.started_at
     }
 
     #[cfg(any(not(target_os = &quot;linux&quot;), test))]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-206">is_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; bool {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-220">is_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) -&gt; bool {
         <span class="rs-self">self</span>.timeout
             .is_some_and(|timeout| now.duration_since(<span class="rs-self">self</span>.started_at) &gt;= timeout)
     }
 
     #[cfg(target_os = &quot;linux&quot;)]
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-past-deadline-213">is_past_deadline</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>, max_session_s: u64) -&gt; bool {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-past-deadline-227">is_past_deadline</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>, max_session_s: u64) -&gt; bool {
         <span class="rs-kw">let</span> timeout = <span class="rs-self">self</span>
             .timeout
             .unwrap_or_else(|| <span class="rs-type">Duration</span>::from_secs(max_session_s));
@@ -817,36 +836,33 @@
     <span class="rs-comment">/// Reap the child if it has exited, returning the raw command result. Returns</span>
     <span class="rs-comment">/// `None` while the process is still running or has already been reaped. This</span>
     <span class="rs-comment">/// only reaps the substrate — it does not publish or discard; the owning run</span>
-    <span class="rs-comment">/// decides that from `ReapedCommand::cancelled`.</span>
+    <span class="rs-comment">/// decides that from `ReapedCommand::kill`.</span>
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>(&amp;<span class="rs-self">self</span>.reaped);
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.reaped);
         <span class="rs-kw">if</span> *reaped {
             <span class="rs-kw">return</span> <span class="rs-type">None</span>;
         }
-        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-try-reap-207">try_reap</a>() {
+        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-try-reap-226">try_reap</a>() {
             <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
             <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
         };
         *reaped = <span class="rs-kw">true</span>;
         drop(reaped);
-        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-201">terminate</a>();
+        <span class="rs-self">self</span>.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-terminate-220">terminate</a>();
         <span class="rs-self">self</span>.process
-            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-wait-for-reader-done-226">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.output_drain_grace_ms));
-        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandRunnerResult-101">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-read-from-path-109">read_from_path</a>(&amp;<span class="rs-self">self</span>.output_path);
-        <span class="rs-kw">let</span> cancelled = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>(&amp;<span class="rs-self">self</span>.cancelled);
-        <span class="rs-kw">let</span> completion = <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandCompletionStatus-62">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-from-process-and-runner-69">from_process_and_runner</a>(
-            process_exit,
-            runner.as_ref(),
-            cancelled,
-        );
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-wait-for-reader-done-245">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.output_drain_grace_ms));
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-read-from-path-128">read_from_path</a>(&amp;<span class="rs-self">self</span>.output_path);
+        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.kill);
+        <span class="rs-kw">let</span> completion =
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
         <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a> {
-            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-90">status</a>().to_owned(),
+            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>().to_owned(),
             exit_code: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>(),
-            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-value-146">value</a>().clone()),
-            stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-276">final_stdout</a>(),
+            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-value-165">value</a>().clone()),
+            stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-287">final_stdout</a>(),
             elapsed_s: <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64(),
-            cancelled,
+            kill,
         })
     }
 
@@ -855,13 +871,13 @@
     <span class="rs-comment">/// convenience, so a write failure does not undo the already-decided</span>
     <span class="rs-comment">/// publish/discard or fail the operation.</span>
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-258">persist_final</a>(&amp;<span class="rs-self">self</span>, response: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>) {
-        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-290">write_final_response</a>(&amp;<span class="rs-self">self</span>.final_path, response);
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-268">remove_transcript_file</a>();
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-269">persist_final</a>(&amp;<span class="rs-self">self</span>, response: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>) {
+        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-301">write_final_response</a>(&amp;<span class="rs-self">self</span>.final_path, response);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-279">remove_transcript_file</a>();
     }
 
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-268">remove_transcript_file</a>(&amp;<span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-remove-transcript-file-279">remove_transcript_file</a>(&amp;<span class="rs-self">self</span>) {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.transcript_path.as_os_str().is_empty() {
             <span class="rs-kw">return</span>;
         }
@@ -869,13 +885,13 @@
     }
 
     #[cfg(target_os = &quot;linux&quot;)]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-276">final_stdout</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-287">final_stdout</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <a class="symbol-link rs-fn" href="eos-command-session--src-transcript-rs.html#item-fn-read-transcript-stdout-76">read_transcript_stdout</a>(&amp;<span class="rs-self">self</span>.transcript_path)
     }
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; u64 {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; u64 {
     <span class="rs-kw">if</span> path.as_os_str().is_empty() {
         <span class="rs-kw">return</span> 0;
     }
@@ -883,7 +899,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-290">write_final_response</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-write-final-response-301">write_final_response</a>(
     path: &amp;<span class="rs-type">Path</span>,
     response: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-3">CommandSessionError</a>&gt; {
@@ -898,21 +914,21 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-try-finalize-307">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>()
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-try-finalize-318">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-23">ReapedCommand</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>()
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-194">transcript_len</a>(<span class="rs-self">self</span>)
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-transcript-len-208">transcript_len</a>(<span class="rs-self">self</span>)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-188">read_output_since</a>(<span class="rs-self">self</span>, start_offset)
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-read-output-since-202">read_output_since</a>(<span class="rs-self">self</span>, start_offset)
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-duration-from-secs-f64-320">duration_from_secs_f64</a>(seconds: f64) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-duration-from-secs-f64-331">duration_from_secs_f64</a>(seconds: f64) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt; {
     <span class="rs-kw">if</span> seconds.is_finite() &amp;&amp; seconds &gt; 0.0 {
         <span class="rs-type">Some</span>(<span class="rs-type">Duration</span>::from_secs_f64(seconds))
     } <span class="rs-kw">else</span> {
@@ -921,24 +937,24 @@
 }
 
 #[cfg(all(target_os = &quot;linux&quot;, test))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-328">inactive_process_parts</a>() -&gt; <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
-    <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-inactive-process-parts-339">inactive_process_parts</a>() -&gt; <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
+    <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>()
         .read(<span class="rs-kw">true</span>)
         .write(<span class="rs-kw">true</span>)
         .open(&quot;/dev/null&quot;)
         .expect(&quot;open /dev/null <span class="rs-kw">for</span> inactive command session process&quot;);
-    <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
-        process: <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-153">inactive</a>(writer),
-        output_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
-        final_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
-        transcript_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+    <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
+        process: <a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-172">inactive</a>(writer),
+        output_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
+        final_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
+        transcript_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
         output_drain_grace_ms: 0,
     }
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
-    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-337">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-356">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
 }
 
 #[cfg(test)]
@@ -946,26 +962,26 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-session-exposes-identity-and-expiry-353">session_exposes_identity_and_expiry</a>() {
-        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-session-exposes-identity-and-expiry-364">session_exposes_identity_and_expiry</a>() {
+        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> {
             id: &quot;cmd_1&quot;.to_owned(),
             caller_id: &quot;caller&quot;.to_owned(),
             command: &quot;echo ok&quot;.to_owned(),
             timeout_seconds: <span class="rs-type">Some</span>(0.001),
         });
 
-        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>(), &quot;cmd_1&quot;);
-        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a>(), &quot;caller&quot;);
-        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-149">command</a>(), &quot;echo ok&quot;);
-        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-206">is_expired</a>(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-200">started_at</a>() + <span class="rs-type">Duration</span>::from_millis(2)));
+        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-145">id</a>(), &quot;cmd_1&quot;);
+        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-150">caller_id</a>(), &quot;caller&quot;);
+        assert_eq!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-command-155">command</a>(), &quot;echo ok&quot;);
+        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-is-expired-220">is_expired</a>(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-started-at-214">started_at</a>() + <span class="rs-type">Duration</span>::from_millis(2)));
     }
 
     #[cfg(target_os = &quot;linux&quot;)]
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-reap-reads-transcript-and-persist-removes-it-368">reap_reads_transcript_and_persist_removes_it</a>() -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#item-fn-reap-reads-transcript-and-persist-removes-it-379">reap_reads_transcript_and_persist_removes_it</a>() -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
             &quot;eos-command-session-reap-{}-{}&quot;,
-            std::process::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>(),
+            std::process::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-145">id</a>(),
             std::time::<span class="rs-type">SystemTime</span>::now()
                 .duration_since(std::time::<span class="rs-type">UNIX_EPOCH</span>)?
                 .as_nanos()
@@ -975,19 +991,19 @@
         <span class="rs-kw">let</span> final_path = root.join(&quot;final.json&quot;);
         std::fs::write(&amp;transcript_path, b&quot;captured transcript output&quot;)?;
 
-        <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
+        <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>()
             .read(<span class="rs-kw">true</span>)
             .write(<span class="rs-kw">true</span>)
             .open(&quot;/dev/null&quot;)?;
-        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-88">new_running</a>(
-            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-65">CommandSessionSpec</a> {
+        <span class="rs-kw">let</span> session = <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-42">CommandSession</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-running-94">new_running</a>(
+            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-71">CommandSessionSpec</a> {
                 id: &quot;cmd_1&quot;.to_owned(),
                 caller_id: &quot;caller&quot;.to_owned(),
                 command: &quot;echo ok&quot;.to_owned(),
                 timeout_seconds: <span class="rs-type">None</span>,
             },
-            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-72">RunningCommandSessionParts</a> {
-                process: <span class="rs-kw">crate</span>::process::<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-153">inactive</a>(writer),
+            <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-78">RunningCommandSessionParts</a> {
+                process: <span class="rs-kw">crate</span>::process::<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-inactive-172">inactive</a>(writer),
                 output_path: root.join(&quot;runner-result.json&quot;),
                 final_path: final_path.clone(),
                 transcript_path: transcript_path.clone(),
@@ -995,22 +1011,22 @@
             },
         );
 
-        <span class="rs-kw">let</span> reaped = session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>().expect(&quot;inactive process reaps&quot;);
+        <span class="rs-kw">let</span> reaped = session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>().expect(&quot;inactive process reaps&quot;);
         assert_eq!(reaped.stdout, &quot;captured transcript output&quot;);
-        assert!(!reaped.cancelled);
+        assert!(reaped.kill.is_none());
         <span class="rs-comment">// Reaping is idempotent.</span>
-        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-222">reap</a>().is_none());
+        assert!(session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-236">reap</a>().is_none());
 
         <span class="rs-kw">let</span> response = <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> {
             status: &quot;ok&quot;.to_owned(),
             exit_code: <span class="rs-type">Some</span>(0),
             stdout: reaped.stdout.clone(),
-            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-88">new</a>(),
             command_session_id: <span class="rs-type">Some</span>(&quot;cmd_1&quot;.to_owned()),
             workspace_mode: <span class="rs-type">Some</span>(eos_workspace_api::<span class="rs-type">WorkspaceMode</span>::default()),
             metadata: serde_json::<span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
         };
-        session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-258">persist_final</a>(&amp;response);
+        session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-persist-final-269">persist_final</a>(&amp;response);
 
         assert!(final_path.exists());
         <span class="rs-kw">let</span> final_response: serde_json::<span class="rs-type">Value</span> =

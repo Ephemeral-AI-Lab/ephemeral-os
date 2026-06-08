@@ -8,13 +8,13 @@ rust-version.workspace = true
 async-stream.workspace = true
 async-trait.workspace = true
 eos-audit.workspace = true
-eos-agent-runner.workspace = true
+eos-agent-ports.workspace = true
+eos-tool-ports.workspace = true
 eos-llm-client.workspace = true
-eos-tools.workspace = true
 eos-sandbox-port.workspace = true
-eos-agent-def.workspace = true
 eos-types.workspace = true
 futures.workspace = true
+regex.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -24,6 +24,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 eos-skills.workspace = true
+eos-tools.workspace = true
 tempfile.workspace = true
 # Shared `ScriptedSource` + `metadata` (TESTING_SPEC §7). In-crate tests consume
 # `metadata` (an `eos-tools` type, external to this crate, so the dev-dep cycle
@@ -43,10 +44,6 @@ path = "tests/terminal/mod.rs"
 [[test]]
 name = "query"
 path = "tests/query/mod.rs"
-
-[[test]]
-name = "runtime"
-path = "tests/runtime/mod.rs"
 
 [lints]
 workspace = true

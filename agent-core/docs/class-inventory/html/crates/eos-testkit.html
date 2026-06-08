@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>6</b><span>modules</span></div>
-  <div><b>14</b><span>items</span></div>
-  <div><b>2</b><span>fields</span></div>
-  <div><b>4</b><span>methods</span></div>
+  <div><b>19</b><span>items</span></div>
+  <div><b>4</b><span>fields</span></div>
+  <div><b>7</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-testkit.html"><span>agents.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-testkit--src-engine-rs.html"><span>engine.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-testkit--src-llm-rs.html"><span>llm.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-testkit--src-meta-rs.html"><span>meta.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-testkit.html"><span>agents.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-testkit--src-engine-rs.html"><span>engine.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-testkit--src-llm-rs.html"><span>llm.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-testkit--src-meta-rs.html"><span>meta.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-testkit--src-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="agents crates/eos-testkit/src/agents.rs agent_def test_tools_root">
   <div class="module-head">
     <div>
@@ -76,16 +76,16 @@
     terminals: &amp;[&amp;str],
 ) -&gt; <span class="rs-type">AgentDefinition</span> {
     <span class="rs-type">AgentDefinition</span> {
-        name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(name).expect(&quot;name&quot;),
+        name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(name).expect(&quot;name&quot;),
         description: name.to_owned(),
         system_prompt: <span class="rs-type">Some</span>(&quot;test profile&quot;.to_owned()),
         model: <span class="rs-type">Some</span>(&quot;test-model&quot;.to_owned()),
-        tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(8).expect(&quot;nonzero&quot;),
+        tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(8).expect(&quot;nonzero&quot;),
         role,
         agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
         allowed_tools: allowed.iter().map(|s| (*s).to_owned()).collect(),
         terminals: terminals.iter().map(|s| (*s).to_owned()).collect(),
-        notification_triggers: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(),
+        notification_triggers: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(),
         skill: <span class="rs-type">None</span>,
         context_recipe: <span class="rs-type">None</span>,
     }
@@ -110,7 +110,7 @@
 <span class="rs-comment">/// without depending on the process working directory.</span>
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-test-tools-root-31">test_tools_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
-    std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;)
+    std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;)
 }
 </code></pre>
 </details>
@@ -139,16 +139,16 @@
     terminals: &amp;[&amp;str],
 ) -&gt; <span class="rs-type">AgentDefinition</span> {
     <span class="rs-type">AgentDefinition</span> {
-        name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(name).expect(&quot;name&quot;),
+        name: <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(name).expect(&quot;name&quot;),
         description: name.to_owned(),
         system_prompt: <span class="rs-type">Some</span>(&quot;test profile&quot;.to_owned()),
         model: <span class="rs-type">Some</span>(&quot;test-model&quot;.to_owned()),
-        tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(8).expect(&quot;nonzero&quot;),
+        tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(8).expect(&quot;nonzero&quot;),
         role,
         agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
         allowed_tools: allowed.iter().map(|s| (*s).to_owned()).collect(),
         terminals: terminals.iter().map(|s| (*s).to_owned()).collect(),
-        notification_triggers: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(),
+        notification_triggers: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(),
         skill: <span class="rs-type">None</span>,
         context_recipe: <span class="rs-type">None</span>,
     }
@@ -159,7 +159,7 @@
 <span class="rs-comment">/// without depending on the process working directory.</span>
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit.html#item-fn-test-tools-root-31">test_tools_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
-    std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;)
+    std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(&quot;../../../.eos-agents/tools&quot;)
 }
 </code></pre>
 </section>

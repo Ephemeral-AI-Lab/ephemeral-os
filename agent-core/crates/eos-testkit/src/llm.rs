@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_agent_def::AgentDefinition;
 use eos_engine::{
     AssistantMessageComplete, EngineError, EngineStream, EventSource, EventSourceFactory,
     StreamEvent,
@@ -63,10 +62,57 @@ impl EventSource for ScriptedSource {
     }
 }
 
+/// A scripted event source that routes each model request by its terminal tool
+/// set. Tests keep using agent-name keys such as `root`, `advisor`, `planner`,
+/// `coder`, `reducer`, and `explorer` without exposing `AgentDefinition` to the
+/// engine event-source seam.
+#[derive(Debug)]
+pub struct ScriptedByAgentSource {
+    scripts: tokio::sync::Mutex<HashMap<String, Vec<Vec<StreamEvent>>>>,
+    block_when_empty: HashMap<String, bool>,
+}
+
+impl ScriptedByAgentSource {
+    /// Build a routed source from per-agent scripts.
+    #[must_use]
+    pub fn new(scripts: HashMap<String, Vec<Vec<StreamEvent>>>) -> Self {
+        Self {
+            scripts: tokio::sync::Mutex::new(scripts),
+            block_when_empty: HashMap::new(),
+        }
+    }
+
+    /// Mark one route as blocking after its scripted turns are exhausted.
+    #[must_use]
+    pub fn with_blocking_route(mut self, agent_name: impl Into<String>) -> Self {
+        self.block_when_empty.insert(agent_name.into(), true);
+        self
+    }
+}
+
+#[async_trait]
+impl EventSource for ScriptedByAgentSource {
+    async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError> {
+        let mut scripts = self.scripts.lock().await;
+        let key = request_route_key(&scripts, request);
+        let turns = scripts.entry(key.clone()).or_default();
+        if turns.is_empty() {
+            if self.block_when_empty.get(&key).copied().unwrap_or(false) {
+                drop(scripts);
+                std::future::pending::<()>().await;
+                unreachable!("pending future never resolves");
+            }
+            return Ok(Box::pin(futures::stream::iter(Vec::new())));
+        }
+        let events = turns.remove(0);
+        Ok(Box::pin(futures::stream::iter(events.into_iter().map(Ok))))
+    }
+}
+
 /// A factory that always returns the given scripted turns.
 #[must_use]
 pub fn factory_from(turns: Vec<Vec<StreamEvent>>) -> EventSourceFactory {
-    Arc::new(move |_def: &AgentDefinition| {
+    Arc::new(move |_request| {
         Arc::new(ScriptedSource::new(turns.clone())) as Arc<dyn EventSource>
     })
 }
@@ -75,12 +121,10 @@ pub fn factory_from(turns: Vec<Vec<StreamEvent>>) -> EventSourceFactory {
 /// running), and every other agent gets an empty (first-turn-erroring) source.
 #[must_use]
 pub fn factory_root_blocks_after(root_turns: Vec<Vec<StreamEvent>>) -> EventSourceFactory {
-    Arc::new(move |def: &AgentDefinition| {
-        if def.name.as_str() == "root" {
-            Arc::new(ScriptedSource::new_blocking(root_turns.clone())) as Arc<dyn EventSource>
-        } else {
-            Arc::new(ScriptedSource::new(Vec::new())) as Arc<dyn EventSource>
-        }
+    Arc::new(move |_request| {
+        let scripts = HashMap::from([("root".to_owned(), root_turns.clone())]);
+        Arc::new(ScriptedByAgentSource::new(scripts).with_blocking_route("root"))
+            as Arc<dyn EventSource>
     })
 }
 
@@ -94,10 +138,45 @@ pub fn factory_by_agent(
         .into_iter()
         .map(|(name, turns)| (name.to_owned(), turns))
         .collect();
-    Arc::new(move |def: &AgentDefinition| {
-        let turns = scripts.get(def.name.as_str()).cloned().unwrap_or_default();
-        Arc::new(ScriptedSource::new(turns)) as Arc<dyn EventSource>
+    Arc::new(move |_request| {
+        Arc::new(ScriptedByAgentSource::new(scripts.clone())) as Arc<dyn EventSource>
     })
+}
+
+fn request_route_key(
+    scripts: &HashMap<String, Vec<Vec<StreamEvent>>>,
+    request: &LlmRequest,
+) -> String {
+    let candidates = request_route_candidates(request);
+    for &candidate in candidates {
+        if scripts.contains_key(candidate) {
+            return candidate.to_owned();
+        }
+    }
+    candidates.first().copied().unwrap_or("root").to_owned()
+}
+
+fn request_route_candidates(request: &LlmRequest) -> &'static [&'static str] {
+    let has_tool = |name: &str| request.tools.iter().any(|tool| tool.name == name);
+    if has_tool("submit_advisor_feedback") {
+        return &["advisor"];
+    }
+    if has_tool("submit_planner_outcome") {
+        return &["planner"];
+    }
+    if has_tool("submit_generator_outcome") {
+        return &["coder", "generator"];
+    }
+    if has_tool("submit_reducer_outcome") {
+        return &["reducer"];
+    }
+    if has_tool("submit_exploration_result") {
+        return &["explorer", "subagent"];
+    }
+    if has_tool("submit_root_outcome") {
+        return &["root"];
+    }
+    &["root"]
 }
 
 /// One model turn that calls `tool_name` with `input` (a non-object `input`
