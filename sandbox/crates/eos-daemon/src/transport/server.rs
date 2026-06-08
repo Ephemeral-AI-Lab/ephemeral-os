@@ -26,31 +26,28 @@ use std::path::PathBuf;
 use std::sync::{mpsc as std_mpsc, Arc};
 use std::time::{Duration, Instant};
 
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
-use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use eos_config::configs::{
     daemon::{AuditConfig, DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
-use eos_protocol::{
-    audit::{build_event, Lane, ToolCallSection},
-    decode_value, encode, Envelope, ErrorKind, Request,
-};
+use eos_protocol::{decode_value, encode, Envelope, ErrorKind, Request};
 
-use crate::audit::buffer::safe_emit;
+use super::framing::{read_request_line, signal_shutdown};
+use super::tool_call_events::{
+    caller_id_from_args, emit_tool_call_event, should_emit_tool_call_event,
+};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 
-/// Maximum bytes read for a single request line (re-exported for the listener
-/// buffer cap).
-pub const MAX_REQUEST_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
-
-/// Per-request read timeout in seconds.
-pub const REQUEST_READ_TIMEOUT_S: f64 = eos_protocol::REQUEST_READ_TIMEOUT_S;
+// The definitions live in `super::framing`; re-export so the crate root's
+// `eos_daemon::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S}` surface is unchanged
+// and `MAX_REQUEST_BYTES` stays in scope for `handle_connection`.
+pub use super::framing::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -112,12 +109,12 @@ impl DaemonServer {
         daemon_config: &DaemonConfig,
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
-        crate::services::workspace_run::configure_command_sessions(
+        crate::adapters::workspace_run::configure_command_sessions(
             &daemon_config.command_sessions,
         );
-        crate::services::workspace_run::isolated::configure_isolated_workspace(isolated_config);
-        crate::services::plugins::configure_plugin_runtime(&daemon_config.plugin);
-        crate::services::occ::configure_layer_stack(&daemon_config.layer_stack);
+        crate::adapters::workspace_run::isolated::configure_isolated_workspace(isolated_config);
+        crate::adapters::plugins::configure_plugin_runtime(&daemon_config.plugin);
+        crate::adapters::occ::configure_layer_stack(&daemon_config.layer_stack);
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
@@ -172,7 +169,7 @@ impl DaemonServer {
                     tokio::select! {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(sweep_interval_ms)) => {
-                            let _ = tokio::task::spawn_blocking(crate::services::workspace_run::isolated::ttl_sweep).await;
+                            let _ = tokio::task::spawn_blocking(crate::adapters::workspace_run::isolated::ttl_sweep).await;
                         }
                     }
                 }
@@ -188,7 +185,7 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(50)) => {
                             let _ = tokio::task::spawn_blocking(
-                                crate::services::workspace_run::command_session_reaper_sweep,
+                                crate::adapters::workspace_run::command_session_reaper_sweep,
                             )
                             .await;
                         }
@@ -197,7 +194,7 @@ impl DaemonServer {
             })
         };
         // Reap stale command sessions left by a prior daemon, before accepting.
-        crate::services::workspace_run::recover_orphaned_command_sessions();
+        crate::adapters::workspace_run::recover_orphaned_command_sessions();
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -441,7 +438,6 @@ impl DaemonServer {
         Ok(value)
     }
 }
-
 fn default_file_limits() -> FileLimitsConfig {
     FileLimitsConfig {
         max_read_bytes: eos_protocol::models::MAX_READ_BYTES,
@@ -457,85 +453,4 @@ fn default_audit_config() -> AuditConfig {
         ring_max_bytes: 8_388_608,
         pressure_threshold: 0.8,
     }
-}
-
-fn should_emit_tool_call_event(op: &str) -> bool {
-    !op.starts_with("api.audit.")
-        && !matches!(
-            op,
-            "api.runtime.ready"
-                | "api.v1.heartbeat"
-                | "api.v1.inflight_count"
-                | "api.v1.command_session_count"
-        )
-}
-
-fn emit_tool_call_event(
-    event_type: &str,
-    invocation_id: &str,
-    op: &str,
-    caller_id: &str,
-    total_ms: Option<f64>,
-    exit_status: Option<String>,
-) {
-    let section = ToolCallSection {
-        tool_use_id: invocation_id.to_owned(),
-        tool_name: op.to_owned(),
-        caller_id: (!caller_id.is_empty()).then(|| caller_id.to_owned()),
-        workspace_mode: None,
-        workspace_handle_id: None,
-        phase: None,
-        duration_ms: None,
-        total_ms,
-        exit_status,
-        bytes_in: None,
-        bytes_out: None,
-        phase_totals_rollup: None,
-    };
-    if let Ok(section) = serde_json::to_value(section) {
-        safe_emit(build_event(event_type, "tool_call", section), Lane::Normal);
-    }
-}
-
-fn caller_id_from_args(args: &serde_json::Value) -> String {
-    args.get("caller_id")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned()
-}
-
-async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>
-where
-    R: AsyncRead + Unpin,
-{
-    let mut buf = Vec::new();
-    let timeout_duration = Duration::from_secs_f64(REQUEST_READ_TIMEOUT_S);
-    let read = async {
-        // Bound the buffered read to one byte past the cap so a frame without a
-        // newline cannot grow `buf` without limit (a no-newline flood OOM); the
-        // explicit length check below preserves the existing `RequestTooLarge`.
-        let limit = u64::try_from(MAX_REQUEST_BYTES)
-            .unwrap_or(u64::MAX)
-            .saturating_add(1);
-        let mut limited = BufReader::new(reader.take(limit));
-        limited.read_until(b'\n', &mut buf).await?;
-        if buf.len() > MAX_REQUEST_BYTES {
-            return Err(DaemonError::RequestTooLarge {
-                limit: MAX_REQUEST_BYTES,
-            });
-        }
-        Ok::<(), DaemonError>(())
-    };
-    timeout(timeout_duration, read).await.map_err(|_| {
-        DaemonError::Io(std::io::Error::new(
-            std::io::ErrorKind::TimedOut,
-            "daemon request read timed out",
-        ))
-    })??;
-    Ok(buf)
-}
-
-async fn signal_shutdown() {
-    let _ = tokio::signal::ctrl_c().await;
 }

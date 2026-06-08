@@ -6,11 +6,11 @@ use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
 pub(crate) fn op_ensure(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    crate::services::plugins::op_ensure(args, context)
+    crate::adapters::plugins::op_ensure(args, context)
 }
 
 pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    crate::services::plugins::op_status(args, context)
+    crate::adapters::plugins::op_status(args, context)
 }
 
 pub(crate) fn dispatch_registered_op(
@@ -19,5 +19,5 @@ pub(crate) fn dispatch_registered_op(
     args: &Value,
     context: DispatchContext<'_>,
 ) -> Option<Result<Value, DaemonError>> {
-    crate::services::plugins::dispatch_registered_op(op, invocation_id, args, context)
+    crate::adapters::plugins::dispatch_registered_op(op, invocation_id, args, context)
 }

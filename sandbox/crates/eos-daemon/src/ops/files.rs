@@ -16,9 +16,9 @@ use serde_json::{json, Value};
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::request_args::{require_raw_string, require_string};
-use crate::services::workspace::EphemeralFilePorts;
+use crate::adapters::workspace::EphemeralFilePorts;
 #[cfg(target_os = "linux")]
-use crate::services::workspace::IsolatedFilePorts;
+use crate::adapters::workspace::IsolatedFilePorts;
 
 /// `api.v1.read_file` — shared public read op, routed by active workspace mode.
 pub(crate) fn op_read_file(
@@ -27,7 +27,7 @@ pub(crate) fn op_read_file(
 ) -> Result<Value, DaemonError> {
     let request = read_request(args, context)?;
     #[cfg(target_os = "linux")]
-    if let Some(handle) = crate::services::workspace_run::isolated::command_handle_for_args(args) {
+    if let Some(handle) = crate::adapters::workspace_run::isolated::command_handle_for_args(args) {
         let ports = IsolatedFilePorts::new(handle);
         let outcome = IsolatedWorkspaceOps::new(ports.clone())
             .read_file(request)
@@ -49,7 +49,7 @@ pub(crate) fn op_write_file(
 ) -> Result<Value, DaemonError> {
     let request = write_request(args, context)?;
     #[cfg(target_os = "linux")]
-    if let Some(handle) = crate::services::workspace_run::isolated::command_handle_for_args(args) {
+    if let Some(handle) = crate::adapters::workspace_run::isolated::command_handle_for_args(args) {
         let outcome = IsolatedWorkspaceOps::new(IsolatedFilePorts::new(handle))
             .write_file(request)
             .map_err(workspace_error)?;
@@ -69,7 +69,7 @@ pub(crate) fn op_edit_file(
 ) -> Result<Value, DaemonError> {
     let request = edit_request(args)?;
     #[cfg(target_os = "linux")]
-    if let Some(handle) = crate::services::workspace_run::isolated::command_handle_for_args(args) {
+    if let Some(handle) = crate::adapters::workspace_run::isolated::command_handle_for_args(args) {
         let outcome = IsolatedWorkspaceOps::new(IsolatedFilePorts::new(handle))
             .edit_file(request)
             .map_err(workspace_error)?;

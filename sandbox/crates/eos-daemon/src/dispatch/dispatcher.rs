@@ -37,7 +37,7 @@ use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
 };
 #[cfg(test)]
-use crate::services::occ::{
+use crate::adapters::occ::{
     base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
     LayerStackCommitTransaction, LayerStackRouteProvider, OccServiceCache, OCC_SERVICE_CACHE_MAX,
 };

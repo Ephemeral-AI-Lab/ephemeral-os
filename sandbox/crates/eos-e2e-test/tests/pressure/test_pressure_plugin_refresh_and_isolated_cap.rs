@@ -1,5 +1,6 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::unique_suffix;
@@ -8,7 +9,8 @@ use serde_json::{json, Value};
 
 use crate::helpers::{pressure_levels, request_with_identity};
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, reset_isolated_workspaces, wait_for_active_leases,
+    as_bool, as_i64, as_str, live_pool_or_skip, reset_isolated_workspaces,
+    settle_foreground_command, wait_for_active_leases,
 };
 
 #[test]
@@ -170,6 +172,8 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
             "yield_time_ms": 1000,
             "timeout_seconds": 10,}),
     )?;
+    // Settle the yielded exec under emulation before asserting its terminal status.
+    let exec = settle_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(15))?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
 
     let conflict_path = "capstone/conflict.txt";

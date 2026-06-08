@@ -286,8 +286,12 @@ pub(crate) fn usize_to_i64_saturating(value: usize) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
 }
 
+// Delegate to eos-workspace-api's converters so daemon-emitted timings/metrics
+// share ONE saturating semantics. The daemon copies used to cap at u32::MAX —
+// correct for small counts (depth, path counts) but wrong on the byte paths
+// (e.g. `*_tree_bytes`), where a >4.29 GB tree was silently clamped.
 pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
-    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+    eos_workspace_api::usize_to_f64_saturating(value)
 }
 
 #[cfg(test)]
@@ -296,7 +300,7 @@ pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
 }
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
-    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+    eos_workspace_api::u64_to_f64_saturating(value)
 }
 
 pub(crate) fn u64_to_usize_saturating(value: u64) -> usize {
@@ -306,3 +310,7 @@ pub(crate) fn u64_to_usize_saturating(value: u64) -> usize {
 pub(crate) fn f64_to_i64_rounded_saturating(value: f64) -> i64 {
     value.round() as i64
 }
+
+#[cfg(test)]
+#[path = "../../tests/response_timings/mod.rs"]
+mod tests;

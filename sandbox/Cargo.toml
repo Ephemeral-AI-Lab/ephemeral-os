@@ -8,6 +8,7 @@ members = [
     "crates/eos-checkpoint-host",
     "crates/eos-occ-layerstack",
     "crates/eos-plugin-host",
+    "crates/eos-workspace-run-host",
     "crates/eos-runner",
     "crates/eos-command-session",
     "crates/eos-ns-holder",
@@ -71,6 +72,7 @@ eos-daemon = { path = "crates/eos-daemon" }
 eos-checkpoint-host = { path = "crates/eos-checkpoint-host" }
 eos-occ-layerstack = { path = "crates/eos-occ-layerstack" }
 eos-plugin-host = { path = "crates/eos-plugin-host" }
+eos-workspace-run-host = { path = "crates/eos-workspace-run-host" }
 eosd = { path = "crates/eosd" }
 eos-e2e-test = { path = "crates/eos-e2e-test" }
 xtask = { path = "xtask" }

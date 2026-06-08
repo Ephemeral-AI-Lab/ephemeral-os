@@ -116,7 +116,7 @@ Combined impact: ~70 LOC leaves the daemon, two `layers/`/`staging/` literal lea
 close, zero new dependency edges. This is the entire "leaked logic" story without a
 new crate.
 
-### Tier 2 — optional: stand up `eos-workspace-run-host` (the only real "shrink the daemon" lever)
+### Tier 2 — ✅ DONE: stand up `eos-workspace-run-host` (verified: darwin + linux-musl `check`/`clippy -D warnings`, no-publish guard holds, 112 daemon + 2 crate tests; residual = Docker E2E for Linux runtime)
 Mirrors the existing `eos-checkpoint-host` / `eos-plugin-host` pattern: a host-tier
 crate that takes `eos-layerstack` + `eos-command-session` + `eos-ephemeral-workspace`
 + `eos-isolated-workspace` edges but **stays `eos-occ`-free** by keeping the publisher

@@ -5648,15 +5648,15 @@
       "name": "eos-daemon",
       "path": "crates/eos-daemon",
       "stats": {
-        "modules": 51,
-        "items": 490,
-        "structs": 47,
-        "enums": 4,
+        "modules": 53,
+        "items": 472,
+        "structs": 42,
+        "enums": 3,
         "traits": 0,
-        "functions": 395,
-        "impls": 36,
-        "fields": 230,
-        "methods": 135
+        "functions": 386,
+        "impls": 34,
+        "fields": 205,
+        "methods": 120
       },
       "modules": [
         {
@@ -8928,7 +8928,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/response_timings.rs",
               "module": "runtime::response_timings",
-              "line": 289
+              "line": 293
             },
             {
               "kind": "fn",
@@ -8946,7 +8946,7 @@
               ],
               "file": "crates/eos-daemon/src/runtime/response_timings.rs",
               "module": "runtime::response_timings",
-              "line": 293
+              "line": 297
             },
             {
               "kind": "fn",
@@ -8962,7 +8962,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/response_timings.rs",
               "module": "runtime::response_timings",
-              "line": 298
+              "line": 302
             },
             {
               "kind": "fn",
@@ -8978,7 +8978,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/response_timings.rs",
               "module": "runtime::response_timings",
-              "line": 302
+              "line": 306
             },
             {
               "kind": "fn",
@@ -8994,7 +8994,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/response_timings.rs",
               "module": "runtime::response_timings",
-              "line": 306
+              "line": 310
             }
           ]
         },
@@ -9032,7 +9032,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/checkpoint/base.rs",
               "module": "services::checkpoint::base",
-              "line": 43
+              "line": 44
             },
             {
               "kind": "fn",
@@ -9048,7 +9048,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/checkpoint/base.rs",
               "module": "services::checkpoint::base",
-              "line": 66
+              "line": 67
             },
             {
               "kind": "fn",
@@ -9064,39 +9064,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/checkpoint/base.rs",
               "module": "services::checkpoint::base",
-              "line": 83
-            },
-            {
-              "kind": "fn",
-              "name": "count_dirs",
-              "visibility": "private",
-              "signature": "fn count_dirs (path : & Path) -> Result < usize , DaemonError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/checkpoint/base.rs",
-              "module": "services::checkpoint::base",
-              "line": 93
-            },
-            {
-              "kind": "fn",
-              "name": "storage_bytes",
-              "visibility": "private",
-              "signature": "fn storage_bytes (path : & Path) -> Result < u64 , DaemonError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/checkpoint/base.rs",
-              "module": "services::checkpoint::base",
-              "line": 106
+              "line": 84
             }
           ]
         },
@@ -9198,7 +9166,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/occ/mod.rs",
               "module": "services::occ",
-              "line": 26
+              "line": 25
             },
             {
               "kind": "fn",
@@ -9214,7 +9182,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/occ/mod.rs",
               "module": "services::occ",
-              "line": 30
+              "line": 29
             },
             {
               "kind": "fn",
@@ -9230,7 +9198,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/occ/mod.rs",
               "module": "services::occ",
-              "line": 47
+              "line": 46
             },
             {
               "kind": "fn",
@@ -9246,7 +9214,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/occ/mod.rs",
               "module": "services::occ",
-              "line": 68
+              "line": 56
             }
           ]
         },
@@ -11809,160 +11777,6 @@
               "file": "crates/eos-daemon/src/services/plugins/process.rs",
               "module": "services::plugins::process",
               "line": 546
-            },
-            {
-              "kind": "type",
-              "name": "TestResult",
-              "visibility": "private",
-              "signature": "type TestResult = std :: result :: Result < () , Box < dyn std :: error :: Error + Send + Sync > >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 585
-            },
-            {
-              "kind": "fn",
-              "name": "key",
-              "visibility": "private",
-              "signature": "fn key (profile : & str) -> std :: result :: Result < PluginServiceKey , PluginError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 587
-            },
-            {
-              "kind": "fn",
-              "name": "process_spec_uses_stable_eos_plugin_socket_and_env",
-              "visibility": "private",
-              "signature": "fn process_spec_uses_stable_eos_plugin_socket_and_env () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 600
-            },
-            {
-              "kind": "fn",
-              "name": "process_spec_key_changes_socket_path",
-              "visibility": "private",
-              "signature": "fn process_spec_key_changes_socket_path () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 629
-            },
-            {
-              "kind": "fn",
-              "name": "process_spec_rejects_empty_command",
-              "visibility": "private",
-              "signature": "fn process_spec_rejects_empty_command () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 641
-            },
-            {
-              "kind": "fn",
-              "name": "spawned_process_reports_running_then_tears_down",
-              "visibility": "private",
-              "signature": "fn spawned_process_reports_running_then_tears_down () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 651
-            },
-            {
-              "kind": "fn",
-              "name": "spawn_connected_accepts_ppc_socket",
-              "visibility": "private",
-              "signature": "fn spawn_connected_accepts_ppc_socket () -> TestResult",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 678
-            },
-            {
-              "kind": "fn",
-              "name": "test_socket_root",
-              "visibility": "private",
-              "signature": "fn test_socket_root (name : & str) -> PathBuf",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 712
-            },
-            {
-              "kind": "fn",
-              "name": "wait_for_socket",
-              "visibility": "private",
-              "signature": "fn wait_for_socket (root : & Path) -> std :: io :: Result < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/plugins/process.rs",
-              "module": "services::plugins::process::tests",
-              "line": 718
             }
           ]
         },
@@ -13707,7 +13521,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 47
+              "line": 52
             },
             {
               "kind": "fn",
@@ -13725,7 +13539,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 118
+              "line": 123
             },
             {
               "kind": "fn",
@@ -13744,7 +13558,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 129
+              "line": 134
             },
             {
               "kind": "fn",
@@ -13763,7 +13577,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 151
+              "line": 156
             },
             {
               "kind": "fn",
@@ -13782,7 +13596,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 173
+              "line": 178
             },
             {
               "kind": "fn",
@@ -13801,7 +13615,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 195
+              "line": 200
             },
             {
               "kind": "fn",
@@ -13820,7 +13634,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 221
+              "line": 226
             },
             {
               "kind": "fn",
@@ -13838,7 +13652,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 247
+              "line": 252
             },
             {
               "kind": "fn",
@@ -13856,7 +13670,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 282
+              "line": 287
             },
             {
               "kind": "fn",
@@ -13874,7 +13688,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 293
+              "line": 298
             },
             {
               "kind": "fn",
@@ -13893,7 +13707,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 305
+              "line": 310
             },
             {
               "kind": "fn",
@@ -13911,7 +13725,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 315
+              "line": 320
             },
             {
               "kind": "fn",
@@ -13929,7 +13743,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 320
+              "line": 325
             },
             {
               "kind": "fn",
@@ -13947,7 +13761,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 328
+              "line": 333
             },
             {
               "kind": "fn",
@@ -13965,7 +13779,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 339
+              "line": 344
             },
             {
               "kind": "fn",
@@ -13983,7 +13797,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 346
+              "line": 351
             },
             {
               "kind": "fn",
@@ -14001,7 +13815,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 351
+              "line": 356
             },
             {
               "kind": "fn",
@@ -14019,7 +13833,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 358
+              "line": 363
             },
             {
               "kind": "fn",
@@ -14037,7 +13851,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 363
+              "line": 368
             },
             {
               "kind": "fn",
@@ -14055,7 +13869,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 375
+              "line": 380
             },
             {
               "kind": "fn",
@@ -14073,7 +13887,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 430
+              "line": 435
             },
             {
               "kind": "fn",
@@ -14091,7 +13905,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/commands.rs",
               "module": "services::workspace_run::commands",
-              "line": 433
+              "line": 438
             }
           ]
         },
@@ -14206,6 +14020,85 @@
           ]
         },
         {
+          "path": "crates/eos-daemon/src/services/workspace_run/host_ports.rs",
+          "module": "services::workspace_run::host_ports",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "DaemonRunHostPorts",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct DaemonRunHostPorts",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Zero-sized: each call resolves its daemon resources (the per-root OCC writer,\nthe process-global isolated session) freshly, so there is no captured state.",
+              "tags": [],
+              "file": "crates/eos-daemon/src/services/workspace_run/host_ports.rs",
+              "module": "services::workspace_run::host_ports",
+              "line": 23
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkspaceRunHostPorts for DaemonRunHostPorts",
+              "visibility": "private",
+              "signature": "impl WorkspaceRunHostPorts for DaemonRunHostPorts",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "base_timings",
+                  "signature": "fn base_timings (& self , root : & Path) -> Result < WorkspaceTimings , WorkspaceApiError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 28
+                },
+                {
+                  "name": "finalize_ephemeral",
+                  "signature": "fn finalize_ephemeral (& self , root : & Path , workspace : EphemeralWorkspace , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -> Result < WorkspaceCommandOutcome , WorkspaceApiError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 35
+                },
+                {
+                  "name": "record_tool_call",
+                  "signature": "fn record_tool_call (& self , caller_id : & str , audit : Value)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 45
+                }
+              ],
+              "impl_target": "DaemonRunHostPorts",
+              "trait_name": "WorkspaceRunHostPorts",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-daemon/src/services/workspace_run/host_ports.rs",
+              "module": "services::workspace_run::host_ports",
+              "line": 27
+            },
+            {
+              "kind": "fn",
+              "name": "workspace_api_error",
+              "visibility": "private",
+              "signature": "fn workspace_api_error (error : impl std :: fmt :: Display) -> WorkspaceApiError",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-daemon/src/services/workspace_run/host_ports.rs",
+              "module": "services::workspace_run::host_ports",
+              "line": 50
+            }
+          ]
+        },
+        {
           "path": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
           "module": "services::workspace_run::isolated",
           "items": [
@@ -14223,7 +14116,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 36
+              "line": 37
             },
             {
               "kind": "struct",
@@ -14250,7 +14143,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 38
+              "line": 39
             },
             {
               "kind": "fn",
@@ -14266,7 +14159,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 44
+              "line": 45
             },
             {
               "kind": "fn",
@@ -14285,7 +14178,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 53
+              "line": 54
             },
             {
               "kind": "fn",
@@ -14301,7 +14194,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 88
+              "line": 89
             },
             {
               "kind": "fn",
@@ -14320,7 +14213,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 104
+              "line": 105
             },
             {
               "kind": "fn",
@@ -14339,7 +14232,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 130
+              "line": 131
             },
             {
               "kind": "fn",
@@ -14358,7 +14251,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 144
+              "line": 145
             },
             {
               "kind": "fn",
@@ -14376,7 +14269,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 175
+              "line": 176
             },
             {
               "kind": "fn",
@@ -14392,7 +14285,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 198
+              "line": 199
             },
             {
               "kind": "fn",
@@ -14408,7 +14301,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 210
+              "line": 211
             },
             {
               "kind": "fn",
@@ -14424,7 +14317,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 219
+              "line": 220
             },
             {
               "kind": "fn",
@@ -14440,7 +14333,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 234
+              "line": 235
             },
             {
               "kind": "fn",
@@ -14458,7 +14351,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 251
+              "line": 252
             },
             {
               "kind": "fn",
@@ -14474,7 +14367,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 261
+              "line": 262
             },
             {
               "kind": "fn",
@@ -14490,7 +14383,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 316
+              "line": 317
             },
             {
               "kind": "fn",
@@ -14506,7 +14399,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 320
+              "line": 321
             },
             {
               "kind": "fn",
@@ -14522,7 +14415,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 327
+              "line": 328
             },
             {
               "kind": "fn",
@@ -14538,7 +14431,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 332
+              "line": 333
             },
             {
               "kind": "fn",
@@ -14554,7 +14447,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 350
+              "line": 351
             },
             {
               "kind": "fn",
@@ -14572,7 +14465,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 369
+              "line": 370
             },
             {
               "kind": "fn",
@@ -14588,7 +14481,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 378
+              "line": 379
             },
             {
               "kind": "fn",
@@ -14604,7 +14497,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 383
+              "line": 384
             },
             {
               "kind": "fn",
@@ -14622,7 +14515,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 387
+              "line": 388
             },
             {
               "kind": "fn",
@@ -14638,7 +14531,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 395
+              "line": 396
             },
             {
               "kind": "fn",
@@ -14654,7 +14547,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 412
+              "line": 413
             },
             {
               "kind": "fn",
@@ -14670,7 +14563,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 418
+              "line": 419
             },
             {
               "kind": "fn",
@@ -14686,7 +14579,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 445
+              "line": 446
             },
             {
               "kind": "fn",
@@ -14702,7 +14595,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 456
+              "line": 457
             },
             {
               "kind": "fn",
@@ -14718,7 +14611,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 463
+              "line": 464
             },
             {
               "kind": "fn",
@@ -14734,7 +14627,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/mod.rs",
               "module": "services::workspace_run::isolated",
-              "line": 467
+              "line": 468
             }
           ]
         },
@@ -14742,88 +14635,6 @@
           "path": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
           "module": "services::workspace_run::isolated::runtime",
           "items": [
-            {
-              "kind": "struct",
-              "name": "CommandHandle",
-              "visibility": "pub",
-              "signature": "pub struct CommandHandle",
-              "fields": [
-                {
-                  "name": "caller_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "workspace_handle_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "layer_stack_root",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "manifest_version",
-                  "visibility": "pub",
-                  "ty": "i64"
-                },
-                {
-                  "name": "manifest_root_hash",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "workspace_root",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "scratch_dir",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "upperdir",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "workdir",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                },
-                {
-                  "name": "layer_paths",
-                  "visibility": "pub",
-                  "ty": "Vec < PathBuf >"
-                },
-                {
-                  "name": "ns_fds",
-                  "visibility": "pub",
-                  "ty": "HashMap < String , i32 >"
-                },
-                {
-                  "name": "cgroup_path",
-                  "visibility": "pub",
-                  "ty": "Option < PathBuf >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Per-command-session snapshot of a caller's isolated workspace state (pure\ndata: namespace fds, scratch dirs, lease/manifest coordinates). The daemon's\nisolated workspace run owns one of these per session; it carries everything\nthe run needs to build the set-ns runner request and finalize for audit.",
-              "tags": [
-                "cfg_attr: allow",
-                "cfg_attr: not",
-                "derive: Clone",
-                "derive: Debug"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
-              "module": "services::workspace_run::isolated::runtime",
-              "line": 40
-            },
             {
               "kind": "struct",
               "name": "DaemonLayerStackPort",
@@ -14847,7 +14658,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 63
+              "line": 42
             },
             {
               "kind": "impl",
@@ -14862,21 +14673,21 @@
                   "signature": "fn acquire_snapshot (& self , request_id : & str) -> Result < SnapshotLease , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 69
+                  "line": 48
                 },
                 {
                   "name": "release_lease",
                   "signature": "fn release_lease (& self , lease_id : & str) -> Result < bool , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 85
+                  "line": 64
                 },
                 {
                   "name": "active_lease_count",
                   "signature": "fn active_lease_count (& self) -> Result < Option < usize > , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 93
+                  "line": 72
                 }
               ],
               "impl_target": "DaemonLayerStackPort",
@@ -14888,7 +14699,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 68
+              "line": 47
             },
             {
               "kind": "struct",
@@ -14906,7 +14717,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 102
+              "line": 81
             },
             {
               "kind": "impl",
@@ -14921,49 +14732,49 @@
                   "signature": "fn spawn_ns_holder (& self , handle : & mut WorkspaceHandle , setup_timeout_s : f64 ,) -> Result < i32 , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 106
+                  "line": 85
                 },
                 {
                   "name": "open_ns_fds",
                   "signature": "fn open_ns_fds (& self , holder_pid : i32) -> Result < HashMap < String , i32 > , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 166
+                  "line": 145
                 },
                 {
                   "name": "mount_overlay",
                   "signature": "fn mount_overlay (& self , handle : & WorkspaceHandle , layer_paths : & [PathBuf] ,) -> Result < () , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 190
+                  "line": 169
                 },
                 {
                   "name": "configure_dns",
                   "signature": "fn configure_dns (& self , handle : & WorkspaceHandle , fallback_dns : & str ,) -> Result < bool , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 227
+                  "line": 206
                 },
                 {
                   "name": "signal_net_ready",
                   "signature": "fn signal_net_ready (& self , handle : & WorkspaceHandle , setup_timeout_s : f64 ,) -> Result < () , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 267
+                  "line": 246
                 },
                 {
                   "name": "create_cgroup",
                   "signature": "fn create_cgroup (& self , handle : & WorkspaceHandle) -> Result < PathBuf , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 299
+                  "line": 278
                 },
                 {
                   "name": "kill_holder",
                   "signature": "fn kill_holder (& self , holder_pid : i32 , grace_s : f64) -> Result < () , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 312
+                  "line": 291
                 }
               ],
               "impl_target": "DaemonNamespaceRuntime",
@@ -14975,7 +14786,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 105
+              "line": 84
             },
             {
               "kind": "fn",
@@ -14993,7 +14804,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 343
+              "line": 322
             },
             {
               "kind": "fn",
@@ -15011,7 +14822,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 364
+              "line": 343
             },
             {
               "kind": "fn",
@@ -15029,7 +14840,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 370
+              "line": 349
             },
             {
               "kind": "fn",
@@ -15047,7 +14858,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 377
+              "line": 356
             },
             {
               "kind": "fn",
@@ -15065,7 +14876,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 384
+              "line": 363
             },
             {
               "kind": "fn",
@@ -15083,7 +14894,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 390
+              "line": 369
             },
             {
               "kind": "fn",
@@ -15101,7 +14912,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 398
+              "line": 377
             },
             {
               "kind": "fn",
@@ -15119,7 +14930,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 436
+              "line": 415
             },
             {
               "kind": "fn",
@@ -15137,7 +14948,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 445
+              "line": 424
             },
             {
               "kind": "fn",
@@ -15155,7 +14966,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 458
+              "line": 437
             },
             {
               "kind": "fn",
@@ -15173,7 +14984,7 @@
               ],
               "file": "crates/eos-daemon/src/services/workspace_run/isolated/runtime.rs",
               "module": "services::workspace_run::isolated::runtime",
-              "line": 490
+              "line": 469
             }
           ]
         },
@@ -15570,463 +15381,6 @@
           "items": []
         },
         {
-          "path": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-          "module": "services::workspace_run::registry",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "EphemeralRun",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) struct EphemeralRun",
-              "fields": [
-                {
-                  "name": "session",
-                  "visibility": "pub(crate)",
-                  "ty": "CommandSession"
-                },
-                {
-                  "name": "workspace",
-                  "visibility": "pub(crate)",
-                  "ty": "EphemeralWorkspace"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One ephemeral workspace run: exactly **one** command session paired with the\nfresh overlay it owns (snapshot lease + run dirs). The run owns the overlay\nstate directly — there is no policy indirection — so completion publishes the\ncaptured upperdir and cancellation discards it, structurally.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 18
-            },
-            {
-              "kind": "struct",
-              "name": "IsolatedRun",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) struct IsolatedRun",
-              "fields": [
-                {
-                  "name": "session",
-                  "visibility": "pub(crate)",
-                  "ty": "CommandSession"
-                },
-                {
-                  "name": "handle",
-                  "visibility": "pub(crate)",
-                  "ty": "CommandHandle"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One command session running inside a caller's isolated workspace. It carries\nthe per-session [`CommandHandle`] (namespace fds, scratch dirs, lease/manifest\ncoordinates) needed to finalize the session for AUDIT (never published); the\nnamespace + lease themselves are owned by the isolated-session subsystem and\ntorn down on `exit`.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 27
-            },
-            {
-              "kind": "enum",
-              "name": "WorkspaceRun",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) enum WorkspaceRun",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Ephemeral",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "EphemeralRun"
-                    }
-                  ]
-                },
-                {
-                  "name": "Isolated",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "IsolatedRun"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A single workspace run: an ephemeral overlay run or one session of the\ncaller's isolated run. The variant carries the per-kind state the daemon needs\nto publish (ephemeral complete), discard (cancel), or audit (isolated).",
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 37
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkspaceRun",
-              "visibility": "private",
-              "signature": "impl WorkspaceRun",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "session",
-                  "signature": "pub(crate) fn session (& self) -> & CommandSession",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 46
-                }
-              ],
-              "impl_target": "WorkspaceRun",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 45
-            },
-            {
-              "kind": "struct",
-              "name": "CallerRuns",
-              "visibility": "private",
-              "signature": "struct CallerRuns",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "HashMap < String , Arc < WorkspaceRun > >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A caller's command-session runs, keyed by command-session id. A caller holds\nmany ephemeral workspace runs (each one session) **or** its one isolated run's\nmany sessions; the ephemeral-vs-isolated XOR is enforced by the isolated\nenter/exit gate, not here. Each [`WorkspaceRun`] is self-describing\n(`Ephemeral`/`Isolated`), so cancel/settle dispatch on the run, and the\nregistry needs no per-caller variant tag — one map holds whichever kind the\ncaller currently runs.",
-              "tags": [
-                "derive: Default"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 54
-            },
-            {
-              "kind": "impl",
-              "name": "impl CallerRuns",
-              "visibility": "private",
-              "signature": "impl CallerRuns",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "sessions",
-                  "signature": "fn sessions (& self) -> Vec < Arc < WorkspaceRun > >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 65
-                },
-                {
-                  "name": "get",
-                  "signature": "fn get (& self , session_id : & str) -> Option < Arc < WorkspaceRun > >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 69
-                },
-                {
-                  "name": "count",
-                  "signature": "fn count (& self) -> usize",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 73
-                },
-                {
-                  "name": "insert",
-                  "signature": "fn insert (& mut self , session_id : String , run : Arc < WorkspaceRun >)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 77
-                },
-                {
-                  "name": "take",
-                  "signature": "fn take (& mut self , session_id : & str) -> (Option < Arc < WorkspaceRun > > , bool)",
-                  "kind": "method",
-                  "docs": "Remove `session_id`, returning the removed run and whether this caller is\nnow empty (so the registry can drop the caller entry).",
-                  "line": 81
-                }
-              ],
-              "impl_target": "CallerRuns",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 64
-            },
-            {
-              "kind": "struct",
-              "name": "CompletedEntry",
-              "visibility": "private",
-              "signature": "struct CompletedEntry",
-              "fields": [
-                {
-                  "name": "seq",
-                  "visibility": "private",
-                  "ty": "u64"
-                },
-                {
-                  "name": "completion",
-                  "visibility": "private",
-                  "ty": "CommandSessionCompletion"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 98
-            },
-            {
-              "kind": "struct",
-              "name": "WorkspaceRunRegistry",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) struct WorkspaceRunRegistry",
-              "fields": [
-                {
-                  "name": "runs",
-                  "visibility": "private",
-                  "ty": "Mutex < HashMap < String , CallerRuns > >"
-                },
-                {
-                  "name": "completed",
-                  "visibility": "private",
-                  "ty": "Mutex < HashMap < String , CompletedEntry > >"
-                },
-                {
-                  "name": "counter",
-                  "visibility": "private",
-                  "ty": "AtomicU64"
-                },
-                {
-                  "name": "completed_seq",
-                  "visibility": "private",
-                  "ty": "AtomicU64"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Single caller-keyed command-session authority. Each caller maps to its\n[`CallerRuns`] (many ephemeral workspace runs or the one isolated run's\nsessions). Session-targeted ops resolve by scanning runs for the session id\n(caller count is small).",
-              "tags": [
-                "derive: Default"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 103
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkspaceRunRegistry",
-              "visibility": "private",
-              "signature": "impl WorkspaceRunRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub(crate) fn new () -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 116
-                },
-                {
-                  "name": "next_id",
-                  "signature": "pub(crate) fn next_id (& self) -> String",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 126
-                },
-                {
-                  "name": "insert",
-                  "signature": "pub(crate) fn insert (& self , run : Arc < WorkspaceRun >)",
-                  "kind": "method",
-                  "docs": "File a started run under its caller, keyed by command-session id. Total by\nconstruction — a freshly spawned run is never silently dropped.",
-                  "line": 131
-                },
-                {
-                  "name": "get",
-                  "signature": "pub(crate) fn get (& self , id : & str) -> Option < Arc < WorkspaceRun > >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 142
-                },
-                {
-                  "name": "remove",
-                  "signature": "pub(crate) fn remove (& self , id : & str) -> Option < Arc < WorkspaceRun > >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 147
-                },
-                {
-                  "name": "count_by_caller",
-                  "signature": "pub(crate) fn count_by_caller (& self , caller_id : Option < & str >) -> usize",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 163
-                },
-                {
-                  "name": "live",
-                  "signature": "pub(crate) fn live (& self) -> Vec < Arc < WorkspaceRun > >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 172
-                },
-                {
-                  "name": "caller_sessions",
-                  "signature": "pub(crate) fn caller_sessions (& self , caller_id : & str) -> Vec < Arc < WorkspaceRun > >",
-                  "kind": "method",
-                  "docs": "All live runs owned by `caller_id` (drives per-caller cleanup).",
-                  "line": 180
-                },
-                {
-                  "name": "push_completed",
-                  "signature": "pub(crate) fn push_completed (& self , completion : CommandSessionCompletion)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 189
-                },
-                {
-                  "name": "take_completed_result",
-                  "signature": "pub(crate) fn take_completed_result (& self , id : & str) -> Option < CommandResponse >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 209
-                },
-                {
-                  "name": "completed_result",
-                  "signature": "pub(crate) fn completed_result (& self , id : & str) -> Option < CommandResponse >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 215
-                },
-                {
-                  "name": "collect_completed",
-                  "signature": "pub(crate) fn collect_completed (& self , request : & CollectCompleted) -> CollectCompletedResponse",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 222
-                }
-              ],
-              "impl_target": "WorkspaceRunRegistry",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 115
-            },
-            {
-              "kind": "fn",
-              "name": "lock",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn lock < T > (mutex : & Mutex < T >) -> MutexGuard < '_ , T >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry",
-              "line": 252
-            },
-            {
-              "kind": "fn",
-              "name": "sample_completion",
-              "visibility": "private",
-              "signature": "fn sample_completion (id : & str) -> CommandSessionCompletion",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry::tests",
-              "line": 262
-            },
-            {
-              "kind": "fn",
-              "name": "ephemeral_run",
-              "visibility": "private",
-              "signature": "fn ephemeral_run (id : & str , caller : & str) -> Arc < WorkspaceRun >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "cfg: not"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry::tests",
-              "line": 275
-            },
-            {
-              "kind": "fn",
-              "name": "insert_get_count_remove_track_caller_runs",
-              "visibility": "private",
-              "signature": "fn insert_get_count_remove_track_caller_runs ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "cfg: not",
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry::tests",
-              "line": 314
-            },
-            {
-              "kind": "fn",
-              "name": "push_completed_evicts_oldest_beyond_cap",
-              "visibility": "private",
-              "signature": "fn push_completed_evicts_oldest_beyond_cap ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-daemon/src/services/workspace_run/registry.rs",
-              "module": "services::workspace_run::registry::tests",
-              "line": 336
-            }
-          ]
-        },
-        {
           "path": "crates/eos-daemon/src/services/workspace_run/wire.rs",
           "module": "services::workspace_run::wire",
           "items": [
@@ -16217,6 +15571,48 @@
               "file": "crates/eos-daemon/src/services/workspace_run/wire.rs",
               "module": "services::workspace_run::wire",
               "line": 119
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-daemon/src/transport/framing.rs",
+          "module": "transport::framing",
+          "items": [
+            {
+              "kind": "fn",
+              "name": "read_request_line",
+              "visibility": "pub(super)",
+              "signature": "pub(super) async fn read_request_line < R > (reader : & mut R) -> Result < Vec < u8 > , DaemonError > where R : AsyncRead + Unpin ,",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async"
+              ],
+              "file": "crates/eos-daemon/src/transport/framing.rs",
+              "module": "transport::framing",
+              "line": 18
+            },
+            {
+              "kind": "fn",
+              "name": "signal_shutdown",
+              "visibility": "pub(super)",
+              "signature": "pub(super) async fn signal_shutdown ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async"
+              ],
+              "file": "crates/eos-daemon/src/transport/framing.rs",
+              "module": "transport::framing",
+              "line": 49
             }
           ]
         },
@@ -16517,6 +15913,60 @@
               "file": "crates/eos-daemon/src/transport/server.rs",
               "module": "transport::server",
               "line": 539
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-daemon/src/transport/tool_call_events.rs",
+          "module": "transport::tool_call_events",
+          "items": [
+            {
+              "kind": "fn",
+              "name": "should_emit_tool_call_event",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn should_emit_tool_call_event (op : & str) -> bool",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-daemon/src/transport/tool_call_events.rs",
+              "module": "transport::tool_call_events",
+              "line": 11
+            },
+            {
+              "kind": "fn",
+              "name": "emit_tool_call_event",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn emit_tool_call_event (event_type : & str , invocation_id : & str , op : & str , caller_id : & str , total_ms : Option < f64 > , exit_status : Option < String > ,)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-daemon/src/transport/tool_call_events.rs",
+              "module": "transport::tool_call_events",
+              "line": 22
+            },
+            {
+              "kind": "fn",
+              "name": "caller_id_from_args",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn caller_id_from_args (args : & serde_json :: Value) -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-daemon/src/transport/tool_call_events.rs",
+              "module": "transport::tool_call_events",
+              "line": 49
             }
           ]
         }
@@ -23040,15 +22490,15 @@
       "name": "eos-layerstack",
       "path": "crates/eos-layerstack",
       "stats": {
-        "modules": 13,
-        "items": 114,
-        "structs": 19,
+        "modules": 14,
+        "items": 118,
+        "structs": 20,
         "enums": 4,
         "traits": 0,
-        "functions": 71,
-        "impls": 17,
-        "fields": 69,
-        "methods": 60
+        "functions": 73,
+        "impls": 18,
+        "fields": 72,
+        "methods": 61
       },
       "modules": [
         {
@@ -23629,6 +23079,108 @@
           "path": "crates/eos-layerstack/src/lib.rs",
           "module": "lib",
           "items": []
+        },
+        {
+          "path": "crates/eos-layerstack/src/metrics.rs",
+          "module": "metrics",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "LayerStackStorageMetrics",
+              "visibility": "pub",
+              "signature": "pub struct LayerStackStorageMetrics",
+              "fields": [
+                {
+                  "name": "layer_dirs",
+                  "visibility": "pub",
+                  "ty": "usize"
+                },
+                {
+                  "name": "staging_dirs",
+                  "visibility": "pub",
+                  "ty": "usize"
+                },
+                {
+                  "name": "storage_bytes",
+                  "visibility": "pub",
+                  "ty": "u64"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Filesystem storage metrics for a [`LayerStack`] root.\n\nCounts directory entries under the crate-owned `layers/` and `staging/`\nlayout plus the recursive byte size of every regular file beneath the\nstorage root.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-layerstack/src/metrics.rs",
+              "module": "metrics",
+              "line": 7
+            },
+            {
+              "kind": "impl",
+              "name": "impl LayerStack",
+              "visibility": "private",
+              "signature": "impl LayerStack",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "storage_metrics",
+                  "signature": "pub fn storage_metrics (& self) -> Result < LayerStackStorageMetrics , LayerStackError >",
+                  "kind": "method",
+                  "docs": "Walk this stack's storage layout for directory counts and total bytes.",
+                  "line": 23
+                }
+              ],
+              "impl_target": "LayerStack",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-layerstack/src/metrics.rs",
+              "module": "metrics",
+              "line": 22
+            },
+            {
+              "kind": "fn",
+              "name": "count_dirs",
+              "visibility": "private",
+              "signature": "fn count_dirs (path : & Path) -> Result < usize , LayerStackError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/metrics.rs",
+              "module": "metrics",
+              "line": 34
+            },
+            {
+              "kind": "fn",
+              "name": "storage_bytes",
+              "visibility": "private",
+              "signature": "fn storage_bytes (path : & Path) -> Result < u64 , LayerStackError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/metrics.rs",
+              "module": "metrics",
+              "line": 47
+            }
+          ]
         },
         {
           "path": "crates/eos-layerstack/src/squash.rs",
@@ -29000,11 +28552,11 @@
       "path": "crates/eos-occ-layerstack",
       "stats": {
         "modules": 3,
-        "items": 35,
+        "items": 36,
         "structs": 4,
         "enums": 0,
         "traits": 0,
-        "functions": 29,
+        "functions": 30,
         "impls": 2,
         "fields": 8,
         "methods": 3
@@ -29014,6 +28566,22 @@
           "path": "crates/eos-occ-layerstack/src/lib.rs",
           "module": "lib",
           "items": [
+            {
+              "kind": "fn",
+              "name": "base_hashes_for_snapshot",
+              "visibility": "pub",
+              "signature": "pub fn base_hashes_for_snapshot (root : & Path , manifest : & Manifest , changes : & [LayerChange] ,) -> Result < Vec < (LayerPath , Option < String >) > , LayerStackError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Per-path base-hash overrides for a snapshot's changeset.\n\nBuilds a [`MergedView`] over `root` and, for each non-`OpaqueDir` change,\nhashes the bytes visible at `manifest` via [`hash_current`] so OCC publish\ncan gate on the base the writer observed. `OpaqueDir` (and absent) paths map\nto `None`. Errors are native [`LayerStackError`] — no daemon edge.",
+              "tags": [],
+              "file": "crates/eos-occ-layerstack/src/lib.rs",
+              "module": "lib",
+              "line": 33
+            },
             {
               "kind": "fn",
               "name": "hash_current",
@@ -29030,7 +28598,7 @@
               ],
               "file": "crates/eos-occ-layerstack/src/lib.rs",
               "module": "lib",
-              "line": 29
+              "line": 57
             },
             {
               "kind": "fn",
@@ -29048,7 +28616,7 @@
               ],
               "file": "crates/eos-occ-layerstack/src/lib.rs",
               "module": "lib",
-              "line": 41
+              "line": 69
             },
             {
               "kind": "fn",
@@ -29064,7 +28632,7 @@
               "tags": [],
               "file": "crates/eos-occ-layerstack/src/lib.rs",
               "module": "lib",
-              "line": 49
+              "line": 77
             },
             {
               "kind": "fn",
@@ -29080,7 +28648,7 @@
               "tags": [],
               "file": "crates/eos-occ-layerstack/src/lib.rs",
               "module": "lib",
-              "line": 60
+              "line": 88
             },
             {
               "kind": "fn",
@@ -29096,7 +28664,7 @@
               "tags": [],
               "file": "crates/eos-occ-layerstack/src/lib.rs",
               "module": "lib",
-              "line": 64
+              "line": 92
             }
           ]
         },
@@ -39735,6 +39303,964 @@
               "file": "crates/eos-workspace-api/src/response.rs",
               "module": "response",
               "line": 61
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "eos-workspace-run-host",
+      "path": "crates/eos-workspace-run-host",
+      "stats": {
+        "modules": 5,
+        "items": 26,
+        "structs": 7,
+        "enums": 2,
+        "traits": 1,
+        "functions": 12,
+        "impls": 4,
+        "fields": 32,
+        "methods": 40
+      },
+      "modules": [
+        {
+          "path": "crates/eos-workspace-run-host/src/command_handle.rs",
+          "module": "command_handle",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "CommandHandle",
+              "visibility": "pub",
+              "signature": "pub struct CommandHandle",
+              "fields": [
+                {
+                  "name": "caller_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "workspace_handle_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "layer_stack_root",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "manifest_version",
+                  "visibility": "pub",
+                  "ty": "i64"
+                },
+                {
+                  "name": "manifest_root_hash",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "workspace_root",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "scratch_dir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "upperdir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "workdir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "layer_paths",
+                  "visibility": "pub",
+                  "ty": "Vec < PathBuf >"
+                },
+                {
+                  "name": "ns_fds",
+                  "visibility": "pub",
+                  "ty": "HashMap < String , i32 >"
+                },
+                {
+                  "name": "cgroup_path",
+                  "visibility": "pub",
+                  "ty": "Option < PathBuf >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Per-command-session snapshot of a caller's isolated workspace state (pure\ndata: namespace fds, scratch dirs, lease/manifest coordinates). The isolated\nworkspace run owns one of these per session; it carries everything the run\nneeds to build the set-ns runner request and finalize for audit.\n\nConstructed by the daemon from its isolated-session state and stored in the\nrun [`crate::registry`]; the namespace + lease themselves are owned by the\ndaemon's isolated-session subsystem and torn down on `exit`.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-workspace-run-host/src/command_handle.rs",
+              "module": "command_handle",
+              "line": 4
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-workspace-run-host/src/lib.rs",
+          "module": "lib",
+          "items": []
+        },
+        {
+          "path": "crates/eos-workspace-run-host/src/manager.rs",
+          "module": "manager",
+          "items": [
+            {
+              "kind": "enum",
+              "name": "StartTarget",
+              "visibility": "pub",
+              "signature": "pub enum StartTarget",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Ephemeral",
+                  "fields": [
+                    {
+                      "name": "root",
+                      "visibility": "private",
+                      "ty": "PathBuf"
+                    },
+                    {
+                      "name": "workspace_root",
+                      "visibility": "private",
+                      "ty": "PathBuf"
+                    },
+                    {
+                      "name": "scratch_root",
+                      "visibility": "private",
+                      "ty": "PathBuf"
+                    }
+                  ]
+                },
+                {
+                  "name": "Isolated",
+                  "fields": [
+                    {
+                      "name": "handle",
+                      "visibility": "private",
+                      "ty": "Box < CommandHandle >"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Which workspace a starting command session belongs to. The daemon picks the\nkind from the caller's current mode and supplies the inputs the manager needs\nto lay out the run: the LayerStack roots (ephemeral) or the caller's isolated\nnamespace handle (isolated).",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 44
+            },
+            {
+              "kind": "struct",
+              "name": "WorkspaceRunManager",
+              "visibility": "pub",
+              "signature": "pub struct WorkspaceRunManager",
+              "fields": [
+                {
+                  "name": "config",
+                  "visibility": "private",
+                  "ty": "CommandSessionConfig"
+                },
+                {
+                  "name": "registry",
+                  "visibility": "private",
+                  "ty": "Arc < WorkspaceRunRegistry >"
+                },
+                {
+                  "name": "ports",
+                  "visibility": "private",
+                  "ty": "Arc < dyn WorkspaceRunHostPorts >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 61
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkspaceRunManager",
+              "visibility": "private",
+              "signature": "impl WorkspaceRunManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (config : CommandSessionConfig , ports : Arc < dyn WorkspaceRunHostPorts >) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 68
+                },
+                {
+                  "name": "start",
+                  "signature": "pub fn start (& self , request : StartCommandSession , target : StartTarget ,) -> Result < CommandResponse , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 77
+                },
+                {
+                  "name": "start_ephemeral",
+                  "signature": "fn start_ephemeral (& self , spec : CommandSessionSpec , prepare_request : eos_workspace_api :: PrepareCommandRequest , root : PathBuf , workspace_root : PathBuf , scratch_root : PathBuf , yield_time_ms : u64 ,) -> Result < CommandResponse , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 115
+                },
+                {
+                  "name": "start_isolated",
+                  "signature": "fn start_isolated (& self , spec : CommandSessionSpec , prepare_request : eos_workspace_api :: PrepareCommandRequest , handle : Box < CommandHandle > , yield_time_ms : u64 ,) -> Result < CommandResponse , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 167
+                },
+                {
+                  "name": "spawn_session",
+                  "signature": "fn spawn_session (& self , spec : CommandSessionSpec , prepared : eos_workspace_api :: PreparedCommandWorkspace ,) -> Result < CommandSession , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 192
+                },
+                {
+                  "name": "register_and_wait",
+                  "signature": "fn register_and_wait (& self , session : CommandSession , yield_time_ms : u64 , make_run : impl FnOnce (CommandSession) -> WorkspaceRun ,) -> CommandResponse",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 216
+                },
+                {
+                  "name": "write_stdin",
+                  "signature": "pub fn write_stdin (& self , request : WriteStdin) -> Result < CommandResponse , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 231
+                },
+                {
+                  "name": "read_progress",
+                  "signature": "pub fn read_progress (& self , request : ReadCommandProgress ,) -> Result < CommandResponse , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 259
+                },
+                {
+                  "name": "cancel",
+                  "signature": "pub fn cancel (& self , request : CancelCommandSession ,) -> Result < CommandResponse , CommandSessionError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 286
+                },
+                {
+                  "name": "count_by_caller",
+                  "signature": "pub fn count_by_caller (& self , caller_id : Option < & str >) -> usize",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 309
+                },
+                {
+                  "name": "collect_completed",
+                  "signature": "pub fn collect_completed (& self , request : & CollectCompleted) -> CollectCompletedResponse",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 314
+                },
+                {
+                  "name": "push_completed",
+                  "signature": "pub fn push_completed (& self , completion : CommandSessionCompletion)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 319
+                },
+                {
+                  "name": "cleanup_caller",
+                  "signature": "pub fn cleanup_caller (& self , caller_id : & str , grace_s : Option < f64 >) -> usize",
+                  "kind": "method",
+                  "docs": "Cancel and discard every command session owned by `caller_id` (the\nper-caller workspace-run teardown). Cancelled sessions discard their\noverlay and push no completion (the caller initiated the cancel).",
+                  "line": 323
+                },
+                {
+                  "name": "cancel_all",
+                  "signature": "pub fn cancel_all (& self , grace_s : Option < f64 >) -> usize",
+                  "kind": "method",
+                  "docs": "Cancel and discard every live command session in the sandbox (the\nwhole-sandbox sweep backstop). Cancelled sessions discard and push no\ncompletion.",
+                  "line": 335
+                },
+                {
+                  "name": "cancel_and_drain",
+                  "signature": "fn cancel_and_drain (& self , runs : Vec < Arc < WorkspaceRun > > , grace_s : Option < f64 >) -> usize",
+                  "kind": "method",
+                  "docs": "Cancel every run, then reap+discard within `grace`, finalizing any\nstragglers. Returns the number of runs that were live at entry.",
+                  "line": 343
+                },
+                {
+                  "name": "force_discard",
+                  "signature": "fn force_discard (& self , run : & Arc < WorkspaceRun >)",
+                  "kind": "method",
+                  "docs": "Reap-independent teardown for a run the cancel grace could not reap.\nReleases an ephemeral run's overlay lease + dirs (best-effort: a still-live\nprocess may leave its dirs for the orphan reaper, but the lease is freed);\nan isolated session only needs its registry entry dropped, since the\nnamespace + lease are torn down by `exit_isolated`.",
+                  "line": 385
+                },
+                {
+                  "name": "sweep_expired",
+                  "signature": "pub fn sweep_expired (& self , now : Instant)",
+                  "kind": "method",
+                  "docs": "Periodic reaper: enforce the per-session timeout backstop and finalize any\nsession whose child has exited without a live poller, parking the\ncompletion for the heartbeat.\n\nA past-deadline session is killed as a **timeout** (not a user cancel), so\nits completion is still parked — a fire-and-forget session that hits its\ntimeout must reach the heartbeat, or its agent-core background session is\nstuck Running forever. Only a caller-initiated cancel parks nothing.",
+                  "line": 404
+                },
+                {
+                  "name": "finish_reaped",
+                  "signature": "fn finish_reaped (& self , run : Arc < WorkspaceRun > , reaped : ReapedCommand , publish_completion : bool ,) -> CommandResponse",
+                  "kind": "method",
+                  "docs": "Turn a reaped command into its final response: the run publishes (normal\ncompletion) or discards (cancel) via the workspace lifecycle helpers, then\npersists the final response. Routing cancel to the discard branch is the\nstructural guarantee that a cancelled command never reaches the OCC merge.",
+                  "line": 424
+                },
+                {
+                  "name": "finalize_run",
+                  "signature": "fn finalize_run (& self , run : Arc < WorkspaceRun > , request : FinalizeCommandRequest , cancelled : bool , publish_completion : bool ,) -> CommandResponse",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 448
+                }
+              ],
+              "impl_target": "WorkspaceRunManager",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 67
+            },
+            {
+              "kind": "fn",
+              "name": "settle_ephemeral",
+              "visibility": "private",
+              "signature": "fn settle_ephemeral (ports : & dyn WorkspaceRunHostPorts , run : & EphemeralRun , request : FinalizeCommandRequest , cancelled : bool ,) -> Result < WorkspaceCommandOutcome , WorkspaceApiError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths\nremove the run dirs and release the snapshot lease; only the complete path\ncaptures + publishes the upperdir, so a cancelled command never OCC-merges.",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 483
+            },
+            {
+              "kind": "fn",
+              "name": "settle_isolated",
+              "visibility": "private",
+              "signature": "fn settle_isolated (ports : & dyn WorkspaceRunHostPorts , run : & IsolatedRun , request : FinalizeCommandRequest , cancelled : bool ,) -> Result < WorkspaceCommandOutcome , WorkspaceApiError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Complete (capture for audit) or discard (cancel) one isolated command\nsession. Isolated writes are never published; the upperdir is torn down with\nthe namespace on exit, so discard is a no-op beyond the cancelled outcome.",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 512
+            },
+            {
+              "kind": "fn",
+              "name": "release_lease",
+              "visibility": "private",
+              "signature": "fn release_lease (root : & Path , lease_id : & str)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 542
+            },
+            {
+              "kind": "fn",
+              "name": "layerstack_error",
+              "visibility": "private",
+              "signature": "fn layerstack_error (error : impl std :: fmt :: Display) -> CommandSessionError",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 546
+            },
+            {
+              "kind": "fn",
+              "name": "workspace_api_error",
+              "visibility": "private",
+              "signature": "fn workspace_api_error (error : impl std :: fmt :: Display) -> WorkspaceApiError",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 553
+            },
+            {
+              "kind": "fn",
+              "name": "is_teardown_control",
+              "visibility": "private",
+              "signature": "fn is_teardown_control (chars : & str) -> bool",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 557
+            },
+            {
+              "kind": "fn",
+              "name": "contains_teardown_control",
+              "visibility": "private",
+              "signature": "fn contains_teardown_control (chars : & str) -> bool",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/manager.rs",
+              "module": "manager",
+              "line": 561
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-workspace-run-host/src/ports.rs",
+          "module": "ports",
+          "items": [
+            {
+              "kind": "trait",
+              "name": "WorkspaceRunHostPorts",
+              "visibility": "pub",
+              "signature": "pub trait WorkspaceRunHostPorts",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "base_timings",
+                  "signature": "fn base_timings (& self , root : & Path) -> Result < WorkspaceTimings , WorkspaceApiError >",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 21
+                },
+                {
+                  "name": "finalize_ephemeral",
+                  "signature": "fn finalize_ephemeral (& self , root : & Path , workspace : EphemeralWorkspace , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -> Result < WorkspaceCommandOutcome , WorkspaceApiError >",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 23
+                },
+                {
+                  "name": "record_tool_call",
+                  "signature": "fn record_tool_call (& self , caller_id : & str , audit : Value)",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 31
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Daemon-provided services the run lifecycle depends on but that must stay in\nthe daemon process. Injected so this crate keeps no `eos-occ` edge (the\nbuild-time no-publish guard) and no daemon-global state:\n\n* [`base_timings`](Self::base_timings) — daemon `/proc` + cgroup resource\ntelemetry, spliced onto each finalize.\n* [`finalize_ephemeral`](Self::finalize_ephemeral) — publish a completed\nephemeral run's captured upperdir through the daemon's per-root OCC single\nwriter.\n* [`record_tool_call`](Self::record_tool_call) — record an isolated command's\ncaptured audit into the caller's daemon-global isolated session.",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/ports.rs",
+              "module": "ports",
+              "line": 9
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-workspace-run-host/src/registry.rs",
+          "module": "registry",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "EphemeralRun",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct EphemeralRun",
+              "fields": [
+                {
+                  "name": "session",
+                  "visibility": "pub(crate)",
+                  "ty": "CommandSession"
+                },
+                {
+                  "name": "workspace",
+                  "visibility": "pub(crate)",
+                  "ty": "EphemeralWorkspace"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One ephemeral workspace run: exactly **one** command session paired with the\nfresh overlay it owns (snapshot lease + run dirs). The run owns the overlay\nstate directly — there is no policy indirection — so completion publishes the\ncaptured upperdir and cancellation discards it, structurally.",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 18
+            },
+            {
+              "kind": "struct",
+              "name": "IsolatedRun",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct IsolatedRun",
+              "fields": [
+                {
+                  "name": "session",
+                  "visibility": "pub(crate)",
+                  "ty": "CommandSession"
+                },
+                {
+                  "name": "handle",
+                  "visibility": "pub(crate)",
+                  "ty": "CommandHandle"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One command session running inside a caller's isolated workspace. It carries\nthe per-session [`CommandHandle`] (namespace fds, scratch dirs, lease/manifest\ncoordinates) needed to finalize the session for AUDIT (never published); the\nnamespace + lease themselves are owned by the isolated-session subsystem and\ntorn down on `exit`.",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 27
+            },
+            {
+              "kind": "enum",
+              "name": "WorkspaceRun",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) enum WorkspaceRun",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Ephemeral",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "EphemeralRun"
+                    }
+                  ]
+                },
+                {
+                  "name": "Isolated",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "IsolatedRun"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A single workspace run: an ephemeral overlay run or one session of the\ncaller's isolated run. The variant carries the per-kind state the daemon needs\nto publish (ephemeral complete), discard (cancel), or audit (isolated).",
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 37
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkspaceRun",
+              "visibility": "private",
+              "signature": "impl WorkspaceRun",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "session",
+                  "signature": "pub(crate) fn session (& self) -> & CommandSession",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 46
+                }
+              ],
+              "impl_target": "WorkspaceRun",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 45
+            },
+            {
+              "kind": "struct",
+              "name": "CallerRuns",
+              "visibility": "private",
+              "signature": "struct CallerRuns",
+              "fields": [
+                {
+                  "name": "0",
+                  "visibility": "private",
+                  "ty": "HashMap < String , Arc < WorkspaceRun > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A caller's command-session runs, keyed by command-session id. A caller holds\nmany ephemeral workspace runs (each one session) **or** its one isolated run's\nmany sessions; the ephemeral-vs-isolated XOR is enforced by the isolated\nenter/exit gate, not here. Each [`WorkspaceRun`] is self-describing\n(`Ephemeral`/`Isolated`), so cancel/settle dispatch on the run, and the\nregistry needs no per-caller variant tag — one map holds whichever kind the\ncaller currently runs.",
+              "tags": [
+                "derive: Default"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 54
+            },
+            {
+              "kind": "impl",
+              "name": "impl CallerRuns",
+              "visibility": "private",
+              "signature": "impl CallerRuns",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "sessions",
+                  "signature": "fn sessions (& self) -> Vec < Arc < WorkspaceRun > >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 65
+                },
+                {
+                  "name": "get",
+                  "signature": "fn get (& self , session_id : & str) -> Option < Arc < WorkspaceRun > >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 69
+                },
+                {
+                  "name": "count",
+                  "signature": "fn count (& self) -> usize",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 73
+                },
+                {
+                  "name": "insert",
+                  "signature": "fn insert (& mut self , session_id : String , run : Arc < WorkspaceRun >)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 77
+                },
+                {
+                  "name": "take",
+                  "signature": "fn take (& mut self , session_id : & str) -> (Option < Arc < WorkspaceRun > > , bool)",
+                  "kind": "method",
+                  "docs": "Remove `session_id`, returning the removed run and whether this caller is\nnow empty (so the registry can drop the caller entry).",
+                  "line": 81
+                }
+              ],
+              "impl_target": "CallerRuns",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 64
+            },
+            {
+              "kind": "struct",
+              "name": "CompletedEntry",
+              "visibility": "private",
+              "signature": "struct CompletedEntry",
+              "fields": [
+                {
+                  "name": "seq",
+                  "visibility": "private",
+                  "ty": "u64"
+                },
+                {
+                  "name": "completion",
+                  "visibility": "private",
+                  "ty": "CommandSessionCompletion"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 98
+            },
+            {
+              "kind": "struct",
+              "name": "WorkspaceRunRegistry",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct WorkspaceRunRegistry",
+              "fields": [
+                {
+                  "name": "runs",
+                  "visibility": "private",
+                  "ty": "Mutex < HashMap < String , CallerRuns > >"
+                },
+                {
+                  "name": "completed",
+                  "visibility": "private",
+                  "ty": "Mutex < HashMap < String , CompletedEntry > >"
+                },
+                {
+                  "name": "counter",
+                  "visibility": "private",
+                  "ty": "AtomicU64"
+                },
+                {
+                  "name": "completed_seq",
+                  "visibility": "private",
+                  "ty": "AtomicU64"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Single caller-keyed command-session authority. Each caller maps to its\n[`CallerRuns`] (many ephemeral workspace runs or the one isolated run's\nsessions). Session-targeted ops resolve by scanning runs for the session id\n(caller count is small).",
+              "tags": [
+                "derive: Default"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 103
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkspaceRunRegistry",
+              "visibility": "private",
+              "signature": "impl WorkspaceRunRegistry",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub(crate) fn new () -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 116
+                },
+                {
+                  "name": "next_id",
+                  "signature": "pub(crate) fn next_id (& self) -> String",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 126
+                },
+                {
+                  "name": "insert",
+                  "signature": "pub(crate) fn insert (& self , run : Arc < WorkspaceRun >)",
+                  "kind": "method",
+                  "docs": "File a started run under its caller, keyed by command-session id. Total by\nconstruction — a freshly spawned run is never silently dropped.",
+                  "line": 131
+                },
+                {
+                  "name": "get",
+                  "signature": "pub(crate) fn get (& self , id : & str) -> Option < Arc < WorkspaceRun > >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 142
+                },
+                {
+                  "name": "remove",
+                  "signature": "pub(crate) fn remove (& self , id : & str) -> Option < Arc < WorkspaceRun > >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 147
+                },
+                {
+                  "name": "count_by_caller",
+                  "signature": "pub(crate) fn count_by_caller (& self , caller_id : Option < & str >) -> usize",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 163
+                },
+                {
+                  "name": "live",
+                  "signature": "pub(crate) fn live (& self) -> Vec < Arc < WorkspaceRun > >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 172
+                },
+                {
+                  "name": "caller_sessions",
+                  "signature": "pub(crate) fn caller_sessions (& self , caller_id : & str) -> Vec < Arc < WorkspaceRun > >",
+                  "kind": "method",
+                  "docs": "All live runs owned by `caller_id` (drives per-caller cleanup).",
+                  "line": 180
+                },
+                {
+                  "name": "push_completed",
+                  "signature": "pub(crate) fn push_completed (& self , completion : CommandSessionCompletion)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 189
+                },
+                {
+                  "name": "take_completed_result",
+                  "signature": "pub(crate) fn take_completed_result (& self , id : & str) -> Option < CommandResponse >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 209
+                },
+                {
+                  "name": "completed_result",
+                  "signature": "pub(crate) fn completed_result (& self , id : & str) -> Option < CommandResponse >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 215
+                },
+                {
+                  "name": "collect_completed",
+                  "signature": "pub(crate) fn collect_completed (& self , request : & CollectCompleted) -> CollectCompletedResponse",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 222
+                }
+              ],
+              "impl_target": "WorkspaceRunRegistry",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 115
+            },
+            {
+              "kind": "fn",
+              "name": "lock",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn lock < T > (mutex : & Mutex < T >) -> MutexGuard < '_ , T >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry",
+              "line": 252
+            },
+            {
+              "kind": "fn",
+              "name": "sample_completion",
+              "visibility": "private",
+              "signature": "fn sample_completion (id : & str) -> CommandSessionCompletion",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry::tests",
+              "line": 262
+            },
+            {
+              "kind": "fn",
+              "name": "ephemeral_run",
+              "visibility": "private",
+              "signature": "fn ephemeral_run (id : & str , caller : & str) -> Arc < WorkspaceRun >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "cfg: not"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry::tests",
+              "line": 275
+            },
+            {
+              "kind": "fn",
+              "name": "insert_get_count_remove_track_caller_runs",
+              "visibility": "private",
+              "signature": "fn insert_get_count_remove_track_caller_runs ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "cfg: not",
+                "test"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry::tests",
+              "line": 314
+            },
+            {
+              "kind": "fn",
+              "name": "push_completed_evicts_oldest_beyond_cap",
+              "visibility": "private",
+              "signature": "fn push_completed_evicts_oldest_beyond_cap ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-workspace-run-host/src/registry.rs",
+              "module": "registry::tests",
+              "line": 336
             }
           ]
         }

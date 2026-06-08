@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>35</b><span>items</span></div>
+  <div><b>36</b><span>items</span></div>
   <div><b>8</b><span>fields</span></div>
   <div><b>3</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-occ-layerstack.html"><span>lib.rs</span><small>0/5</small></a></li><li><a class="file-link active" href="eos-occ-layerstack--src-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-occ-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-occ-layerstack.html"><span>lib.rs</span><small>0/6</small></a></li><li><a class="file-link active" href="eos-occ-layerstack--src-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-occ-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="publish crates/eos-occ-layerstack/src/publish.rs configure_auto_squash_max_depth auto_squash_max_depth LayerStackCommitTransaction impl CommitTransactionPort for LayerStackCommitTransaction failed_revalidate_result atomic_validation_drop_result publishable_changes no_publish_result run_auto_squash committed_changeset_result PublishedCommitTimings validate_prepared validate_direct_group validate_gated_group parent_dir parent_absent_from_manifest is_validation_failure failed_changeset_with_timings commit_timings manifest_version_u64_optional">
   <div class="module-head">
     <div>
@@ -355,21 +355,21 @@
     );
     timings.insert(
         &quot;layer_stack.auto_squash.max_depth&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(max_depth),
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(max_depth),
     );
     timings.insert(
         &quot;layer_stack.auto_squash.depth_before&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(active.depth()),
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(active.depth()),
     );
     <span class="rs-kw">match</span> squashed {
         <span class="rs-type">Some</span>(manifest) =&gt; {
             timings.insert(
                 &quot;layer_stack.auto_squash.depth_after&quot;.to_owned(),
-                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(manifest.depth()),
+                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(manifest.depth()),
             );
             timings.insert(
                 &quot;layer_stack.auto_squash.manifest_version&quot;.to_owned(),
-                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-64">i64_to_f64_saturating</a>(manifest.version),
+                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-92">i64_to_f64_saturating</a>(manifest.version),
             );
         }
         <span class="rs-type">None</span> =&gt; {
@@ -540,7 +540,7 @@
         }
     }
     <span class="rs-kw">match</span> view.read_bytes(path_str, manifest) {
-        <span class="rs-type">Ok</span>((bytes, exists)) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-29">hash_current</a>(bytes.as_deref(), exists).as_deref() == base_hash =&gt; {
+        <span class="rs-type">Ok</span>((bytes, exists)) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(bytes.as_deref(), exists).as_deref() == base_hash =&gt; {
             <span class="rs-type">FileResult</span> {
                 path: path.clone(),
                 status: <span class="rs-type">OccStatus</span>::<span class="rs-type">Accepted</span>,
@@ -689,12 +689,12 @@
     timings.insert(&quot;occ.commit.publish_layer_s&quot;.to_owned(), publish_s);
     timings.insert(
         &quot;occ.commit.stager_write_count&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(prepared.changes.len()),
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(prepared.changes.len()),
     );
     timings.insert(&quot;occ.commit.stager_write_total_s&quot;.to_owned(), publish_s);
     timings.insert(
         &quot;occ.commit.gated_path_count&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(
             prepared
                 .path_groups
                 .iter()
@@ -704,7 +704,7 @@
     );
     timings.insert(
         &quot;occ.commit.direct_path_count&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(
             prepared
                 .path_groups
                 .iter()
@@ -965,21 +965,21 @@
     );
     timings.insert(
         &quot;layer_stack.auto_squash.max_depth&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(max_depth),
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(max_depth),
     );
     timings.insert(
         &quot;layer_stack.auto_squash.depth_before&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(active.depth()),
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(active.depth()),
     );
     <span class="rs-kw">match</span> squashed {
         <span class="rs-type">Some</span>(manifest) =&gt; {
             timings.insert(
                 &quot;layer_stack.auto_squash.depth_after&quot;.to_owned(),
-                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(manifest.depth()),
+                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(manifest.depth()),
             );
             timings.insert(
                 &quot;layer_stack.auto_squash.manifest_version&quot;.to_owned(),
-                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-64">i64_to_f64_saturating</a>(manifest.version),
+                <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-92">i64_to_f64_saturating</a>(manifest.version),
             );
         }
         <span class="rs-type">None</span> =&gt; {
@@ -1105,7 +1105,7 @@
         }
     }
     <span class="rs-kw">match</span> view.read_bytes(path_str, manifest) {
-        <span class="rs-type">Ok</span>((bytes, exists)) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-29">hash_current</a>(bytes.as_deref(), exists).as_deref() == base_hash =&gt; {
+        <span class="rs-type">Ok</span>((bytes, exists)) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(bytes.as_deref(), exists).as_deref() == base_hash =&gt; {
             <span class="rs-type">FileResult</span> {
                 path: path.clone(),
                 status: <span class="rs-type">OccStatus</span>::<span class="rs-type">Accepted</span>,
@@ -1189,12 +1189,12 @@
     timings.insert(&quot;occ.commit.publish_layer_s&quot;.to_owned(), publish_s);
     timings.insert(
         &quot;occ.commit.stager_write_count&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(prepared.changes.len()),
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(prepared.changes.len()),
     );
     timings.insert(&quot;occ.commit.stager_write_total_s&quot;.to_owned(), publish_s);
     timings.insert(
         &quot;occ.commit.gated_path_count&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(
             prepared
                 .path_groups
                 .iter()
@@ -1204,7 +1204,7 @@
     );
     timings.insert(
         &quot;occ.commit.direct_path_count&quot;.to_owned(),
-        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(
+        <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(
             prepared
                 .path_groups
                 .iter()

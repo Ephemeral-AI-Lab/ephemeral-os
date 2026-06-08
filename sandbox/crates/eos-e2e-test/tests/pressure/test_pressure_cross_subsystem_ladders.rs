@@ -25,6 +25,8 @@ fn overlay_exec_publishes_file_back_to_layerstack() -> Result<()> {
             "yield_time_ms": 1000,
             "timeout_seconds": 10,}),
     )?;
+    // Settle the yielded exec under emulation before asserting its terminal status.
+    let exec = settle_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(15))?;
     assert_eq!(as_str(&exec, "status")?, "ok");
     assert_eq!(as_i64(&exec, "exit_code")?, 0);
 

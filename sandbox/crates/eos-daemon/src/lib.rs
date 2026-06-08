@@ -16,9 +16,10 @@
 //! single-threaded `eosd ns-holder` / `eosd ns-runner` children and wires their
 //! pinned namespace FDs in — it does the namespace syscalls only by delegation.
 //!
-//! Built-in daemon operations live under [`ops`]; reusable command, checkpoint,
-//! plugin, isolated-workspace, overlay, workspace, and OCC machinery lives under
-//! [`services`]. Write-capable shared-workspace operations route through the same
+//! Built-in daemon operations live under [`ops`]; the daemon-side adapter/seam
+//! layer that binds the command, checkpoint, plugin, isolated-workspace, overlay,
+//! workspace, and OCC sibling-crate contracts to daemon resources lives under
+//! [`adapters`]. Write-capable shared-workspace operations route through the same
 //! per-root OCC service cache and single writer used by the live dispatcher.
 //!
 //! # The single-writer / no-lock-across-await discipline (§5)
@@ -33,9 +34,9 @@
 
 pub(crate) mod audit;
 pub(crate) mod dispatch;
+pub(crate) mod adapters;
 pub(crate) mod ops;
 pub(crate) mod runtime;
-pub(crate) mod services;
 pub(crate) mod transport;
 
 pub use dispatch::dispatcher;

@@ -53,7 +53,10 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 #[test]
 #[cfg(target_os = "linux")]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
-    let manager = WorkspaceRunManager::default();
+    let manager = WorkspaceRunManager::new(
+        eos_command_session::CommandSessionConfig::default(),
+        std::sync::Arc::new(NoopRunHostPorts),
+    );
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
     manager.push_completed(test_completion("cmd_done", "caller", "a\ndone\n"));
 
@@ -150,6 +153,35 @@ fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -
     });
     assert_eq!(remaining.completions.len(), 0);
     Ok(())
+}
+
+// The completion-queue unit test drives only push/read/collect, which never
+// reach the settle path, so the injected host ports are never called.
+#[cfg(target_os = "linux")]
+struct NoopRunHostPorts;
+
+#[cfg(target_os = "linux")]
+impl eos_workspace_run_host::WorkspaceRunHostPorts for NoopRunHostPorts {
+    fn base_timings(
+        &self,
+        _root: &std::path::Path,
+    ) -> Result<eos_workspace_api::WorkspaceTimings, eos_workspace_api::WorkspaceApiError> {
+        unimplemented!("settle path is not exercised by completion-queue unit tests")
+    }
+
+    fn finalize_ephemeral(
+        &self,
+        _root: &std::path::Path,
+        _workspace: eos_ephemeral_workspace::EphemeralWorkspace,
+        _base_timings: eos_workspace_api::WorkspaceTimings,
+        _request: eos_workspace_api::FinalizeCommandRequest,
+    ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError> {
+        unimplemented!("settle path is not exercised by completion-queue unit tests")
+    }
+
+    fn record_tool_call(&self, _caller_id: &str, _audit: serde_json::Value) {
+        unimplemented!("settle path is not exercised by completion-queue unit tests")
+    }
 }
 
 #[cfg(target_os = "linux")]

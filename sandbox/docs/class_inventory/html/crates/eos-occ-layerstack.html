@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>35</b><span>items</span></div>
+  <div><b>36</b><span>items</span></div>
   <div><b>8</b><span>fields</span></div>
   <div><b>3</b><span>methods</span></div>
 </section>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-occ-layerstack.html"><span>lib.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-occ-layerstack--src-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-occ-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-occ-layerstack/src/lib.rs hash_current hash_bytes hex_lower usize_to_f64_saturating i64_to_f64_saturating">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-occ-layerstack.html"><span>lib.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-occ-layerstack--src-publish-rs.html"><span>publish.rs</span><small>2/17</small></a></li><li><a class="file-link" href="eos-occ-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-occ-layerstack/src/lib.rs base_hashes_for_snapshot hash_current hash_bytes hex_lower usize_to_f64_saturating i64_to_f64_saturating">
   <div class="module-head">
     <div>
       <h2>src/lib.rs</h2>
@@ -52,17 +52,55 @@
       <span>file owns</span>
       <span>0 types</span>
       <span>0 impls</span>
-      <span>5 fns</span>
+      <span>6 fns</span>
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-hash-current-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hash_current pub pub fn hash_current (content : Option &lt; &amp; [u8] &gt; , exists : bool) -&gt; Option &lt; String &gt; crates/eos-occ-layerstack/src/lib.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-base-hashes-for-snapshot-33" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_hashes_for_snapshot pub pub fn base_hashes_for_snapshot (root : &amp; Path , manifest : &amp; Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , LayerStackError &gt; crates/eos-occ-layerstack/src/lib.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>base_hashes_for_snapshot</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-base-hashes-for-snapshot-33">base_hashes_for_snapshot</a> (root : &amp; Path , manifest : &amp; Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , LayerStackError &gt;</code>
+  <p class="docstring">Per-path base-hash overrides for a snapshot's changeset.<br>Builds a [`MergedView`] over `root` and, for each non-`OpaqueDir` change,<br>hashes the bytes visible at `manifest` via [`hash_current`] so OCC publish<br>can gate on the base the writer observed. `OpaqueDir` (and absent) paths map<br>to `None`. Errors are native [`LayerStackError`] — no daemon edge.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Per-path base-hash overrides for a snapshot's changeset.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Builds a [`MergedView`] over `root` and, for each non-`OpaqueDir` change,</span>
+<span class="rs-comment">/// hashes the bytes visible at `manifest` via [`hash_current`] so OCC publish</span>
+<span class="rs-comment">/// can gate on the base the writer observed. `OpaqueDir` (and absent) paths map</span>
+<span class="rs-comment">/// to `None`. Errors are native [`LayerStackError`] — no daemon edge.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-base-hashes-for-snapshot-33">base_hashes_for_snapshot</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    manifest: &amp;<span class="rs-type">Manifest</span>,
+    changes: &amp;[<span class="rs-type">LayerChange</span>],
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <span class="rs-type">LayerStackError</span>&gt; {
+    <span class="rs-kw">let</span> view = <span class="rs-type">MergedView</span>::new(root.to_path_buf());
+    changes
+        .iter()
+        .map(|change| {
+            <span class="rs-kw">if</span> matches!(change, <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. }) {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((change.path().clone(), <span class="rs-type">None</span>));
+            }
+            <span class="rs-kw">let</span> (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
+            <span class="rs-type">Ok</span>((change.path().clone(), <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(bytes.as_deref(), exists)))
+        })
+        .collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-occ-layerstack/src/lib.rs:33</p>
+</article><article id="item-fn-hash-current-57" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hash_current pub pub fn hash_current (content : Option &lt; &amp; [u8] &gt; , exists : bool) -&gt; Option &lt; String &gt; crates/eos-occ-layerstack/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>hash_current</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-hash-current-29">hash_current</a> (content : Option &lt; &amp; [u8] &gt; , exists : bool) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a> (content : Option &lt; &amp; [u8] &gt; , exists : bool) -&gt; Option &lt; String &gt;</code>
   <p class="docstring">SHA-256 of `content`, lowercase hex, when `exists` is true.<br>Returns `None` for an absent path so an absent base and an empty-but-present<br>file stay distinguishable in OCC base-hash gating.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -72,7 +110,7 @@
 <span class="rs-comment">/// Returns `None` for an absent path so an absent base and an empty-but-present</span>
 <span class="rs-comment">/// file stay distinguishable in OCC base-hash gating.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-29">hash_current</a>(content: <span class="rs-type">Option</span>&lt;&amp;[u8]&gt;, exists: bool) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(content: <span class="rs-type">Option</span>&lt;&amp;[u8]&gt;, exists: bool) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">if</span> !exists {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -81,40 +119,40 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ-layerstack/src/lib.rs:29</p>
-</article><article id="item-fn-hash-bytes-41" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hash_bytes pub pub fn hash_bytes (content : &amp; [u8]) -&gt; String crates/eos-occ-layerstack/src/lib.rs  ">
+  <p class="source">crates/eos-occ-layerstack/src/lib.rs:57</p>
+</article><article id="item-fn-hash-bytes-69" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hash_bytes pub pub fn hash_bytes (content : &amp; [u8]) -&gt; String crates/eos-occ-layerstack/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>hash_bytes</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-hash-bytes-41">hash_bytes</a> (content : &amp; [u8]) -&gt; String</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-hash-bytes-69">hash_bytes</a> (content : &amp; [u8]) -&gt; String</code>
   <p class="docstring">Lowercase-hex SHA-256 of `content`.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Lowercase-hex SHA-256 of `content`.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-bytes-41">hash_bytes</a>(content: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-bytes-69">hash_bytes</a>(content: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::new();
     hasher.update(content);
-    <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-49">hex_lower</a>(&amp;hasher.finalize())
+    <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-77">hex_lower</a>(&amp;hasher.finalize())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ-layerstack/src/lib.rs:41</p>
-</article><article id="item-fn-hex-lower-49" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_lower private fn hex_lower (bytes : &amp; [u8]) -&gt; String crates/eos-occ-layerstack/src/lib.rs  ">
+  <p class="source">crates/eos-occ-layerstack/src/lib.rs:69</p>
+</article><article id="item-fn-hex-lower-77" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_lower private fn hex_lower (bytes : &amp; [u8]) -&gt; String crates/eos-occ-layerstack/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>hex_lower</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-hex-lower-49">hex_lower</a> (bytes : &amp; [u8]) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-hex-lower-77">hex_lower</a> (bytes : &amp; [u8]) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-49">hex_lower</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-77">hex_lower</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">const</span> <span class="rs-type">LOWER_HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
@@ -127,35 +165,35 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ-layerstack/src/lib.rs:49</p>
-</article><article id="item-fn-usize-to-f64-saturating-60" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-occ-layerstack/src/lib.rs  ">
+  <p class="source">crates/eos-occ-layerstack/src/lib.rs:77</p>
+</article><article id="item-fn-usize-to-f64-saturating-88" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-occ-layerstack/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>usize_to_f64_saturating</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
     u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ-layerstack/src/lib.rs:60</p>
-</article><article id="item-fn-i64-to-f64-saturating-64" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn i64_to_f64_saturating private fn i64_to_f64_saturating (value : i64) -&gt; f64 crates/eos-occ-layerstack/src/lib.rs  ">
+  <p class="source">crates/eos-occ-layerstack/src/lib.rs:88</p>
+</article><article id="item-fn-i64-to-f64-saturating-92" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn i64_to_f64_saturating private fn i64_to_f64_saturating (value : i64) -&gt; f64 crates/eos-occ-layerstack/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>i64_to_f64_saturating</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-64">i64_to_f64_saturating</a> (value : i64) -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-92">i64_to_f64_saturating</a> (value : i64) -&gt; f64</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-64">i64_to_f64_saturating</a>(value: i64) -&gt; f64 {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-92">i64_to_f64_saturating</a>(value: i64) -&gt; f64 {
     u64::try_from(value).map_or(0.0, |value| {
         u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
     })
@@ -163,7 +201,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ-layerstack/src/lib.rs:64</p>
+  <p class="source">crates/eos-occ-layerstack/src/lib.rs:92</p>
 </article></div>
 </section></div>
 </main>
@@ -193,6 +231,10 @@
 <span class="rs-kw">mod</span> publish;
 <span class="rs-kw">mod</span> route;
 
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> eos_layerstack::{<span class="rs-type">LayerStackError</span>, <span class="rs-type">Manifest</span>, <span class="rs-type">MergedView</span>};
+<span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>};
 <span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> publish::{configure_auto_squash_max_depth, <a class="symbol-link rs-type" href="eos-occ-layerstack--src-publish-rs.html#item-struct-LayerStackCommitTransaction-26">LayerStackCommitTransaction</a>};
@@ -200,12 +242,36 @@
     insert_occ_route_timings, occ_route_metrics, <a class="symbol-link rs-type" href="eos-occ-layerstack--src-route-rs.html#item-struct-LayerStackRouteProvider-20">LayerStackRouteProvider</a>, <a class="symbol-link rs-type" href="eos-occ-layerstack--src-route-rs.html#item-struct-OccRouteMetrics-14">OccRouteMetrics</a>,
 };
 
+<span class="rs-comment">/// Per-path base-hash overrides for a snapshot's changeset.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Builds a [`MergedView`] over `root` and, for each non-`OpaqueDir` change,</span>
+<span class="rs-comment">/// hashes the bytes visible at `manifest` via [`hash_current`] so OCC publish</span>
+<span class="rs-comment">/// can gate on the base the writer observed. `OpaqueDir` (and absent) paths map</span>
+<span class="rs-comment">/// to `None`. Errors are native [`LayerStackError`] — no daemon edge.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-base-hashes-for-snapshot-33">base_hashes_for_snapshot</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    manifest: &amp;<span class="rs-type">Manifest</span>,
+    changes: &amp;[<span class="rs-type">LayerChange</span>],
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <span class="rs-type">LayerStackError</span>&gt; {
+    <span class="rs-kw">let</span> view = <span class="rs-type">MergedView</span>::new(root.to_path_buf());
+    changes
+        .iter()
+        .map(|change| {
+            <span class="rs-kw">if</span> matches!(change, <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. }) {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((change.path().clone(), <span class="rs-type">None</span>));
+            }
+            <span class="rs-kw">let</span> (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
+            <span class="rs-type">Ok</span>((change.path().clone(), <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(bytes.as_deref(), exists)))
+        })
+        .collect()
+}
+
 <span class="rs-comment">/// SHA-256 of `content`, lowercase hex, when `exists` is true.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns `None` for an absent path so an absent base and an empty-but-present</span>
 <span class="rs-comment">/// file stay distinguishable in OCC base-hash gating.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-29">hash_current</a>(content: <span class="rs-type">Option</span>&lt;&amp;[u8]&gt;, exists: bool) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(content: <span class="rs-type">Option</span>&lt;&amp;[u8]&gt;, exists: bool) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">if</span> !exists {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -214,13 +280,13 @@
 
 <span class="rs-comment">/// Lowercase-hex SHA-256 of `content`.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-bytes-41">hash_bytes</a>(content: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-bytes-69">hash_bytes</a>(content: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::new();
     hasher.update(content);
-    <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-49">hex_lower</a>(&amp;hasher.finalize())
+    <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-77">hex_lower</a>(&amp;hasher.finalize())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-49">hex_lower</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hex-lower-77">hex_lower</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">const</span> <span class="rs-type">LOWER_HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
@@ -231,11 +297,11 @@
     out
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-60">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
     u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-64">i64_to_f64_saturating</a>(value: i64) -&gt; f64 {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-i64-to-f64-saturating-92">i64_to_f64_saturating</a>(value: i64) -&gt; f64 {
     u64::try_from(value).map_or(0.0, |value| {
         u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
     })

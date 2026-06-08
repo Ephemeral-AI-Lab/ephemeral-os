@@ -1,14 +1,16 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use eos_e2e_test::next_invocation_id;
 use eos_protocol::ops;
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::helpers::{pressure_levels, request_with_identity};
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, seed_base_files, wait_for_active_leases,
+    as_bool, as_i64, as_str, live_pool_or_skip, seed_base_files, settle_foreground_command,
+    wait_for_active_leases,
 };
 
 #[test]
@@ -62,17 +64,23 @@ fn n_concurrent_mixed_ops() -> Result<()> {
         .collect();
     for handle in handles {
         let response = handle.join().expect("mixed op thread panicked")?;
+        // A concurrent exec can outlast the 1s yield under emulation and return
+        // status "running" (no success/error yet, lease still held); settle just
+        // those so the structured-payload check and the lease drain below are
+        // deterministic. Write/read responses carry no "status" and pass through.
+        let response = if response.get("status").and_then(Value::as_str) == Some("running") {
+            settle_foreground_command(&lease, response, Instant::now() + Duration::from_secs(15))?
+        } else {
+            response
+        };
         assert!(
             as_bool(&response, "success").unwrap_or(false) || response.get("error").is_some(),
             "mixed pressure op should return a structured payload: {response}"
         );
     }
-    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
-    assert_eq!(
-        as_i64(&metrics, "active_leases")?,
-        0,
-        "mixed ops should not leak leases: {metrics}"
-    );
+    // Poll: lease release is asynchronous, so a settled exec's lease may still be
+    // draining the instant the loop ends.
+    wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
 
@@ -236,6 +244,10 @@ fn concurrent_overlay_execs_share_lowerdir_storage_is_o1() -> Result<()> {
     let mut max_upperdir = 0.0_f64;
     for handle in handles {
         let response = handle.join().expect("overlay exec thread panicked")?;
+        // Settle yielded ("running") execs to the finalized payload so both the
+        // terminal status and the upperdir timing below are present under emulation.
+        let response =
+            settle_foreground_command(&lease, response, Instant::now() + Duration::from_secs(35))?;
         assert_eq!(
             as_str(&response, "status")?,
             "ok",
