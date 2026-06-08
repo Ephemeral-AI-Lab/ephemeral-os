@@ -13,12 +13,12 @@ use eos_types::{StartWorkflowRequest, WorkflowApi};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::runtime::execution::parse_input;
-use crate::WorkflowToolService;
 use eos_tool_ports::ExecutionMetadata;
 use eos_tool_ports::ToolError;
 use eos_tool_ports::ToolExecutor;
 use eos_tool_ports::ToolName;
 use eos_tool_ports::ToolRegistry;
+use eos_tool_ports::WorkflowToolService;
 use eos_tool_ports::{OutputShape, ToolResult};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]

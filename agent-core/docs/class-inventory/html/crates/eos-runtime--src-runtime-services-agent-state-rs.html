@@ -100,7 +100,7 @@
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-isolated-workspace-tool-service-55">isolated_workspace_tool_service</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">IsolatedWorkspaceToolService</span> {
         <span class="rs-kw">let</span> service = <span class="rs-self">self</span>.clone();
-        <span class="rs-type">IsolatedWorkspaceToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-kw">move</span> |agent_run_id, is_isolated| {
+        <span class="rs-type">IsolatedWorkspaceToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-kw">move</span> |agent_run_id, is_isolated| {
             <span class="rs-kw">let</span> service = service.clone();
             <span class="rs-kw">async</span> <span class="rs-kw">move</span> { service.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-set-isolated-workspace-mode-63">set_isolated_workspace_mode</a>(&amp;agent_run_id, is_isolated) }
         })
@@ -234,7 +234,7 @@
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-isolated-workspace-tool-service-55">isolated_workspace_tool_service</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">IsolatedWorkspaceToolService</span> {
         <span class="rs-kw">let</span> service = <span class="rs-self">self</span>.clone();
-        <span class="rs-type">IsolatedWorkspaceToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-kw">move</span> |agent_run_id, is_isolated| {
+        <span class="rs-type">IsolatedWorkspaceToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-kw">move</span> |agent_run_id, is_isolated| {
             <span class="rs-kw">let</span> service = service.clone();
             <span class="rs-kw">async</span> <span class="rs-kw">move</span> { service.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-set-isolated-workspace-mode-63">set_isolated_workspace_mode</a>(&amp;agent_run_id, is_isolated) }
         })

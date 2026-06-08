@@ -648,18 +648,18 @@
 </details>
 
   <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:413</p>
-</article><article id="item-fn-gen-417" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gen private fn gen (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tools :: PlanTask crates/eos-workflow/src/attempt/plan_dag.rs  ">
+</article><article id="item-fn-gen-417" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gen private fn gen (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tool_ports :: PlanTask crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>gen</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-417">gen</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tools :: PlanTask</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-417">gen</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tool_ports :: PlanTask</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-417">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tools::<span class="rs-type">PlanTask</span> {
-        eos_tools::<span class="rs-type">PlanTask</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-417">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tool_ports::<span class="rs-type">PlanTask</span> {
+        eos_tool_ports::<span class="rs-type">PlanTask</span> {
             id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(id),
             agent_name: &quot;coder&quot;.to_owned(),
             needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(n)).collect(),
@@ -669,18 +669,18 @@
 </details>
 
   <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:417</p>
-</article><article id="item-fn-red-425" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn red private fn red (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tools :: PlanReducer crates/eos-workflow/src/attempt/plan_dag.rs  ">
+</article><article id="item-fn-red-425" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn red private fn red (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tool_ports :: PlanReducer crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>red</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-425">red</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tools :: PlanReducer</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-425">red</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_tool_ports :: PlanReducer</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-425">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tools::<span class="rs-type">PlanReducer</span> {
-        eos_tools::<span class="rs-type">PlanReducer</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-425">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tool_ports::<span class="rs-type">PlanReducer</span> {
+        eos_tool_ports::<span class="rs-type">PlanReducer</span> {
             id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(id),
             needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(n)).collect(),
             prompt: &quot;reduce&quot;.to_owned(),
@@ -690,19 +690,19 @@
 </details>
 
   <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:425</p>
-</article><article id="item-fn-shape-plan-433" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shape_plan private fn shape_plan (tasks : Vec &lt; eos_tools :: PlanTask &gt; , reducers : Vec &lt; eos_tools :: PlanReducer &gt; ,) -&gt; PlannerPlan crates/eos-workflow/src/attempt/plan_dag.rs  ">
+</article><article id="item-fn-shape-plan-433" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shape_plan private fn shape_plan (tasks : Vec &lt; eos_tool_ports :: PlanTask &gt; , reducers : Vec &lt; eos_tool_ports :: PlanReducer &gt; ,) -&gt; PlannerPlan crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>shape_plan</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-433">shape_plan</a> (tasks : Vec &lt; eos_tools :: PlanTask &gt; , reducers : Vec &lt; eos_tools :: PlanReducer &gt; ,) -&gt; PlannerPlan</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-433">shape_plan</a> (tasks : Vec &lt; eos_tool_ports :: PlanTask &gt; , reducers : Vec &lt; eos_tool_ports :: PlanReducer &gt; ,) -&gt; PlannerPlan</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-433">shape_plan</a>(
-        tasks: <span class="rs-type">Vec</span>&lt;eos_tools::<span class="rs-type">PlanTask</span>&gt;,
-        reducers: <span class="rs-type">Vec</span>&lt;eos_tools::<span class="rs-type">PlanReducer</span>&gt;,
+        tasks: <span class="rs-type">Vec</span>&lt;eos_tool_ports::<span class="rs-type">PlanTask</span>&gt;,
+        reducers: <span class="rs-type">Vec</span>&lt;eos_tool_ports::<span class="rs-type">PlanReducer</span>&gt;,
     ) -&gt; <span class="rs-type">PlannerPlan</span> {
         <span class="rs-kw">let</span> task_specs = tasks
             .iter()
@@ -801,7 +801,7 @@
   <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::{<span class="rs-type">BTreeMap</span>, <span class="rs-type">BTreeSet</span>, <span class="rs-type">HashMap</span>, <span class="rs-type">HashSet</span>, <span class="rs-type">VecDeque</span>};
 
 <span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentRole</span>};
-<span class="rs-kw">use</span> eos_tools::<span class="rs-type">PlannerPlan</span>;
+<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">PlannerPlan</span>;
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">PlanNodeId</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
@@ -1214,16 +1214,16 @@
         <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(id).expect(&quot;plan node id&quot;)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-417">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tools::<span class="rs-type">PlanTask</span> {
-        eos_tools::<span class="rs-type">PlanTask</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-417">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tool_ports::<span class="rs-type">PlanTask</span> {
+        eos_tool_ports::<span class="rs-type">PlanTask</span> {
             id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(id),
             agent_name: &quot;coder&quot;.to_owned(),
             needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(n)).collect(),
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-425">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tools::<span class="rs-type">PlanReducer</span> {
-        eos_tools::<span class="rs-type">PlanReducer</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-425">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_tool_ports::<span class="rs-type">PlanReducer</span> {
+        eos_tool_ports::<span class="rs-type">PlanReducer</span> {
             id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(id),
             needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-413">pnode</a>(n)).collect(),
             prompt: &quot;reduce&quot;.to_owned(),
@@ -1231,8 +1231,8 @@
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-433">shape_plan</a>(
-        tasks: <span class="rs-type">Vec</span>&lt;eos_tools::<span class="rs-type">PlanTask</span>&gt;,
-        reducers: <span class="rs-type">Vec</span>&lt;eos_tools::<span class="rs-type">PlanReducer</span>&gt;,
+        tasks: <span class="rs-type">Vec</span>&lt;eos_tool_ports::<span class="rs-type">PlanTask</span>&gt;,
+        reducers: <span class="rs-type">Vec</span>&lt;eos_tool_ports::<span class="rs-type">PlanReducer</span>&gt;,
     ) -&gt; <span class="rs-type">PlannerPlan</span> {
         <span class="rs-kw">let</span> task_specs = tasks
             .iter()

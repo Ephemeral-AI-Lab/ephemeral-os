@@ -62,24 +62,24 @@
     <h3>register</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a> (registry : &amp; mut eos_tool_ports :: ToolRegistry , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , workflow_service : Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt; , workflow_sessions : Option &lt; WorkflowToolService &gt; ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a> (registry : &amp; mut eos_tool_ports :: ToolRegistry , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , workflow_service : Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt; , workflow_sessions : Option &lt; WorkflowToolService &gt; ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> eos_tool_ports::<span class="rs-type">ToolRegistry</span>,
     config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
     workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,
     workflow_sessions: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkflowToolService</span>&gt;,
 ) {
-    delegate_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    delegate_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         registry,
         config,
         workflow_service.clone(),
         workflow_sessions,
     );
-    check_workflow_status::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(registry, config, workflow_service.clone());
-    cancel_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(registry, config, workflow_service);
+    check_workflow_status::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(registry, config, workflow_service.clone());
+    cancel_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(registry, config, workflow_service);
 }
 </code></pre>
 </details>
@@ -106,20 +106,20 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<span class="rs-type">WorkflowToolService</span>;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> eos_tool_ports::<span class="rs-type">ToolRegistry</span>,
     config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
     workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,
     workflow_sessions: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkflowToolService</span>&gt;,
 ) {
-    delegate_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    delegate_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         registry,
         config,
         workflow_service.clone(),
         workflow_sessions,
     );
-    check_workflow_status::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(registry, config, workflow_service.clone());
-    cancel_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(registry, config, workflow_service);
+    check_workflow_status::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(registry, config, workflow_service.clone());
+    cancel_workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(registry, config, workflow_service);
 }
 </code></pre>
 </section>

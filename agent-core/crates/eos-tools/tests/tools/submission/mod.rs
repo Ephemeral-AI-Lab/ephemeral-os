@@ -11,7 +11,9 @@ use serde_json::{json, Value};
 
 use crate::support::{metadata, FakeTransport};
 use crate::tools::{AttemptSubmissionService, CallerScope, SandboxToolService, SkillToolService};
-use eos_tool_ports::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, Sealed, SubmissionAck};
+use eos_tool_ports::{
+    AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, Sealed, SubmissionAck,
+};
 use eos_tool_ports::{ToolError, ToolName, ToolRegistry};
 
 #[derive(Debug)]

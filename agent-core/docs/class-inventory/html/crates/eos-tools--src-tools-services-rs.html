@@ -153,13 +153,13 @@
         <span class="rs-self">self</span>.transport.clone()
     }
 </code></pre>
-</details></td></tr><tr id="method-set-isolated-workspace-mode-101"><td>method</td><td>set_isolated_workspace_mode</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#method-set-isolated-workspace-mode-101">set_isolated_workspace_mode</a> (&amp; self , agent_run_id : &amp; AgentRunId , is_isolated : bool ,) -&gt; Result &lt; () , crate :: ToolError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-set-isolated-workspace-mode-101"><td>method</td><td>set_isolated_workspace_mode</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#method-set-isolated-workspace-mode-101">set_isolated_workspace_mode</a> (&amp; self , agent_run_id : &amp; AgentRunId , is_isolated : bool ,) -&gt; Result &lt; () , eos_tool_ports :: ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-set-isolated-workspace-mode-101">set_isolated_workspace_mode</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         is_isolated: bool,
-    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-kw">crate</span>::<span class="rs-type">ToolError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), eos_tool_ports::<span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(isolated_workspace) = &amp;<span class="rs-self">self</span>.isolated_workspace <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         };
@@ -307,7 +307,7 @@
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxId</span>};
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">RequestStore</span>, <span class="rs-type">TaskStore</span>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<span class="rs-type">AttemptSubmissionPort</span>;
+<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">AttemptSubmissionPort</span>;
 
 <span class="rs-comment">/// Store access for the root terminal.</span>
 #[derive(<span class="rs-type">Clone</span>)]
@@ -392,7 +392,7 @@
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         is_isolated: bool,
-    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-kw">crate</span>::<span class="rs-type">ToolError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), eos_tool_ports::<span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(isolated_workspace) = &amp;<span class="rs-self">self</span>.isolated_workspace <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         };

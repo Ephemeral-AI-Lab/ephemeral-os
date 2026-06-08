@@ -86,7 +86,7 @@ impl AgentRunner for RuntimeAgentRunner {
         }
 
         let (loop_launcher, agent_run_api_cell) = build_agent_loop_launcher(
-            self.services.clone(),
+            &self.services,
             Some(AttemptSubmissionService::new(
                 self.attempt_submission.clone(),
             )),

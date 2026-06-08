@@ -28,9 +28,11 @@ use eos_tool_ports::{RegisteredTool, ToolExecutor};
 
 use services::InertSandboxTransport;
 pub use services::{
-    AttemptSubmissionService, CommandSessionToolService, CommandToolService, HookServices,
-    IsolatedWorkspaceToolService, RootSubmissionService, SandboxToolService, SkillToolService,
-    SubagentToolService, WorkflowToolService,
+    AttemptSubmissionService, CommandToolService, RootSubmissionService, SandboxToolService,
+    SkillToolService,
+};
+pub(in crate::tools) use services::{
+    CommandSessionToolService, HookServices, SubagentToolService, WorkflowToolService,
 };
 
 /// The per-caller scope a tool registry is built for: the caller's

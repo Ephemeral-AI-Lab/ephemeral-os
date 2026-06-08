@@ -10,7 +10,7 @@ use eos_sandbox_port::{
     DaemonOp, SandboxCommandApi, SandboxCommandService, SandboxPortError, SandboxTransport,
 };
 use eos_skills::SkillRegistry;
-pub use eos_tool_ports::services::{
+pub(in crate::tools) use eos_tool_ports::services::{
     CommandSessionToolService, HookServices, IsolatedWorkspaceToolService, SubagentToolService,
     WorkflowToolService,
 };

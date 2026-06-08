@@ -9,7 +9,6 @@ mod service_cache;
 
 use std::path::Path;
 
-use eos_layerstack::MergedView;
 use eos_occ::ChangesetResult;
 use eos_protocol::{LayerChange, LayerPath};
 
@@ -49,20 +48,9 @@ pub(crate) fn base_hashes_for_snapshot(
     manifest: &eos_layerstack::Manifest,
     changes: &[LayerChange],
 ) -> Result<Vec<(LayerPath, Option<String>)>, DaemonError> {
-    let view = MergedView::new(root.to_path_buf());
-    changes
-        .iter()
-        .map(|change| {
-            if matches!(change, LayerChange::OpaqueDir { .. }) {
-                return Ok((change.path().clone(), None));
-            }
-            let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
-            Ok((
-                change.path().clone(),
-                hash_current(bytes.as_deref(), exists),
-            ))
-        })
-        .collect()
+    Ok(eos_occ_layerstack::base_hashes_for_snapshot(
+        root, manifest, changes,
+    )?)
 }
 
 pub(crate) fn manifest_version_u64(version: i64) -> Result<u64, DaemonError> {

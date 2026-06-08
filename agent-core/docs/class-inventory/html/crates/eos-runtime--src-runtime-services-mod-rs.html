@@ -72,7 +72,7 @@
     <span class="rs-comment">/// typed trait objects — never a `sqlx` pool or the agent-core table layout.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-state-reader-60">state_reader</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a> {
-        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
             <span class="rs-self">self</span>.db.request_store.clone(),
             <span class="rs-self">self</span>.db.task_store.clone(),
             <span class="rs-self">self</span>.db.agent_run_store.clone(),
@@ -98,11 +98,11 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-builder-55"><td>associated-fn</td><td>builder</td><td><code>pub fn <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#method-builder-55">builder</a> () -&gt; <a class="symbol-link" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a></code><p class="docstring">Start building runtime services.</p><details class="function-source">
+</details></td></tr><tr id="method-builder-55"><td>associated-fn</td><td>builder</td><td><code>pub fn <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#method-builder-55">builder</a> () -&gt; <a class="symbol-link" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-94">RuntimeServicesBuilder</a></code><p class="docstring">Start building runtime services.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Start building runtime services.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-builder-55">builder</a>() -&gt; <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a> {
-        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a>::default()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-builder-55">builder</a>() -&gt; <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-94">RuntimeServicesBuilder</a> {
+        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-94">RuntimeServicesBuilder</a>::default()
     }
 </code></pre>
 </details></td></tr></tbody></table>
@@ -137,7 +137,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> agent_loop::build_agent_loop_launcher;
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> agent_state::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-state-rs.html#item-struct-RuntimeAgentStateService-10">RuntimeAgentStateService</a>;
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> audit::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-audit-rs.html#item-struct-AuditService-7">AuditService</a>;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> builder::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> builder::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-94">RuntimeServicesBuilder</a>;
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> cancel_port::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>;
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> cancel_registry::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#item-struct-RequestCancelRegistry-17">RequestCancelRegistry</a>;
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> db_store::<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-db-store-rs.html#item-struct-DbStoreService-9">DbStoreService</a>;
@@ -171,8 +171,8 @@
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a> {
     <span class="rs-comment">/// Start building runtime services.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-builder-55">builder</a>() -&gt; <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a> {
-        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a>::default()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-builder-55">builder</a>() -&gt; <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-94">RuntimeServicesBuilder</a> {
+        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-94">RuntimeServicesBuilder</a>::default()
     }
 
     <span class="rs-comment">/// Narrow read-side store handles for the backend composition root (spec</span>
@@ -180,7 +180,7 @@
     <span class="rs-comment">/// typed trait objects — never a `sqlx` pool or the agent-core table layout.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-mod-rs.html#method-state-reader-60">state_reader</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a> {
-        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+        <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
             <span class="rs-self">self</span>.db.request_store.clone(),
             <span class="rs-self">self</span>.db.task_store.clone(),
             <span class="rs-self">self</span>.db.agent_run_store.clone(),

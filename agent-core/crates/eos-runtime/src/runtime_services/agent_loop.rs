@@ -29,7 +29,7 @@ pub(crate) type AgentRunApiCell = Arc<OnceLock<Arc<dyn AgentRunApi>>>;
 /// Build a production agent-loop launcher plus the cell that must be filled with
 /// the lifecycle service after it is constructed.
 pub(crate) fn build_agent_loop_launcher(
-    services: RuntimeServices,
+    services: &RuntimeServices,
     attempt_submission: Option<AttemptSubmissionService>,
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     event_callback: Option<EventCallback>,

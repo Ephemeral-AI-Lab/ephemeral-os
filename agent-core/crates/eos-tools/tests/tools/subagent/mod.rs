@@ -11,8 +11,7 @@ use serde_json::json;
 
 use super::super::{cancel_subagent::CancelSubagent, run_subagent::RunSubagent};
 use crate::support::metadata;
-use crate::SubagentToolService;
-use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::{SubagentToolService, ToolExecutor};
 
 #[derive(Default)]
 struct FakeBackgroundSession {

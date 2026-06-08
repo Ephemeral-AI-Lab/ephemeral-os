@@ -65,7 +65,7 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a></code>
   <p class="docstring">Workflow lifecycle and context-builder invariant failures.</p>
   <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>BlankPrompt</td><td><code></code></td></tr><tr><td>NotFound</td><td><code>entity: &amp; &#x27;static str, id: String</code></td></tr><tr><td>Invariant</td><td><code>0: String</code></td></tr><tr><td>Recipe</td><td><code>0: String</code></td></tr><tr><td>AgentDefinition</td><td><code>0: String</code></td></tr><tr><td>Store</td><td><code>0: CoreError</code></td></tr><tr><td>Json</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>Tool</td><td><code>0: eos_tools :: ToolError</code></td></tr><tr><td>Join</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-invariant-45"><td>associated-fn</td><td>invariant</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a> (message : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>BlankPrompt</td><td><code></code></td></tr><tr><td>NotFound</td><td><code>entity: &amp; &#x27;static str, id: String</code></td></tr><tr><td>Invariant</td><td><code>0: String</code></td></tr><tr><td>Recipe</td><td><code>0: String</code></td></tr><tr><td>AgentDefinition</td><td><code>0: String</code></td></tr><tr><td>Store</td><td><code>0: CoreError</code></td></tr><tr><td>Json</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>Tool</td><td><code>0: eos_tool_ports :: ToolError</code></td></tr><tr><td>Join</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-invariant-45"><td>associated-fn</td><td>invariant</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a> (message : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<span class="rs-type">Invariant</span>(message.into())
@@ -145,7 +145,7 @@
     <span class="rs-type">Json</span>(#[from] serde_json::<span class="rs-type">Error</span>),
     <span class="rs-comment">/// Tool framework fault while adapting a downstream-state port.</span>
     #[error(&quot;{0}&quot;)]
-    <span class="rs-type">Tool</span>(#[from] eos_tools::<span class="rs-type">ToolError</span>),
+    <span class="rs-type">Tool</span>(#[from] eos_tool_ports::<span class="rs-type">ToolError</span>),
     <span class="rs-comment">/// A spawned agent task panicked or was cancelled.</span>
     #[error(&quot;agent task join failed: {0}&quot;)]
     <span class="rs-type">Join</span>(<span class="rs-type">String</span>),

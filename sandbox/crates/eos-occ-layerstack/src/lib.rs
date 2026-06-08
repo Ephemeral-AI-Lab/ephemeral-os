@@ -19,12 +19,40 @@
 mod publish;
 mod route;
 
+use std::path::Path;
+
+use eos_layerstack::{LayerStackError, Manifest, MergedView};
+use eos_protocol::{LayerChange, LayerPath};
 use sha2::{Digest, Sha256};
 
 pub use publish::{configure_auto_squash_max_depth, LayerStackCommitTransaction};
 pub use route::{
     insert_occ_route_timings, occ_route_metrics, LayerStackRouteProvider, OccRouteMetrics,
 };
+
+/// Per-path base-hash overrides for a snapshot's changeset.
+///
+/// Builds a [`MergedView`] over `root` and, for each non-`OpaqueDir` change,
+/// hashes the bytes visible at `manifest` via [`hash_current`] so OCC publish
+/// can gate on the base the writer observed. `OpaqueDir` (and absent) paths map
+/// to `None`. Errors are native [`LayerStackError`] — no daemon edge.
+pub fn base_hashes_for_snapshot(
+    root: &Path,
+    manifest: &Manifest,
+    changes: &[LayerChange],
+) -> Result<Vec<(LayerPath, Option<String>)>, LayerStackError> {
+    let view = MergedView::new(root.to_path_buf());
+    changes
+        .iter()
+        .map(|change| {
+            if matches!(change, LayerChange::OpaqueDir { .. }) {
+                return Ok((change.path().clone(), None));
+            }
+            let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
+            Ok((change.path().clone(), hash_current(bytes.as_deref(), exists)))
+        })
+        .collect()
+}
 
 /// SHA-256 of `content`, lowercase hex, when `exists` is true.
 ///

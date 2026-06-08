@@ -70,9 +70,9 @@
         <span class="rs-self">Self</span> { workflow_service }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl ToolExecutor for <a class="symbol-link" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-27">CheckWorkflowStatus</a></code></summary><table><tbody><tr id="method-execute-39"><td>method</td><td>execute</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#method-execute-51">execute</a> (&amp; self , input : &amp; JsonObject , _ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; ToolResult , ToolError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl ToolExecutor for <a class="symbol-link" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-27">CheckWorkflowStatus</a></code></summary><table><tbody><tr id="method-execute-39"><td>method</td><td>execute</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#method-execute-52">execute</a> (&amp; self , input : &amp; JsonObject , _ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; ToolResult , ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#method-execute-51">execute</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#method-execute-52">execute</a>(
         &amp;<span class="rs-self">self</span>,
         input: &amp;<span class="rs-type">JsonObject</span>,
         _ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
@@ -117,11 +117,11 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a> (registry : &amp; mut ToolRegistry , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , workflow_service : Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt; ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a> (registry : &amp; mut ToolRegistry , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , workflow_service : Option &lt; Arc &lt; dyn WorkflowApi &gt; &gt; ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-type">ToolRegistry</span>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
     workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,
@@ -190,7 +190,7 @@
 
 #[async_trait]
 <span class="rs-kw">impl</span> <span class="rs-type">ToolExecutor</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-27">CheckWorkflowStatus</a> {
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#method-execute-51">execute</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#method-execute-52">execute</a>(
         &amp;<span class="rs-self">self</span>,
         input: &amp;<span class="rs-type">JsonObject</span>,
         _ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
@@ -216,7 +216,7 @@
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-type">ToolRegistry</span>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
     workflow_service: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;,

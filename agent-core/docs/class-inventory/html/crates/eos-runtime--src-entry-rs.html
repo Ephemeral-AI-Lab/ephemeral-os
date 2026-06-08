@@ -105,7 +105,7 @@
     <span class="rs-kw">let</span> binding = services
         .sandbox
         .provisioner
-        .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-prepare-for-run-84">prepare_for_run</a>(&amp;request_id, sandbox_id.as_deref())
+        .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-prepare-for-run-83">prepare_for_run</a>(&amp;request_id, sandbox_id.as_deref())
         .<span class="rs-kw">await</span>
         .context(&quot;provisioning the request sandbox&quot;)?;
     services
@@ -123,16 +123,16 @@
     <span class="rs-comment">// GUARDRAIL: workflow service construction closes over the starter built</span>
     <span class="rs-comment">// below, while workflow-agent tools need a handle up front. The cell is set</span>
     <span class="rs-comment">// before any root or workflow agent starts.</span>
-    <span class="rs-kw">let</span> workflow_service_cell: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> iteration_coordinators = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">OpenIterationCoordinatorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> orchestrator_registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">AttemptOrchestratorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> context_engine = <span class="rs-type">ContextEngine</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">ContextEngineDeps</span> {
+    <span class="rs-kw">let</span> workflow_service_cell: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> iteration_coordinators = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">OpenIterationCoordinatorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> orchestrator_registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">AttemptOrchestratorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> context_engine = <span class="rs-type">ContextEngine</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">ContextEngineDeps</span> {
         workflow_store: services.db.workflow_store.clone(),
         iteration_store: services.db.iteration_store.clone(),
         attempt_store: services.db.attempt_store.clone(),
         task_store: services.db.task_store.clone(),
     });
-    <span class="rs-kw">let</span> composer = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">AgentEntryComposer</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> composer = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">AgentEntryComposer</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         context_engine,
         services.agent_core.agent_registry.clone(),
     ));
@@ -140,14 +140,14 @@
     <span class="rs-comment">// straight to the active per-attempt orchestrator over this shared registry</span>
     <span class="rs-comment">// (Path A-recording). Stateless and shared across all runs.</span>
     <span class="rs-kw">let</span> attempt_submission: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt; =
-        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">AttemptSubmissionAdapter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(orchestrator_registry.clone()));
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">AttemptSubmissionAdapter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(orchestrator_registry.clone()));
     <span class="rs-kw">let</span> (loop_launcher, agent_run_api_cell) = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a>(
         services.clone(),
         <span class="rs-type">None</span>,
         workflow_service_cell.clone(),
         on_event.clone(),
     );
-    <span class="rs-kw">let</span> runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunner</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-33">RuntimeAgentRunner</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunner</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-34">RuntimeAgentRunner</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         services.clone(),
         workspace_root.clone(),
         attempt_submission,
@@ -155,7 +155,7 @@
         on_event,
     ));
     <span class="rs-comment">// `attempt_deps` is a local moved into the starter (no clone, never returned).</span>
-    <span class="rs-kw">let</span> attempt_deps = <span class="rs-type">AttemptDeps</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> attempt_deps = <span class="rs-type">AttemptDeps</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         services.db.workflow_store.clone(),
         services.db.iteration_store.clone(),
         services.db.attempt_store.clone(),
@@ -168,8 +168,8 @@
     .with_lifecycle_config(<span class="rs-type">WorkflowLifecycleConfig</span>::default())
     .with_composer(composer)
     .with_max_concurrent_task_runs(workflow_config.attempt.max_concurrent_task_runs);
-    <span class="rs-kw">let</span> starter = <span class="rs-type">WorkflowStarter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(attempt_deps);
-    <span class="rs-kw">let</span> cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> starter = <span class="rs-type">WorkflowStarter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(attempt_deps);
+    <span class="rs-kw">let</span> cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         services.db.task_store.clone(),
         services.db.agent_run_store.clone(),
         agent_run_api_cell.clone(),
@@ -181,7 +181,7 @@
     <span class="rs-kw">let</span> _cancel_guard = services
         .cancel_registry
         .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-register-37">register</a>(request_id.clone(), cancel_port.clone());
-    <span class="rs-kw">let</span> workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">WorkflowService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">WorkflowService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         starter,
         services.db.workflow_store.clone(),
         services.db.iteration_store.clone(),
@@ -208,8 +208,8 @@
             iteration_id: <span class="rs-type">None</span>,
             attempt_id: <span class="rs-type">None</span>,
             agent_name: <span class="rs-type">Some</span>(&quot;root&quot;.to_owned()),
-            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(),
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(),
             terminal_tool_result: <span class="rs-type">None</span>,
         })
         .<span class="rs-kw">await</span>
@@ -224,10 +224,10 @@
     <span class="rs-comment">// [3][4][5] RUN — task-trigger the root through the runner-owned</span>
     <span class="rs-comment">// AgentRunApi. The runner owns the durable row lifecycle and receives loop</span>
     <span class="rs-comment">// completion through the `AgentLoopLauncher` outcome channel.</span>
-    <span class="rs-kw">let</span> summary = <span class="rs-kw">match</span> <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(&quot;root&quot;) {
+    <span class="rs-kw">let</span> summary = <span class="rs-kw">match</span> <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(&quot;root&quot;) {
         <span class="rs-type">Ok</span>(root_name) =&gt; {
-            <span class="rs-kw">let</span> agent_runs = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
-                <span class="rs-type">RunnerAgentRunService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+            <span class="rs-kw">let</span> agent_runs = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+                <span class="rs-type">RunnerAgentRunService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
                     services.agent_core.agent_registry.clone(),
                     loop_launcher,
                     services.db.agent_run_store.clone(),
@@ -250,7 +250,7 @@
             <span class="rs-kw">let</span> _ = agent_run_api_cell.set(agent_run_api);
             <span class="rs-kw">match</span> agent_runs
                 .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-spawn-agent-98">spawn_agent</a>(<span class="rs-type">SpawnAgentRequest</span> {
-                    agent_name: <span class="rs-type">AgentPortName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(root_name.as_str())
+                    agent_name: <span class="rs-type">AgentPortName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(root_name.as_str())
                         .expect(&quot;root agent name is valid&quot;),
                     agent_run_id: <span class="rs-type">Some</span>(<span class="rs-type">AgentRunId</span>::new_v4()),
                     initial_messages: vec![<span class="rs-type">Message</span>::from_user_text(prompt.clone())],
@@ -360,7 +360,7 @@
     root_task_id: &amp;<span class="rs-type">TaskId</span>,
     summary: &amp;str,
 ) {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>();
     terminal.insert(&quot;fail_reason&quot;.to_owned(), json!(&quot;root_run_exhausted&quot;));
     terminal.insert(&quot;summary&quot;.to_owned(), json!(summary));
 
@@ -433,7 +433,7 @@
 };
 <span class="rs-kw">use</span> serde_json::json;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::agent_runner::<a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-33">RuntimeAgentRunner</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::agent_runner::<a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-34">RuntimeAgentRunner</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request_input::<a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime_services::{
     build_agent_loop_launcher, <span class="rs-type">EventCallback</span>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>,
@@ -492,7 +492,7 @@
     <span class="rs-kw">let</span> binding = services
         .sandbox
         .provisioner
-        .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-prepare-for-run-84">prepare_for_run</a>(&amp;request_id, sandbox_id.as_deref())
+        .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-prepare-for-run-83">prepare_for_run</a>(&amp;request_id, sandbox_id.as_deref())
         .<span class="rs-kw">await</span>
         .context(&quot;provisioning the request sandbox&quot;)?;
     services
@@ -510,16 +510,16 @@
     <span class="rs-comment">// GUARDRAIL: workflow service construction closes over the starter built</span>
     <span class="rs-comment">// below, while workflow-agent tools need a handle up front. The cell is set</span>
     <span class="rs-comment">// before any root or workflow agent starts.</span>
-    <span class="rs-kw">let</span> workflow_service_cell: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> iteration_coordinators = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">OpenIterationCoordinatorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> orchestrator_registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">AttemptOrchestratorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> context_engine = <span class="rs-type">ContextEngine</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">ContextEngineDeps</span> {
+    <span class="rs-kw">let</span> workflow_service_cell: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> iteration_coordinators = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">OpenIterationCoordinatorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> orchestrator_registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">AttemptOrchestratorRegistry</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> context_engine = <span class="rs-type">ContextEngine</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">ContextEngineDeps</span> {
         workflow_store: services.db.workflow_store.clone(),
         iteration_store: services.db.iteration_store.clone(),
         attempt_store: services.db.attempt_store.clone(),
         task_store: services.db.task_store.clone(),
     });
-    <span class="rs-kw">let</span> composer = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">AgentEntryComposer</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> composer = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">AgentEntryComposer</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         context_engine,
         services.agent_core.agent_registry.clone(),
     ));
@@ -527,14 +527,14 @@
     <span class="rs-comment">// straight to the active per-attempt orchestrator over this shared registry</span>
     <span class="rs-comment">// (Path A-recording). Stateless and shared across all runs.</span>
     <span class="rs-kw">let</span> attempt_submission: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt; =
-        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">AttemptSubmissionAdapter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(orchestrator_registry.clone()));
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">AttemptSubmissionAdapter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(orchestrator_registry.clone()));
     <span class="rs-kw">let</span> (loop_launcher, agent_run_api_cell) = <a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-fn-build-agent-loop-launcher-29">build_agent_loop_launcher</a>(
         services.clone(),
         <span class="rs-type">None</span>,
         workflow_service_cell.clone(),
         on_event.clone(),
     );
-    <span class="rs-kw">let</span> runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunner</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-33">RuntimeAgentRunner</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunner</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime.html#item-struct-RuntimeAgentRunner-34">RuntimeAgentRunner</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         services.clone(),
         workspace_root.clone(),
         attempt_submission,
@@ -542,7 +542,7 @@
         on_event,
     ));
     <span class="rs-comment">// `attempt_deps` is a local moved into the starter (no clone, never returned).</span>
-    <span class="rs-kw">let</span> attempt_deps = <span class="rs-type">AttemptDeps</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> attempt_deps = <span class="rs-type">AttemptDeps</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         services.db.workflow_store.clone(),
         services.db.iteration_store.clone(),
         services.db.attempt_store.clone(),
@@ -555,8 +555,8 @@
     .with_lifecycle_config(<span class="rs-type">WorkflowLifecycleConfig</span>::default())
     .with_composer(composer)
     .with_max_concurrent_task_runs(workflow_config.attempt.max_concurrent_task_runs);
-    <span class="rs-kw">let</span> starter = <span class="rs-type">WorkflowStarter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(attempt_deps);
-    <span class="rs-kw">let</span> cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> starter = <span class="rs-type">WorkflowStarter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(attempt_deps);
+    <span class="rs-kw">let</span> cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-cancel-port-rs.html#item-struct-RuntimeCancelPort-11">RuntimeCancelPort</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         services.db.task_store.clone(),
         services.db.agent_run_store.clone(),
         agent_run_api_cell.clone(),
@@ -568,7 +568,7 @@
     <span class="rs-kw">let</span> _cancel_guard = services
         .cancel_registry
         .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-register-37">register</a>(request_id.clone(), cancel_port.clone());
-    <span class="rs-kw">let</span> workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">WorkflowService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">WorkflowService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
         starter,
         services.db.workflow_store.clone(),
         services.db.iteration_store.clone(),
@@ -595,8 +595,8 @@
             iteration_id: <span class="rs-type">None</span>,
             attempt_id: <span class="rs-type">None</span>,
             agent_name: <span class="rs-type">Some</span>(&quot;root&quot;.to_owned()),
-            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(),
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(),
             terminal_tool_result: <span class="rs-type">None</span>,
         })
         .<span class="rs-kw">await</span>
@@ -611,10 +611,10 @@
     <span class="rs-comment">// [3][4][5] RUN — task-trigger the root through the runner-owned</span>
     <span class="rs-comment">// AgentRunApi. The runner owns the durable row lifecycle and receives loop</span>
     <span class="rs-comment">// completion through the `AgentLoopLauncher` outcome channel.</span>
-    <span class="rs-kw">let</span> summary = <span class="rs-kw">match</span> <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(&quot;root&quot;) {
+    <span class="rs-kw">let</span> summary = <span class="rs-kw">match</span> <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(&quot;root&quot;) {
         <span class="rs-type">Ok</span>(root_name) =&gt; {
-            <span class="rs-kw">let</span> agent_runs = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
-                <span class="rs-type">RunnerAgentRunService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+            <span class="rs-kw">let</span> agent_runs = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+                <span class="rs-type">RunnerAgentRunService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
                     services.agent_core.agent_registry.clone(),
                     loop_launcher,
                     services.db.agent_run_store.clone(),
@@ -637,7 +637,7 @@
             <span class="rs-kw">let</span> _ = agent_run_api_cell.set(agent_run_api);
             <span class="rs-kw">match</span> agent_runs
                 .<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-loop-rs.html#method-spawn-agent-98">spawn_agent</a>(<span class="rs-type">SpawnAgentRequest</span> {
-                    agent_name: <span class="rs-type">AgentPortName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(root_name.as_str())
+                    agent_name: <span class="rs-type">AgentPortName</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(root_name.as_str())
                         .expect(&quot;root agent name is valid&quot;),
                     agent_run_id: <span class="rs-type">Some</span>(<span class="rs-type">AgentRunId</span>::new_v4()),
                     initial_messages: vec![<span class="rs-type">Message</span>::from_user_text(prompt.clone())],
@@ -708,7 +708,7 @@
     root_task_id: &amp;<span class="rs-type">TaskId</span>,
     summary: &amp;str,
 ) {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>();
     terminal.insert(&quot;fail_reason&quot;.to_owned(), json!(&quot;root_run_exhausted&quot;));
     terminal.insert(&quot;summary&quot;.to_owned(), json!(summary));
 

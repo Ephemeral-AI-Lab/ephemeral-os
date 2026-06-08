@@ -56,44 +56,44 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-build-advisor-messages-50" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_advisor_messages pub(super) pub(super) fn build_advisor_messages (ctx : &amp; ExecutionMetadata , tool_name : &amp; str , tool_payload : &amp; JsonObject ,) -&gt; Vec &lt; Message &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-build-advisor-messages-51" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_advisor_messages pub(super) pub(super) fn build_advisor_messages (ctx : &amp; ExecutionMetadata , tool_name : &amp; str , tool_payload : &amp; JsonObject ,) -&gt; Vec &lt; Message &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_advisor_messages</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-messages-50">build_advisor_messages</a> (ctx : &amp; ExecutionMetadata , tool_name : &amp; str , tool_payload : &amp; JsonObject ,) -&gt; Vec &lt; Message &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-messages-51">build_advisor_messages</a> (ctx : &amp; ExecutionMetadata , tool_name : &amp; str , tool_payload : &amp; JsonObject ,) -&gt; Vec &lt; Message &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-messages-50">build_advisor_messages</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-messages-51">build_advisor_messages</a>(
     ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
     tool_name: &amp;str,
     tool_payload: &amp;<span class="rs-type">JsonObject</span>,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; {
     vec![
-        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-61">build_advisor_user_msg_1</a>(ctx)),
-        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-86">build_advisor_user_msg_2</a>(tool_name, tool_payload)),
+        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-62">build_advisor_user_msg_1</a>(ctx)),
+        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-87">build_advisor_user_msg_2</a>(tool_name, tool_payload)),
     ]
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:50</p>
-</article><article id="item-fn-build-advisor-user-msg-1-61" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_advisor_user_msg_1 private fn build_advisor_user_msg_1 (ctx : &amp; ExecutionMetadata) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:51</p>
+</article><article id="item-fn-build-advisor-user-msg-1-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_advisor_user_msg_1 private fn build_advisor_user_msg_1 (ctx : &amp; ExecutionMetadata) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_advisor_user_msg_1</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-61">build_advisor_user_msg_1</a> (ctx : &amp; ExecutionMetadata) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-62">build_advisor_user_msg_1</a> (ctx : &amp; ExecutionMetadata) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-61">build_advisor_user_msg_1</a>(ctx: &amp;<span class="rs-type">ExecutionMetadata</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-62">build_advisor_user_msg_1</a>(ctx: &amp;<span class="rs-type">ExecutionMetadata</span>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> messages = ctx.conversation.as_ref();
     <span class="rs-kw">let</span> parent_user_msg_1 = messages.first().map(extract_text).unwrap_or_default();
-    <span class="rs-kw">let</span> transcript = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-122">build_parent_transcript</a>(messages);
+    <span class="rs-kw">let</span> transcript = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-123">build_parent_transcript</a>(messages);
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sections = vec![
         <span class="rs-type">PROMPT_INJECTION_GUARD</span>.to_owned(),
@@ -117,21 +117,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:61</p>
-</article><article id="item-fn-build-advisor-user-msg-2-86" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_advisor_user_msg_2 private fn build_advisor_user_msg_2 (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:62</p>
+</article><article id="item-fn-build-advisor-user-msg-2-87" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_advisor_user_msg_2 private fn build_advisor_user_msg_2 (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_advisor_user_msg_2</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-86">build_advisor_user_msg_2</a> (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-87">build_advisor_user_msg_2</a> (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-86">build_advisor_user_msg_2</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-87">build_advisor_user_msg_2</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
     [
-        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-97">render_catalog_section</a>(tool_name),
-        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-112">render_pending_submission</a>(tool_name, tool_payload),
+        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-98">render_catalog_section</a>(tool_name),
+        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-113">render_pending_submission</a>(tool_name, tool_payload),
         <span class="rs-type">ADVISOR_TASK_SECTION</span>.to_owned(),
         <span class="rs-type">ADVISOR_CALIBRATION_SECTION</span>.to_owned(),
         <span class="rs-type">ADVISOR_HOW_TO_SUBMIT_SECTION</span>.to_owned(),
@@ -141,18 +141,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:86</p>
-</article><article id="item-fn-render-catalog-section-97" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_catalog_section private fn render_catalog_section (tool_name : &amp; str) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:87</p>
+</article><article id="item-fn-render-catalog-section-98" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_catalog_section private fn render_catalog_section (tool_name : &amp; str) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_catalog_section</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-97">render_catalog_section</a> (tool_name : &amp; str) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-98">render_catalog_section</a> (tool_name : &amp; str) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-97">render_catalog_section</a>(tool_name: &amp;str) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-98">render_catalog_section</a>(tool_name: &amp;str) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">ToolName</span>&gt; = <span class="rs-type">ToolName</span>::from_wire(tool_name).into_iter().collect();
     <span class="rs-kw">let</span> catalog = <a class="symbol-link rs-fn" href="eos-tools--src-tools-terminal-rs.html#item-fn-render-tool-instruction-133">render_tool_instruction</a>(&amp;terminals, <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-ToolInstructions-123">ToolInstructions</a>::<span class="rs-type">AdvisorReviewFocus</span>);
     <span class="rs-kw">if</span> catalog.is_empty() {
@@ -169,19 +169,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:97</p>
-</article><article id="item-fn-render-pending-submission-112" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_pending_submission private fn render_pending_submission (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:98</p>
+</article><article id="item-fn-render-pending-submission-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_pending_submission private fn render_pending_submission (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_pending_submission</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-112">render_pending_submission</a> (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-113">render_pending_submission</a> (tool_name : &amp; str , tool_payload : &amp; JsonObject) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-112">render_pending_submission</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> payload_json = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(tool_payload.clone()));
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-113">render_pending_submission</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> payload_json = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(tool_payload.clone()));
     format!(
         &quot;# <span class="rs-type">Pending</span> submission\n\n\
          <span class="rs-type">The</span> parent intends to call:\n\n\
@@ -192,18 +192,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:112</p>
-</article><article id="item-fn-build-parent-transcript-122" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_parent_transcript private fn build_parent_transcript (messages : &amp; [Message]) -&gt; Option &lt; String &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:113</p>
+</article><article id="item-fn-build-parent-transcript-123" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_parent_transcript private fn build_parent_transcript (messages : &amp; [Message]) -&gt; Option &lt; String &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_parent_transcript</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-122">build_parent_transcript</a> (messages : &amp; [Message]) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-123">build_parent_transcript</a> (messages : &amp; [Message]) -&gt; Option &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-122">build_parent_transcript</a>(messages: &amp;[<span class="rs-type">Message</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-123">build_parent_transcript</a>(messages: &amp;[<span class="rs-type">Message</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">if</span> messages.is_empty() || messages[0].role != <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -216,23 +216,23 @@
     <span class="rs-kw">if</span> rendered.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
-    <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-207">apply_byte_cap</a>(&amp;rendered))
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-208">apply_byte_cap</a>(&amp;rendered))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:122</p>
-</article><article id="item-fn-render-message-138" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_message private fn render_message (msg : &amp; Message) -&gt; Option &lt; String &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:123</p>
+</article><article id="item-fn-render-message-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_message private fn render_message (msg : &amp; Message) -&gt; Option &lt; String &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-message-138">render_message</a> (msg : &amp; Message) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-message-139">render_message</a> (msg : &amp; Message) -&gt; Option &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-message-138">render_message</a>(msg: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-message-139">render_message</a>(msg: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> role = <span class="rs-kw">match</span> msg.role {
         <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> =&gt; &quot;user&quot;,
         <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> =&gt; &quot;assistant&quot;,
@@ -246,31 +246,31 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:138</p>
-</article><article id="item-fn-render-block-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_block private fn render_block (block : &amp; ContentBlock) -&gt; Option &lt; String &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:139</p>
+</article><article id="item-fn-render-block-151" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_block private fn render_block (block : &amp; ContentBlock) -&gt; Option &lt; String &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_block</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-block-150">render_block</a> (block : &amp; ContentBlock) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-block-151">render_block</a> (block : &amp; ContentBlock) -&gt; Option &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-block-150">render_block</a>(block: &amp;<span class="rs-type">ContentBlock</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-block-151">render_block</a>(block: &amp;<span class="rs-type">ContentBlock</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">match</span> block {
         <span class="rs-type">ContentBlock</span>::<span class="rs-type">Text</span> { text } | <span class="rs-type">ContentBlock</span>::<span class="rs-type">Reasoning</span> { text } =&gt; {
-            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a>(text).map(<span class="rs-type">ToOwned</span>::to_owned)
+            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a>(text).map(<span class="rs-type">ToOwned</span>::to_owned)
         }
         <span class="rs-type">ContentBlock</span>::<span class="rs-type">SystemNotification</span> { text } =&gt; {
-            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a>(text).map(|text| format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;))
+            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a>(text).map(|text| format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;))
         }
         <span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> { name, input, .. } =&gt; {
             <span class="rs-kw">let</span> rendered_input = <span class="rs-kw">if</span> <span class="rs-type">ADVISOR_STRIP_INPUT_TOOLS</span>.contains(&amp;name.<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html#method-as-str-32">as_str</a>()) {
                 &quot;&lt;input elided&gt;&quot;.to_owned()
             } <span class="rs-kw">else</span> {
-                <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(
-                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(input.clone())),
+                <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(
+                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(input.clone())),
                     <span class="rs-type">MAX_BASH_COMMAND_CHARS</span>,
                 )
             };
@@ -285,13 +285,13 @@
             ..
         } =&gt; {
             <span class="rs-kw">let</span> status = <span class="rs-kw">if</span> *is_error { &quot;error&quot; } <span class="rs-kw">else</span> { &quot;ok&quot; };
-            <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(content.clone(), <span class="rs-type">MAX_TOOL_RESULT_CHARS</span>);
+            <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(content.clone(), <span class="rs-type">MAX_TOOL_RESULT_CHARS</span>);
             <span class="rs-kw">let</span> metadata = <span class="rs-kw">if</span> metadata.is_empty() {
                 <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>()
             } <span class="rs-kw">else</span> {
                 format!(
                     &quot;\nmetadata:\n```json\n{}\n```&quot;,
-                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(metadata.clone()))
+                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(metadata.clone()))
                 )
             };
             <span class="rs-type">Some</span>(format!(
@@ -304,18 +304,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:150</p>
-</article><article id="item-fn-extract-text-195" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extract_text private fn extract_text (message : &amp; Message) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:151</p>
+</article><article id="item-fn-extract-text-196" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extract_text private fn extract_text (message : &amp; Message) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>extract_text</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-extract-text-195">extract_text</a> (message : &amp; Message) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-extract-text-196">extract_text</a> (message : &amp; Message) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-extract-text-195">extract_text</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-extract-text-196">extract_text</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">String</span> {
     message
         .content
         .iter()
@@ -329,35 +329,35 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:195</p>
-</article><article id="item-fn-apply-byte-cap-207" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_byte_cap private fn apply_byte_cap (sections : &amp; [String]) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:196</p>
+</article><article id="item-fn-apply-byte-cap-208" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_byte_cap private fn apply_byte_cap (sections : &amp; [String]) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>apply_byte_cap</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-207">apply_byte_cap</a> (sections : &amp; [String]) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-208">apply_byte_cap</a> (sections : &amp; [String]) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-207">apply_byte_cap</a>(sections: &amp;[<span class="rs-type">String</span>]) -&gt; <span class="rs-type">String</span> {
-    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(sections.join(&quot;\n\n&quot;), <span class="rs-type">MAX_TRANSCRIPT_BYTES</span>)
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-208">apply_byte_cap</a>(sections: &amp;[<span class="rs-type">String</span>]) -&gt; <span class="rs-type">String</span> {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(sections.join(&quot;\n\n&quot;), <span class="rs-type">MAX_TRANSCRIPT_BYTES</span>)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:207</p>
-</article><article id="item-fn-cap-string-211" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cap_string private fn cap_string (mut value : String , max_bytes : usize) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:208</p>
+</article><article id="item-fn-cap-string-212" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cap_string private fn cap_string (mut value : String , max_bytes : usize) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cap_string</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a> (mut value : String , max_bytes : usize) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a> (mut value : String , max_bytes : usize) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(<span class="rs-kw">mut</span> value: <span class="rs-type">String</span>, max_bytes: usize) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(<span class="rs-kw">mut</span> value: <span class="rs-type">String</span>, max_bytes: usize) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">if</span> value.len() &lt;= max_bytes {
         <span class="rs-kw">return</span> value;
     }
@@ -371,42 +371,42 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:211</p>
-</article><article id="item-fn-json-pretty-223" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_pretty private fn json_pretty (value : &amp; Value) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:212</p>
+</article><article id="item-fn-json-pretty-224" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_pretty private fn json_pretty (value : &amp; Value) -&gt; String crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>json_pretty</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a> (value : &amp; Value) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a> (value : &amp; Value) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">String</span> {
     serde_json::to_string_pretty(value).unwrap_or_else(|_| &quot;{}&quot;.to_owned())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:223</p>
-</article><article id="item-fn-nonblank-227" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nonblank private fn nonblank (value : &amp; str) -&gt; Option &lt; &amp; str &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:224</p>
+</article><article id="item-fn-nonblank-228" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nonblank private fn nonblank (value : &amp; str) -&gt; Option &lt; &amp; str &gt; crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>nonblank</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a> (value : &amp; str) -&gt; Option &lt; &amp; str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a> (value : &amp; str) -&gt; Option &lt; &amp; str &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
     <span class="rs-kw">let</span> trimmed = value.trim();
     (!trimmed.is_empty()).then_some(trimmed)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:227</p>
+  <p class="source">crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs:228</p>
 </article></div>
 </section></div>
 </main>
@@ -418,10 +418,11 @@
   <pre class="file-source"><code><span class="rs-comment">//! Prompt and transcript construction for the `ask_advisor` helper.</span>
 
 <span class="rs-kw">use</span> eos_llm_client::{<span class="rs-type">ContentBlock</span>, <span class="rs-type">Message</span>, <span class="rs-type">MessageRole</span>};
+<span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">ExecutionMetadata</span>, <span class="rs-type">ToolName</span>};
 <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{render_tool_instruction, <span class="rs-type">ExecutionMetadata</span>, <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-ToolInstructions-123">ToolInstructions</a>, <span class="rs-type">ToolName</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{render_tool_instruction, <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-ToolInstructions-123">ToolInstructions</a>};
 
 <span class="rs-kw">const</span> <span class="rs-type">MAX_TRANSCRIPT_MESSAGES</span>: usize = 40;
 <span class="rs-kw">const</span> <span class="rs-type">MAX_TOOL_RESULT_CHARS</span>: usize = 4096;
@@ -464,21 +465,21 @@ a sharper second reject.&quot;;
 - `summary`: focused prose that covers, <span class="rs-kw">in</span> order: tool selection, quality of \
 synthesis/exploration backing the payload, and residual risks.&quot;;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-messages-50">build_advisor_messages</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-messages-51">build_advisor_messages</a>(
     ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
     tool_name: &amp;str,
     tool_payload: &amp;<span class="rs-type">JsonObject</span>,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; {
     vec![
-        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-61">build_advisor_user_msg_1</a>(ctx)),
-        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-86">build_advisor_user_msg_2</a>(tool_name, tool_payload)),
+        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-62">build_advisor_user_msg_1</a>(ctx)),
+        <span class="rs-type">Message</span>::from_user_text(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-87">build_advisor_user_msg_2</a>(tool_name, tool_payload)),
     ]
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-61">build_advisor_user_msg_1</a>(ctx: &amp;<span class="rs-type">ExecutionMetadata</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-1-62">build_advisor_user_msg_1</a>(ctx: &amp;<span class="rs-type">ExecutionMetadata</span>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> messages = ctx.conversation.as_ref();
     <span class="rs-kw">let</span> parent_user_msg_1 = messages.first().map(extract_text).unwrap_or_default();
-    <span class="rs-kw">let</span> transcript = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-122">build_parent_transcript</a>(messages);
+    <span class="rs-kw">let</span> transcript = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-123">build_parent_transcript</a>(messages);
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sections = vec![
         <span class="rs-type">PROMPT_INJECTION_GUARD</span>.to_owned(),
@@ -500,10 +501,10 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     sections.join(&quot;\n\n&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-86">build_advisor_user_msg_2</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-advisor-user-msg-2-87">build_advisor_user_msg_2</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
     [
-        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-97">render_catalog_section</a>(tool_name),
-        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-112">render_pending_submission</a>(tool_name, tool_payload),
+        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-98">render_catalog_section</a>(tool_name),
+        <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-113">render_pending_submission</a>(tool_name, tool_payload),
         <span class="rs-type">ADVISOR_TASK_SECTION</span>.to_owned(),
         <span class="rs-type">ADVISOR_CALIBRATION_SECTION</span>.to_owned(),
         <span class="rs-type">ADVISOR_HOW_TO_SUBMIT_SECTION</span>.to_owned(),
@@ -511,7 +512,7 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     .join(&quot;\n\n&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-97">render_catalog_section</a>(tool_name: &amp;str) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-catalog-section-98">render_catalog_section</a>(tool_name: &amp;str) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> terminals: <span class="rs-type">Vec</span>&lt;<span class="rs-type">ToolName</span>&gt; = <span class="rs-type">ToolName</span>::from_wire(tool_name).into_iter().collect();
     <span class="rs-kw">let</span> catalog = <a class="symbol-link rs-fn" href="eos-tools--src-tools-terminal-rs.html#item-fn-render-tool-instruction-133">render_tool_instruction</a>(&amp;terminals, <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-ToolInstructions-123">ToolInstructions</a>::<span class="rs-type">AdvisorReviewFocus</span>);
     <span class="rs-kw">if</span> catalog.is_empty() {
@@ -526,8 +527,8 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     )
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-112">render_pending_submission</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> payload_json = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(tool_payload.clone()));
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-pending-submission-113">render_pending_submission</a>(tool_name: &amp;str, tool_payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> payload_json = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(tool_payload.clone()));
     format!(
         &quot;# <span class="rs-type">Pending</span> submission\n\n\
          <span class="rs-type">The</span> parent intends to call:\n\n\
@@ -536,7 +537,7 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     )
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-122">build_parent_transcript</a>(messages: &amp;[<span class="rs-type">Message</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-build-parent-transcript-123">build_parent_transcript</a>(messages: &amp;[<span class="rs-type">Message</span>]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">if</span> messages.is_empty() || messages[0].role != <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -549,10 +550,10 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     <span class="rs-kw">if</span> rendered.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
-    <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-207">apply_byte_cap</a>(&amp;rendered))
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-208">apply_byte_cap</a>(&amp;rendered))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-message-138">render_message</a>(msg: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-message-139">render_message</a>(msg: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> role = <span class="rs-kw">match</span> msg.role {
         <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> =&gt; &quot;user&quot;,
         <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> =&gt; &quot;assistant&quot;,
@@ -564,20 +565,20 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     <span class="rs-type">Some</span>(format!(&quot;## {role}\n\n{}&quot;, blocks.join(&quot;\n\n&quot;)))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-block-150">render_block</a>(block: &amp;<span class="rs-type">ContentBlock</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-render-block-151">render_block</a>(block: &amp;<span class="rs-type">ContentBlock</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">match</span> block {
         <span class="rs-type">ContentBlock</span>::<span class="rs-type">Text</span> { text } | <span class="rs-type">ContentBlock</span>::<span class="rs-type">Reasoning</span> { text } =&gt; {
-            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a>(text).map(<span class="rs-type">ToOwned</span>::to_owned)
+            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a>(text).map(<span class="rs-type">ToOwned</span>::to_owned)
         }
         <span class="rs-type">ContentBlock</span>::<span class="rs-type">SystemNotification</span> { text } =&gt; {
-            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a>(text).map(|text| format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;))
+            <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a>(text).map(|text| format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;))
         }
         <span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> { name, input, .. } =&gt; {
             <span class="rs-kw">let</span> rendered_input = <span class="rs-kw">if</span> <span class="rs-type">ADVISOR_STRIP_INPUT_TOOLS</span>.contains(&amp;name.<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html#method-as-str-32">as_str</a>()) {
                 &quot;&lt;input elided&gt;&quot;.to_owned()
             } <span class="rs-kw">else</span> {
-                <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(
-                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(input.clone())),
+                <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(
+                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(input.clone())),
                     <span class="rs-type">MAX_BASH_COMMAND_CHARS</span>,
                 )
             };
@@ -592,13 +593,13 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
             ..
         } =&gt; {
             <span class="rs-kw">let</span> status = <span class="rs-kw">if</span> *is_error { &quot;error&quot; } <span class="rs-kw">else</span> { &quot;ok&quot; };
-            <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(content.clone(), <span class="rs-type">MAX_TOOL_RESULT_CHARS</span>);
+            <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(content.clone(), <span class="rs-type">MAX_TOOL_RESULT_CHARS</span>);
             <span class="rs-kw">let</span> metadata = <span class="rs-kw">if</span> metadata.is_empty() {
                 <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>()
             } <span class="rs-kw">else</span> {
                 format!(
                     &quot;\nmetadata:\n```json\n{}\n```&quot;,
-                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(metadata.clone()))
+                    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(metadata.clone()))
                 )
             };
             <span class="rs-type">Some</span>(format!(
@@ -609,7 +610,7 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-extract-text-195">extract_text</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-extract-text-196">extract_text</a>(message: &amp;<span class="rs-type">Message</span>) -&gt; <span class="rs-type">String</span> {
     message
         .content
         .iter()
@@ -621,11 +622,11 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
         .join(&quot;&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-207">apply_byte_cap</a>(sections: &amp;[<span class="rs-type">String</span>]) -&gt; <span class="rs-type">String</span> {
-    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(sections.join(&quot;\n\n&quot;), <span class="rs-type">MAX_TRANSCRIPT_BYTES</span>)
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-apply-byte-cap-208">apply_byte_cap</a>(sections: &amp;[<span class="rs-type">String</span>]) -&gt; <span class="rs-type">String</span> {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(sections.join(&quot;\n\n&quot;), <span class="rs-type">MAX_TRANSCRIPT_BYTES</span>)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-211">cap_string</a>(<span class="rs-kw">mut</span> value: <span class="rs-type">String</span>, max_bytes: usize) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-cap-string-212">cap_string</a>(<span class="rs-kw">mut</span> value: <span class="rs-type">String</span>, max_bytes: usize) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">if</span> value.len() &lt;= max_bytes {
         <span class="rs-kw">return</span> value;
     }
@@ -637,11 +638,11 @@ synthesis/exploration backing the payload, and residual risks.&quot;;
     value
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-223">json_pretty</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-json-pretty-224">json_pretty</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">String</span> {
     serde_json::to_string_pretty(value).unwrap_or_else(|_| &quot;{}&quot;.to_owned())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-227">nonblank</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-advisor-prompt-rs.html#item-fn-nonblank-228">nonblank</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
     <span class="rs-kw">let</span> trimmed = value.trim();
     (!trimmed.is_empty()).then_some(trimmed)
 }

@@ -100,7 +100,7 @@ the daemon by design (the MF-1 single-writer invariant).
 
 ## Recommended plan — three tiers, smallest-safe first
 
-### Tier 1 — two edge-free wins (do now; independent, parallelizable, no new crate)
+### Tier 1 — two edge-free wins ✅ DONE (verified: `cargo check`/`clippy -D warnings`/`test` green on all 3 crates)
 1. **`base_hashes_for_snapshot` → `eos-occ-layerstack`.** Move the body next to the
    existing `hash_current`/`base_hash` it mirrors; have it return native
    `LayerStackError`. The daemon keeps a one-line re-export (matches `occ/mod.rs:19`'s

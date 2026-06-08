@@ -1410,8 +1410,8 @@ cargo check --workspace --all-targets
       `AgentExecutionMetadataService`, tool core values, `ToolRegistry`,
       `RegisteredTool`, `ToolExecutor`, hook declarations, session service
       wrappers, and tool port contracts are owned by the ports crates;
-      `eos-tools` keeps concrete tool construction with compatibility
-      re-exports. Verified with `cargo check -p eos-tool-ports --all-targets`,
+      `eos-tools` keeps only concrete tool construction and registry assembly.
+      Verified with `cargo check -p eos-tool-ports --all-targets`,
       `cargo check -p eos-agent-ports --all-targets`, and
       `cargo check -p eos-tools --all-targets`.
 - [x] Phase 2 - Add non-blocking agent-loop API and engine implementation.

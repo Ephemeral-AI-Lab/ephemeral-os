@@ -8,10 +8,8 @@ use eos_types::{JsonObject, SandboxId};
 use serde_json::{json, Value};
 
 use crate::support::metadata;
-use crate::tools::{
-    CallerScope, IsolatedWorkspaceToolService, SandboxToolService, SkillToolService,
-};
-use eos_tool_ports::{ToolName, ToolRegistry};
+use crate::tools::{CallerScope, SandboxToolService, SkillToolService};
+use eos_tool_ports::{IsolatedWorkspaceToolService, ToolName, ToolRegistry};
 
 #[derive(Debug, Clone)]
 struct Call {
@@ -121,7 +119,11 @@ fn ctx() -> eos_tool_ports::ExecutionMetadata {
     ctx
 }
 
-async fn execute(registry: &ToolRegistry, name: ToolName, input: JsonObject) -> eos_tool_ports::ToolResult {
+async fn execute(
+    registry: &ToolRegistry,
+    name: ToolName,
+    input: JsonObject,
+) -> eos_tool_ports::ToolResult {
     registry
         .get(name)
         .expect("registered")

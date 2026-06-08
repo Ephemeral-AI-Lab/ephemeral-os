@@ -122,7 +122,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a></code>
   <p class="docstring">Per-attempt dependency bundle.</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>workflow_store</td><td><code>Arc &lt; dyn WorkflowStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_store</td><td><code>Arc &lt; dyn IterationStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>attempt_store</td><td><code>Arc &lt; dyn AttemptStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>agent_registry</td><td><code>Arc &lt; AgentRegistry &gt;</code></td></tr><tr><td>pub(crate)</td><td>orchestrator_registry</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_coordinators</td><td><code>Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow--src-iteration-mod-rs.html#item-struct-OpenIterationCoordinatorRegistry-309">OpenIterationCoordinatorRegistry</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>lifecycle_config</td><td><code><a class="symbol-link" href="eos-workflow--src-ids-rs.html#item-struct-WorkflowLifecycleConfig-5">WorkflowLifecycleConfig</a></code></td></tr><tr><td>pub(crate)</td><td>composer</td><td><code>Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>runner</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-workflow.html#item-trait-AgentRunner-49">AgentRunner</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>max_concurrent_task_runs</td><td><code>usize</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-264"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (workflow_store : Arc &lt; dyn WorkflowStore &gt; , iteration_store : Arc &lt; dyn IterationStore &gt; , attempt_store : Arc &lt; dyn AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; , agent_registry : Arc &lt; AgentRegistry &gt; , runner : Arc &lt; dyn <a class="symbol-link" href="eos-workflow.html#item-trait-AgentRunner-49">AgentRunner</a> &gt; ,) -&gt; Self</code><p class="docstring">Create deps with sane workflow defaults.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>workflow_store</td><td><code>Arc &lt; dyn WorkflowStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_store</td><td><code>Arc &lt; dyn IterationStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>attempt_store</td><td><code>Arc &lt; dyn AttemptStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>agent_registry</td><td><code>Arc &lt; AgentRegistry &gt;</code></td></tr><tr><td>pub(crate)</td><td>orchestrator_registry</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_coordinators</td><td><code>Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow--src-iteration-mod-rs.html#item-struct-OpenIterationCoordinatorRegistry-309">OpenIterationCoordinatorRegistry</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>lifecycle_config</td><td><code><a class="symbol-link" href="eos-workflow--src-ids-rs.html#item-struct-WorkflowLifecycleConfig-5">WorkflowLifecycleConfig</a></code></td></tr><tr><td>pub(crate)</td><td>composer</td><td><code>Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>runner</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-workflow.html#item-trait-AgentRunner-49">AgentRunner</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>max_concurrent_task_runs</td><td><code>usize</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-264"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (workflow_store : Arc &lt; dyn WorkflowStore &gt; , iteration_store : Arc &lt; dyn IterationStore &gt; , attempt_store : Arc &lt; dyn AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; , agent_registry : Arc &lt; AgentRegistry &gt; , runner : Arc &lt; dyn <a class="symbol-link" href="eos-workflow.html#item-trait-AgentRunner-49">AgentRunner</a> &gt; ,) -&gt; Self</code><p class="docstring">Create deps with sane workflow defaults.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create deps with sane workflow defaults.</span>
     #[must_use]
@@ -182,11 +182,11 @@
         <span class="rs-self">self</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-with-composer-316"><td>method</td><td>with_composer</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-with-composer-316">with_composer</a> (mut self , composer : Arc &lt; <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a> &gt;) -&gt; Self</code><p class="docstring">Use a caller-supplied entry composer.</p><details class="function-source">
+</details></td></tr><tr id="method-with-composer-316"><td>method</td><td>with_composer</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-with-composer-316">with_composer</a> (mut self , composer : Arc &lt; <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a> &gt;) -&gt; Self</code><p class="docstring">Use a caller-supplied entry composer.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Use a caller-supplied entry composer.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-with-composer-316">with_composer</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, composer: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-with-composer-316">with_composer</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, composer: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.composer = <span class="rs-type">Some</span>(composer);
         <span class="rs-self">self</span>
     }
@@ -359,7 +359,7 @@
             .clone();
         <span class="rs-kw">let</span> (context, task_guidance, agent_def, skill) = <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(composer) = &amp;<span class="rs-self">self</span>.deps.composer
         {
-            <span class="rs-kw">let</span> messages = composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(args.base_agent_name, &amp;args.scope).<span class="rs-kw">await</span>?;
+            <span class="rs-kw">let</span> messages = composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(args.base_agent_name, &amp;args.scope).<span class="rs-kw">await</span>?;
             (
                 messages.context,
                 messages.task_guidance,
@@ -610,7 +610,7 @@
     <span class="rs-type">WorkflowStore</span>,
 };
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::context::{<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::context::{<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ids::<a class="symbol-link rs-type" href="eos-workflow--src-ids-rs.html#item-struct-WorkflowLifecycleConfig-5">WorkflowLifecycleConfig</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
@@ -843,7 +843,7 @@
     <span class="rs-comment">/// Lifecycle knobs.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) lifecycle_config: <a class="symbol-link rs-type" href="eos-workflow--src-ids-rs.html#item-struct-WorkflowLifecycleConfig-5">WorkflowLifecycleConfig</a>,
     <span class="rs-comment">/// Optional composer.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) composer: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>&gt;&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) composer: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>&gt;&gt;,
     <span class="rs-comment">/// Agent runner seam.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workflow.html#item-trait-AgentRunner-49">AgentRunner</a>&gt;,
     <span class="rs-comment">/// Per-attempt run cap.</span>
@@ -918,7 +918,7 @@
 
     <span class="rs-comment">/// Use a caller-supplied entry composer.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-with-composer-316">with_composer</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, composer: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-with-composer-316">with_composer</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, composer: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.composer = <span class="rs-type">Some</span>(composer);
         <span class="rs-self">self</span>
     }
@@ -1072,7 +1072,7 @@
             .clone();
         <span class="rs-kw">let</span> (context, task_guidance, agent_def, skill) = <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(composer) = &amp;<span class="rs-self">self</span>.deps.composer
         {
-            <span class="rs-kw">let</span> messages = composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(args.base_agent_name, &amp;args.scope).<span class="rs-kw">await</span>?;
+            <span class="rs-kw">let</span> messages = composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(args.base_agent_name, &amp;args.scope).<span class="rs-kw">await</span>?;
             (
                 messages.context,
                 messages.task_guidance,

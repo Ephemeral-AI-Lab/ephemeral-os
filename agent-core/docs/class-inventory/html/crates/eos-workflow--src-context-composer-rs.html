@@ -56,28 +56,28 @@
       <span>3 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AgentEntryMessages-12" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentEntryMessages pub pub struct AgentEntryMessages crates/eos-workflow/src/context/composer.rs agent_def AgentDefinition context String task_guidance Option &lt; String &gt; skill Option &lt; String &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AgentEntryMessages-13" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentEntryMessages pub pub struct AgentEntryMessages crates/eos-workflow/src/context/composer.rs agent_def AgentDefinition context String task_guidance Option &lt; String &gt; skill Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentEntryMessages</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a></code>
   <p class="docstring">Composed launch messages for one agent run.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>agent_def</td><td><code>AgentDefinition</code></td></tr><tr><td>pub</td><td>context</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_guidance</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:12</p>
-</article><article id="item-struct-AgentEntryComposer-25" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentEntryComposer pub pub struct AgentEntryComposer crates/eos-workflow/src/context/composer.rs engine ContextEngine agents Arc &lt; AgentRegistry &gt; ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:13</p>
+</article><article id="item-struct-AgentEntryComposer-26" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentEntryComposer pub pub struct AgentEntryComposer crates/eos-workflow/src/context/composer.rs engine ContextEngine agents Arc &lt; AgentRegistry &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentEntryComposer</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a></code>
   <p class="docstring">Agent-entry message composer.</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>engine</td><td><code><a class="symbol-link" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a></code></td></tr><tr><td>private</td><td>agents</td><td><code>Arc &lt; AgentRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-39"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (engine : <a class="symbol-link" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a> , agents : Arc &lt; AgentRegistry &gt;) -&gt; Self</code><p class="docstring">Create a composer from the context engine and agent registry.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>engine</td><td><code><a class="symbol-link" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a></code></td></tr><tr><td>private</td><td>agents</td><td><code>Arc &lt; AgentRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-40"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (engine : <a class="symbol-link" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a> , agents : Arc &lt; AgentRegistry &gt;) -&gt; Self</code><p class="docstring">Create a composer from the context engine and agent registry.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a composer from the context engine and agent registry.</span>
     #[must_use]
@@ -85,18 +85,18 @@
         <span class="rs-self">Self</span> { engine, agents }
     }
 </code></pre>
-</details></td></tr><tr id="method-compose-45"><td>method</td><td>compose</td><td><code>pub async fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a> (&amp; self , base_agent_name : &amp; str , scope : &amp; <a class="symbol-link" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a> ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a> &gt;</code><p class="docstring">Compose the launch rows for `base_agent_name`.<br># Errors<br>Returns [`WorkflowError`] when the agent is missing or lacks a matching<br>context recipe.</p><details class="function-source">
+</details></td></tr><tr id="method-compose-46"><td>method</td><td>compose</td><td><code>pub async fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a> (&amp; self , base_agent_name : &amp; str , scope : &amp; <a class="symbol-link" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a> ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a> &gt;</code><p class="docstring">Compose the launch rows for `base_agent_name`.<br># Errors<br>Returns [`WorkflowError`] when the agent is missing or lacks a matching<br>context recipe.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Compose the launch rows for `base_agent_name`.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`WorkflowError`] when the agent is missing or lacks a matching</span>
     <span class="rs-comment">/// context recipe.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(
         &amp;<span class="rs-self">self</span>,
         base_agent_name: &amp;str,
         scope: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a>&gt; {
         <span class="rs-kw">let</span> name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(base_agent_name)?;
         <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>
             .agents
@@ -115,40 +115,40 @@
             ))
         })?;
         <span class="rs-kw">let</span> context = <span class="rs-self">self</span>.engine.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(recipe, scope).<span class="rs-kw">await</span>?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a> {
             context: <a class="symbol-link rs-fn" href="eos-workflow--src-context-xml-rs.html#item-fn-render-context-xml-5">render_context_xml</a>(&amp;context),
-            task_guidance: <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(
-                &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-85">render_task_guidance</a>(&amp;context),
+            task_guidance: <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-86">render_task_guidance</a>(&amp;context),
                 &amp;agent_def,
             )),
-            skill: <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;agent_def)?,
+            skill: <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;agent_def)?,
             agent_def,
         })
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a></code></summary><table><tbody><tr id="method-fmt-33"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-251">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a></code></summary><table><tbody><tr id="method-fmt-34"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-251">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>&quot;).finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>&quot;).finish_non_exhaustive()
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:25</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-render-task-guidance-85" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_task_guidance pub pub fn render_task_guidance (context : &amp; AgentContext) -&gt; String crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:26</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-render-task-guidance-86" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_task_guidance pub pub fn render_task_guidance (context : &amp; AgentContext) -&gt; String crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_task_guidance</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-85">render_task_guidance</a> (context : &amp; <a class="symbol-link" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>) -&gt; String</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-86">render_task_guidance</a> (context : &amp; <a class="symbol-link" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>) -&gt; String</code>
   <p class="docstring">Render role guidance from a context packet.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Render role guidance from a context packet.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-85">render_task_guidance</a>(context: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-86">render_task_guidance</a>(context: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> contents = <span class="rs-kw">match</span> context.role {
         <a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-enum-ContextRole-4">ContextRole</a>::<span class="rs-type">Planner</span> =&gt; [
             &quot;- &lt;workflow&gt;: workflow goal and current planning frame&quot;,
@@ -180,20 +180,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:85</p>
-</article><article id="item-fn-wrap-task-guidance-117" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wrap_task_guidance private fn wrap_task_guidance (prose : &amp; str , agent_def : &amp; AgentDefinition) -&gt; String crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:86</p>
+</article><article id="item-fn-wrap-task-guidance-118" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wrap_task_guidance private fn wrap_task_guidance (prose : &amp; str , agent_def : &amp; AgentDefinition) -&gt; String crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>wrap_task_guidance</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a> (prose : &amp; str , agent_def : &amp; AgentDefinition) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a> (prose : &amp; str , agent_def : &amp; AgentDefinition) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(prose: &amp;str, agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(prose: &amp;str, agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> body = prose.trim_end();
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(agent_def) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(agent_def) {
         format!(&quot;&lt;<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;\n{body}\n\n{block}\n&lt;/<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;)
     } <span class="rs-kw">else</span> {
         format!(&quot;&lt;<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;\n{body}\n&lt;/<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;)
@@ -202,24 +202,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:117</p>
-</article><article id="item-fn-build-skill-message-126" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_skill_message private fn build_skill_message (agent_def : &amp; AgentDefinition) -&gt; Result &lt; Option &lt; String &gt; &gt; crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:118</p>
+</article><article id="item-fn-build-skill-message-127" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_skill_message private fn build_skill_message (agent_def : &amp; AgentDefinition) -&gt; Result &lt; Option &lt; String &gt; &gt; crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_skill_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a> (agent_def : &amp; AgentDefinition) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Option &lt; String &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a> (agent_def : &amp; AgentDefinition) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Option &lt; String &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(path) = &amp;agent_def.skill <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
     <span class="rs-kw">let</span> raw =
         fs::read_to_string(path).map_err(|err| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(err.to_string()))?;
-    <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&amp;raw).trim().to_owned();
+    <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&amp;raw).trim().to_owned();
     <span class="rs-kw">let</span> skill_name = path
         .parent()
         .and_then(|p| p.file_name())
@@ -232,7 +232,7 @@
         body,
         &quot;&lt;/skill&gt;&quot;.to_owned(),
     ];
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(agent_def) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(agent_def) {
         parts.push(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>());
         parts.push(block);
     }
@@ -241,18 +241,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:126</p>
-</article><article id="item-fn-strip-frontmatter-152" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strip_frontmatter private fn strip_frontmatter (raw : &amp; str) -&gt; &amp; str crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:127</p>
+</article><article id="item-fn-strip-frontmatter-153" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strip_frontmatter private fn strip_frontmatter (raw : &amp; str) -&gt; &amp; str crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>strip_frontmatter</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a> (raw : &amp; str) -&gt; &amp; str</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a> (raw : &amp; str) -&gt; &amp; str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(raw: &amp;str) -&gt; &amp;str {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(raw: &amp;str) -&gt; &amp;str {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(rest) = raw.strip_prefix(&quot;---&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> raw;
     };
@@ -264,18 +264,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:152</p>
-</article><article id="item-fn-terminal-selection-block-162" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminal_selection_block private fn terminal_selection_block (agent_def : &amp; AgentDefinition) -&gt; Option &lt; String &gt; crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:153</p>
+</article><article id="item-fn-terminal-selection-block-163" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminal_selection_block private fn terminal_selection_block (agent_def : &amp; AgentDefinition) -&gt; Option &lt; String &gt; crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>terminal_selection_block</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a> (agent_def : &amp; AgentDefinition) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a> (agent_def : &amp; AgentDefinition) -&gt; Option &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminals = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
     <span class="rs-kw">for</span> terminal <span class="rs-kw">in</span> &amp;agent_def.terminals {
         <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(name) = terminal.parse::&lt;<span class="rs-type">ToolName</span>&gt;() <span class="rs-kw">else</span> {
@@ -295,8 +295,8 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:162</p>
-</article><article id="item-fn-agent-def-188" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_def private fn agent_def (terminals : Vec &lt; &amp; str &gt;) -&gt; AgentDefinition crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:163</p>
+</article><article id="item-fn-agent-def-189" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn agent_def private fn agent_def (terminals : Vec &lt; &amp; str &gt;) -&gt; AgentDefinition crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>agent_def</h3>
@@ -325,25 +325,25 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:188</p>
-</article><article id="item-fn-terminal-selection-uses-terminal-catalog-format-205" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminal_selection_uses_terminal_catalog_format private fn terminal_selection_uses_terminal_catalog_format () crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:189</p>
+</article><article id="item-fn-terminal-selection-uses-terminal-catalog-format-206" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminal_selection_uses_terminal_catalog_format private fn terminal_selection_uses_terminal_catalog_format () crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>terminal_selection_uses_terminal_catalog_format</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-uses-terminal-catalog-format-205">terminal_selection_uses_terminal_catalog_format</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-uses-terminal-catalog-format-206">terminal_selection_uses_terminal_catalog_format</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-uses-terminal-catalog-format-205">terminal_selection_uses_terminal_catalog_format</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-uses-terminal-catalog-format-206">terminal_selection_uses_terminal_catalog_format</a>() {
         <span class="rs-kw">let</span> terminal = <span class="rs-type">ToolName</span>::<span class="rs-type">SubmitGeneratorOutcome</span>;
         <span class="rs-kw">let</span> expected_catalog =
             render_tool_instruction(&amp;[terminal], <span class="rs-type">ToolInstructions</span>::<span class="rs-type">SelectionGuidance</span>);
 
         <span class="rs-kw">let</span> block =
-            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![terminal.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()])).expect(&quot;terminal block&quot;);
+            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![terminal.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()])).expect(&quot;terminal block&quot;);
 
         assert_eq!(
             block,
@@ -354,18 +354,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:205</p>
-</article><article id="item-fn-engine-221" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn engine private fn engine () -&gt; ContextEngine crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:206</p>
+</article><article id="item-fn-engine-222" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn engine private fn engine () -&gt; ContextEngine crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>engine</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a> () -&gt; <a class="symbol-link" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a> () -&gt; <a class="symbol-link" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a>() -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a>() -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a> {
         <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-kw">crate</span>::support::<span class="rs-type">MemoryStores</span>::default());
         <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-kw">crate</span>::context::<a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngineDeps-15">ContextEngineDeps</a> {
             workflow_store: stores.clone(),
@@ -377,41 +377,41 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:221</p>
-</article><article id="item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-231" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strip_frontmatter_removes_yaml_block_and_passes_plain_through private fn strip_frontmatter_removes_yaml_block_and_passes_plain_through () crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:222</p>
+</article><article id="item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-232" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strip_frontmatter_removes_yaml_block_and_passes_plain_through private fn strip_frontmatter_removes_yaml_block_and_passes_plain_through () crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>strip_frontmatter_removes_yaml_block_and_passes_plain_through</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-231">strip_frontmatter_removes_yaml_block_and_passes_plain_through</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-232">strip_frontmatter_removes_yaml_block_and_passes_plain_through</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-231">strip_frontmatter_removes_yaml_block_and_passes_plain_through</a>() {
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&quot;---\nname: x\n---\nBODY&quot;).trim(), &quot;<span class="rs-type">BODY</span>&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-232">strip_frontmatter_removes_yaml_block_and_passes_plain_through</a>() {
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&quot;---\nname: x\n---\nBODY&quot;).trim(), &quot;<span class="rs-type">BODY</span>&quot;);
         <span class="rs-comment">// No frontmatter fence -&gt; returned unchanged.</span>
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&quot;plain body&quot;), &quot;plain body&quot;);
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&quot;plain body&quot;), &quot;plain body&quot;);
         <span class="rs-comment">// An opening fence with no closing fence -&gt; returned unchanged.</span>
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&quot;---\nunterminated&quot;), &quot;---\nunterminated&quot;);
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&quot;---\nunterminated&quot;), &quot;---\nunterminated&quot;);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:231</p>
-</article><article id="item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-240" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_skill_message_reads_strips_frontmatter_and_derives_name private fn build_skill_message_reads_strips_frontmatter_and_derives_name () crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:232</p>
+</article><article id="item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-241" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_skill_message_reads_strips_frontmatter_and_derives_name private fn build_skill_message_reads_strips_frontmatter_and_derives_name () crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_skill_message_reads_strips_frontmatter_and_derives_name</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-240">build_skill_message_reads_strips_frontmatter_and_derives_name</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-241">build_skill_message_reads_strips_frontmatter_and_derives_name</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-240">build_skill_message_reads_strips_frontmatter_and_derives_name</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-241">build_skill_message_reads_strips_frontmatter_and_derives_name</a>() {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(&quot;eos-skill-{}&quot;, std::process::id()));
         <span class="rs-kw">let</span> skill_dir = root.join(&quot;my-skill&quot;);
         std::fs::create_dir_all(&amp;skill_dir).expect(&quot;mkdir skill dir&quot;);
@@ -420,7 +420,7 @@
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> def = <a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]);
         def.skill = <span class="rs-type">Some</span>(skill_file);
-        <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;def)
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;def)
             .expect(&quot;build skill message&quot;)
             .expect(&quot;a skill message&quot;);
         assert!(message.contains(&quot;<span class="rs-type">Load</span> skill: my-skill&quot;), &quot;{message}&quot;);
@@ -433,34 +433,34 @@
         );
 
         <span class="rs-comment">// No skill declared -&gt; None.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]))
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]))
             .expect(&quot;no skill is ok&quot;)
             .is_none());
 
         <span class="rs-comment">// A declared-but-missing skill file -&gt; error.</span>
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> missing = <a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]);
         missing.skill = <span class="rs-type">Some</span>(root.join(&quot;absent&quot;).join(&quot;<span class="rs-type">SKILL</span>.md&quot;));
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;missing).is_err());
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;missing).is_err());
 
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:240</p>
-</article><article id="item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-275" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present private fn wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present () crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:241</p>
+</article><article id="item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-276" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present private fn wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present () crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-275">wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-276">wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-275">wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</a>() {
-        <span class="rs-kw">let</span> plain = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(&quot;<span class="rs-type">BODY</span>&quot;, &amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]));
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-276">wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</a>() {
+        <span class="rs-kw">let</span> plain = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(&quot;<span class="rs-type">BODY</span>&quot;, &amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]));
         assert!(plain.starts_with(&quot;&lt;<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;));
         assert!(plain.contains(&quot;<span class="rs-type">BODY</span>&quot;));
         assert!(plain.ends_with(&quot;&lt;/<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;));
@@ -469,7 +469,7 @@
             &quot;no terminals -&gt; no terminal block&quot;
         );
 
-        <span class="rs-kw">let</span> with_terminal = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(
+        <span class="rs-kw">let</span> with_terminal = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(
             &quot;<span class="rs-type">BODY</span>&quot;,
             &amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![<span class="rs-type">ToolName</span>::<span class="rs-type">SubmitGeneratorOutcome</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()]),
         );
@@ -478,19 +478,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:275</p>
-</article><article id="item-fn-compose-rejects-missing-agent-and-missing-recipe-293" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn compose_rejects_missing_agent_and_missing_recipe private async fn compose_rejects_missing_agent_and_missing_recipe () crates/eos-workflow/src/context/composer.rs  ">
+  <p class="source">crates/eos-workflow/src/context/composer.rs:276</p>
+</article><article id="item-fn-compose-rejects-missing-agent-and-missing-recipe-294" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn compose_rejects_missing_agent_and_missing_recipe private async fn compose_rejects_missing_agent_and_missing_recipe () crates/eos-workflow/src/context/composer.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>compose_rejects_missing_agent_and_missing_recipe</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-compose-rejects-missing-agent-and-missing-recipe-293">compose_rejects_missing_agent_and_missing_recipe</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-context-composer-rs.html#item-fn-compose-rejects-missing-agent-and-missing-recipe-294">compose_rejects_missing_agent_and_missing_recipe</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-compose-rejects-missing-agent-and-missing-recipe-293">compose_rejects_missing_agent_and_missing_recipe</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-compose-rejects-missing-agent-and-missing-recipe-294">compose_rejects_missing_agent_and_missing_recipe</a>() {
         <span class="rs-kw">let</span> scope = <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-planner-370">for_planner</a>(
             eos_types::<span class="rs-type">WorkflowId</span>::new_v4(),
             eos_types::<span class="rs-type">IterationId</span>::new_v4(),
@@ -498,24 +498,24 @@
         );
 
         <span class="rs-comment">// Agent absent from the registry -&gt; error (before the engine is touched).</span>
-        <span class="rs-kw">let</span> empty = <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a>(),
+        <span class="rs-kw">let</span> empty = <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
+            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a>(),
             <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">AgentRegistry</span>::from_iter(<span class="rs-type">Vec</span>::&lt;<span class="rs-type">AgentDefinition</span>&gt;::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>())),
         );
-        assert!(empty.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(&quot;ghost&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
+        assert!(empty.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(&quot;ghost&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
 
         <span class="rs-comment">// Agent present but with no context_recipe -&gt; error.</span>
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> no_recipe = <a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]);
         no_recipe.name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(&quot;solo&quot;).expect(&quot;name&quot;);
         no_recipe.context_recipe = <span class="rs-type">None</span>;
         <span class="rs-kw">let</span> composer =
-            <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a>(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">AgentRegistry</span>::from_iter([no_recipe])));
-        assert!(composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(&quot;solo&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
+            <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a>(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">AgentRegistry</span>::from_iter([no_recipe])));
+        assert!(composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(&quot;solo&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/composer.rs:293</p>
+  <p class="source">crates/eos-workflow/src/context/composer.rs:294</p>
 </article></div>
 </section></div>
 </main>
@@ -528,7 +528,8 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>};
-<span class="rs-kw">use</span> eos_tools::{render_tool_instruction, <span class="rs-type">ToolInstructions</span>, <span class="rs-type">ToolName</span>};
+<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolName</span>;
+<span class="rs-kw">use</span> eos_tools::{render_tool_instruction, <span class="rs-type">ToolInstructions</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
@@ -537,7 +538,7 @@
 
 <span class="rs-comment">/// Composed launch messages for one agent run.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a> {
     <span class="rs-comment">/// Resolved agent definition.</span>
     <span class="rs-kw">pub</span> agent_def: <span class="rs-type">AgentDefinition</span>,
     <span class="rs-comment">/// Rendered `&lt;context&gt;` row.</span>
@@ -550,18 +551,18 @@
 
 <span class="rs-comment">/// Agent-entry message composer.</span>
 #[derive(<span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a> {
     engine: <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a>,
     agents: <span class="rs-type">Arc</span>&lt;<span class="rs-type">AgentRegistry</span>&gt;,
 }
 
-<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a> {
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>&quot;).finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>&quot;).finish_non_exhaustive()
     }
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a> {
     <span class="rs-comment">/// Create a composer from the context engine and agent registry.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(engine: <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a>, agents: <span class="rs-type">Arc</span>&lt;<span class="rs-type">AgentRegistry</span>&gt;) -&gt; <span class="rs-self">Self</span> {
@@ -573,11 +574,11 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`WorkflowError`] when the agent is missing or lacks a matching</span>
     <span class="rs-comment">/// context recipe.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(
         &amp;<span class="rs-self">self</span>,
         base_agent_name: &amp;str,
         scope: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a>&gt; {
         <span class="rs-kw">let</span> name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(base_agent_name)?;
         <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>
             .agents
@@ -596,13 +597,13 @@
             ))
         })?;
         <span class="rs-kw">let</span> context = <span class="rs-self">self</span>.engine.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(recipe, scope).<span class="rs-kw">await</span>?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-13">AgentEntryMessages</a> {
             context: <a class="symbol-link rs-fn" href="eos-workflow--src-context-xml-rs.html#item-fn-render-context-xml-5">render_context_xml</a>(&amp;context),
-            task_guidance: <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(
-                &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-85">render_task_guidance</a>(&amp;context),
+            task_guidance: <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-86">render_task_guidance</a>(&amp;context),
                 &amp;agent_def,
             )),
-            skill: <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;agent_def)?,
+            skill: <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;agent_def)?,
             agent_def,
         })
     }
@@ -610,7 +611,7 @@
 
 <span class="rs-comment">/// Render role guidance from a context packet.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-85">render_task_guidance</a>(context: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-render-task-guidance-86">render_task_guidance</a>(context: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> contents = <span class="rs-kw">match</span> context.role {
         <a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-enum-ContextRole-4">ContextRole</a>::<span class="rs-type">Planner</span> =&gt; [
             &quot;- &lt;workflow&gt;: workflow goal and current planning frame&quot;,
@@ -640,22 +641,22 @@
     parts.join(&quot;\n\n&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(prose: &amp;str, agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(prose: &amp;str, agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> body = prose.trim_end();
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(agent_def) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(agent_def) {
         format!(&quot;&lt;<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;\n{body}\n\n{block}\n&lt;/<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;)
     } <span class="rs-kw">else</span> {
         format!(&quot;&lt;<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;\n{body}\n&lt;/<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;)
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(path) = &amp;agent_def.skill <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
     <span class="rs-kw">let</span> raw =
         fs::read_to_string(path).map_err(|err| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(err.to_string()))?;
-    <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&amp;raw).trim().to_owned();
+    <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&amp;raw).trim().to_owned();
     <span class="rs-kw">let</span> skill_name = path
         .parent()
         .and_then(|p| p.file_name())
@@ -668,14 +669,14 @@
         body,
         &quot;&lt;/skill&gt;&quot;.to_owned(),
     ];
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(agent_def) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(agent_def) {
         parts.push(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>());
         parts.push(block);
     }
     <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(parts.join(&quot;\n&quot;)))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(raw: &amp;str) -&gt; &amp;str {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(raw: &amp;str) -&gt; &amp;str {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(rest) = raw.strip_prefix(&quot;---&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> raw;
     };
@@ -685,7 +686,7 @@
     body
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(agent_def: &amp;<span class="rs-type">AgentDefinition</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminals = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
     <span class="rs-kw">for</span> terminal <span class="rs-kw">in</span> &amp;agent_def.terminals {
         <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(name) = terminal.parse::&lt;<span class="rs-type">ToolName</span>&gt;() <span class="rs-kw">else</span> {
@@ -729,13 +730,13 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-uses-terminal-catalog-format-205">terminal_selection_uses_terminal_catalog_format</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-uses-terminal-catalog-format-206">terminal_selection_uses_terminal_catalog_format</a>() {
         <span class="rs-kw">let</span> terminal = <span class="rs-type">ToolName</span>::<span class="rs-type">SubmitGeneratorOutcome</span>;
         <span class="rs-kw">let</span> expected_catalog =
             render_tool_instruction(&amp;[terminal], <span class="rs-type">ToolInstructions</span>::<span class="rs-type">SelectionGuidance</span>);
 
         <span class="rs-kw">let</span> block =
-            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-162">terminal_selection_block</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![terminal.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()])).expect(&quot;terminal block&quot;);
+            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-terminal-selection-block-163">terminal_selection_block</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![terminal.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()])).expect(&quot;terminal block&quot;);
 
         assert_eq!(
             block,
@@ -744,7 +745,7 @@
         assert!(!block.contains(&quot;<span class="rs-type">Pick</span> exactly one&quot;));
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a>() -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a>() -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a> {
         <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-kw">crate</span>::support::<span class="rs-type">MemoryStores</span>::default());
         <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-34">ContextEngine</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-kw">crate</span>::context::<a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngineDeps-15">ContextEngineDeps</a> {
             workflow_store: stores.clone(),
@@ -755,16 +756,16 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-231">strip_frontmatter_removes_yaml_block_and_passes_plain_through</a>() {
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&quot;---\nname: x\n---\nBODY&quot;).trim(), &quot;<span class="rs-type">BODY</span>&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-removes-yaml-block-and-passes-plain-through-232">strip_frontmatter_removes_yaml_block_and_passes_plain_through</a>() {
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&quot;---\nname: x\n---\nBODY&quot;).trim(), &quot;<span class="rs-type">BODY</span>&quot;);
         <span class="rs-comment">// No frontmatter fence -&gt; returned unchanged.</span>
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&quot;plain body&quot;), &quot;plain body&quot;);
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&quot;plain body&quot;), &quot;plain body&quot;);
         <span class="rs-comment">// An opening fence with no closing fence -&gt; returned unchanged.</span>
-        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-152">strip_frontmatter</a>(&quot;---\nunterminated&quot;), &quot;---\nunterminated&quot;);
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-strip-frontmatter-153">strip_frontmatter</a>(&quot;---\nunterminated&quot;), &quot;---\nunterminated&quot;);
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-240">build_skill_message_reads_strips_frontmatter_and_derives_name</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-reads-strips-frontmatter-and-derives-name-241">build_skill_message_reads_strips_frontmatter_and_derives_name</a>() {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(&quot;eos-skill-{}&quot;, std::process::id()));
         <span class="rs-kw">let</span> skill_dir = root.join(&quot;my-skill&quot;);
         std::fs::create_dir_all(&amp;skill_dir).expect(&quot;mkdir skill dir&quot;);
@@ -773,7 +774,7 @@
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> def = <a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]);
         def.skill = <span class="rs-type">Some</span>(skill_file);
-        <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;def)
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;def)
             .expect(&quot;build skill message&quot;)
             .expect(&quot;a skill message&quot;);
         assert!(message.contains(&quot;<span class="rs-type">Load</span> skill: my-skill&quot;), &quot;{message}&quot;);
@@ -786,21 +787,21 @@
         );
 
         <span class="rs-comment">// No skill declared -&gt; None.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]))
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]))
             .expect(&quot;no skill is ok&quot;)
             .is_none());
 
         <span class="rs-comment">// A declared-but-missing skill file -&gt; error.</span>
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> missing = <a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]);
         missing.skill = <span class="rs-type">Some</span>(root.join(&quot;absent&quot;).join(&quot;<span class="rs-type">SKILL</span>.md&quot;));
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-126">build_skill_message</a>(&amp;missing).is_err());
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-build-skill-message-127">build_skill_message</a>(&amp;missing).is_err());
 
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-275">wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</a>() {
-        <span class="rs-kw">let</span> plain = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(&quot;<span class="rs-type">BODY</span>&quot;, &amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]));
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-wraps-body-and-appends-terminal-block-when-present-276">wrap_task_guidance_wraps_body_and_appends_terminal_block_when_present</a>() {
+        <span class="rs-kw">let</span> plain = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(&quot;<span class="rs-type">BODY</span>&quot;, &amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]));
         assert!(plain.starts_with(&quot;&lt;<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;));
         assert!(plain.contains(&quot;<span class="rs-type">BODY</span>&quot;));
         assert!(plain.ends_with(&quot;&lt;/<span class="rs-type">Task</span> <span class="rs-type">Guidance</span>&gt;&quot;));
@@ -809,7 +810,7 @@
             &quot;no terminals -&gt; no terminal block&quot;
         );
 
-        <span class="rs-kw">let</span> with_terminal = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-117">wrap_task_guidance</a>(
+        <span class="rs-kw">let</span> with_terminal = <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-wrap-task-guidance-118">wrap_task_guidance</a>(
             &quot;<span class="rs-type">BODY</span>&quot;,
             &amp;<a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![<span class="rs-type">ToolName</span>::<span class="rs-type">SubmitGeneratorOutcome</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()]),
         );
@@ -817,7 +818,7 @@
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-compose-rejects-missing-agent-and-missing-recipe-293">compose_rejects_missing_agent_and_missing_recipe</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-compose-rejects-missing-agent-and-missing-recipe-294">compose_rejects_missing_agent_and_missing_recipe</a>() {
         <span class="rs-kw">let</span> scope = <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-planner-370">for_planner</a>(
             eos_types::<span class="rs-type">WorkflowId</span>::new_v4(),
             eos_types::<span class="rs-type">IterationId</span>::new_v4(),
@@ -825,19 +826,19 @@
         );
 
         <span class="rs-comment">// Agent absent from the registry -&gt; error (before the engine is touched).</span>
-        <span class="rs-kw">let</span> empty = <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a>(),
+        <span class="rs-kw">let</span> empty = <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
+            <a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a>(),
             <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">AgentRegistry</span>::from_iter(<span class="rs-type">Vec</span>::&lt;<span class="rs-type">AgentDefinition</span>&gt;::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>())),
         );
-        assert!(empty.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(&quot;ghost&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
+        assert!(empty.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(&quot;ghost&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
 
         <span class="rs-comment">// Agent present but with no context_recipe -&gt; error.</span>
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> no_recipe = <a class="symbol-link rs-fn" href="eos-workflow.html#method-agent-def-204">agent_def</a>(vec![]);
         no_recipe.name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(&quot;solo&quot;).expect(&quot;name&quot;);
         no_recipe.context_recipe = <span class="rs-type">None</span>;
         <span class="rs-kw">let</span> composer =
-            <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-221">engine</a>(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">AgentRegistry</span>::from_iter([no_recipe])));
-        assert!(composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-45">compose</a>(&quot;solo&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
+            <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-26">AgentEntryComposer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#item-fn-engine-222">engine</a>(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">AgentRegistry</span>::from_iter([no_recipe])));
+        assert!(composer.<a class="symbol-link rs-fn" href="eos-workflow--src-context-composer-rs.html#method-compose-46">compose</a>(&quot;solo&quot;, &amp;scope).<span class="rs-kw">await</span>.is_err());
     }
 }
 </code></pre>

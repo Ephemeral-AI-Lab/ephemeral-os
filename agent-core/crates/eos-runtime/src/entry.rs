@@ -122,7 +122,7 @@ pub async fn run_request(
     let attempt_submission: Arc<dyn AttemptSubmissionPort> =
         Arc::new(AttemptSubmissionAdapter::new(orchestrator_registry.clone()));
     let (loop_launcher, agent_run_api_cell) = build_agent_loop_launcher(
-        services.clone(),
+        services,
         None,
         workflow_service_cell.clone(),
         on_event.clone(),

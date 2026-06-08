@@ -162,9 +162,9 @@
         )
     }
 </code></pre>
-</details></td></tr><tr id="method-drain-notifications-161"><td>method</td><td>drain_notifications</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-engine.html#method-drain-notifications-358">drain_notifications</a> (&amp; mut self) -&gt; Vec &lt; SystemNotification &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-drain-notifications-161"><td>method</td><td>drain_notifications</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a> (&amp; mut self) -&gt; Vec &lt; SystemNotification &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-358">drain_notifications</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">SystemNotification</span>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">SystemNotification</span>&gt; {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(background) = &amp;<span class="rs-self">self</span>.background {
             background.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-flush-completions-214">flush_completions</a>().<span class="rs-kw">await</span>;
         }
@@ -483,7 +483,7 @@
         )
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-358">drain_notifications</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">SystemNotification</span>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">SystemNotification</span>&gt; {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(background) = &amp;<span class="rs-self">self</span>.background {
             background.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-flush-completions-214">flush_completions</a>().<span class="rs-kw">await</span>;
         }

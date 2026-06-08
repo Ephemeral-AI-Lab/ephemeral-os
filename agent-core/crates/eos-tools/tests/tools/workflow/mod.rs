@@ -14,8 +14,7 @@ use super::super::{
     delegate_workflow::DelegateWorkflow,
 };
 use crate::support::metadata;
-use crate::WorkflowToolService;
-use eos_tool_ports::ToolExecutor;
+use eos_tool_ports::{ToolExecutor, WorkflowToolService};
 
 fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
     pairs

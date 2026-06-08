@@ -4342,7 +4342,7 @@
               "kind": "fn",
               "name": "to_message_record_kind",
               "visibility": "pub",
-              "signature": "pub fn to_message_record_kind (kind : & AgentRunMessageRecordKind ,) -> eos_agent_message_records :: AgentRunMessageRecordKind",
+              "signature": "pub fn to_message_record_kind (kind : & AgentRunMessageRecordKind ,) -> eos_agent_message_records :: AgentRunRecordKind",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -4573,21 +4573,21 @@
                   "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 275
+                  "line": 277
                 },
                 {
                   "name": "poll_agent_run_outcome",
                   "signature": "async fn poll_agent_run_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunOutcome > , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 293
+                  "line": 295
                 },
                 {
                   "name": "cancel_agent_run",
                   "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 311
+                  "line": 313
                 }
               ],
               "impl_target": "AgentRunService",
@@ -4618,7 +4618,7 @@
               ],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 343
+              "line": 345
             },
             {
               "kind": "fn",
@@ -4634,7 +4634,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 381
+              "line": 383
             },
             {
               "kind": "fn",
@@ -4650,7 +4650,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 409
+              "line": 411
             },
             {
               "kind": "fn",
@@ -4666,7 +4666,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 420
+              "line": 422
             },
             {
               "kind": "fn",
@@ -4682,7 +4682,7 @@
               "tags": [],
               "file": "crates/eos-agent-runner/src/agent_run_service.rs",
               "module": "agent_run_service",
-              "line": 443
+              "line": 445
             }
           ]
         },
@@ -11331,49 +11331,49 @@
                   "signature": "async fn execute_assistant_turn (& self , event_source : & Arc < dyn EventSource > , event_identity : & eos_agent_ports :: AgentState , state : & mut AgentLoopState ,) -> Result < AssistantTurnResult , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 154
+                  "line": 152
                 },
                 {
                   "name": "dispatch_tool_batch",
                   "signature": "async fn dispatch_tool_batch (& self , state : & AgentLoopState , calls : & [ToolUseRequest] ,) -> Result < LoopToolDispatchOutcome , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 224
+                  "line": 222
                 },
                 {
                   "name": "execute_registered_tool",
                   "signature": "async fn execute_registered_tool (& self , state : & AgentLoopState , call : & ToolUseRequest , tool : & RegisteredTool , conversation : Arc < [Message] > ,) -> Result < ToolResult , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 298
+                  "line": 296
                 },
                 {
                   "name": "build_run_services",
                   "signature": "fn build_run_services (& self , agent_run_id : & AgentRunId) -> AgentLoopRunServices",
                   "kind": "method",
                   "docs": null,
-                  "line": 338
+                  "line": 336
                 },
                 {
                   "name": "resolve_event_source",
                   "signature": "fn resolve_event_source (& self , request : & StartAgentLoopRequest , agent_state : & eos_agent_ports :: AgentState ,) -> Arc < dyn EventSource >",
                   "kind": "method",
                   "docs": null,
-                  "line": 347
+                  "line": 345
                 },
                 {
                   "name": "drain_notifications",
                   "signature": "async fn drain_notifications (& self , state : & mut AgentLoopState , event_identity : & eos_agent_ports :: AgentState ,)",
                   "kind": "method",
                   "docs": null,
-                  "line": 358
+                  "line": 356
                 },
                 {
                   "name": "emit_event",
                   "signature": "fn emit_event (& self , event : & StreamEvent)",
                   "kind": "method",
                   "docs": null,
-                  "line": 372
+                  "line": 370
                 }
               ],
               "impl_target": "AgentLoopExecutor",
@@ -11420,7 +11420,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 379
+              "line": 377
             },
             {
               "kind": "struct",
@@ -11447,7 +11447,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 391
+              "line": 389
             },
             {
               "kind": "struct",
@@ -11485,7 +11485,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 396
+              "line": 394
             },
             {
               "kind": "fn",
@@ -11501,7 +11501,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 403
+              "line": 401
             },
             {
               "kind": "fn",
@@ -11517,7 +11517,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 427
+              "line": 425
             },
             {
               "kind": "fn",
@@ -11533,7 +11533,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 446
+              "line": 444
             },
             {
               "kind": "fn",
@@ -11549,7 +11549,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 457
+              "line": 455
             },
             {
               "kind": "fn",
@@ -11565,7 +11565,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/agent_loop_executor.rs",
               "module": "agent_loop::agent_loop_executor",
-              "line": 467
+              "line": 465
             }
           ]
         },
@@ -23928,7 +23928,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 33
+              "line": 34
             },
             {
               "kind": "impl",
@@ -23943,7 +23943,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 50
+                  "line": 51
                 }
               ],
               "impl_target": "RuntimeAgentRunner",
@@ -23955,7 +23955,7 @@
               ],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 49
+              "line": 50
             },
             {
               "kind": "impl",
@@ -23970,7 +23970,7 @@
                   "signature": "pub(crate) fn new (services : RuntimeServices , workspace_root : impl Into < String > , attempt_submission : Arc < dyn AttemptSubmissionPort > , workflow_service : Arc < OnceLock < Arc < dyn WorkflowApi > > > , event_callback : Option < EventCallback > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 56
+                  "line": 57
                 }
               ],
               "impl_target": "RuntimeAgentRunner",
@@ -23981,7 +23981,7 @@
               ],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 55
+              "line": 56
             },
             {
               "kind": "impl",
@@ -23996,7 +23996,7 @@
                   "signature": "async fn run (& self , launch : AgentLaunch) -> WorkflowResult < AgentRunReport >",
                   "kind": "method",
                   "docs": null,
-                  "line": 75
+                  "line": 76
                 }
               ],
               "impl_target": "RuntimeAgentRunner",
@@ -24009,7 +24009,7 @@
               ],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 73
+              "line": 74
             },
             {
               "kind": "fn",
@@ -24025,7 +24025,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/agent_runner.rs",
               "module": "agent_runner",
-              "line": 155
+              "line": 156
             }
           ]
         },
@@ -24326,7 +24326,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 27
+              "line": 28
             },
             {
               "kind": "fn",
@@ -24342,7 +24342,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 39
+              "line": 40
             },
             {
               "kind": "fn",
@@ -24358,7 +24358,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 68
+              "line": 69
             },
             {
               "kind": "fn",
@@ -24374,7 +24374,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 73
+              "line": 74
             },
             {
               "kind": "struct",
@@ -24413,7 +24413,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 78
+              "line": 79
             },
             {
               "kind": "impl",
@@ -24428,7 +24428,7 @@
                   "signature": "async fn execute (& self , input : & JsonObject , ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 88
+                  "line": 89
                 }
               ],
               "impl_target": "PluginToolExecutor",
@@ -24441,7 +24441,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 86
+              "line": 87
             },
             {
               "kind": "fn",
@@ -24459,7 +24459,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 124
+              "line": 125
             },
             {
               "kind": "fn",
@@ -24477,7 +24477,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 146
+              "line": 147
             },
             {
               "kind": "fn",
@@ -24493,7 +24493,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools",
-              "line": 154
+              "line": 155
             },
             {
               "kind": "fn",
@@ -24511,7 +24511,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools::tests",
-              "line": 174
+              "line": 175
             },
             {
               "kind": "fn",
@@ -24530,7 +24530,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools::tests",
-              "line": 188
+              "line": 189
             },
             {
               "kind": "struct",
@@ -24565,7 +24565,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools::tests",
-              "line": 270
+              "line": 271
             },
             {
               "kind": "struct",
@@ -24591,7 +24591,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools::tests",
-              "line": 277
+              "line": 278
             },
             {
               "kind": "impl",
@@ -24606,14 +24606,14 @@
                   "signature": "async fn call (& self , _sandbox_id : & SandboxId , op : DaemonOp , payload : JsonObject , timeout_s : u32 ,) -> Result < JsonObject , SandboxPortError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 284
+                  "line": 285
                 },
                 {
                   "name": "call_dynamic",
                   "signature": "async fn call_dynamic (& self , _sandbox_id : & SandboxId , op : & str , payload : JsonObject , timeout_s : u32 ,) -> Result < JsonObject , SandboxPortError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 299
+                  "line": 300
                 }
               ],
               "impl_target": "PluginToolTestTransport",
@@ -24626,7 +24626,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools::tests",
-              "line": 282
+              "line": 283
             },
             {
               "kind": "fn",
@@ -24642,7 +24642,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin_tools.rs",
               "module": "plugin_tools::tests",
-              "line": 315
+              "line": 316
             }
           ]
         },
@@ -25427,7 +25427,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 38
+              "line": 37
             },
             {
               "kind": "impl",
@@ -25442,7 +25442,7 @@
                   "signature": "async fn stream_message (& self , _request : LlmRequest) -> Result < LlmStream , ProviderError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 46
+                  "line": 45
                 }
               ],
               "impl_target": "UnconfiguredLlmClient",
@@ -25455,7 +25455,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 44
+              "line": 43
             },
             {
               "kind": "struct",
@@ -25476,7 +25476,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 53
+              "line": 52
             },
             {
               "kind": "impl",
@@ -25491,7 +25491,7 @@
                   "signature": "async fn call (& self , _sandbox_id : & SandboxId , _op : DaemonOp , _payload : JsonObject , _timeout_s : u32 ,) -> Result < JsonObject , SandboxPortError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 62
+                  "line": 61
                 }
               ],
               "impl_target": "UnconfiguredSandboxTransport",
@@ -25504,7 +25504,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 60
+              "line": 59
             },
             {
               "kind": "struct",
@@ -25524,7 +25524,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 76
+              "line": 75
             },
             {
               "kind": "impl",
@@ -25539,7 +25539,7 @@
                   "signature": "async fn prepare_for_run (& self , _request_id : & RequestId , _sandbox_id : Option < & str > ,) -> Result < RequestSandboxBinding , SandboxProvisionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 84
+                  "line": 83
                 }
               ],
               "impl_target": "UnconfiguredProvisioner",
@@ -25552,7 +25552,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 82
+              "line": 81
             },
             {
               "kind": "struct",
@@ -25652,7 +25652,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 95
+              "line": 94
             },
             {
               "kind": "impl",
@@ -25667,7 +25667,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 120
+                  "line": 119
                 }
               ],
               "impl_target": "RuntimeServicesBuilder",
@@ -25679,7 +25679,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 119
+              "line": 118
             },
             {
               "kind": "impl",
@@ -25694,119 +25694,119 @@
                   "signature": "pub fn database_url (mut self , url : impl Into < String >) -> Self",
                   "kind": "method",
                   "docs": "Override the database URL (test seam; a network URL makes `build()` fail\nfast).",
-                  "line": 127
+                  "line": 126
                 },
                 {
                   "name": "llm_client",
                   "signature": "pub fn llm_client (mut self , client : Arc < dyn LlmClient >) -> Self",
                   "kind": "method",
                   "docs": "Inject an LLM client (an unconfigured placeholder by default).",
-                  "line": 134
+                  "line": 133
                 },
                 {
                   "name": "providers_config",
                   "signature": "pub fn providers_config (mut self , config : ProvidersConfig) -> Self",
                   "kind": "method",
                   "docs": "Inject provider config used to construct the default LLM client.",
-                  "line": 140
+                  "line": 139
                 },
                 {
                   "name": "workflow_config",
                   "signature": "pub fn workflow_config (mut self , config : WorkflowConfig) -> Self",
                   "kind": "method",
                   "docs": "Inject workflow config used to wire attempt and planner-depth runtime\ntunables.",
-                  "line": 146
+                  "line": 145
                 },
                 {
                   "name": "runtime_config",
                   "signature": "pub fn runtime_config (mut self , config : RuntimeConfig) -> Self",
                   "kind": "method",
                   "docs": "Inject runtime config used to wire runtime-local background tunables.",
-                  "line": 153
+                  "line": 152
                 },
                 {
                   "name": "event_source_factory",
                   "signature": "pub fn event_source_factory (mut self , factory : EventSourceFactory) -> Self",
                   "kind": "method",
                   "docs": "Inject the per-agent event-source factory (mock harness).",
-                  "line": 159
+                  "line": 158
                 },
                 {
                   "name": "audit",
                   "signature": "pub fn audit (mut self , audit : Arc < dyn AuditSink >) -> Self",
                   "kind": "method",
                   "docs": "Inject an audit sink (a no-op sink by default unless `audit_path` is set).",
-                  "line": 165
+                  "line": 164
                 },
                 {
                   "name": "audit_path",
                   "signature": "pub fn audit_path (mut self , path : impl Into < PathBuf >) -> Self",
                   "kind": "method",
                   "docs": "Write audit events to a buffered JSONL file at `path`.",
-                  "line": 171
+                  "line": 170
                 },
                 {
                   "name": "message_records_root",
                   "signature": "pub fn message_records_root (mut self , path : impl Into < PathBuf >) -> Self",
                   "kind": "method",
                   "docs": "Write and serve agent-node `messages.jsonl` / `events.jsonl` under this\nmessage-record root.",
-                  "line": 177
+                  "line": 176
                 },
                 {
                   "name": "agent_registry",
                   "signature": "pub fn agent_registry (mut self , registry : Arc < AgentRegistry >) -> Self",
                   "kind": "method",
                   "docs": "Inject a prebuilt agent registry (else load from `agents_dir`, else empty).",
-                  "line": 184
+                  "line": 183
                 },
                 {
                   "name": "agents_dir",
                   "signature": "pub fn agents_dir (mut self , dir : impl Into < PathBuf >) -> Self",
                   "kind": "method",
                   "docs": "Load agent profiles from this directory tree.",
-                  "line": 190
+                  "line": 189
                 },
                 {
                   "name": "tool_config",
                   "signature": "pub fn tool_config (mut self , config : Arc < ToolConfigSet >) -> Self",
                   "kind": "method",
                   "docs": "Inject a prebuilt tool config (else load from `tools_root`).",
-                  "line": 196
+                  "line": 195
                 },
                 {
                   "name": "tools_root",
                   "signature": "pub fn tools_root (mut self , root : impl Into < PathBuf >) -> Self",
                   "kind": "method",
                   "docs": "Load the externalized tool config from this `.eos-agents/tools` root.",
-                  "line": 202
+                  "line": 201
                 },
                 {
                   "name": "skill_registry",
                   "signature": "pub fn skill_registry (mut self , registry : Arc < SkillRegistry >) -> Self",
                   "kind": "method",
                   "docs": "Inject a prebuilt skill registry (else load from `skill_root`, else empty).",
-                  "line": 208
+                  "line": 207
                 },
                 {
                   "name": "skill_root",
                   "signature": "pub fn skill_root (mut self , root : impl Into < PathBuf >) -> Self",
                   "kind": "method",
                   "docs": "Load skills from this root directory.",
-                  "line": 214
+                  "line": 213
                 },
                 {
                   "name": "sandbox_gateway",
                   "signature": "pub fn sandbox_gateway (mut self , gateway : Arc < dyn SandboxGateway >) -> Self",
                   "kind": "method",
                   "docs": "Inject the production sandbox gateway: one handle that hands back the\ntransport (per-tool daemon RPC) and provisioner (request binding) sharing\nthe backend's registry/lifecycle. This is the production-visible seam the\nbackend composition root wires its `SandboxManager` into; without it the\nruntime falls back to placeholders that error on first sandbox use. Tests\ninject a fake gateway wrapping a fake transport and provisioner.",
-                  "line": 220
+                  "line": 219
                 },
                 {
                   "name": "build",
                   "signature": "pub async fn build (self) -> Result < RuntimeServices >",
                   "kind": "method",
                   "docs": "Construct the runtime graph: build the `SQLite` pool (fail fast on a network\nURL), construct every store and seam, apply the model registry config,\nand validate agent profile tool names against the registry.\n\n# Errors\nReturns an error if the DB URL is non-local, the pool/migrations fail, a\nconfigured agent/skill/plugin root cannot be loaded, or an agent names an\nunknown tool.",
-                  "line": 231
+                  "line": 230
                 }
               ],
               "impl_target": "RuntimeServicesBuilder",
@@ -25817,7 +25817,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 126
+              "line": 125
             },
             {
               "kind": "fn",
@@ -25835,7 +25835,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 384
+              "line": 383
             },
             {
               "kind": "fn",
@@ -25851,7 +25851,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 397
+              "line": 396
             },
             {
               "kind": "fn",
@@ -25867,7 +25867,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 467
+              "line": 466
             },
             {
               "kind": "fn",
@@ -25883,7 +25883,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 480
+              "line": 479
             },
             {
               "kind": "fn",
@@ -25899,7 +25899,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 484
+              "line": 483
             },
             {
               "kind": "fn",
@@ -25915,7 +25915,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 494
+              "line": 493
             },
             {
               "kind": "fn",
@@ -25931,7 +25931,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 509
+              "line": 508
             },
             {
               "kind": "fn",
@@ -25947,7 +25947,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 516
+              "line": 515
             },
             {
               "kind": "fn",
@@ -25963,7 +25963,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder",
-              "line": 527
+              "line": 526
             },
             {
               "kind": "fn",
@@ -25979,7 +25979,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder::tests",
-              "line": 552
+              "line": 551
             },
             {
               "kind": "fn",
@@ -25995,7 +25995,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder::tests",
-              "line": 570
+              "line": 569
             },
             {
               "kind": "fn",
@@ -26013,7 +26013,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder::tests",
-              "line": 577
+              "line": 576
             },
             {
               "kind": "fn",
@@ -26031,7 +26031,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder::tests",
-              "line": 584
+              "line": 583
             },
             {
               "kind": "fn",
@@ -26049,7 +26049,7 @@
               ],
               "file": "crates/eos-runtime/src/runtime_services/builder.rs",
               "module": "runtime_services::builder::tests",
-              "line": 594
+              "line": 593
             }
           ]
         },
@@ -36236,7 +36236,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 50
+              "line": 51
             },
             {
               "kind": "fn",
@@ -36252,7 +36252,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 61
+              "line": 62
             },
             {
               "kind": "fn",
@@ -36268,7 +36268,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 86
+              "line": 87
             },
             {
               "kind": "fn",
@@ -36284,7 +36284,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 97
+              "line": 98
             },
             {
               "kind": "fn",
@@ -36300,7 +36300,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 112
+              "line": 113
             },
             {
               "kind": "fn",
@@ -36316,7 +36316,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 122
+              "line": 123
             },
             {
               "kind": "fn",
@@ -36332,7 +36332,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 138
+              "line": 139
             },
             {
               "kind": "fn",
@@ -36348,7 +36348,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 150
+              "line": 151
             },
             {
               "kind": "fn",
@@ -36364,7 +36364,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 195
+              "line": 196
             },
             {
               "kind": "fn",
@@ -36380,7 +36380,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 207
+              "line": 208
             },
             {
               "kind": "fn",
@@ -36396,7 +36396,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 211
+              "line": 212
             },
             {
               "kind": "fn",
@@ -36412,7 +36412,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 223
+              "line": 224
             },
             {
               "kind": "fn",
@@ -36428,7 +36428,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/advisor_prompt.rs",
               "module": "tools::ask_helper::advisor_prompt",
-              "line": 227
+              "line": 228
             }
           ]
         },
@@ -36467,7 +36467,7 @@
               ],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 30
+              "line": 31
             },
             {
               "kind": "struct",
@@ -36489,7 +36489,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 39
+              "line": 40
             },
             {
               "kind": "impl",
@@ -36504,7 +36504,7 @@
                   "signature": "fn new (agent_run_service : Option < Arc < dyn AgentRunApi > >) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 44
+                  "line": 45
                 }
               ],
               "impl_target": "AskAdvisor",
@@ -36515,7 +36515,7 @@
               ],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 43
+              "line": 44
             },
             {
               "kind": "impl",
@@ -36530,7 +36530,7 @@
                   "signature": "async fn execute (& self , input : & JsonObject , ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 51
+                  "line": 52
                 }
               ],
               "impl_target": "AskAdvisor",
@@ -36543,7 +36543,7 @@
               ],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 49
+              "line": 50
             },
             {
               "kind": "fn",
@@ -36559,7 +36559,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 116
+              "line": 117
             },
             {
               "kind": "fn",
@@ -36575,7 +36575,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 125
+              "line": 126
             },
             {
               "kind": "fn",
@@ -36591,7 +36591,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 139
+              "line": 140
             },
             {
               "kind": "fn",
@@ -36607,7 +36607,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/ask_helper/ask_advisor.rs",
               "module": "tools::ask_helper::ask_advisor",
-              "line": 162
+              "line": 163
             }
           ]
         },
@@ -38854,7 +38854,7 @@
                 },
                 {
                   "name": "set_isolated_workspace_mode",
-                  "signature": "pub(crate) async fn set_isolated_workspace_mode (& self , agent_run_id : & AgentRunId , is_isolated : bool ,) -> Result < () , crate :: ToolError >",
+                  "signature": "pub(crate) async fn set_isolated_workspace_mode (& self , agent_run_id : & AgentRunId , is_isolated : bool ,) -> Result < () , eos_tool_ports :: ToolError >",
                   "kind": "method",
                   "docs": null,
                   "line": 101
@@ -47405,7 +47405,7 @@
               "kind": "fn",
               "name": "gen",
               "visibility": "private",
-              "signature": "fn gen (id : & str , needs : & [& str]) -> eos_tools :: PlanTask",
+              "signature": "fn gen (id : & str , needs : & [& str]) -> eos_tool_ports :: PlanTask",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -47421,7 +47421,7 @@
               "kind": "fn",
               "name": "red",
               "visibility": "private",
-              "signature": "fn red (id : & str , needs : & [& str]) -> eos_tools :: PlanReducer",
+              "signature": "fn red (id : & str , needs : & [& str]) -> eos_tool_ports :: PlanReducer",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -47437,7 +47437,7 @@
               "kind": "fn",
               "name": "shape_plan",
               "visibility": "private",
-              "signature": "fn shape_plan (tasks : Vec < eos_tools :: PlanTask > , reducers : Vec < eos_tools :: PlanReducer > ,) -> PlannerPlan",
+              "signature": "fn shape_plan (tasks : Vec < eos_tool_ports :: PlanTask > , reducers : Vec < eos_tool_ports :: PlanReducer > ,) -> PlannerPlan",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -47754,7 +47754,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 12
+              "line": 13
             },
             {
               "kind": "struct",
@@ -47783,7 +47783,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 25
+              "line": 26
             },
             {
               "kind": "impl",
@@ -47798,7 +47798,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 33
+                  "line": 34
                 }
               ],
               "impl_target": "AgentEntryComposer",
@@ -47810,7 +47810,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 32
+              "line": 33
             },
             {
               "kind": "impl",
@@ -47825,14 +47825,14 @@
                   "signature": "pub fn new (engine : ContextEngine , agents : Arc < AgentRegistry >) -> Self",
                   "kind": "constructor",
                   "docs": "Create a composer from the context engine and agent registry.",
-                  "line": 39
+                  "line": 40
                 },
                 {
                   "name": "compose",
                   "signature": "pub async fn compose (& self , base_agent_name : & str , scope : & ContextScope ,) -> Result < AgentEntryMessages >",
                   "kind": "method",
                   "docs": "Compose the launch rows for `base_agent_name`.\n\n# Errors\nReturns [`WorkflowError`] when the agent is missing or lacks a matching\ncontext recipe.",
-                  "line": 45
+                  "line": 46
                 }
               ],
               "impl_target": "AgentEntryComposer",
@@ -47843,7 +47843,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 38
+              "line": 39
             },
             {
               "kind": "fn",
@@ -47861,7 +47861,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 85
+              "line": 86
             },
             {
               "kind": "fn",
@@ -47877,7 +47877,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 117
+              "line": 118
             },
             {
               "kind": "fn",
@@ -47893,7 +47893,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 126
+              "line": 127
             },
             {
               "kind": "fn",
@@ -47909,7 +47909,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 152
+              "line": 153
             },
             {
               "kind": "fn",
@@ -47925,7 +47925,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 162
+              "line": 163
             },
             {
               "kind": "fn",
@@ -47941,7 +47941,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 188
+              "line": 189
             },
             {
               "kind": "fn",
@@ -47959,7 +47959,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 205
+              "line": 206
             },
             {
               "kind": "fn",
@@ -47975,7 +47975,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 221
+              "line": 222
             },
             {
               "kind": "fn",
@@ -47993,7 +47993,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 231
+              "line": 232
             },
             {
               "kind": "fn",
@@ -48011,7 +48011,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 240
+              "line": 241
             },
             {
               "kind": "fn",
@@ -48029,7 +48029,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 275
+              "line": 276
             },
             {
               "kind": "fn",
@@ -48048,7 +48048,7 @@
               ],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer::tests",
-              "line": 293
+              "line": 294
             }
           ]
         },
@@ -48827,7 +48827,7 @@
                     {
                       "name": "0",
                       "visibility": "private",
-                      "ty": "eos_tools :: ToolError"
+                      "ty": "eos_tool_ports :: ToolError"
                     }
                   ]
                 },

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use eos_types::WorkflowApi;
 
-use crate::WorkflowToolService;
+use eos_tool_ports::WorkflowToolService;
 
 pub(crate) fn register(
     registry: &mut eos_tool_ports::ToolRegistry,

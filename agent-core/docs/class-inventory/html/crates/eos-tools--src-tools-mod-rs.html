@@ -138,24 +138,24 @@
         subagent_sessions.clone(),
     );
     <span class="rs-kw">let</span> command_service = <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-126">CommandToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-95">transport</a>(), command_sessions);
-    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         sandbox_service.clone(),
         command_service,
     );
-    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
-    submission::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
-    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, agent_run_service.clone());
-    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, workflow_service, workflow_sessions);
-    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
+    submission::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
+    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, agent_run_service.clone());
+    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, workflow_service, workflow_sessions);
+    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         caller,
         agent_run_service,
         subagent_sessions,
     );
-    skills::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
+    skills::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
     registry.apply_hook_services(hook_services);
     registry
 }
@@ -184,7 +184,7 @@
     output: <span class="rs-type">OutputShape</span>,
     executor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">ToolExecutor</span>&gt;,
 ) {
-    registry.<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    registry.<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         <span class="rs-type">RegisteredTool</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(name, config.intent, config.terminal, spec, output, executor)
             .with_hooks(config.hooks.clone()),
     );
@@ -222,7 +222,7 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! The model-facing tools: backend-shaped category folders with one file per</span>
 <span class="rs-comment">//! model-callable tool. Each tool authors its Input/Output DTOs and a</span>
-<span class="rs-comment">//! [`ToolExecutor`](crate::ToolExecutor) impl; the description and the intent /</span>
+<span class="rs-comment">//! [`ToolExecutor`](eos_tool_ports::ToolExecutor) impl; the description and the intent /</span>
 <span class="rs-comment">//! terminal flag / hooks come from the externalized</span>
 <span class="rs-comment">//! [`ToolConfigSet`](crate::registry::config::ToolConfigSet) (`.eos-agents/tools/*.md`),</span>
 <span class="rs-comment">//! which the registry builder stamps onto each `RegisteredTool`.</span>
@@ -279,7 +279,7 @@
     output: <span class="rs-type">OutputShape</span>,
     executor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">ToolExecutor</span>&gt;,
 ) {
-    registry.<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    registry.<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         <span class="rs-type">RegisteredTool</span>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(name, config.intent, config.terminal, spec, output, executor)
             .with_hooks(config.hooks.clone()),
     );
@@ -330,24 +330,24 @@
         subagent_sessions.clone(),
     );
     <span class="rs-kw">let</span> command_service = <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-126">CommandToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-new-314">new</a>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-95">transport</a>(), command_sessions);
-    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         sandbox_service.clone(),
         command_service,
     );
-    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
-    submission::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
-    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, agent_run_service.clone());
-    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, workflow_service, workflow_sessions);
-    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(
+    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
+    submission::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
+    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, agent_run_service.clone());
+    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, workflow_service, workflow_sessions);
+    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         caller,
         agent_run_service,
         subagent_sessions,
     );
-    skills::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-162">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
+    skills::<a class="symbol-link rs-fn" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-fn-register-163">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
     registry.apply_hook_services(hook_services);
     registry
 }

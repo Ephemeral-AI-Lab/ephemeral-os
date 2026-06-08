@@ -64,9 +64,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a></code>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>cell</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-77"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-new-56">new</a> (cell : <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>cell</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-77"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-new-57">new</a> (cell : <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(cell: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(cell: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { cell }
     }
 </code></pre>
@@ -79,9 +79,9 @@
             .ok_or_else(|| <span class="rs-type">AgentRunError</span>::<span class="rs-type">Internal</span>(&quot;agent-run <span class="rs-type">API</span> not initialized&quot;.to_owned()))
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a></code></summary><table><tbody><tr id="method-fmt-90"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-50">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a></code></summary><table><tbody><tr id="method-fmt-90"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-50">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a>&quot;)
             .finish_non_exhaustive()
     }
@@ -134,9 +134,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>services</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a></code></td></tr><tr><td>private</td><td>attempt_submission</td><td><code>Option &lt; AttemptSubmissionService &gt;</code></td></tr><tr><td>private</td><td>workflow_service</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowApi &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>agent_run_api</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a></code></summary><table><tbody><tr id="method-fmt-136"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-50">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>services</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a></code></td></tr><tr><td>private</td><td>attempt_submission</td><td><code>Option &lt; AttemptSubmissionService &gt;</code></td></tr><tr><td>private</td><td>workflow_service</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowApi &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>agent_run_api</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a></code></summary><table><tbody><tr id="method-fmt-136"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-50">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a>&quot;)
             .finish_non_exhaustive()
     }
@@ -147,7 +147,7 @@
         &amp;<span class="rs-self">self</span>,
         input: <span class="rs-type">AgentLoopToolRegistryBuildInput</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ToolRegistry</span>, eos_engine::<span class="rs-type">EngineError</span>&gt; {
-        <span class="rs-kw">let</span> sandbox_service = <span class="rs-type">SandboxToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-self">self</span>.services.sandbox.transport.clone())
+        <span class="rs-kw">let</span> sandbox_service = <span class="rs-type">SandboxToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-self">self</span>.services.sandbox.transport.clone())
             .with_isolated_workspace_service(
                 <span class="rs-self">self</span>.services.agent_state.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-isolated-workspace-tool-service-55">isolated_workspace_tool_service</a>(),
             );
@@ -167,7 +167,7 @@
             &amp;<span class="rs-self">self</span>.services.agent_core.tool_config,
             &amp;caller,
             sandbox_service,
-            <span class="rs-type">Some</span>(<span class="rs-type">RootSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">RootSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
                 <span class="rs-self">self</span>.services.db.task_store.clone(),
                 <span class="rs-self">self</span>.services.db.request_store.clone(),
             )),
@@ -177,9 +177,9 @@
             <span class="rs-self">self</span>.workflow_service.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-get-48">get</a>().cloned(),
             <span class="rs-type">Some</span>(input.workflow_sessions),
             <span class="rs-type">Some</span>(input.command_sessions),
-            <span class="rs-type">SkillToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-self">self</span>.services.agent_core.skill_registry.clone()),
+            <span class="rs-type">SkillToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-self">self</span>.services.agent_core.skill_registry.clone()),
         );
-        <a class="symbol-link rs-fn" href="eos-runtime--src-plugin-tools-rs.html#item-fn-register-plugin-tools-27">register_plugin_tools</a>(&amp;<span class="rs-kw">mut</span> registry, &amp;plugin_sandbox_service);
+        <a class="symbol-link rs-fn" href="eos-runtime--src-plugin-tools-rs.html#item-fn-register-plugin-tools-28">register_plugin_tools</a>(&amp;<span class="rs-kw">mut</span> registry, &amp;plugin_sandbox_service);
         <span class="rs-type">Ok</span>(registry)
     }
 </code></pre>
@@ -194,9 +194,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-184">RuntimeExecutionMetadataService</a></code>
   <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>services</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-190"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-new-56">new</a> (services : <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>services</td><td><code><a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-190"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-runtime.html#method-new-57">new</a> (services : <a class="symbol-link" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(services: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(services: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { services }
     }
 </code></pre>
@@ -373,7 +373,7 @@
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(tool_use_id) = input.tool_use_id {
             builder = builder.tool_use_id(tool_use_id);
         }
-        <span class="rs-type">Ok</span>(builder.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-build-231">build</a>())
+        <span class="rs-type">Ok</span>(builder.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-build-230">build</a>())
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
@@ -409,17 +409,17 @@
     workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt;,
     event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-type">EventCallback</span>&gt;,
 ) -&gt; (<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentLoopLauncher</span>&gt;, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) {
-    <span class="rs-kw">let</span> agent_run_api = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> metadata_service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-184">RuntimeExecutionMetadataService</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(services.clone()));
-    <span class="rs-kw">let</span> registry_factory = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a> {
+    <span class="rs-kw">let</span> agent_run_api = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> metadata_service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-184">RuntimeExecutionMetadataService</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(services.clone()));
+    <span class="rs-kw">let</span> registry_factory = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a> {
         services: services.clone(),
         attempt_submission,
         workflow_service,
         agent_run_api: agent_run_api.clone(),
     });
-    <span class="rs-kw">let</span> background_dependencies = <span class="rs-type">AgentLoopBackgroundDependencies</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
-        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(agent_run_api.clone())),
-        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">SandboxCommandService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> background_dependencies = <span class="rs-type">AgentLoopBackgroundDependencies</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(agent_run_api.clone())),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">SandboxCommandService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
             services.sandbox.transport.clone(),
         )),
         services.engine.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-engine-rs.html#method-command-session-completion-poll-interval-20">command_session_completion_poll_interval</a>(),
@@ -431,15 +431,15 @@
             registry_factory.clone(),
             metadata_service.clone(),
         ),
-        <span class="rs-type">None</span> =&gt; <span class="rs-type">TokioAgentLoopLauncher</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
-            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">ProviderEventSource</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(services.engine.llm_client.clone())),
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">TokioAgentLoopLauncher</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">ProviderEventSource</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(services.engine.llm_client.clone())),
             registry_factory,
             metadata_service,
         ),
     }
     .with_background_dependencies(background_dependencies)
     .with_event_callback(event_callback);
-    <span class="rs-kw">let</span> launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentLoopLauncher</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(launcher_impl);
+    <span class="rs-kw">let</span> launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentLoopLauncher</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(launcher_impl);
     (launcher, agent_run_api)
 }
 </code></pre>
@@ -490,17 +490,17 @@
     workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;&gt;&gt;,
     event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-type">EventCallback</span>&gt;,
 ) -&gt; (<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentLoopLauncher</span>&gt;, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) {
-    <span class="rs-kw">let</span> agent_run_api = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>());
-    <span class="rs-kw">let</span> metadata_service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-184">RuntimeExecutionMetadataService</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(services.clone()));
-    <span class="rs-kw">let</span> registry_factory = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a> {
+    <span class="rs-kw">let</span> agent_run_api = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>());
+    <span class="rs-kw">let</span> metadata_service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-184">RuntimeExecutionMetadataService</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(services.clone()));
+    <span class="rs-kw">let</span> registry_factory = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a> {
         services: services.clone(),
         attempt_submission,
         workflow_service,
         agent_run_api: agent_run_api.clone(),
     });
-    <span class="rs-kw">let</span> background_dependencies = <span class="rs-type">AgentLoopBackgroundDependencies</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
-        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(agent_run_api.clone())),
-        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">SandboxCommandService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+    <span class="rs-kw">let</span> background_dependencies = <span class="rs-type">AgentLoopBackgroundDependencies</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(agent_run_api.clone())),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">SandboxCommandService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
             services.sandbox.transport.clone(),
         )),
         services.engine.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-engine-rs.html#method-command-session-completion-poll-interval-20">command_session_completion_poll_interval</a>(),
@@ -512,15 +512,15 @@
             registry_factory.clone(),
             metadata_service.clone(),
         ),
-        <span class="rs-type">None</span> =&gt; <span class="rs-type">TokioAgentLoopLauncher</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
-            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-type">ProviderEventSource</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(services.engine.llm_client.clone())),
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">TokioAgentLoopLauncher</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
+            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-type">ProviderEventSource</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(services.engine.llm_client.clone())),
             registry_factory,
             metadata_service,
         ),
     }
     .with_background_dependencies(background_dependencies)
     .with_event_callback(event_callback);
-    <span class="rs-kw">let</span> launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentLoopLauncher</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(launcher_impl);
+    <span class="rs-kw">let</span> launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentLoopLauncher</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(launcher_impl);
     (launcher, agent_run_api)
 }
 
@@ -530,7 +530,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(cell: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(cell: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-type-AgentRunApiCell-26">AgentRunApiCell</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { cell }
     }
 
@@ -543,7 +543,7 @@
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-50">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-LateBoundAgentRunApi-71">LateBoundAgentRunApi</a>&quot;)
             .finish_non_exhaustive()
     }
@@ -589,7 +589,7 @@
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-50">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeToolRegistryFactory-128">RuntimeToolRegistryFactory</a>&quot;)
             .finish_non_exhaustive()
     }
@@ -600,7 +600,7 @@
         &amp;<span class="rs-self">self</span>,
         input: <span class="rs-type">AgentLoopToolRegistryBuildInput</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ToolRegistry</span>, eos_engine::<span class="rs-type">EngineError</span>&gt; {
-        <span class="rs-kw">let</span> sandbox_service = <span class="rs-type">SandboxToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-self">self</span>.services.sandbox.transport.clone())
+        <span class="rs-kw">let</span> sandbox_service = <span class="rs-type">SandboxToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-self">self</span>.services.sandbox.transport.clone())
             .with_isolated_workspace_service(
                 <span class="rs-self">self</span>.services.agent_state.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-isolated-workspace-tool-service-55">isolated_workspace_tool_service</a>(),
             );
@@ -620,7 +620,7 @@
             &amp;<span class="rs-self">self</span>.services.agent_core.tool_config,
             &amp;caller,
             sandbox_service,
-            <span class="rs-type">Some</span>(<span class="rs-type">RootSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">RootSubmissionService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(
                 <span class="rs-self">self</span>.services.db.task_store.clone(),
                 <span class="rs-self">self</span>.services.db.request_store.clone(),
             )),
@@ -630,9 +630,9 @@
             <span class="rs-self">self</span>.workflow_service.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-agent-state-rs.html#method-get-48">get</a>().cloned(),
             <span class="rs-type">Some</span>(input.workflow_sessions),
             <span class="rs-type">Some</span>(input.command_sessions),
-            <span class="rs-type">SkillToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(<span class="rs-self">self</span>.services.agent_core.skill_registry.clone()),
+            <span class="rs-type">SkillToolService</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(<span class="rs-self">self</span>.services.agent_core.skill_registry.clone()),
         );
-        <a class="symbol-link rs-fn" href="eos-runtime--src-plugin-tools-rs.html#item-fn-register-plugin-tools-27">register_plugin_tools</a>(&amp;<span class="rs-kw">mut</span> registry, &amp;plugin_sandbox_service);
+        <a class="symbol-link rs-fn" href="eos-runtime--src-plugin-tools-rs.html#item-fn-register-plugin-tools-28">register_plugin_tools</a>(&amp;<span class="rs-kw">mut</span> registry, &amp;plugin_sandbox_service);
         <span class="rs-type">Ok</span>(registry)
     }
 }
@@ -643,7 +643,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-agent-loop-rs.html#item-struct-RuntimeExecutionMetadataService-184">RuntimeExecutionMetadataService</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-56">new</a>(services: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#method-new-57">new</a>(services: <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-37">RuntimeServices</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { services }
     }
 
@@ -815,7 +815,7 @@
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(tool_use_id) = input.tool_use_id {
             builder = builder.tool_use_id(tool_use_id);
         }
-        <span class="rs-type">Ok</span>(builder.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-build-231">build</a>())
+        <span class="rs-type">Ok</span>(builder.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-builder-rs.html#method-build-230">build</a>())
     }
 }
 </code></pre>

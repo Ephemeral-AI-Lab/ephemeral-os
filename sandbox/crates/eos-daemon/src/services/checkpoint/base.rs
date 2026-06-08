@@ -1,6 +1,6 @@
 //! Workspace checkpoint base, binding, and LayerStack metric services.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
 use eos_layerstack::{
@@ -18,6 +18,7 @@ pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let stack = LayerStack::open(root.clone())?;
     let manifest = stack.read_active_manifest()?;
+    let metrics = stack.storage_metrics()?;
     let binding = read_workspace_binding(&root)?;
     Ok(json!({
         "success": true,
@@ -25,14 +26,14 @@ pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
         "manifest_depth": manifest.depth(),
         "active_leases": stack.active_lease_count(),
         "leased_layers": stack.leased_layers().len(),
-        "layer_dirs": count_dirs(&root.join("layers"))?,
+        "layer_dirs": metrics.layer_dirs,
         "referenced_layers": manifest.layers.len(),
         "orphan_layer_count": 0,
         "missing_layer_count": 0,
         "orphan_layer_ids": [],
         "missing_layer_ids": [],
-        "staging_dirs": count_dirs(&root.join("staging"))?,
-        "storage_bytes": storage_bytes(&root)?,
+        "staging_dirs": metrics.staging_dirs,
+        "storage_bytes": metrics.storage_bytes,
         "workspace_bound": binding.is_some(),
         "workspace_root": binding.as_ref().map_or("", |binding| binding.workspace_root.as_str()),
         "base_root_hash": binding.as_ref().map_or("", |binding| binding.base_root_hash.as_str()),
@@ -88,37 +89,4 @@ pub(crate) fn workspace_binding(args: &Value) -> Result<Value, DaemonError> {
         "success": true,
         "binding": binding,
     }))
-}
-
-fn count_dirs(path: &Path) -> Result<usize, DaemonError> {
-    if !path.exists() {
-        return Ok(0);
-    }
-    let mut count = 0;
-    for entry in std::fs::read_dir(path)? {
-        if entry?.file_type()?.is_dir() {
-            count += 1;
-        }
-    }
-    Ok(count)
-}
-
-fn storage_bytes(path: &Path) -> Result<u64, DaemonError> {
-    if !path.exists() {
-        return Ok(0);
-    }
-    let mut total = 0;
-    let mut stack = vec![path.to_path_buf()];
-    while let Some(dir) = stack.pop() {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let meta = entry.metadata()?;
-            if meta.is_dir() {
-                stack.push(entry.path());
-            } else if meta.is_file() {
-                total += meta.len();
-            }
-        }
-    }
-    Ok(total)
 }
