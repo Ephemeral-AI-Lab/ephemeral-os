@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 use std::sync::Arc;
 
-use eos_state::{
+use eos_types::{
     AttemptBudget, AttemptClosure, ExecutionTaskOutcome, IterationCreationReason, MaterializedPlan,
     PlanDisposition, PlanNodeId, RequestId, Task, TaskOutcomeStatus,
 };
@@ -31,7 +31,7 @@ fn node(id: &str) -> PlanNodeId {
 fn outcome(
     status: TaskOutcomeStatus,
     role: ExecutionRole,
-    task_id: &eos_state::TaskId,
+    task_id: &eos_types::TaskId,
     text: &str,
 ) -> ExecutionTaskOutcome {
     ExecutionTaskOutcome {
@@ -45,12 +45,12 @@ fn outcome(
 #[allow(clippy::too_many_arguments)]
 fn exec_task(
     stores: &MemoryStores,
-    id: &eos_state::TaskId,
+    id: &eos_types::TaskId,
     request_id: &RequestId,
     role: TaskRole,
     instruction: &str,
     status: TaskStatus,
-    needs: Vec<eos_state::TaskId>,
+    needs: Vec<eos_types::TaskId>,
     outcomes: Vec<ExecutionTaskOutcome>,
     attempt: &Attempt,
 ) {
@@ -101,11 +101,11 @@ async fn build_planner_context_matches_source() {
         "Storage layer is implemented and verified.",
     )])
     .unwrap();
-    eos_state::IterationStore::close_succeeded(
+    eos_types::IterationStore::close_succeeded(
         stores.as_ref(),
         &prior.id,
         &prior_outcomes,
-        Some(eos_state::UtcDateTime::now()),
+        Some(eos_types::UtcDateTime::now()),
     )
     .await
     .unwrap();
@@ -124,7 +124,7 @@ async fn build_planner_context_matches_source() {
     let red_node = node("verify_api");
     let gen_id = generator_task_id(&previous_attempt.id, &gen_node).unwrap();
     let red_id = reducer_task_id(&previous_attempt.id, &red_node).unwrap();
-    eos_state::AttemptStore::record_plan(
+    eos_types::AttemptStore::record_plan(
         stores.as_ref(),
         &previous_attempt.id,
         &MaterializedPlan {
@@ -168,13 +168,13 @@ async fn build_planner_context_matches_source() {
         )],
         &previous_attempt,
     );
-    eos_state::AttemptStore::close(
+    eos_types::AttemptStore::close(
         stores.as_ref(),
         &previous_attempt.id,
         AttemptClosure::Failed {
-            reason: eos_state::AttemptFailReason::TaskFailed,
+            reason: eos_types::AttemptFailReason::TaskFailed,
             outcomes: Vec::new(),
-            closed_at: eos_state::UtcDateTime::now(),
+            closed_at: eos_types::UtcDateTime::now(),
         },
     )
     .await
@@ -374,9 +374,9 @@ async fn build_rejects_recipe_role_mismatch() {
         .build(
             "planner",
             &ContextScope::for_generator(
-                eos_state::WorkflowId::new_v4(),
-                eos_state::IterationId::new_v4(),
-                eos_state::AttemptId::new_v4(),
+                eos_types::WorkflowId::new_v4(),
+                eos_types::IterationId::new_v4(),
+                eos_types::AttemptId::new_v4(),
                 tid("task"),
             ),
         )

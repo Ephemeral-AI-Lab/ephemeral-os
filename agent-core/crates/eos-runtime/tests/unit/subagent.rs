@@ -13,8 +13,8 @@ mod subagent_lifecycle {
     use eos_agent_def::{AgentDefinition, AgentRole, AgentType};
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
-    use eos_state::{RequestStatus, TaskStatus};
     use eos_types::RequestId;
+    use eos_types::{RequestStatus, TaskStatus};
     use serde_json::json;
 
     use super::run_request;
@@ -158,7 +158,7 @@ mod subagent_lifecycle {
                 message.content.iter().any(|block| {
                     matches!(block, ContentBlock::SystemNotification { text }
                         if text.contains("[BACKGROUND COMPLETED]")
-                            && text.contains("subagent_session_id=")
+                            && text.contains("agent_run_id=")
                             && text.contains("status=completed"))
                 })
             });

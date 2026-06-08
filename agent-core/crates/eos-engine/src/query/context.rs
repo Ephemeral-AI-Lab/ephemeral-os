@@ -74,8 +74,8 @@ pub struct QueryContext {
     pub terminal_tools: BTreeSet<ToolName>,
     /// Loop exit reason.
     pub exit_reason: Option<QueryExitReason>,
-    /// Terminal result, when one was produced.
-    pub terminal_result: Option<ToolResult>,
+    /// Terminal tool outcome, when one was produced.
+    pub submission_outcome: Option<ToolResult>,
     /// Event-source seam.
     pub event_source: Option<Arc<dyn EventSource>>,
     /// Optional prompt-report recorder.
@@ -144,9 +144,9 @@ impl QueryContext {
         self.exit_reason = Some(reason);
     }
 
-    /// Store the terminal tool result observed by dispatch.
-    pub(crate) fn set_terminal_result(&mut self, result: Option<ToolResult>) {
-        self.terminal_result = result;
+    /// Store the successful submission outcome observed by dispatch.
+    pub(crate) fn set_submission_outcome(&mut self, outcome: Option<ToolResult>) {
+        self.submission_outcome = outcome;
     }
 
     /// Whether a fire-once notification has already fired.

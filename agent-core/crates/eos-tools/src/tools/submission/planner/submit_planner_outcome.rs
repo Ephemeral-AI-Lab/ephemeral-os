@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::{DeferredGoal, PlanDisposition, PlanNodeId};
 use eos_types::JsonObject;
+use eos_types::{DeferredGoal, PlanDisposition, PlanNodeId};
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

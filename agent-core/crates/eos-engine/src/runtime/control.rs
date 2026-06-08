@@ -8,12 +8,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use eos_state::AgentRunStore;
+use eos_types::AgentRunStore;
 use eos_types::{AgentRunId, JsonObject, TaskId};
 use tokio::sync::Notify;
 
 use super::foreground::ForegroundExecutor;
-use crate::background::BackgroundSessionService;
+use crate::background::BackgroundManagers;
 use crate::notifications::NotificationService;
 use crate::EngineError;
 
@@ -162,7 +162,7 @@ pub struct AgentRunControl {
     cancellation: AgentRunCancellation,
     foreground: Arc<ForegroundExecutor>,
     notifications: NotificationService,
-    background: BackgroundSessionService,
+    background: BackgroundManagers,
     finalization: AgentRunFinalization,
 }
 
@@ -216,7 +216,7 @@ impl AgentRunControl {
 
     /// A clone of the run's background session service.
     #[must_use]
-    pub fn background(&self) -> BackgroundSessionService {
+    pub fn background(&self) -> BackgroundManagers {
         self.background.clone()
     }
 
@@ -248,5 +248,5 @@ pub(super) struct AgentRunControlParts {
     pub(super) agent_run_store: Arc<dyn AgentRunStore>,
     pub(super) foreground: Arc<ForegroundExecutor>,
     pub(super) notifications: NotificationService,
-    pub(super) background: BackgroundSessionService,
+    pub(super) background: BackgroundManagers,
 }

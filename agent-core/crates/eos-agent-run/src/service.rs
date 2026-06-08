@@ -9,13 +9,10 @@ use crate::{AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 #[async_trait]
 pub trait AgentRunApi: Send + Sync {
     /// Spawn an agent and return its natural run id immediately.
-    async fn spawn_agent(
-        &self,
-        request: SpawnAgentRequest,
-    ) -> Result<AgentRunId, AgentRunError>;
+    async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentRunError>;
 
     /// Wait for one agent run to publish a terminal outcome.
-    async fn wait_for_agent_outcomes(
+    async fn wait_for_agent_outcome(
         &self,
         agent_run_id: &AgentRunId,
     ) -> Result<AgentRunOutcome, AgentRunError>;

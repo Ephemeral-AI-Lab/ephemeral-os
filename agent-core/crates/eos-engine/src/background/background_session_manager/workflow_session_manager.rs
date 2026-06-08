@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_tools::{Sealed, StartedWorkflow, WorkflowServicePort, WorkflowSessionPort};
+use eos_tools::{StartedWorkflow, WorkflowServicePort};
 use eos_types::{AgentRunId, WorkflowId, WorkflowSessionId};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -276,32 +276,6 @@ impl BackgroundSessionManager for WorkflowSessionManager {
     }
 }
 
-impl Sealed for WorkflowSessionManager {}
-
-#[async_trait]
-impl WorkflowSessionPort for WorkflowSessionManager {
-    async fn register_background_session(&self, workflow: &StartedWorkflow) {
-        WorkflowSessionManager::register_background_session(self, workflow).await;
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        BackgroundSessionManager::count(self).await
-    }
-
-    async fn cancel_all_background_sessions(&self, reason: &str) {
-        BackgroundSessionManager::cancel(self, reason).await;
-    }
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        let completions = self.poll_completions().await;
-        let count = completions.len();
-        for completion in completions {
-            self.push_notification_on_completion(completion).await;
-        }
-        count
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::expect_used)]
@@ -309,12 +283,12 @@ mod tests {
     use std::sync::{Arc, OnceLock};
 
     use async_trait::async_trait;
-    use eos_state::TaskId;
     use eos_tools::{
-        OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus,
+        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus,
         TerminalWorkflow, ToolError, WorkflowServicePort,
     };
     use eos_types::AgentRunId;
+    use eos_types::TaskId;
 
     use crate::background::notification::BackgroundNotificationEmitter;
     use crate::NotificationService;

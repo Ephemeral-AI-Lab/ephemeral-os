@@ -4,14 +4,10 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_agent_run::{AgentRunApi, AgentRunOutcome, AgentRunStatus};
-#[cfg(test)]
-use eos_state::AgentRun;
 use eos_tools::ToolResult;
-use eos_tools::{Sealed, SubagentSessionPort};
 #[cfg(test)]
-use eos_types::JsonObject;
-use eos_types::{AgentRunId, SubagentSessionId};
-#[cfg(test)]
+use eos_types::AgentRun;
+use eos_types::{AgentRunId, JsonObject};
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -22,16 +18,14 @@ use crate::background::notification::{BackgroundCompletion, BackgroundNotificati
 /// One tracked subagent run owned by an agent run's background session runtime.
 #[derive(Debug, Clone)]
 pub(in crate::background) struct SubagentSession {
-    id: SubagentSessionId,
     agent_run_id: AgentRunId,
     status: BackgroundSessionStatus,
     result: Option<ToolResult>,
 }
 
 impl SubagentSession {
-    fn tracked(id: SubagentSessionId, agent_run_id: AgentRunId) -> Self {
+    fn tracked(agent_run_id: AgentRunId) -> Self {
         Self {
-            id,
             agent_run_id,
             status: BackgroundSessionStatus::Running,
             result: None,
@@ -72,24 +66,23 @@ impl SubagentSession {
 }
 
 impl BackgroundSession for SubagentSession {
-    type Id = SubagentSessionId;
+    type Id = AgentRunId;
 
     fn id(&self) -> &Self::Id {
-        &self.id
+        &self.agent_run_id
     }
 }
 
 #[derive(Debug, Clone)]
 pub(in crate::background) struct SubagentCompletion {
-    pub(super) subagent_session_id: SubagentSessionId,
+    pub(super) agent_run_id: AgentRunId,
     pub(super) status: BackgroundSessionStatus,
     pub(super) result: ToolResult,
 }
 
 #[derive(Default)]
 struct SubagentSessionState {
-    next_session_seq: u64,
-    sessions: HashMap<SubagentSessionId, SubagentSession>,
+    sessions: HashMap<AgentRunId, SubagentSession>,
 }
 
 /// Tracks subagent background sessions for one agent run.
@@ -123,10 +116,10 @@ impl SubagentSessionManager {
         }
     }
 
-    async fn cancel_one(&self, subagent_session_id: &SubagentSessionId, reason: &str) -> bool {
+    async fn cancel_one(&self, agent_run_id: &AgentRunId, reason: &str) -> bool {
         let agent_run_id = {
             let mut guard = self.sessions.lock().await;
-            let Some(session) = guard.sessions.get_mut(subagent_session_id) else {
+            let Some(session) = guard.sessions.get_mut(agent_run_id) else {
                 return false;
             };
             if session.cancel(reason) {
@@ -157,40 +150,20 @@ impl SubagentSessionManager {
         child_run_id: &AgentRunId,
         reason: &str,
     ) -> bool {
-        let subagent_session_id = {
-            let guard = self.sessions.lock().await;
-            guard
-                .sessions
-                .values()
-                .find(|session| session.agent_run_id() == child_run_id)
-                .map(|session| session.id().clone())
-        };
-        let Some(subagent_session_id) = subagent_session_id else {
-            return false;
-        };
-        self.cancel_one(&subagent_session_id, reason).await
-    }
-
-    async fn next_session_id(&self) -> SubagentSessionId {
-        let mut guard = self.sessions.lock().await;
-        guard.next_session_seq = guard.next_session_seq.saturating_add(1);
-        match format!("subagent_{}", guard.next_session_seq).parse() {
-            Ok(id) => id,
-            Err(_) => unreachable!("generated subagent ids are non-empty"),
-        }
+        self.cancel_one(child_run_id, reason).await
     }
 
     pub(super) async fn settle(
         &self,
-        subagent_session_id: &SubagentSessionId,
+        agent_run_id: &AgentRunId,
         status: BackgroundSessionStatus,
         result: ToolResult,
     ) -> Option<SubagentCompletion> {
         let mut guard = self.sessions.lock().await;
-        let session = guard.sessions.get_mut(subagent_session_id)?;
+        let session = guard.sessions.get_mut(agent_run_id)?;
         let result = session.settle(status, result)?;
         Some(SubagentCompletion {
-            subagent_session_id: subagent_session_id.clone(),
+            agent_run_id: agent_run_id.clone(),
             status: session.status(),
             result,
         })
@@ -199,7 +172,7 @@ impl SubagentSessionManager {
     pub(in crate::background) async fn poll_completions(&self) -> Vec<SubagentCompletion> {
         let running = self.running_agent_runs().await;
         let mut completions = Vec::new();
-        for (subagent_session_id, agent_run_id) in running {
+        for agent_run_id in running {
             let terminal = match self
                 .agent_run_service
                 .poll_agent_run_outcome(&agent_run_id)
@@ -212,12 +185,11 @@ impl SubagentSessionManager {
                 continue;
             };
             let status = agent_run_status_to_background(terminal.status);
-            let result = terminal_result(terminal);
+            let result = submission_outcome(terminal);
             let is_error = result.is_error;
-            if let Some(completion) = self.settle(&subagent_session_id, status, result).await {
+            if let Some(completion) = self.settle(&agent_run_id, status, result).await {
                 trace_background_tool(
                     terminal_event_type(status),
-                    &subagent_session_id,
                     &agent_run_id,
                     status,
                     Some(i64::from(is_error)),
@@ -228,14 +200,14 @@ impl SubagentSessionManager {
         completions
     }
 
-    async fn running_agent_runs(&self) -> Vec<(SubagentSessionId, AgentRunId)> {
+    async fn running_agent_runs(&self) -> Vec<AgentRunId> {
         self.sessions
             .lock()
             .await
             .sessions
             .values()
             .filter(|session| matches!(session.status(), BackgroundSessionStatus::Running))
-            .map(|session| (session.id().clone(), session.agent_run_id().clone()))
+            .map(|session| session.agent_run_id().clone())
             .collect()
     }
 }
@@ -295,7 +267,7 @@ impl BackgroundSessionManager for SubagentSessionManager {
         let _ = self
             .notification
             .emit(BackgroundCompletion::Subagent {
-                subagent_session_id: completion.subagent_session_id,
+                agent_run_id: completion.agent_run_id,
                 status: completion.status,
                 result: completion.result,
             })
@@ -333,62 +305,51 @@ impl BackgroundSessionManager for SubagentSessionManager {
     }
 }
 
-impl Sealed for SubagentSessionManager {}
-
-#[async_trait]
-impl SubagentSessionPort for SubagentSessionManager {
-    async fn register_background_session(
+impl SubagentSessionManager {
+    pub(in crate::background) async fn register_background_session(
         &self,
         agent_run_id: &AgentRunId,
-        _agent_name: &str,
-    ) -> SubagentSessionId {
-        let subagent_session_id = self.next_session_id().await;
+    ) {
         trace_background_tool(
             "background_tool.started",
-            &subagent_session_id,
             agent_run_id,
             BackgroundSessionStatus::Running,
             None,
         );
-        self.insert(SubagentSession::tracked(
-            subagent_session_id.clone(),
-            agent_run_id.clone(),
-        ))
-        .await;
-        subagent_session_id
+        self.insert(SubagentSession::tracked(agent_run_id.clone()))
+            .await;
     }
 
-    async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, reason: &str) -> bool {
+    pub(in crate::background) async fn cancel_background_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        reason: &str,
+    ) -> bool {
         self.cancel_agent_run(agent_run_id, reason).await
     }
 
-    async fn count_background_sessions(&self) -> usize {
+    pub(in crate::background) async fn count_background_sessions(&self) -> usize {
         BackgroundSessionManager::count(self).await
     }
 
-    async fn cancel_all_background_sessions(&self, reason: &str) {
+    pub(in crate::background) async fn cancel_all_background_sessions(&self, reason: &str) {
         BackgroundSessionManager::cancel(self, reason).await;
-    }
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        let completions = self.poll_completions().await;
-        let count = completions.len();
-        for completion in completions {
-            self.push_notification_on_completion(completion).await;
-        }
-        count
     }
 }
 
-fn terminal_result(outcome: AgentRunOutcome) -> ToolResult {
-    outcome.terminal_result.unwrap_or_else(|| {
-        ToolResult::error(
-            outcome
-                .error
-                .unwrap_or_else(|| "subagent exited without terminal output".to_owned()),
-        )
-        .meta("subagent_terminal_called", serde_json::json!(false))
-    })
+fn submission_outcome(outcome: AgentRunOutcome) -> ToolResult {
+    outcome
+        .submission_payload
+        .as_ref()
+        .map(tool_result_from_payload)
+        .unwrap_or_else(|| {
+            ToolResult::error(
+                outcome
+                    .error
+                    .unwrap_or_else(|| "subagent exited without terminal output".to_owned()),
+            )
+            .meta("subagent_terminal_called", serde_json::json!(false))
+        })
 }
 
 const fn agent_run_status_to_background(status: AgentRunStatus) -> BackgroundSessionStatus {
@@ -421,7 +382,6 @@ const fn status_value(status: BackgroundSessionStatus) -> &'static str {
 
 fn trace_background_tool(
     event_type: &str,
-    background_task_id: &SubagentSessionId,
     agent_run_id: &AgentRunId,
     status: BackgroundSessionStatus,
     exit_code: Option<i64>,
@@ -429,7 +389,7 @@ fn trace_background_tool(
     tracing::debug!(
         target: "eos_engine::diagnostics",
         event_type,
-        background_task_id = background_task_id.as_str(),
+        background_task_id = agent_run_id.as_str(),
         task_kind = "subagent",
         tool_name = "run_subagent",
         agent_run_id = agent_run_id.as_str(),
@@ -461,7 +421,6 @@ pub(super) fn completion_from_agent_run(
     ))
 }
 
-#[cfg(test)]
 fn tool_result_from_payload(payload: &JsonObject) -> ToolResult {
     let output = payload
         .get("output")
@@ -498,7 +457,7 @@ mod tests {
 
     use async_trait::async_trait;
     use eos_agent_run::{AgentRunError, SpawnAgentRequest};
-    use eos_state::{AgentRun, UtcDateTime};
+    use eos_types::{AgentRun, UtcDateTime};
 
     use crate::NotificationService;
 
@@ -516,7 +475,7 @@ mod tests {
             Ok(AgentRunId::new_v4())
         }
 
-        async fn wait_for_agent_outcomes(
+        async fn wait_for_agent_outcome(
             &self,
             agent_run_id: &AgentRunId,
         ) -> Result<AgentRunOutcome, AgentRunError> {
@@ -563,7 +522,7 @@ mod tests {
     }
 
     #[test]
-    fn terminal_payload_settles_completed_and_finished() {
+    fn submission_payload_settles_completed_and_finished() {
         let mut terminal = JsonObject::new();
         terminal.insert("output".to_owned(), json!("partial but delivered"));
         terminal.insert("is_error".to_owned(), json!(true));
@@ -590,24 +549,18 @@ mod tests {
     async fn count_cancel_and_completion_notification_are_manager_owned() {
         let notifier = NotificationService::new();
         let manager = manager(&notifier);
-        let running_id: SubagentSessionId = "subagent_1".parse().expect("subagent id");
+        let running_id: AgentRunId = "run-sub-1".parse().expect("agent run id");
         manager
-            .insert(SubagentSession::tracked(
-                running_id.clone(),
-                "run-sub-1".parse().expect("agent run id"),
-            ))
+            .insert(SubagentSession::tracked(running_id.clone()))
             .await;
 
         assert_eq!(manager.count().await, 1);
         assert!(manager.cancel_one(&running_id, "not needed").await);
         assert_eq!(manager.count().await, 0);
 
-        let done_id: SubagentSessionId = "subagent_2".parse().expect("subagent id");
+        let done_id: AgentRunId = "run-sub-2".parse().expect("agent run id");
         manager
-            .insert(SubagentSession::tracked(
-                done_id.clone(),
-                "run-sub-2".parse().expect("agent run id"),
-            ))
+            .insert(SubagentSession::tracked(done_id.clone()))
             .await;
         let completion = manager
             .settle(
@@ -623,7 +576,7 @@ mod tests {
         assert_eq!(notifications.len(), 1);
         assert!(notifications[0]
             .message
-            .contains("[BACKGROUND COMPLETED] subagent_session_id=subagent_2"));
+            .contains("[BACKGROUND COMPLETED] agent_run_id=run-sub-2"));
         assert!(notifications[0].message.contains("findings"));
     }
 }

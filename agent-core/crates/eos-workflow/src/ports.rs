@@ -3,16 +3,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::{
-    AttemptClosure, GeneratorSubmission, IterationStatus, ReducerSubmission, TaskStore, WorkflowId,
-    WorkflowStatus,
-};
 use eos_tools::{
     AttemptSubmissionPort, CancelPort, OutstandingWorkflow, PlannerPlan, Sealed,
     StartWorkflowRequest, StartedWorkflow, SubagentSessionStatus, SubmissionAck, TerminalWorkflow,
     ToolError, WorkflowServicePort,
 };
 use eos_types::{AgentRunId, WorkflowSessionId};
+use eos_types::{
+    AttemptClosure, GeneratorSubmission, IterationStatus, ReducerSubmission, TaskStore, WorkflowId,
+    WorkflowStatus,
+};
 use parking_lot::Mutex;
 
 use crate::attempt::AttemptOrchestratorRegistry;
@@ -102,9 +102,9 @@ fn submission_ack(result: crate::Result<()>) -> Result<SubmissionAck, ToolError>
 #[derive(Clone)]
 pub struct WorkflowServiceAdapter {
     starter: WorkflowStarter,
-    workflow_store: Arc<dyn eos_state::WorkflowStore>,
-    iteration_store: Arc<dyn eos_state::IterationStore>,
-    attempt_store: Arc<dyn eos_state::AttemptStore>,
+    workflow_store: Arc<dyn eos_types::WorkflowStore>,
+    iteration_store: Arc<dyn eos_types::IterationStore>,
+    attempt_store: Arc<dyn eos_types::AttemptStore>,
     task_store: Arc<dyn TaskStore>,
     handles: Arc<WorkflowHandleRegistry>,
     /// The recursive cancellation port (spec §12.4): workflow cancellation
@@ -124,9 +124,9 @@ impl WorkflowServiceAdapter {
     #[must_use]
     pub fn new(
         starter: WorkflowStarter,
-        workflow_store: Arc<dyn eos_state::WorkflowStore>,
-        iteration_store: Arc<dyn eos_state::IterationStore>,
-        attempt_store: Arc<dyn eos_state::AttemptStore>,
+        workflow_store: Arc<dyn eos_types::WorkflowStore>,
+        iteration_store: Arc<dyn eos_types::IterationStore>,
+        attempt_store: Arc<dyn eos_types::AttemptStore>,
         task_store: Arc<dyn TaskStore>,
         cancel_port: Arc<dyn CancelPort>,
     ) -> Self {
@@ -221,14 +221,14 @@ impl WorkflowServicePort for WorkflowServiceAdapter {
 
     async fn find_outstanding_workflows(
         &self,
-        parent_task_id: &eos_state::TaskId,
+        parent_task_id: &eos_types::TaskId,
         _agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
         self.workflow_store
             .list_for_parent_task(parent_task_id)
             .await?
             .into_iter()
-            .filter(eos_state::Workflow::is_open)
+            .filter(eos_types::Workflow::is_open)
             .map(|workflow| {
                 Ok(OutstandingWorkflow {
                     workflow_task_id: self.handles.handle_for_workflow(&workflow.id)?,
@@ -302,10 +302,10 @@ impl WorkflowServiceAdapter {
     /// cancelled while tearing down a parent) terminates.
     async fn cancel_workflow_state(
         &self,
-        workflow: &eos_state::Workflow,
+        workflow: &eos_types::Workflow,
         reason: &str,
     ) -> Result<(), ToolError> {
-        let now = eos_state::UtcDateTime::now();
+        let now = eos_types::UtcDateTime::now();
         // Iteration/workflow `outcomes` columns are read back strictly as
         // `Vec<ExecutionTaskOutcome>` by `ContextEngine`, so the cancellation
         // summary is the empty typed projection; the reason rides on each
@@ -348,9 +348,9 @@ impl WorkflowServiceAdapter {
     /// the attempt as `Cancelled`.
     async fn cancel_attempt(
         &self,
-        attempt: &eos_state::Attempt,
+        attempt: &eos_types::Attempt,
         reason: &str,
-        now: eos_state::UtcDateTime,
+        now: eos_types::UtcDateTime,
     ) -> Result<(), ToolError> {
         // Stop the planner orchestrator from materializing NEW (un-latched) task
         // rows. This is *not* redundant with `cancel_task(planner)`: the latch only
@@ -359,7 +359,7 @@ impl WorkflowServiceAdapter {
         self.starter
             .orchestrator_registry()
             .abort_planner(&attempt.id);
-        let tasks: Vec<eos_state::TaskId> = attempt
+        let tasks: Vec<eos_types::TaskId> = attempt
             .planner_task_id()
             .into_iter()
             .chain(attempt.generator_task_ids().iter())
@@ -441,9 +441,9 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
-    use eos_state::{AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus};
     use eos_tools::WorkflowServicePort as _;
     use eos_types::JsonObject;
+    use eos_types::{AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus};
     use serde_json::json;
 
     use super::*;
@@ -459,7 +459,7 @@ mod tests {
     impl CancelPort for TestCancelPort {
         async fn cancel_task(
             &self,
-            task_id: &eos_state::TaskId,
+            task_id: &eos_types::TaskId,
             reason: &str,
         ) -> Result<(), ToolError> {
             if let Some(task) = self.task_store.get(task_id).await? {

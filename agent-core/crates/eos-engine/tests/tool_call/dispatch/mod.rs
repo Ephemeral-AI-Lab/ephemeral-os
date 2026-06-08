@@ -152,7 +152,7 @@ fn ctx(registry: ToolRegistry) -> QueryContext {
         tool_metadata: metadata(),
         terminal_tools: BTreeSet::from([ToolName::SubmitRootOutcome]),
         exit_reason: None,
-        terminal_result: None,
+        submission_outcome: None,
         event_source: None,
         prompt_report: None,
         message_record: None,
@@ -246,7 +246,7 @@ async fn terminal_batched_with_sibling_rejects_all() {
         .tool_results
         .iter()
         .all(|block| matches!(block, ContentBlock::ToolResult { is_error: true, .. })));
-    assert!(outcome.terminal_result.is_none());
+    assert!(outcome.submission_outcome.is_none());
     assert!(outcome.events.iter().all(|event| matches!(
         event,
         StreamEvent::ToolExecutionCompleted { is_error: true, .. }
@@ -304,7 +304,7 @@ async fn foreground_multi_tool_batch_runs_in_parallel_and_preserves_final_result
 }
 
 #[tokio::test]
-async fn terminal_tool_error_does_not_project_terminal_result() {
+async fn terminal_tool_error_does_not_project_submission_outcome() {
     let terminal_count = Arc::new(AtomicUsize::new(0));
     let mut registry = ToolRegistry::new();
     registry.register(tool_with_result(
@@ -325,8 +325,8 @@ async fn terminal_tool_error_does_not_project_terminal_result() {
         .expect("dispatch");
 
     assert_eq!(terminal_count.load(Ordering::SeqCst), 1);
-    assert!(ctx.terminal_result.is_none());
-    assert!(outcome.terminal_result.is_none());
+    assert!(ctx.submission_outcome.is_none());
+    assert!(outcome.submission_outcome.is_none());
     assert!(matches!(
         outcome.tool_results.first(),
         Some(ContentBlock::ToolResult {
@@ -379,5 +379,5 @@ async fn ask_advisor_dispatches_as_normal_tool() {
             ..
         }) if content == "advisor result"
     ));
-    assert!(outcome.terminal_result.is_none());
+    assert!(outcome.submission_outcome.is_none());
 }

@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use eos_agent_def::{AgentName, AgentRegistry, AgentRole};
-use eos_state::{PlanNodeId, Task, TaskId, TaskStatus};
 use eos_tools::PlannerPlan;
+use eos_types::{PlanNodeId, Task, TaskId, TaskStatus};
 
 use crate::{Result, WorkflowError};
 
@@ -337,7 +337,7 @@ fn assert_acyclic(plan: &PlannerPlan) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eos_state::{RequestId, TaskRole};
+    use eos_types::{RequestId, TaskRole};
 
     fn tid(s: &str) -> TaskId {
         s.parse().expect("task id")
@@ -441,7 +441,7 @@ mod tests {
         PlannerPlan {
             attempt_id: eos_types::AttemptId::new_v4(),
             planner_task_id: tid("planner"),
-            disposition: eos_state::PlanDisposition::Complete,
+            disposition: eos_types::PlanDisposition::Complete,
             tasks,
             task_specs,
             reducers,

@@ -2,7 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use eos_state::{
+use eos_types::{
     IterationCreationReason, IterationOutcome, IterationStatus, IterationStore, Workflow,
     WorkflowId, WorkflowOutcome,
 };
@@ -17,7 +17,7 @@ use crate::{Result, WorkflowError};
 
 type IterationCoordinatorFuture<'a> = Pin<
     Box<
-        dyn Future<Output = Result<(eos_state::Iteration, Arc<IterationAttemptCoordinator>)>>
+        dyn Future<Output = Result<(eos_types::Iteration, Arc<IterationAttemptCoordinator>)>>
             + Send
             + 'a,
     >,
@@ -56,8 +56,8 @@ impl WorkflowLifecycle {
     /// Insert a workflow row.
     pub(crate) async fn create_workflow(
         &self,
-        request_id: &eos_state::RequestId,
-        parent_task_id: &eos_state::TaskId,
+        request_id: &eos_types::RequestId,
+        parent_task_id: &eos_types::TaskId,
         workflow_goal: &str,
     ) -> Result<Workflow> {
         Ok(self
@@ -78,7 +78,7 @@ impl WorkflowLifecycle {
     async fn create_iteration_with_coordinator_inner(
         &self,
         workflow_id: &WorkflowId,
-    ) -> Result<(eos_state::Iteration, Arc<IterationAttemptCoordinator>)> {
+    ) -> Result<(eos_types::Iteration, Arc<IterationAttemptCoordinator>)> {
         let workflow = self.require_workflow(workflow_id).await?;
         if !workflow.is_open() {
             return Err(WorkflowError::invariant(format!(
@@ -208,7 +208,7 @@ impl WorkflowLifecycle {
                 .set_status(
                     &next.id,
                     IterationStatus::Cancelled,
-                    Some(eos_state::UtcDateTime::now()),
+                    Some(eos_types::UtcDateTime::now()),
                     None,
                 )
                 .await?;
@@ -239,7 +239,7 @@ impl WorkflowLifecycle {
             .set_status(
                 workflow_id,
                 outcome.status(),
-                Some(eos_state::UtcDateTime::now()),
+                Some(eos_types::UtcDateTime::now()),
                 Some(&outcomes),
             )
             .await?)
@@ -273,7 +273,7 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use std::sync::Arc;
 
-    use eos_state::{DeferredGoal, IterationOutcome, WorkflowOutcome, WorkflowStatus};
+    use eos_types::{DeferredGoal, IterationOutcome, WorkflowOutcome, WorkflowStatus};
 
     use super::*;
     use crate::support::{agent_registry_without_planner, root_task, MemoryStores, QueueRunner};
@@ -291,7 +291,7 @@ mod tests {
 
         let workflow = lifecycle
             .create_workflow(
-                &eos_state::RequestId::new_v4(),
+                &eos_types::RequestId::new_v4(),
                 &"parent".parse().unwrap(),
                 "delegated goal",
             )
@@ -304,9 +304,9 @@ mod tests {
             .unwrap();
         // Prime the counter through the counted path so the zero *delta* below is
         // a real "close wrote no tasks", not a stuck-at-zero counter.
-        eos_state::TaskStore::insert_task(
+        eos_types::TaskStore::insert_task(
             stores.as_ref(),
-            &crate::support::root_task("parent", eos_state::TaskStatus::Running),
+            &crate::support::root_task("parent", eos_types::TaskStatus::Running),
         )
         .await
         .unwrap();
@@ -340,12 +340,12 @@ mod tests {
         let coordinators = deps.iteration_coordinators.clone().unwrap();
         let lifecycle = WorkflowLifecycle::new(deps, coordinators.clone());
 
-        let parent = root_task("parent", eos_state::TaskStatus::Running);
+        let parent = root_task("parent", eos_types::TaskStatus::Running);
         stores.seed_task(parent.clone());
 
         let workflow = lifecycle
             .create_workflow(
-                &eos_state::RequestId::new_v4(),
+                &eos_types::RequestId::new_v4(),
                 &parent.id,
                 "delegated goal",
             )
@@ -359,15 +359,15 @@ mod tests {
         // Mark iter1 SUCCEEDED with a deferred goal so the continuation fires.
         // `create_iteration_with_coordinator` reads the iteration's
         // `deferred_goal_for_next_iteration`, not the signal, so both must be set.
-        eos_state::IterationStore::close_succeeded(
+        eos_types::IterationStore::close_succeeded(
             stores.as_ref(),
             &iter1.id,
             "[]",
-            Some(eos_state::UtcDateTime::now()),
+            Some(eos_types::UtcDateTime::now()),
         )
         .await
         .unwrap();
-        eos_state::IterationStore::set_deferred_goal_for_next_iteration(
+        eos_types::IterationStore::set_deferred_goal_for_next_iteration(
             stores.as_ref(),
             &iter1.id,
             Some(&DeferredGoal::new("continue").unwrap()),
@@ -394,7 +394,7 @@ mod tests {
         );
         // The continuation iteration (seq 2, DeferredGoalContinuation) is CANCELLED.
         let iterations =
-            eos_state::IterationStore::list_for_workflow(stores.as_ref(), &workflow.id)
+            eos_types::IterationStore::list_for_workflow(stores.as_ref(), &workflow.id)
                 .await
                 .unwrap();
         assert_eq!(
@@ -421,7 +421,7 @@ mod tests {
         // Parent untouched.
         assert_eq!(
             stores.task(&parent.id).unwrap().status,
-            eos_state::TaskStatus::Running
+            eos_types::TaskStatus::Running
         );
     }
 }

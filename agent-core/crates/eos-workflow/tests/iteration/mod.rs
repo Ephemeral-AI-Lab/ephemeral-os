@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 use std::sync::Arc;
 
-use eos_state::{
+use eos_types::{
     AttemptBudget, IterationCreationReason, IterationStatus, TaskOutcomeStatus, TaskStatus,
     WorkflowStatus,
 };
@@ -66,7 +66,7 @@ async fn deferred_goal_starts_next_iteration() {
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
     let iterations =
-        eos_state::IterationStore::list_for_workflow(stores.as_ref(), &started.workflow_id)
+        eos_types::IterationStore::list_for_workflow(stores.as_ref(), &started.workflow_id)
             .await
             .unwrap();
     assert_eq!(

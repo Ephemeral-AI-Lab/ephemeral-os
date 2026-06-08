@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use eos_agent_def::AgentRole;
-use eos_state::{
+use eos_types::{
     execution_outcome_for_submission, Attempt, ExecutionRole, GeneratorSubmission, JsonObject,
     PlannerFailReason, PlannerFailureSubmission, ReducerSubmission, Task, TaskOutcomeStatus,
     TaskRole, TaskStatus,
@@ -49,7 +49,7 @@ impl AttemptStageAdvancer {
         let mut set = JoinSet::new();
         loop {
             let attempt = self.orchestrator.fresh_attempt().await?;
-            if attempt.is_closed() || attempt.stage() != eos_state::AttemptStage::Run {
+            if attempt.is_closed() || attempt.stage() != eos_types::AttemptStage::Run {
                 return Ok(());
             }
             let tasks = self.orchestrator.plan_task_records(&attempt).await?;
@@ -63,7 +63,7 @@ impl AttemptStageAdvancer {
                     let needs: Vec<&str> = pending
                         .needs
                         .iter()
-                        .map(eos_state::TaskId::as_str)
+                        .map(eos_types::TaskId::as_str)
                         .collect();
                     self.emit_task_event(
                         TASK_READY,
@@ -116,7 +116,7 @@ impl AttemptStageAdvancer {
                 DagResolution::FailedOrBlocked => {
                     return self
                         .orchestrator
-                        .close_attempt_failed(eos_state::AttemptFailReason::TaskFailed)
+                        .close_attempt_failed(eos_types::AttemptFailReason::TaskFailed)
                         .await;
                 }
                 DagResolution::Passed => return self.orchestrator.close_attempt_passed().await,
@@ -223,7 +223,7 @@ impl AttemptStageAdvancer {
         payload.insert("request_id".to_owned(), json!(task.request_id.as_str()));
         payload.insert(
             "attempt_id".to_owned(),
-            json!(task.attempt_id.as_ref().map(eos_state::AttemptId::as_str)),
+            json!(task.attempt_id.as_ref().map(eos_types::AttemptId::as_str)),
         );
         payload.insert("task_id".to_owned(), json!(task.id.as_str()));
         payload.insert("role".to_owned(), json!(task_role_label(task.role)));
@@ -233,7 +233,7 @@ impl AttemptStageAdvancer {
             json!(task
                 .needs
                 .iter()
-                .map(eos_state::TaskId::as_str)
+                .map(eos_types::TaskId::as_str)
                 .collect::<Vec<_>>()),
         );
         for (key, value) in extra {
@@ -247,7 +247,7 @@ impl AttemptStageAdvancer {
             attempt_id = task
                 .attempt_id
                 .as_ref()
-                .map(eos_state::AttemptId::as_str),
+                .map(eos_types::AttemptId::as_str),
             role = task_role_label(task.role),
             agent_name = task.agent_name.as_deref(),
             payload = ?payload,
@@ -345,7 +345,7 @@ mod tests {
     use std::sync::Arc;
 
     use eos_agent_def::AgentRole;
-    use eos_state::{
+    use eos_types::{
         AttemptBudget, AttemptFailReason, AttemptStatus, IterationStatus, PlanDisposition,
         PlanNodeId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowStatus,
     };
@@ -386,20 +386,20 @@ mod tests {
         let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
         runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
         runner.push(ScriptedSubmission::Generator(
-            eos_state::GeneratorSubmission {
+            eos_types::GeneratorSubmission {
                 attempt_id: started.attempt_id.clone(),
                 task_id: generator_id.clone(),
                 status: TaskOutcomeStatus::Success,
                 outcome: "generated".to_owned(),
-                terminal_tool_result: crate::support::terminal_result(),
+                terminal_tool_result: crate::support::terminal_tool_result_fixture(),
             },
         ));
-        runner.push(ScriptedSubmission::Reducer(eos_state::ReducerSubmission {
+        runner.push(ScriptedSubmission::Reducer(eos_types::ReducerSubmission {
             attempt_id: started.attempt_id.clone(),
             task_id: crate::reducer_task_id(&started.attempt_id, &node("r1")).unwrap(),
             status: TaskOutcomeStatus::Success,
             outcome: "reduced".to_owned(),
-            terminal_tool_result: crate::support::terminal_result(),
+            terminal_tool_result: crate::support::terminal_tool_result_fixture(),
         }));
         wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
@@ -568,10 +568,10 @@ mod tests {
             outcomes: Vec::new(),
             terminal_tool_result: None,
         });
-        eos_state::AttemptStore::record_plan(
+        eos_types::AttemptStore::record_plan(
             stores.as_ref(),
             &started.attempt_id,
-            &eos_state::MaterializedPlan {
+            &eos_types::MaterializedPlan {
                 planner_task_id: crate::planner_task_id(&started.attempt_id).unwrap(),
                 disposition: PlanDisposition::Complete,
                 generator_task_ids: vec![task_id.clone()],

@@ -54,23 +54,3 @@ pub trait CommandServicePort: Sealed + Send + Sync {
         reason: &str,
     ) -> Result<(), ToolError>;
 }
-
-/// Command background-session registry for one owning agent run.
-#[async_trait]
-pub trait CommandSessionPort: Sealed + Send + Sync {
-    /// Register a freshly-started background command session as running.
-    async fn register_background_session(
-        &self,
-        command_session_id: &CommandSessionId,
-        sandbox_id: &SandboxId,
-    );
-
-    /// Count running command sessions for this run.
-    async fn count_background_sessions(&self) -> usize;
-
-    /// Cancel all running command sessions for this run.
-    async fn cancel_all_background_sessions(&self, reason: &str);
-
-    /// Poll terminal command sessions and push notifications.
-    async fn poll_complete_background_sessions(&self) -> usize;
-}

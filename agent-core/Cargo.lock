@@ -456,7 +456,6 @@ dependencies = [
  "eos-agent-def",
  "eos-agent-message-records",
  "eos-llm-client",
- "eos-tools",
  "eos-types",
  "thiserror",
  "tokio",
@@ -489,7 +488,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-config",
- "eos-state",
+ "eos-types",
  "serde",
  "serde_json",
  "sqlx",
@@ -512,7 +511,6 @@ dependencies = [
  "eos-llm-client",
  "eos-sandbox-port",
  "eos-skills",
- "eos-state",
  "eos-testkit",
  "eos-tools",
  "eos-types",
@@ -572,6 +570,7 @@ dependencies = [
  "console-subscriber",
  "eos-agent-def",
  "eos-agent-message-records",
+ "eos-agent-run",
  "eos-audit",
  "eos-config",
  "eos-db",
@@ -580,7 +579,6 @@ dependencies = [
  "eos-plugin-catalog",
  "eos-sandbox-port",
  "eos-skills",
- "eos-state",
  "eos-testkit",
  "eos-tools",
  "eos-types",
@@ -620,20 +618,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-state"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "eos-types",
- "insta",
- "proptest",
- "schemars",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "eos-testkit"
 version = "0.1.0"
 dependencies = [
@@ -656,11 +640,11 @@ dependencies = [
  "async-trait",
  "eos-agent-def",
  "eos-agent-message-records",
+ "eos-agent-run",
  "eos-config",
  "eos-llm-client",
  "eos-sandbox-port",
  "eos-skills",
- "eos-state",
  "eos-types",
  "insta",
  "regex",
@@ -676,6 +660,7 @@ dependencies = [
 name = "eos-types"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "proptest",
  "schemars",
  "serde",
@@ -691,7 +676,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
- "eos-state",
  "eos-tools",
  "eos-types",
  "parking_lot",

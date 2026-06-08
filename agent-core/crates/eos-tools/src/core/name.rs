@@ -2,10 +2,11 @@
 //!
 //! Ports `_names.py` **plus** the five names that module omits (`write_stdin`,
 //! `read_command_progress`, `enter_isolated_workspace`, `exit_isolated_workspace`,
-//! `load_skill_reference`) and `cancel_subagent` — GC-tools-04. The authoritative set is the union of the
-//! six registration sites, not `_names.py`. Each variant maps to its wire string
-//! (the exact `snake_case` of the variant), so `serde` `rename_all` and the
-//! hand-written [`ToolName::as_str`] agree (asserted by a test).
+//! `load_skill_reference`) and `cancel_subagent` — GC-tools-04. The authoritative
+//! set is the union of the six registration sites, not `_names.py`. Each variant
+//! maps to its wire string (the exact `snake_case` of the variant), so `serde`
+//! `rename_all` and the hand-written [`ToolName::as_str`] agree (asserted by a
+//! test).
 
 use std::fmt;
 use std::str::FromStr;

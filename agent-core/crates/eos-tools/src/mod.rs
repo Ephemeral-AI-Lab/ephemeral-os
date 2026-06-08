@@ -34,12 +34,10 @@ pub use core::intent::ToolIntent;
 pub use core::metadata::ExecutionMetadata;
 pub use core::name::{ToolKey, ToolName};
 pub use core::ports::{
-    AgentRunServicePort, AgentSpawnError, AttemptSubmissionPort, BackgroundSessionCounts,
-    CancelPort, CancelableResource, CommandServicePort, CommandSessionPort, NotificationSink,
-    OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed, SpawnAgentRequest,
-    StartWorkflowRequest, StartedWorkflow, SubagentLaunchRejection, SubagentSessionPort,
-    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalWorkflow,
-    WorkflowServicePort, WorkflowSessionPort,
+    AttemptSubmissionPort, BackgroundSessionCounts, CancelPort, CancelableResource,
+    CommandServicePort, NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan,
+    Sealed, StartWorkflowRequest, StartedWorkflow, SubagentLaunchRejection, SubagentSessionStatus,
+    SubmissionAck, SystemNotification, TerminalWorkflow, WorkflowServicePort,
 };
 pub use core::result::{OutputShape, ToolResult};
 pub use hooks::{Hook, HookDenial, HookOutcome};
@@ -56,6 +54,7 @@ pub use tools::terminal::{
 };
 pub use tools::{
     build_default_registry, build_default_registry_with_services, AttemptSubmissionService,
-    CallerScope, CommandToolService, HookServices, RootSubmissionService, SandboxToolService,
-    SkillToolService,
+    CallerScope, CommandSessionToolService, CommandToolService, HookServices,
+    RootSubmissionService, SandboxToolService, SkillToolService, SubagentToolService,
+    WorkflowToolService,
 };

@@ -80,10 +80,10 @@ pub(crate) async fn run_require_no_background_sessions(
         let subagents = if cancels_inflight_subagents(tool) {
             subagent_sessions
                 .cancel_all_background_sessions("parent submitted its terminal")
-                .await;
-            subagent_sessions.count_background_sessions().await
+                .await?;
+            subagent_sessions.count_background_sessions().await?
         } else {
-            subagent_sessions.count_background_sessions().await
+            subagent_sessions.count_background_sessions().await?
         };
         if subagents > 0 {
             return Ok(HookOutcome::Deny(
@@ -195,10 +195,10 @@ mod tests {
     };
 
     use async_trait::async_trait;
-    use eos_types::{AgentRunId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+    use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
     use crate::{
-        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, SubagentSessionPort,
+        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, SubagentToolService,
         TerminalWorkflow, WorkflowServicePort,
     };
     struct ReportSubagentSessions {
@@ -215,30 +215,32 @@ mod tests {
         }
     }
 
-    impl Sealed for ReportSubagentSessions {}
-
-    #[async_trait]
-    impl SubagentSessionPort for ReportSubagentSessions {
-        async fn register_background_session(&self, _: &AgentRunId, _: &str) -> SubagentSessionId {
-            unreachable!("not used by hook tests")
-        }
-
-        async fn cancel_background_agent_run(&self, _: &AgentRunId, _: &str) -> bool {
-            unreachable!("not used by hook tests")
-        }
-
-        async fn count_background_sessions(&self) -> usize {
-            self.subagents.load(Ordering::Relaxed)
-        }
-
-        async fn cancel_all_background_sessions(&self, _: &str) {
-            self.cancel_called.store(true, Ordering::Relaxed);
-            self.subagents.store(0, Ordering::Relaxed);
-        }
-
-        async fn poll_complete_background_sessions(&self) -> usize {
-            0
-        }
+    fn subagent_service(background: Arc<ReportSubagentSessions>) -> SubagentToolService {
+        let register_background = background.clone();
+        let cancel_background = background.clone();
+        let count_background = background.clone();
+        let cancel_all_background = background;
+        SubagentToolService::new(
+            move |_agent_run_id| {
+                let _background = register_background.clone();
+                async move { unreachable!("not used by hook tests") }
+            },
+            move |_agent_run_id, _reason| {
+                let _background = cancel_background.clone();
+                async move { unreachable!("not used by hook tests") }
+            },
+            move || {
+                let background = count_background.clone();
+                async move { background.subagents.load(Ordering::Relaxed) }
+            },
+            move |_reason| {
+                let background = cancel_all_background.clone();
+                async move {
+                    background.cancel_called.store(true, Ordering::Relaxed);
+                    background.subagents.store(0, Ordering::Relaxed);
+                }
+            },
+        )
     }
 
     struct OneOutstanding;
@@ -391,7 +393,8 @@ mod tests {
         let background = Arc::new(ReportSubagentSessions::new(1));
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
-        let services = crate::tools::HookServices::new(None, None, Some(background.clone()));
+        let services =
+            crate::tools::HookServices::new(None, None, Some(subagent_service(background.clone())));
 
         let outcome = run_require_no_background_sessions(
             ToolName::EnterIsolatedWorkspace,
@@ -505,7 +508,7 @@ mod tests {
                 _ => Ok(JsonObject::new()),
             }))),
             None,
-            Some(background.clone()),
+            Some(subagent_service(background.clone())),
         );
 
         let outcome = run_require_no_background_sessions(

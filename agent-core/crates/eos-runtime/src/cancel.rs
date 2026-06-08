@@ -7,8 +7,8 @@
 //! cancellation boundary itself.
 
 use anyhow::Result;
-use eos_state::RequestStatus;
 use eos_types::RequestId;
+use eos_types::RequestStatus;
 
 use crate::entry::root_task_id_for;
 use crate::runtime_services::RuntimeServices;

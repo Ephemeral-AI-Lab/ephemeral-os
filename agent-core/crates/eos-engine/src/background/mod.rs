@@ -5,5 +5,5 @@ mod notification;
 
 pub(crate) use background_session_manager::BackgroundSessionFinalizer;
 pub use background_session_manager::BackgroundSessionStatus;
-pub use background_session_manager::{BackgroundSessionService, BackgroundTeardownPort};
+pub use background_session_manager::{BackgroundManagers, BackgroundTeardownService};
 pub use notification::{BackgroundCompletion, BackgroundNotificationEmitter};

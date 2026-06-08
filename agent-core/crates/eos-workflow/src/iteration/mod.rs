@@ -2,13 +2,14 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use eos_state::{
-    project_iteration_outcomes, Attempt, AttemptClosure, AttemptFailReason, AttemptId,
-    AttemptStatus, AttemptStore, IterationId, IterationOutcome, IterationStatus,
+use eos_types::{
+    Attempt, AttemptClosure, AttemptFailReason, AttemptId, AttemptStatus, AttemptStore,
+    IterationId, IterationOutcome, IterationStatus,
 };
 use parking_lot::Mutex;
 
 use crate::attempt::{AttemptDeps, AttemptOrchestrator};
+use crate::state::project_iteration_outcomes;
 use crate::{Result, WorkflowError};
 
 /// Iteration close signal.
@@ -170,7 +171,7 @@ impl IterationAttemptCoordinator {
         }
     }
 
-    async fn current_iteration_snapshot(&self) -> Result<eos_state::Iteration> {
+    async fn current_iteration_snapshot(&self) -> Result<eos_types::Iteration> {
         self.deps
             .iteration_store
             .get(&self.iteration_id)
@@ -197,7 +198,7 @@ impl IterationAttemptCoordinator {
             .close_succeeded(
                 &self.iteration_id,
                 &outcomes,
-                Some(eos_state::UtcDateTime::now()),
+                Some(eos_types::UtcDateTime::now()),
             )
             .await?;
         let outcome = if let Some(deferred_goal) = attempt.deferred_goal_for_next_iteration() {
@@ -245,7 +246,7 @@ impl IterationAttemptCoordinator {
             .set_status(
                 &self.iteration_id,
                 IterationStatus::Failed,
-                Some(eos_state::UtcDateTime::now()),
+                Some(eos_types::UtcDateTime::now()),
                 Some(&outcomes),
             )
             .await?;
@@ -285,7 +286,7 @@ impl IterationAttemptCoordinator {
                 AttemptClosure::Failed {
                     reason: AttemptFailReason::StartupFailed,
                     outcomes: Vec::new(),
-                    closed_at: eos_state::UtcDateTime::now(),
+                    closed_at: eos_types::UtcDateTime::now(),
                 },
             )
             .await?;
@@ -295,7 +296,7 @@ impl IterationAttemptCoordinator {
 
 async fn iteration_outcomes_json(
     attempt_store: &dyn AttemptStore,
-    task_store: &dyn eos_state::TaskStore,
+    task_store: &dyn eos_types::TaskStore,
     attempt: &Attempt,
 ) -> Result<String> {
     let attempts = attempt_store

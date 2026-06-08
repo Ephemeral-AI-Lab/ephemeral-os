@@ -77,7 +77,9 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             timeout_seconds,
             yield_time_ms,
             handle.caller_id.clone(),
-            StartTarget::Isolated { handle },
+            StartTarget::Isolated {
+                handle: Box::new(handle),
+            },
         );
     }
 
@@ -367,7 +369,7 @@ pub const fn cancel_all_command_sessions(_grace_s: Option<f64>) -> usize {
 /// wall-clock cap so it can never run forever.
 #[cfg(target_os = "linux")]
 pub fn command_session_reaper_sweep() {
-    let _ = workspace_run_manager().sweep_expired(Instant::now());
+    workspace_run_manager().sweep_expired(Instant::now());
 }
 
 /// Startup recovery (sense-2 §2.4): a previous daemon may have left ephemeral

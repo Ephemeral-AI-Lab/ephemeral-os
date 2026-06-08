@@ -5,35 +5,26 @@ use std::sync::Arc;
 
 use eos_agent_def::AgentDefinition;
 use eos_llm_client::DEFAULT_MAX_TOKENS;
-use eos_tools::{
-    build_default_registry_with_services, AgentRunServicePort, AttemptSubmissionService,
-    CallerScope, CommandSessionPort, ExecutionMetadata, SubagentSessionPort, WorkflowServicePort,
-    WorkflowSessionPort,
-};
+use eos_tools::{build_default_registry_with_services, CallerScope, ExecutionMetadata};
 use eos_types::{AgentRunId, TaskId};
 
 use crate::agent::{build_query_context, BuildQueryContextInput};
-use crate::background::{BackgroundSessionFinalizer, BackgroundTeardownPort};
+use crate::background::{BackgroundSessionFinalizer, BackgroundTeardownService};
 use crate::notifications::NotificationService;
 use crate::query::QueryContext;
 use crate::EngineError;
 
 use super::control::AgentRunCancellation;
 use super::foreground::ForegroundExecutor;
-use super::types::EngineRunHandles;
+use super::types::{AgentToolRegistryServices, EngineRunHandles};
 
 pub(super) struct AgentRunSetupInput {
     pub(super) agent: AgentDefinition,
     pub(super) task_id: Option<TaskId>,
     pub(super) agent_run_id: AgentRunId,
     pub(super) tool_metadata: ExecutionMetadata,
-    pub(super) attempt_submission: Option<AttemptSubmissionService>,
-    pub(super) agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-    pub(super) subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
-    pub(super) workflow_service: Option<Arc<dyn WorkflowServicePort>>,
-    pub(super) workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
-    pub(super) background_session: Option<Arc<dyn BackgroundTeardownPort>>,
-    pub(super) command_session_port: Option<Arc<dyn CommandSessionPort>>,
+    pub(super) tool_registry: eos_tools::ToolRegistry,
+    pub(super) background_teardown: Option<BackgroundTeardownService>,
     pub(super) notifier: NotificationService,
     pub(super) cancellation: AgentRunCancellation,
     pub(super) foreground: Arc<ForegroundExecutor>,
@@ -41,7 +32,7 @@ pub(super) struct AgentRunSetupInput {
 
 pub(super) struct PreparedAgentRun {
     pub(super) ctx: QueryContext,
-    pub(super) background_session_finalizer: BackgroundSessionFinalizer,
+    pub(super) background_teardown_finalizer: BackgroundSessionFinalizer,
 }
 
 pub(super) fn prepare_agent_run_context(
@@ -53,13 +44,8 @@ pub(super) fn prepare_agent_run_context(
         task_id,
         agent_run_id,
         tool_metadata,
-        attempt_submission,
-        agent_run_service,
-        subagent_sessions,
-        workflow_service,
-        workflow_sessions,
-        background_session,
-        command_session_port,
+        tool_registry,
+        background_teardown,
         notifier,
         cancellation,
         foreground,
@@ -70,31 +56,14 @@ pub(super) fn prepare_agent_run_context(
         .event_source_factory
         .as_ref()
         .map(|factory| factory(&agent));
-    let caller_scope = caller_scope_for(handles, &agent);
-    let mut registry = build_default_registry_with_services(
-        &handles.tool_config,
-        &caller_scope,
-        handles.sandbox_service.clone(),
-        handles.root_submission.clone(),
-        attempt_submission,
-        agent_run_service,
-        subagent_sessions,
-        workflow_service,
-        workflow_sessions,
-        command_session_port,
-        handles.skill_service.clone(),
-    );
-    if let Some(extender) = &handles.tool_registry_extender {
-        extender(&mut registry);
-    }
 
-    let background_session_finalizer = BackgroundSessionFinalizer::new(background_session);
+    let background_teardown_finalizer = BackgroundSessionFinalizer::new(background_teardown);
     let ctx = build_query_context(BuildQueryContextInput {
         agent,
         model,
         client: Some(handles.llm_client.clone()),
         event_source,
-        registry,
+        registry: tool_registry,
         base_system_prompt: String::new(),
         max_tokens: DEFAULT_MAX_TOKENS,
         cwd: PathBuf::from(&handles.workspace_root),
@@ -110,8 +79,35 @@ pub(super) fn prepare_agent_run_context(
 
     Ok(PreparedAgentRun {
         ctx,
-        background_session_finalizer,
+        background_teardown_finalizer,
     })
+}
+
+/// Build one run's tool registry before entering the engine loop.
+#[must_use]
+pub fn build_agent_tool_registry(
+    handles: &EngineRunHandles,
+    agent: &AgentDefinition,
+    services: AgentToolRegistryServices,
+) -> eos_tools::ToolRegistry {
+    let caller_scope = caller_scope_for(handles, agent);
+    let mut registry = build_default_registry_with_services(
+        &handles.tool_config,
+        &caller_scope,
+        handles.sandbox_service.clone(),
+        handles.root_submission.clone(),
+        services.attempt_submission,
+        services.agent_run_service,
+        services.subagent_sessions,
+        services.workflow_service,
+        services.workflow_sessions,
+        services.command_sessions,
+        handles.skill_service.clone(),
+    );
+    if let Some(extender) = &handles.tool_registry_extender {
+        extender(&mut registry);
+    }
+    registry
 }
 
 fn caller_scope_for(handles: &EngineRunHandles, agent: &AgentDefinition) -> CallerScope {

@@ -4,17 +4,18 @@ use std::sync::Arc;
 
 use eos_agent_def::{AgentDefinition, AgentRegistry};
 use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
+use eos_agent_run::AgentRunApi;
 use eos_audit::AuditSink;
 use eos_llm_client::{LlmClient, Message};
-use eos_state::AgentRunStore;
 use eos_tools::{
-    AgentRunServicePort, AttemptSubmissionService, CommandSessionPort, ExecutionMetadata,
-    RootSubmissionService, SandboxToolService, SkillToolService, SubagentSessionPort,
-    ToolConfigSet, ToolRegistry, ToolResult, WorkflowServicePort, WorkflowSessionPort,
+    AttemptSubmissionService, CommandSessionToolService, ExecutionMetadata, RootSubmissionService,
+    SandboxToolService, SkillToolService, SubagentToolService, ToolConfigSet, ToolRegistry,
+    ToolResult, WorkflowServicePort, WorkflowToolService,
 };
+use eos_types::AgentRunStore;
 use eos_types::{AgentRunId, TaskId};
 
-use crate::background::BackgroundTeardownPort;
+use crate::background::BackgroundTeardownService;
 use crate::notifications::NotificationService;
 use crate::query::EventSource;
 use crate::telemetry::StreamEvent;
@@ -98,21 +99,10 @@ pub struct AgentRunInput {
     pub agent_run_id: AgentRunId,
     /// The typed tool execution context threaded through every tool call.
     pub tool_metadata: ExecutionMetadata,
-    /// Per-attempt terminal submission service for planner/generator/reducer
-    /// agents. `None` for root/helper runs.
-    pub attempt_submission: Option<AttemptSubmissionService>,
-    /// Agent-run service for subagent launch tools.
-    pub agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-    /// Subagent background-session registry for this run.
-    pub subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
-    /// Workflow service for workflow tools and workflow-state hooks.
-    pub workflow_service: Option<Arc<dyn WorkflowServicePort>>,
-    /// Workflow background-session registry for this run.
-    pub workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+    /// Tool registry with concrete tool executors already wired for this run.
+    pub tool_registry: ToolRegistry,
     /// Background teardown for run-finalization cleanup.
-    pub background_session: Option<Arc<dyn BackgroundTeardownPort>>,
-    /// Command-session lifecycle port for shell tools.
-    pub command_session_port: Option<Arc<dyn CommandSessionPort>>,
+    pub background_teardown: Option<BackgroundTeardownService>,
     /// The run-local notification sink owned by this run's `AgentRunControl` and
     /// shared (by clone) with tools, the heartbeat, and the query loop — the §7
     /// instance-identity invariant. Helper runs pass a fresh standalone service.
@@ -143,15 +133,10 @@ impl std::fmt::Debug for AgentRunInput {
             .field("initial_messages", &self.initial_messages.len())
             .field("task_id", &self.task_id)
             .field("agent_run_id", &self.agent_run_id)
-            .field("has_attempt_submission", &self.attempt_submission.is_some())
-            .field("has_agent_run_service", &self.agent_run_service.is_some())
-            .field("has_subagent_sessions", &self.subagent_sessions.is_some())
-            .field("has_workflow_service", &self.workflow_service.is_some())
-            .field("has_workflow_sessions", &self.workflow_sessions.is_some())
-            .field("has_background_session", &self.background_session.is_some())
+            .field("tool_registry_len", &self.tool_registry.len())
             .field(
-                "has_command_session_port",
-                &self.command_session_port.is_some(),
+                "has_background_teardown",
+                &self.background_teardown.is_some(),
             )
             .field("persist_agent_run", &self.persist_agent_run)
             .field("record_kind", &self.record_kind)
@@ -159,11 +144,45 @@ impl std::fmt::Debug for AgentRunInput {
     }
 }
 
-/// The result of one agent run, read from the loop's `QueryContext`.
+/// Construction-only services used to build one run's [`ToolRegistry`].
+///
+/// These dependencies are captured by concrete tool executors before
+/// [`run_agent`](crate::run_agent) starts; they do not ride on [`AgentRunInput`].
+#[derive(Default)]
+pub struct AgentToolRegistryServices {
+    /// Per-attempt terminal submission service for planner/generator/reducer
+    /// agents. `None` for root/helper runs.
+    pub attempt_submission: Option<AttemptSubmissionService>,
+    /// Agent-run API for advisor/subagent launch tools.
+    pub agent_run_service: Option<Arc<dyn AgentRunApi>>,
+    /// Subagent background-session service for this run.
+    pub subagent_sessions: Option<SubagentToolService>,
+    /// Workflow service for workflow tools and workflow-state hooks.
+    pub workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    /// Workflow background-session tracking service for this run.
+    pub workflow_sessions: Option<WorkflowToolService>,
+    /// Command-session background tracking service for shell tools.
+    pub command_sessions: Option<CommandSessionToolService>,
+}
+
+impl std::fmt::Debug for AgentToolRegistryServices {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentToolRegistryServices")
+            .field("has_attempt_submission", &self.attempt_submission.is_some())
+            .field("has_agent_run_service", &self.agent_run_service.is_some())
+            .field("has_subagent_sessions", &self.subagent_sessions.is_some())
+            .field("has_workflow_service", &self.workflow_service.is_some())
+            .field("has_workflow_sessions", &self.workflow_sessions.is_some())
+            .field("has_command_sessions", &self.command_sessions.is_some())
+            .finish()
+    }
+}
+
+/// The outcome of one agent run, read from the loop's `QueryContext`.
 #[derive(Debug)]
 pub struct AgentRunResult {
-    /// The terminal tool result, when a terminal tool succeeded.
-    pub terminal_result: Option<ToolResult>,
+    /// The submission outcome, when a terminal submit tool succeeded.
+    pub submission_outcome: Option<ToolResult>,
     /// A framework-fault summary if context construction or the stream broke.
     pub error: Option<String>,
 }

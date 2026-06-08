@@ -1,11 +1,11 @@
-//! eos-types — shared id, timestamp, clock, json, and error primitives.
+//! eos-types — shared id, timestamp, clock, json, errors, and state contracts.
 //!
-//! This is the leaf crate of the agent-core dependency DAG: the small,
-//! dependency-light value primitives every other crate shares. It holds the
-//! twelve typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`] trait
-//! seam, the transitional [`JsonObject`] alias, and the minimal [`CoreError`].
-//! It deliberately holds no domain state, status enums, SQL, HTTP, or config —
-//! those belong to their owning crates.
+//! This is the upstream contract crate of the agent-core dependency DAG. It
+//! holds the eleven typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`]
+//! seam, the transitional [`JsonObject`] alias, the minimal [`CoreError`], and
+//! the persisted DTO/store contracts shared across runtime, engine, workflow,
+//! tools, and database crates. It deliberately holds no SQL, HTTP, provider, or
+//! orchestration behavior.
 //!
 //! The public surface is re-exported flatly, so consumers write
 //! `use eos_types::{TaskId, UtcDateTime, Clock, JsonObject};`.
@@ -15,12 +15,27 @@
 mod error;
 mod ids;
 mod json;
+pub mod ports;
+pub mod state;
 mod time;
 
 pub use error::CoreError;
 pub use ids::{
     AgentRunId, AttemptId, CommandSessionId, InvocationId, IterationId, RequestId, SandboxId,
-    SubagentSessionId, TaskId, ToolUseId, WorkflowId, WorkflowSessionId,
+    TaskId, ToolUseId, WorkflowId, WorkflowSessionId,
 };
 pub use json::JsonObject;
+pub use ports::{
+    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
+    TaskStore, WorkflowStore,
+};
+pub use state::{
+    execution_outcome_for_submission, present_status, AgentRun, Attempt, AttemptBudget,
+    AttemptClosure, AttemptFailReason, AttemptStage, AttemptState, AttemptStatus, DeferredGoal,
+    ExecutionRole, ExecutionTaskOutcome, GeneratorSubmission, Iteration, IterationCreationReason,
+    IterationOutcome, IterationStatus, MaterializedPlan, ModelRegistration, Page, PageResult,
+    PlanDisposition, PlanNodeId, PlannerFailReason, PlannerFailureSubmission, PlannerSubmission,
+    ReducerSubmission, Request, RequestListFilter, RequestStatus, Task, TaskOutcomeStatus,
+    TaskRole, TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
+};
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

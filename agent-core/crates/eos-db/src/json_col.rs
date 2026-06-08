@@ -50,7 +50,7 @@ pub(crate) fn decode_opt<T: DeserializeOwned>(text: Option<&str>) -> Result<Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eos_state::JsonObject;
+    use eos_types::JsonObject;
 
     #[test]
     fn decode_default_coerces_null_and_empty() {

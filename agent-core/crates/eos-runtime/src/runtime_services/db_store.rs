@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use eos_state::{
+use eos_types::{
     AgentRunStore, AttemptStore, IterationStore, RequestStore, TaskStore, WorkflowStore,
 };
 

@@ -590,7 +590,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-config",
- "eos-state",
+ "eos-types",
  "serde",
  "serde_json",
  "sqlx",
@@ -610,7 +610,6 @@ dependencies = [
  "eos-audit",
  "eos-llm-client",
  "eos-sandbox-port",
- "eos-state",
  "eos-tools",
  "eos-types",
  "futures",
@@ -683,7 +682,6 @@ dependencies = [
  "eos-plugin-catalog",
  "eos-sandbox-port",
  "eos-skills",
- "eos-state",
  "eos-tools",
  "eos-types",
  "eos-workflow",
@@ -761,7 +759,6 @@ dependencies = [
  "eos-llm-client",
  "eos-sandbox-port",
  "eos-skills",
- "eos-state",
  "eos-types",
  "regex",
  "schemars 0.8.22",
@@ -775,6 +772,7 @@ dependencies = [
 name = "eos-types"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -789,7 +787,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
- "eos-state",
  "eos-tools",
  "eos-types",
  "parking_lot",

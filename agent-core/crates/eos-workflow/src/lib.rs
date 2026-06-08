@@ -15,6 +15,7 @@ mod iteration;
 mod lifecycle;
 mod ports;
 mod starter;
+mod state;
 mod util;
 
 // Layer-B doubles (in-memory stores + `AgentRunner` doubles + `wait_until`).

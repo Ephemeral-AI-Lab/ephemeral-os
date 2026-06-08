@@ -84,13 +84,13 @@ impl ToolExecutor for ExecCommand {
         // Register a backgrounded session on this run's command-session manager.
         // The manager is bound to the owning agent run, so no per-call agent-run
         // argument is threaded through the tool request.
-        if let (Some(port), Some(session_id)) = (
-            &self.service.command_session_port,
-            &result.command_session_id,
-        ) {
+        if let (Some(command_sessions), Some(session_id)) =
+            (&self.service.command_sessions, &result.command_session_id)
+        {
             if result.is_running() {
-                port.register_background_session(session_id, sandbox_id)
-                    .await;
+                command_sessions
+                    .register_background_session(session_id, sandbox_id)
+                    .await?;
             }
         }
         Ok(command_tool_result(&result))

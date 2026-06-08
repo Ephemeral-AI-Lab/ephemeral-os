@@ -5,8 +5,8 @@
 //! composition and reused. It holds only immutable construction capability
 //! (foreground creation plus background service construction inputs) and must never retain a live
 //! `AgentRunControl`, `NotificationService`, `ForegroundExecutor`,
-//! `BackgroundSessionService`, or manager state. Each call mints a fresh
-//! notification service, foreground executor, background session service, and
+//! `BackgroundManagers`, or manager state. Each call mints a fresh
+//! notification service, foreground executor, background managers, and
 //! completion monitors.
 
 use std::sync::{Arc, OnceLock};
@@ -16,7 +16,7 @@ use eos_sandbox_port::SandboxCommandApi;
 use eos_tools::WorkflowServicePort;
 use eos_types::{AgentRunId, TaskId};
 
-use crate::background::BackgroundSessionService;
+use crate::background::BackgroundManagers;
 use crate::notifications::NotificationService;
 
 use super::control::{AgentRunControl, AgentRunControlParts};
@@ -80,7 +80,7 @@ impl AgentRunControlFactory {
         // `AgentRunService` can mint each subagent its own run control. This is
         // value capability only: the factory holds no `AgentRunControl`, so
         // there is no reference cycle.
-        let background = BackgroundSessionService::new(
+        let background = BackgroundManagers::new(
             agent_run_id.clone(),
             self.handles.clone(),
             self.command_service.clone(),

@@ -50,7 +50,9 @@ pub enum StartTarget {
         scratch_root: PathBuf,
     },
     Isolated {
-        handle: CommandHandle,
+        // Boxed: `CommandHandle` is far larger than the ephemeral variant, and
+        // this enum is only a short-lived dispatch value.
+        handle: Box<CommandHandle>,
     },
 }
 
@@ -170,7 +172,7 @@ impl WorkspaceRunManager {
         &self,
         spec: CommandSessionSpec,
         prepare_request: eos_workspace_api::PrepareCommandRequest,
-        handle: CommandHandle,
+        handle: Box<CommandHandle>,
         yield_time_ms: u64,
     ) -> Result<CommandResponse, CommandSessionError> {
         let context = IsolatedCommandPrepareContext {
@@ -185,6 +187,7 @@ impl WorkspaceRunManager {
         };
         let prepared = prepare_isolated_command(context, prepare_request)?;
         let session = self.spawn_session(spec, prepared)?;
+        let handle = *handle;
         Ok(self.register_and_wait(session, yield_time_ms, move |session| {
             WorkspaceRun::Isolated(IsolatedRun { session, handle })
         }))
@@ -460,21 +463,24 @@ fn settle_ephemeral(
 ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
     let root = run.workspace.layer_stack_root.0.clone();
     let lease_id = run.workspace.snapshot.lease_id.clone();
-    if cancelled {
-        discard_ephemeral_command(&run.workspace.dirs);
-        release_lease(&root, &lease_id);
-        return Ok(WorkspaceCommandOutcome::discarded(
+    // Compute the outcome, then ALWAYS remove the run dirs + release the lease —
+    // on completion (after publish), on cancel (discard, never published), and
+    // even if shaping the completion errors. Cleanup must not depend on success.
+    let outcome = if cancelled {
+        Ok(WorkspaceCommandOutcome::discarded(
             WorkspaceMode::Ephemeral,
             request,
-        ));
-    }
-    let base_timings = base_timings(&root)?;
-    let outcome = finalize_ephemeral_command(
-        &DaemonPublisherPort::new(&root),
-        run.workspace.clone(),
-        base_timings,
-        request,
-    );
+        ))
+    } else {
+        base_timings(&root).and_then(|base_timings| {
+            finalize_ephemeral_command(
+                &DaemonPublisherPort::new(&root),
+                run.workspace.clone(),
+                base_timings,
+                request,
+            )
+        })
+    };
     discard_ephemeral_command(&run.workspace.dirs);
     release_lease(&root, &lease_id);
     outcome

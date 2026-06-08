@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_agent_def::AgentName;
 use eos_agent_message_records::AgentRunRecordKind;
+use eos_agent_run::{AgentRunApi, AgentRunError, SpawnAgentRequest};
 use eos_llm_client::Message;
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
@@ -21,10 +22,9 @@ use crate::registry::spec::text_spec_with_agent_enum;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
-use crate::{
-    AgentRunServicePort, AgentSpawnError, SpawnAgentRequest, SubagentLaunchRejection,
-    SubagentSessionPort,
-};
+use crate::SubagentLaunchRejection;
+
+use super::super::SubagentToolService;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct RunSubagentInput {
@@ -34,14 +34,14 @@ struct RunSubagentInput {
 }
 
 pub(in crate::tools::subagent) struct RunSubagent {
-    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+    agent_run_service: Option<Arc<dyn AgentRunApi>>,
+    subagent_sessions: Option<SubagentToolService>,
 }
 
 impl RunSubagent {
     pub(in crate::tools::subagent) fn new(
-        agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-        subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+        agent_run_service: Option<Arc<dyn AgentRunApi>>,
+        subagent_sessions: Option<SubagentToolService>,
     ) -> Self {
         Self {
             agent_run_service,
@@ -140,6 +140,7 @@ impl ToolExecutor for RunSubagent {
             .ok_or(ToolError::MissingPort("agent_run_service"))?
             .spawn_agent(SpawnAgentRequest {
                 agent_name: agent_name.clone(),
+                agent_run_id: None,
                 initial_messages: vec![
                     Message::from_user_text(parsed.prompt.clone()),
                     Message::from_user_text(explorer_launch_guidance()),
@@ -160,15 +161,13 @@ impl ToolExecutor for RunSubagent {
             .await
         {
             Ok(agent_run_id) => agent_run_id,
-            Err(AgentSpawnError::Rejected(rejection)) => return Ok(launch_rejection(rejection)),
-            Err(AgentSpawnError::Tool(err)) => return Err(err),
+            Err(err) => return render_launch_error(err),
         };
-        let _subagent_session_id = self
-            .subagent_sessions
-            .as_deref()
+        self.subagent_sessions
+            .as_ref()
             .ok_or(ToolError::MissingPort("subagent_sessions"))?
-            .register_background_session(&agent_run_id, agent_name.as_str())
-            .await;
+            .register_background_session(&agent_run_id)
+            .await?;
         Ok(launch_result(&agent_run_id, agent_name.as_str()))
     }
 }
@@ -177,8 +176,8 @@ pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
     caller: &CallerScope,
-    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+    agent_run_service: Option<Arc<dyn AgentRunApi>>,
+    subagent_sessions: Option<SubagentToolService>,
 ) {
     let run = config.get(ToolName::RunSubagent);
     super::super::register_tool(
@@ -194,4 +193,24 @@ pub(super) fn register(
         OutputShape::Text,
         Arc::new(RunSubagent::new(agent_run_service, subagent_sessions)),
     );
+}
+
+fn render_launch_error(err: AgentRunError) -> Result<ToolResult, ToolError> {
+    match err {
+        AgentRunError::RecursiveSubagent => {
+            Ok(launch_rejection(SubagentLaunchRejection::Recursive))
+        }
+        AgentRunError::AgentNotRegistered(agent_name) => {
+            Ok(launch_rejection(SubagentLaunchRejection::NotRegistered {
+                agent_name,
+            }))
+        }
+        AgentRunError::WrongAgentType {
+            agent_name, actual, ..
+        } => Ok(launch_rejection(SubagentLaunchRejection::NotSubagent {
+            agent_name,
+            agent_type: actual.to_owned(),
+        })),
+        err => Err(ToolError::Internal(format!("run_subagent: {err}"))),
+    }
 }

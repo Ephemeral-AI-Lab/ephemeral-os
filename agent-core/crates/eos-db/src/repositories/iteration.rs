@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
-use eos_state::{
+use eos_types::{
     AttemptBudget, AttemptId, CoreError, DeferredGoal, Iteration, IterationCreationReason,
     IterationId, IterationStatus, IterationStore, Sealed, UtcDateTime, WorkflowId,
 };

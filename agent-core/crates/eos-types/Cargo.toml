@@ -11,6 +11,7 @@ schemars.workspace = true
 time.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
+async-trait.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

@@ -1,7 +1,6 @@
 //! Agent-run terminal outcome DTOs.
 
 use eos_llm_client::Message;
-use eos_tools::ToolResult;
 use eos_types::{AgentRunId, JsonObject};
 
 /// Terminal outcome for one agent run.
@@ -11,10 +10,8 @@ pub struct AgentRunOutcome {
     pub agent_run_id: AgentRunId,
     /// Terminal status.
     pub status: AgentRunStatus,
-    /// Terminal model-facing tool result, when one was submitted.
-    pub terminal_result: Option<ToolResult>,
-    /// Persisted terminal payload, when available.
-    pub terminal_payload: Option<JsonObject>,
+    /// Persisted submission payload, when available.
+    pub submission_payload: Option<JsonObject>,
     /// Final message history, when the runner makes it available.
     pub message_history: Vec<Message>,
     /// Provider token count, when known.

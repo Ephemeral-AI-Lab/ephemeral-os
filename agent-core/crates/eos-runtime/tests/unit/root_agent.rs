@@ -402,7 +402,7 @@ async fn root_terminal_blocked_without_advisor_approval() {
 #[tokio::test]
 async fn unfinished_root_sets_run_exhausted() {
     // An empty factory: the first turn yields no completion → the run ends with
-    // terminal_result=None → the unfinished-root guard fires.
+    // submission_outcome=None → the unfinished-root guard fires.
     let factory = factory_from(vec![]);
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
     let request_id = RequestId::new_v4();

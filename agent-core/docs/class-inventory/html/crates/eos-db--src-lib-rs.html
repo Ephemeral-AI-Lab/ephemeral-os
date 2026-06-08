@@ -66,7 +66,7 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! eos-db — the single `SQLite`-backed persistence implementation for agent-core.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! Turns the abstract per-entity `Store` traits (owned by `eos-state`) into</span>
+<span class="rs-comment">//! Turns the abstract per-entity `Store` traits (owned by `eos-types`) into</span>
 <span class="rs-comment">//! concrete `sqlx` repositories over one local `SQLite` file: it owns the</span>
 <span class="rs-comment">//! `SqlitePool` (PRAGMA discipline), the versioned `migrations/`, the typed row</span>
 <span class="rs-comment">//! structs and their explicit row↔domain mapping (the naming gap, anchor §4),</span>

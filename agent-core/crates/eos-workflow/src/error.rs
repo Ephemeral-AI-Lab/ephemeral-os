@@ -1,4 +1,4 @@
-use eos_state::CoreError;
+use eos_types::CoreError;
 
 /// Result alias for workflow operations.
 pub type Result<T> = std::result::Result<T, WorkflowError>;

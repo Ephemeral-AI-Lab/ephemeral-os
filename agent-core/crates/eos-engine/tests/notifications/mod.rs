@@ -27,7 +27,7 @@ fn ctx() -> QueryContext {
         tool_metadata: metadata(),
         terminal_tools: BTreeSet::from([ToolName::SubmitRootOutcome]),
         exit_reason: None,
-        terminal_result: None,
+        submission_outcome: None,
         event_source: None,
         prompt_report: None,
         message_record: None,
@@ -92,7 +92,7 @@ async fn notification_rules_fire_in_order_with_dedup() {
     assert_eq!(second.len(), 1, "budget tier is fire-once");
     assert!(second[0].message.contains("terminal tool"));
 
-    ctx.terminal_result = Some(ToolResult {
+    ctx.submission_outcome = Some(ToolResult {
         output: "done".to_owned(),
         is_error: false,
         metadata: JsonObject::new(),

@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::{
+use eos_types::{
     Attempt, AttemptBudget, AttemptClosure, AttemptId, AttemptState, CoreError, DeferredGoal,
     ExecutionTaskOutcome, Iteration, IterationCreationReason, IterationId, IterationStatus,
     JsonObject, MaterializedPlan, RequestId, Task, TaskId, TaskStatus, Workflow, WorkflowId,
@@ -77,7 +77,7 @@ impl MemoryStores {
     // wrappers keep test bodies readable and do not touch `task_writes`).
 
     pub(crate) async fn seed_workflow(&self, goal: &str) -> Workflow {
-        eos_state::WorkflowStore::insert(self, &RequestId::new_v4(), &tid("root"), goal)
+        eos_types::WorkflowStore::insert(self, &RequestId::new_v4(), &tid("root"), goal)
             .await
             .unwrap()
     }
@@ -90,7 +90,7 @@ impl MemoryStores {
         iteration_goal: &str,
         attempt_budget: AttemptBudget,
     ) -> Iteration {
-        let iteration = eos_state::IterationStore::insert(
+        let iteration = eos_types::IterationStore::insert(
             self,
             workflow_id,
             sequence_no,
@@ -100,7 +100,7 @@ impl MemoryStores {
         )
         .await
         .unwrap();
-        eos_state::WorkflowStore::append_iteration_id(self, workflow_id, &iteration.id)
+        eos_types::WorkflowStore::append_iteration_id(self, workflow_id, &iteration.id)
             .await
             .unwrap();
         iteration
@@ -112,10 +112,10 @@ impl MemoryStores {
         workflow_id: &WorkflowId,
         sequence_no: i64,
     ) -> Attempt {
-        let attempt = eos_state::AttemptStore::insert(self, iteration_id, workflow_id, sequence_no)
+        let attempt = eos_types::AttemptStore::insert(self, iteration_id, workflow_id, sequence_no)
             .await
             .unwrap();
-        eos_state::IterationStore::append_attempt_id(self, iteration_id, &attempt.id)
+        eos_types::IterationStore::append_attempt_id(self, iteration_id, &attempt.id)
             .await
             .unwrap();
         attempt
@@ -126,17 +126,17 @@ pub(crate) fn tid(id: &str) -> TaskId {
     id.parse().unwrap()
 }
 
-impl eos_state::Sealed for MemoryStores {}
+impl eos_types::Sealed for MemoryStores {}
 
 #[async_trait]
-impl eos_state::WorkflowStore for MemoryStores {
+impl eos_types::WorkflowStore for MemoryStores {
     async fn insert(
         &self,
         request_id: &RequestId,
         parent_task_id: &TaskId,
         workflow_goal: &str,
     ) -> std::result::Result<Workflow, CoreError> {
-        let now = eos_state::UtcDateTime::now();
+        let now = eos_types::UtcDateTime::now();
         let workflow = Workflow {
             id: WorkflowId::new_v4(),
             request_id: request_id.clone(),
@@ -169,7 +169,7 @@ impl eos_state::WorkflowStore for MemoryStores {
             .get_mut(id)
             .ok_or_else(|| not_found("workflow", id.as_str()))?;
         workflow.iteration_ids.push(iteration_id.clone());
-        workflow.updated_at = eos_state::UtcDateTime::now();
+        workflow.updated_at = eos_types::UtcDateTime::now();
         Ok(workflow.clone())
     }
 
@@ -177,7 +177,7 @@ impl eos_state::WorkflowStore for MemoryStores {
         &self,
         id: &WorkflowId,
         status: WorkflowStatus,
-        closed_at: Option<eos_state::UtcDateTime>,
+        closed_at: Option<eos_types::UtcDateTime>,
         outcomes: Option<&str>,
     ) -> std::result::Result<Workflow, CoreError> {
         let mut guard = self.workflows.lock();
@@ -186,7 +186,7 @@ impl eos_state::WorkflowStore for MemoryStores {
             .ok_or_else(|| not_found("workflow", id.as_str()))?;
         workflow.status = status;
         workflow.closed_at = closed_at;
-        workflow.updated_at = eos_state::UtcDateTime::now();
+        workflow.updated_at = eos_types::UtcDateTime::now();
         if let Some(outcomes) = outcomes {
             workflow.outcomes = Some(outcomes.to_owned());
         }
@@ -210,7 +210,7 @@ impl eos_state::WorkflowStore for MemoryStores {
 }
 
 #[async_trait]
-impl eos_state::IterationStore for MemoryStores {
+impl eos_types::IterationStore for MemoryStores {
     async fn insert(
         &self,
         workflow_id: &WorkflowId,
@@ -219,7 +219,7 @@ impl eos_state::IterationStore for MemoryStores {
         iteration_goal: &str,
         attempt_budget: AttemptBudget,
     ) -> std::result::Result<Iteration, CoreError> {
-        let now = eos_state::UtcDateTime::now();
+        let now = eos_types::UtcDateTime::now();
         let iteration = Iteration {
             id: IterationId::new_v4(),
             workflow_id: workflow_id.clone(),
@@ -255,7 +255,7 @@ impl eos_state::IterationStore for MemoryStores {
             .get_mut(id)
             .ok_or_else(|| not_found("iteration", id.as_str()))?;
         iteration.attempt_ids.push(attempt_id.clone());
-        iteration.updated_at = eos_state::UtcDateTime::now();
+        iteration.updated_at = eos_types::UtcDateTime::now();
         Ok(iteration.clone())
     }
 
@@ -263,7 +263,7 @@ impl eos_state::IterationStore for MemoryStores {
         &self,
         id: &IterationId,
         status: IterationStatus,
-        closed_at: Option<eos_state::UtcDateTime>,
+        closed_at: Option<eos_types::UtcDateTime>,
         outcomes: Option<&str>,
     ) -> std::result::Result<Iteration, CoreError> {
         let mut guard = self.iterations.lock();
@@ -272,7 +272,7 @@ impl eos_state::IterationStore for MemoryStores {
             .ok_or_else(|| not_found("iteration", id.as_str()))?;
         iteration.status = status;
         iteration.closed_at = closed_at;
-        iteration.updated_at = eos_state::UtcDateTime::now();
+        iteration.updated_at = eos_types::UtcDateTime::now();
         if let Some(outcomes) = outcomes {
             iteration.outcomes = Some(outcomes.to_owned());
         }
@@ -289,7 +289,7 @@ impl eos_state::IterationStore for MemoryStores {
             .get_mut(id)
             .ok_or_else(|| not_found("iteration", id.as_str()))?;
         iteration.deferred_goal_for_next_iteration = deferred_goal_for_next_iteration.cloned();
-        iteration.updated_at = eos_state::UtcDateTime::now();
+        iteration.updated_at = eos_types::UtcDateTime::now();
         Ok(iteration.clone())
     }
 
@@ -297,7 +297,7 @@ impl eos_state::IterationStore for MemoryStores {
         &self,
         id: &IterationId,
         outcomes: &str,
-        closed_at: Option<eos_state::UtcDateTime>,
+        closed_at: Option<eos_types::UtcDateTime>,
     ) -> std::result::Result<Iteration, CoreError> {
         self.set_status(id, IterationStatus::Succeeded, closed_at, Some(outcomes))
             .await
@@ -320,14 +320,14 @@ impl eos_state::IterationStore for MemoryStores {
 }
 
 #[async_trait]
-impl eos_state::AttemptStore for MemoryStores {
+impl eos_types::AttemptStore for MemoryStores {
     async fn insert(
         &self,
         iteration_id: &IterationId,
         workflow_id: &WorkflowId,
         attempt_sequence_no: i64,
     ) -> std::result::Result<Attempt, CoreError> {
-        let now = eos_state::UtcDateTime::now();
+        let now = eos_types::UtcDateTime::now();
         let attempt = Attempt {
             id: AttemptId::new_v4(),
             iteration_id: iteration_id.clone(),
@@ -361,7 +361,7 @@ impl eos_state::AttemptStore for MemoryStores {
         attempt.state = AttemptState::Planning {
             planner_task_id: Some(planner_task_id.clone()),
         };
-        attempt.updated_at = eos_state::UtcDateTime::now();
+        attempt.updated_at = eos_types::UtcDateTime::now();
         Ok(attempt.clone())
     }
 
@@ -375,7 +375,7 @@ impl eos_state::AttemptStore for MemoryStores {
             .get_mut(id)
             .ok_or_else(|| not_found("attempt", id.as_str()))?;
         attempt.state = AttemptState::Running { plan: plan.clone() };
-        attempt.updated_at = eos_state::UtcDateTime::now();
+        attempt.updated_at = eos_types::UtcDateTime::now();
         Ok(attempt.clone())
     }
 
@@ -400,7 +400,7 @@ impl eos_state::AttemptStore for MemoryStores {
             planner_task_id,
             plan,
         };
-        attempt.updated_at = eos_state::UtcDateTime::now();
+        attempt.updated_at = eos_types::UtcDateTime::now();
         Ok(attempt.clone())
     }
 
@@ -421,7 +421,7 @@ impl eos_state::AttemptStore for MemoryStores {
 }
 
 #[async_trait]
-impl eos_state::TaskStore for MemoryStores {
+impl eos_types::TaskStore for MemoryStores {
     async fn insert_task(&self, task: &Task) -> std::result::Result<(), CoreError> {
         self.task_writes.fetch_add(1, Ordering::Relaxed);
         let mut tasks = self.tasks.lock();

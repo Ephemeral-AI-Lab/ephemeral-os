@@ -1,4 +1,4 @@
-use eos_state::ExecutionTaskOutcome;
+use eos_types::ExecutionTaskOutcome;
 
 use super::{AgentContext, ContextSection};
 

@@ -3,10 +3,10 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_state::{
+use eos_types::{AttemptId, JsonObject, TaskId};
+use eos_types::{
     GeneratorSubmission, PlanDisposition, PlanNodeId, ReducerSubmission, TaskOutcomeStatus,
 };
-use eos_types::{AttemptId, JsonObject, TaskId};
 use serde_json::{json, Value};
 
 use crate::support::{metadata, FakeTransport};

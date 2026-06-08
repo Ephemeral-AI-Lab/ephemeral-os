@@ -17,6 +17,7 @@ mod workflow;
 
 use std::sync::Arc;
 
+use eos_agent_run::AgentRunApi;
 use eos_llm_client::ToolSpec;
 
 use crate::core::name::ToolName;
@@ -24,12 +25,12 @@ use crate::core::result::OutputShape;
 use crate::registry::config::{ToolConfig, ToolConfigSet};
 use crate::registry::ToolRegistry;
 use crate::runtime::executor::{RegisteredTool, ToolExecutor};
-use crate::AgentRunServicePort;
 
 use services::InertSandboxTransport;
 pub use services::{
-    AttemptSubmissionService, CommandToolService, HookServices, RootSubmissionService,
-    SandboxToolService, SkillToolService,
+    AttemptSubmissionService, CommandSessionToolService, CommandToolService, HookServices,
+    RootSubmissionService, SandboxToolService, SkillToolService, SubagentToolService,
+    WorkflowToolService,
 };
 
 /// The per-caller scope a tool registry is built for: the caller's
@@ -93,11 +94,11 @@ pub fn build_default_registry_with_services(
     sandbox_service: SandboxToolService,
     root_submission: Option<RootSubmissionService>,
     attempt_submission: Option<AttemptSubmissionService>,
-    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-    subagent_sessions: Option<Arc<dyn crate::SubagentSessionPort>>,
+    agent_run_service: Option<Arc<dyn AgentRunApi>>,
+    subagent_sessions: Option<SubagentToolService>,
     workflow_service: Option<Arc<dyn crate::WorkflowServicePort>>,
-    workflow_sessions: Option<Arc<dyn crate::WorkflowSessionPort>>,
-    command_session_port: Option<Arc<dyn crate::CommandSessionPort>>,
+    workflow_sessions: Option<WorkflowToolService>,
+    command_sessions: Option<CommandSessionToolService>,
     skill_service: SkillToolService,
 ) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
@@ -106,8 +107,7 @@ pub fn build_default_registry_with_services(
         workflow_service.clone(),
         subagent_sessions.clone(),
     );
-    let command_service =
-        CommandToolService::new(sandbox_service.transport(), command_session_port);
+    let command_service = CommandToolService::new(sandbox_service.transport(), command_sessions);
     sandbox::register(
         &mut registry,
         config,

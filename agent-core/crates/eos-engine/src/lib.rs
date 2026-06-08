@@ -14,8 +14,8 @@ pub mod tool_call;
 
 pub use agent::{build_query_context, BuildQueryContextInput};
 pub use background::{
-    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSessionService,
-    BackgroundSessionStatus, BackgroundTeardownPort,
+    BackgroundCompletion, BackgroundManagers, BackgroundNotificationEmitter,
+    BackgroundSessionStatus, BackgroundTeardownService,
 };
 pub use notifications::{make_default_notification_rules, NotificationRule, NotificationService};
 pub use query::{
@@ -23,8 +23,9 @@ pub use query::{
     ProviderEventSource, QueryContext, QueryExitReason, QueryRunRequest, QueryStream,
 };
 pub use runtime::{
-    run_agent, AgentRunCancellation, AgentRunControl, AgentRunControlFactory, AgentRunFinalization,
-    AgentRunInput, AgentRunRegistry, AgentRunResult, AgentRunService, EngineCancelPort,
+    build_agent_tool_registry, run_agent, AgentRunCancellation, AgentRunControl,
+    AgentRunControlFactory, AgentRunFinalization, AgentRunInput, AgentRunRegistry, AgentRunResult,
+    AgentRunService, AgentRunServiceOptions, AgentToolRegistryServices, EngineCancelPort,
     EngineRunHandles, EventCallback, EventSourceFactory, ForegroundExecutor,
     ForegroundExecutorFactory, ForegroundResourceId, ToolRegistryExtender,
 };

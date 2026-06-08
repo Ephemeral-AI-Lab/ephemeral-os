@@ -156,7 +156,7 @@
         .bind(plan.planner_task_id.as_str())
         .bind(json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a>(&amp;plan.generator_task_ids)?)
         .bind(json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a>(&amp;plan.reducer_task_ids)?)
-        .bind(plan.deferred_goal().map(eos_state::<span class="rs-type">DeferredGoal</span>::as_str))
+        .bind(plan.deferred_goal().map(eos_types::<span class="rs-type">DeferredGoal</span>::as_str))
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
@@ -223,7 +223,7 @@
 <span class="rs-kw">use</span> sqlx::{<span class="rs-type">Sqlite</span>, <span class="rs-type">SqlitePool</span>};
 <span class="rs-kw">use</span> time::<span class="rs-type">OffsetDateTime</span>;
 
-<span class="rs-kw">use</span> eos_state::{
+<span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptClosure</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">AttemptStage</span>, <span class="rs-type">AttemptStore</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">IterationId</span>,
     <span class="rs-type">MaterializedPlan</span>, <span class="rs-type">Sealed</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">WorkflowId</span>,
 };
@@ -323,7 +323,7 @@
         .bind(plan.planner_task_id.as_str())
         .bind(json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a>(&amp;plan.generator_task_ids)?)
         .bind(json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a>(&amp;plan.reducer_task_ids)?)
-        .bind(plan.deferred_goal().map(eos_state::<span class="rs-type">DeferredGoal</span>::as_str))
+        .bind(plan.deferred_goal().map(eos_types::<span class="rs-type">DeferredGoal</span>::as_str))
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&amp;<span class="rs-self">self</span>.pool)

@@ -20,9 +20,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::{TaskStatus, TaskStore};
 use eos_tools::{CancelPort, ToolError};
 use eos_types::{AgentRunId, JsonObject, TaskId};
+use eos_types::{TaskStatus, TaskStore};
 
 use super::registry::AgentRunRegistry;
 

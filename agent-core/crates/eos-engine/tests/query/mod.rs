@@ -183,7 +183,7 @@ fn ctx(
         tool_metadata: metadata(),
         terminal_tools,
         exit_reason: None,
-        terminal_result: None,
+        submission_outcome: None,
         event_source: Some(source),
         prompt_report: None,
         message_record: None,
@@ -389,7 +389,7 @@ async fn run_query_sets_tool_stop_after_terminal_success() {
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     assert_eq!(ctx.exit_reason, Some(QueryExitReason::ToolStop));
     assert!(ctx
-        .terminal_result
+        .submission_outcome
         .as_ref()
         .is_some_and(|result| result.is_terminal));
     assert!(saw_completed(&events, "submit_root_outcome", "done", true));
@@ -439,7 +439,7 @@ async fn run_query_terminal_tool_error_does_not_set_tool_stop() {
         false
     ));
     assert_eq!(ctx.exit_reason, None);
-    assert!(ctx.terminal_result.is_none());
+    assert!(ctx.submission_outcome.is_none());
 }
 
 #[tokio::test]

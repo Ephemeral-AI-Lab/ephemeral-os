@@ -3,7 +3,7 @@
 
 use eos_config::{DatabaseConfig, DatabaseUrl};
 use eos_db::Database;
-use eos_state::{
+use eos_types::{
     AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus, DeferredGoal,
     ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus, JsonObject,
     MaterializedPlan, Page, PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task,
@@ -181,7 +181,7 @@ async fn workflow_roundtrip_goal_mapping() {
             .expect("raw goal");
     assert_eq!(raw_goal, "build the parser");
 
-    let it_id: eos_state::IterationId = "iter-x".parse().expect("iter id");
+    let it_id: eos_types::IterationId = "iter-x".parse().expect("iter id");
     let appended = workflows
         .append_iteration_id(&wf.id, &it_id)
         .await
@@ -327,7 +327,7 @@ async fn attempt_roundtrip() {
     assert_eq!(with_red.reducer_task_ids(), &[tid("r1")]);
 
     let outcomes = vec![ExecutionTaskOutcome {
-        status: eos_state::TaskOutcomeStatus::Failed,
+        status: eos_types::TaskOutcomeStatus::Failed,
         role: ExecutionRole::Generator,
         task_id: tid("g1"),
         outcome: "boom".to_owned(),
@@ -372,7 +372,7 @@ async fn agent_run_roundtrip() {
         .await
         .expect("task");
 
-    let run_id: eos_state::AgentRunId = "run-1".parse().expect("run id");
+    let run_id: eos_types::AgentRunId = "run-1".parse().expect("run id");
     let initial = vec![json_obj(&[("role", serde_json::json!("user"))])];
     let created = agent_runs
         .create_run(&run_id, Some(&tid("t-5")), "coder", Some(&initial))
@@ -400,7 +400,7 @@ async fn agent_run_roundtrip() {
     // Unique task_id: a second run for the same task errors.
     assert!(agent_runs
         .create_run(
-            &"run-2".parse::<eos_state::AgentRunId>().expect("id"),
+            &"run-2".parse::<eos_types::AgentRunId>().expect("id"),
             Some(&tid("t-5")),
             "coder",
             None
@@ -694,7 +694,7 @@ async fn read_side_list_apis() {
     assert!(owner_tasks.iter().all(|task| task.request_id == owner));
 
     // get_for_task returns the bound run, and None when a task has no run.
-    let run_id: eos_state::AgentRunId = "run-a1".parse().expect("run id");
+    let run_id: eos_types::AgentRunId = "run-a1".parse().expect("run id");
     agent_runs
         .create_run(&run_id, Some(&tid("t-a1")), "coder", None)
         .await
@@ -776,7 +776,7 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
     assert!(err.to_string().contains("not found in tasks"), "{err}");
 
     // Workflow / iteration / attempt mutators on an absent row are NotFound.
-    let wf_missing: eos_state::WorkflowId = "ghost-wf".parse().expect("wf id");
+    let wf_missing: eos_types::WorkflowId = "ghost-wf".parse().expect("wf id");
     assert!(workflows
         .set_status(&wf_missing, WorkflowStatus::Succeeded, None, None)
         .await
@@ -786,12 +786,12 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
     assert!(workflows
         .append_iteration_id(
             &wf_missing,
-            &"i".parse::<eos_state::IterationId>().expect("it id")
+            &"i".parse::<eos_types::IterationId>().expect("it id")
         )
         .await
         .is_err());
 
-    let it_missing: eos_state::IterationId = "ghost-it".parse().expect("it id");
+    let it_missing: eos_types::IterationId = "ghost-it".parse().expect("it id");
     assert!(iterations
         .close_succeeded(&it_missing, "[]", None)
         .await
@@ -803,7 +803,7 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
         .await
         .is_err());
 
-    let att_missing: eos_state::AttemptId = "ghost-att".parse().expect("att id");
+    let att_missing: eos_types::AttemptId = "ghost-att".parse().expect("att id");
     assert!(attempts
         .close(
             &att_missing,
@@ -825,7 +825,7 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
     assert!(agent_runs
         .finish_run(
             &"ghost-run"
-                .parse::<eos_state::AgentRunId>()
+                .parse::<eos_types::AgentRunId>()
                 .expect("run id"),
             None,
             None,
@@ -885,7 +885,7 @@ async fn attempt_passed_closure_roundtrips_through_store() {
         .expect("plan");
 
     let outcomes = vec![ExecutionTaskOutcome {
-        status: eos_state::TaskOutcomeStatus::Success,
+        status: eos_types::TaskOutcomeStatus::Success,
         role: ExecutionRole::Reducer,
         task_id: tid("r1"),
         outcome: "shipped".to_owned(),

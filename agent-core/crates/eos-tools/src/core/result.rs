@@ -72,8 +72,8 @@ pub enum OutputShape {
 impl std::fmt::Debug for OutputShape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OutputShape::Text => f.write_str("OutputShape::Text"),
-            OutputShape::Json { model_name, .. } => {
+            Self::Text => f.write_str("OutputShape::Text"),
+            Self::Json { model_name, .. } => {
                 write!(f, "OutputShape::Json({model_name})")
             }
         }
@@ -81,10 +81,10 @@ impl std::fmt::Debug for OutputShape {
 }
 
 impl OutputShape {
-    /// Build a [`OutputShape::Json`] for output model `T`.
+    /// Build an [`OutputShape::Json`] for output model `T`.
     #[must_use]
     pub fn json<T: DeserializeOwned>(model_name: &'static str) -> Self {
-        OutputShape::Json {
+        Self::Json {
             model_name,
             validate: validate_json::<T>,
         }

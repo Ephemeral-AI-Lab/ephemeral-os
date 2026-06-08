@@ -1,6 +1,6 @@
-//! The single `eos-db` error enum and its bridge to `eos-state`'s `CoreError`.
+//! The single `eos-db` error enum and its bridge to `eos-types`'s `CoreError`.
 
-use eos_state::CoreError;
+use eos_types::CoreError;
 
 /// Errors raised by the `SQLite` persistence layer.
 #[derive(Debug, thiserror::Error)]

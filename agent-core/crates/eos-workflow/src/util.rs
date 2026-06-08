@@ -1,6 +1,6 @@
 //! Small crate-internal helpers shared across modules.
 
-use eos_state::JsonObject;
+use eos_types::JsonObject;
 use serde_json::Value;
 
 /// Build a single-key [`JsonObject`] (the `terminal_tool_result` markers the

@@ -1,4 +1,4 @@
-use eos_state::{AttemptBudget, AttemptId, PlanNodeId, TaskId};
+use eos_types::{AttemptBudget, AttemptId, PlanNodeId, TaskId};
 
 use crate::Result;
 

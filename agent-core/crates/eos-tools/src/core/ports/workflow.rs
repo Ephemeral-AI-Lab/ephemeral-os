@@ -1,7 +1,8 @@
-use async_trait::async_trait;
 use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
 use crate::core::{Sealed, ToolError};
+
+use async_trait::async_trait;
 
 /// Request to start a delegated workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,20 +85,4 @@ pub struct OutstandingWorkflow {
     pub workflow_task_id: WorkflowSessionId,
     /// The workflow goal.
     pub workflow_goal: String,
-}
-
-/// Workflow background-session registry for one owning agent run.
-#[async_trait]
-pub trait WorkflowSessionPort: Sealed + Send + Sync {
-    /// Register a started workflow as background work.
-    async fn register_background_session(&self, workflow: &StartedWorkflow);
-
-    /// Count running workflow sessions for this run.
-    async fn count_background_sessions(&self) -> usize;
-
-    /// Cancel all running workflow sessions for this run.
-    async fn cancel_all_background_sessions(&self, reason: &str);
-
-    /// Poll terminal workflows and push notifications.
-    async fn poll_complete_background_sessions(&self) -> usize;
 }

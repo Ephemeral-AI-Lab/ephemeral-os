@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use eos_state::AttemptId;
+use eos_types::AttemptId;
 use parking_lot::Mutex;
 use tokio::task::AbortHandle;
 

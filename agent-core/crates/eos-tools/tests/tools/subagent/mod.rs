@@ -3,24 +3,25 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{AgentRunId, JsonObject, SubagentSessionId};
+use eos_agent_run::{
+    AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,
+};
+use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
 
 use super::super::{cancel_subagent::CancelSubagent, run_subagent::RunSubagent};
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
-use crate::{AgentRunServicePort, AgentSpawnError, Sealed, SpawnAgentRequest, SubagentSessionPort};
+use crate::SubagentToolService;
 
 #[derive(Default)]
 struct FakeBackgroundSession {
     spawned: Mutex<Vec<(String, String)>>,
 }
 
-impl Sealed for FakeBackgroundSession {}
-
 #[async_trait]
-impl AgentRunServicePort for FakeBackgroundSession {
-    async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentSpawnError> {
+impl AgentRunApi for FakeBackgroundSession {
+    async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentRunError> {
         self.spawned.lock().unwrap().push((
             request.agent_name.as_str().to_owned(),
             first_user_text(&request),
@@ -28,11 +29,38 @@ impl AgentRunServicePort for FakeBackgroundSession {
         Ok("agent-run-child".parse().unwrap())
     }
 
-    async fn wait_for_agent_result(
+    async fn wait_for_agent_outcome(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<AgentRunOutcome, AgentRunError> {
+        Ok(AgentRunOutcome {
+            agent_run_id: agent_run_id.clone(),
+            status: AgentRunStatus::Completed,
+            submission_payload: Some(obj(&[
+                ("output", json!("done")),
+                ("is_error", json!(false)),
+                ("metadata", json!({})),
+                ("is_terminal", json!(true)),
+            ])),
+            message_history: Vec::new(),
+            token_count: None,
+            error: None,
+        })
+    }
+
+    async fn poll_agent_run_outcome(
         &self,
         _agent_run_id: &AgentRunId,
-    ) -> Result<crate::ToolResult, crate::ToolError> {
-        Ok(crate::ToolResult::ok("done"))
+    ) -> Result<Option<AgentRunOutcome>, AgentRunError> {
+        Ok(None)
+    }
+
+    async fn cancel_agent_run(
+        &self,
+        _agent_run_id: &AgentRunId,
+        _reason: &str,
+    ) -> Result<(), AgentRunError> {
+        Ok(())
     }
 }
 
@@ -48,29 +76,13 @@ fn first_user_text(request: &SpawnAgentRequest) -> String {
         .unwrap_or_default()
 }
 
-#[async_trait]
-impl SubagentSessionPort for FakeBackgroundSession {
-    async fn register_background_session(
-        &self,
-        _agent_run_id: &AgentRunId,
-        _agent_name: &str,
-    ) -> SubagentSessionId {
-        "subagent_1".parse().unwrap()
-    }
-
-    async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, _reason: &str) -> bool {
-        agent_run_id.as_str() == "agent-run-child"
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        0
-    }
-
-    async fn cancel_all_background_sessions(&self, _reason: &str) {}
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        0
-    }
+fn subagent_service() -> SubagentToolService {
+    SubagentToolService::new(
+        |_agent_run_id| async {},
+        |agent_run_id, _reason| async move { agent_run_id.as_str() == "agent-run-child" },
+        || async { 0 },
+        |_reason| async {},
+    )
 }
 
 fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
@@ -83,9 +95,10 @@ fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
 #[tokio::test]
 async fn run_subagent_returns_agent_run_id() {
     let background = Arc::new(FakeBackgroundSession::default());
+    let subagent_sessions = subagent_service();
     let ctx = metadata();
 
-    let res = RunSubagent::new(Some(background.clone()), Some(background.clone()))
+    let res = RunSubagent::new(Some(background.clone()), Some(subagent_sessions))
         .execute(
             &obj(&[
                 ("agent_name", json!("explorer")),

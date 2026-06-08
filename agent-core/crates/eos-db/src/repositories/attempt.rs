@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
-use eos_state::{
+use eos_types::{
     Attempt, AttemptClosure, AttemptId, AttemptStage, AttemptStore, CoreError, IterationId,
     MaterializedPlan, Sealed, TaskId, WorkflowId,
 };
@@ -104,7 +104,7 @@ impl AttemptStore for SqlAttemptStore {
         .bind(plan.planner_task_id.as_str())
         .bind(json_col::encode(&plan.generator_task_ids)?)
         .bind(json_col::encode(&plan.reducer_task_ids)?)
-        .bind(plan.deferred_goal().map(eos_state::DeferredGoal::as_str))
+        .bind(plan.deferred_goal().map(eos_types::DeferredGoal::as_str))
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&self.pool)

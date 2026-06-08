@@ -1,29 +1,27 @@
 //! Request run-to-completion: mint the root task, provision the sandbox, wire the
-//! per-request delegated-workflow runtime, run the root agent **inline** through
-//! the shared engine primitive, and return the root's terminal outcome.
+//! per-request delegated-workflow runtime, start the root agent through
+//! `AgentRunApi`, and return the root's terminal outcome.
 //!
-//! The root is a `Task(role=Root, workflow_id=None)` run directly through the
-//! engine — never the workflow starter (GC-eos-runtime-01). Closure is a single
+//! The root is a `Task(role=Root, workflow_id=None)` started through the
+//! agent-run lifecycle — never the workflow starter (GC-eos-runtime-01). Closure is a single
 //! framework-side guard (`fail_unfinished_root`); the happy-path writer is the
 //! engine-stamped `submit_root_outcome`.
 
 use std::sync::{Arc, OnceLock};
 
 use anyhow::{Context, Result};
-use eos_agent_def::{AgentDefinition, AgentName};
+use eos_agent_def::AgentName;
 use eos_agent_message_records::AgentRunRecordKind;
+use eos_agent_run::{AgentRunApi, SpawnAgentRequest};
 use eos_engine::{
-    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundTeardownPort,
+    AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
     EngineCancelPort, ForegroundExecutorFactory,
 };
 use eos_llm_client::Message;
 use eos_sandbox_port::SandboxCommandService;
-use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
-use eos_tools::{
-    AgentRunServicePort, AttemptSubmissionPort, CancelPort, CommandSessionPort,
-    SubagentSessionPort, WorkflowServicePort, WorkflowSessionPort,
-};
+use eos_tools::{AttemptSubmissionPort, CancelPort, WorkflowServicePort};
 use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
+use eos_types::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_workflow::{
     AgentEntryComposer, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
     AttemptSubmissionAdapter, ContextEngine, ContextEngineDeps, OpenIterationCoordinatorRegistry,
@@ -34,7 +32,6 @@ use serde_json::json;
 use crate::agent_runner::RuntimeAgentRunner;
 use crate::request_input::RequestRunInput;
 use crate::runtime_services::{EventCallback, RuntimeServices};
-use crate::tool_context::{build_metadata, MetadataParams};
 
 /// The terminal outcome of a completed top-level request — the root's outcome
 /// (canonical flow step 7). The ids are caller-known (`request_id` is injected,
@@ -220,78 +217,57 @@ pub async fn run_request(
         .await
         .context("recording the root task id")?;
 
-    // [3][4][5] RUN — resolve the root agent def, build its tool metadata, and run
-    // the shared engine primitive INLINE. `submit_root_outcome` closes the task
-    // mid-loop on success (step 6, inside the run). `summary` feeds the post-run
-    // guard; on the happy path it is unused (the guard no-ops on a closed task).
-    let summary = match resolve_root_def(services) {
-        Some(root_def) => {
-            let agent_run_id = AgentRunId::new_v4();
-            // Mint the root's own AgentRunControl and register it as the live run
-            // for the root task before the provider loop starts.
-            let control =
-                control_factory.persisted(agent_run_id.clone(), Some(root_task_id.clone()));
-            agent_run_registry.insert(control.clone());
-            let metadata = build_metadata(
-                &workspace_root,
-                MetadataParams {
-                    agent_name: "root".to_owned(),
-                    sandbox_id: Some(binding.sandbox_id),
-                    agent_run_id: agent_run_id.clone(),
+    // [3][4][5] RUN — task-trigger the root through AgentRunApi. The service
+    // registers the live run before the provider loop starts and `run_agent`
+    // owns row finalization + child teardown inside the spawned task.
+    let summary = match AgentName::new("root") {
+        Ok(root_name) => {
+            let handles = services.engine_run_handles(&workspace_root);
+            let agent_runs = AgentRunService::with_run_services(
+                handles,
+                (*control_factory).clone(),
+                AgentRunServiceOptions {
+                    agent_run_registry: Some(agent_run_registry.clone()),
+                    workflow_service: Some(workflow_service.clone()),
+                    event_callback: on_event.clone(),
+                    ..AgentRunServiceOptions::default()
+                },
+            );
+            match agent_runs
+                .spawn_agent(SpawnAgentRequest {
+                    agent_name: root_name,
+                    agent_run_id: Some(AgentRunId::new_v4()),
+                    initial_messages: vec![Message::from_user_text(prompt.clone())],
+                    parent_agent_run_id: None,
                     request_id: Some(request_id.clone()),
                     task_id: Some(root_task_id.clone()),
                     attempt_id: None,
                     workflow_id: None,
+                    sandbox_id: Some(binding.sandbox_id.clone()),
+                    workspace_root: workspace_root.clone(),
                     is_isolated_workspace_mode: false,
-                },
-            );
-            let background = control.background();
-            let agent_run_service: Arc<dyn AgentRunServicePort> = Arc::new(background.clone());
-            let subagent_sessions: Arc<dyn SubagentSessionPort> = Arc::new(background.clone());
-            let workflow_sessions: Arc<dyn WorkflowSessionPort> = Arc::new(background.clone());
-            let background_session: Arc<dyn BackgroundTeardownPort> = Arc::new(background.clone());
-            let command_session_port: Arc<dyn CommandSessionPort> = Arc::new(background);
-            let run = run_agent(
-                &services.engine_run_handles(&workspace_root),
-                AgentRunInput {
-                    agent: root_def,
-                    initial_messages: vec![Message::from_user_text(prompt.clone())],
-                    task_id: Some(root_task_id.clone()),
-                    agent_run_id,
-                    tool_metadata: metadata,
-                    attempt_submission: None,
-                    agent_run_service: Some(agent_run_service),
-                    subagent_sessions: Some(subagent_sessions),
-                    workflow_service: Some(workflow_service.clone()),
-                    workflow_sessions: Some(workflow_sessions),
-                    background_session: Some(background_session),
-                    command_session_port: Some(command_session_port),
-                    notifier: control.notifications(),
-                    cancellation: control.cancellation(),
-                    foreground: control.foreground(),
-                    agent_run_registry: Some(agent_run_registry.clone()),
-                    persist_agent_run: true,
+                    persist: true,
                     record_kind: AgentRunRecordKind::Root,
+                })
+                .await
+            {
+                Ok(agent_run_id) => match agent_runs.wait_for_agent_outcome(&agent_run_id).await {
+                    Ok(outcome) => {
+                        let has_submission = outcome.submission_payload.is_some();
+                        outcome.error.unwrap_or_else(|| {
+                            if has_submission {
+                                "root run complete".to_owned()
+                            } else {
+                                "root agent ended without submit_root_outcome".to_owned()
+                            }
+                        })
+                    }
+                    Err(err) => err.to_string(),
                 },
-                on_event.as_ref(),
-            )
-            .await;
-            // `run_agent` claims the registry entry and finalizes (or, if a
-            // concurrent cancel won the claim, skips) the row + child teardown, and
-            // removes the live-run entry. Dropping `control` here releases its
-            // heartbeat (RAII).
-            drop(control);
-            // Success leaves the engine-stamped terminal as the persisted outcome.
-            let has_terminal = run.terminal_result.is_some();
-            run.error.unwrap_or_else(|| {
-                if has_terminal {
-                    "root run complete".to_owned()
-                } else {
-                    "root agent ended without submit_root_outcome".to_owned()
-                }
-            })
+                Err(err) => err.to_string(),
+            }
         }
-        None => "root agent definition 'root' is not registered".to_owned(),
+        Err(err) => format!("invalid root agent name: {err}"),
     };
 
     // [6] FINALIZE / CLEANUP. Per-agent-run background teardown (heartbeat abort +
@@ -318,23 +294,12 @@ pub async fn run_request(
     })
 }
 
-/// Resolve the registered `root` agent definition, or `None` when the registry
-/// has no `root` profile (the shipped binary seeds one; tests inject one).
-fn resolve_root_def(services: &RuntimeServices) -> Option<AgentDefinition> {
-    let root_name = AgentName::new("root").ok()?;
-    services
-        .agent_core
-        .agent_registry
-        .get(&root_name)
-        .map(|def| (**def).clone())
-}
-
 /// Fail the root **iff** it is still running (idempotent compare-and-set) and
-/// finish the request as `Failed`. Called unconditionally after the inline run; a
-/// no-op once `submit_root_outcome` has closed the task. The root role is not in
-/// `ExecutionRole`, so the summary rides in `terminal_tool_result` rather than a
-/// typed outcome row (documented deviation; the typed outcome column is left
-/// empty for root).
+/// finish the request as `Failed`. Called unconditionally after the root agent
+/// has completed or failed; a no-op once `submit_root_outcome` has closed the
+/// task. The root role is not in `ExecutionRole`, so the summary rides in
+/// `terminal_tool_result` rather than a typed outcome row (documented deviation;
+/// the typed outcome column is left empty for root).
 async fn fail_unfinished_root(
     services: &RuntimeServices,
     request_id: &RequestId,

@@ -25,13 +25,8 @@ pub async fn run_agent(
         task_id,
         agent_run_id,
         tool_metadata,
-        attempt_submission,
-        agent_run_service,
-        subagent_sessions,
-        workflow_service,
-        workflow_sessions,
-        background_session,
-        command_session_port,
+        tool_registry,
+        background_teardown,
         notifier,
         cancellation,
         foreground,
@@ -55,13 +50,8 @@ pub async fn run_agent(
             task_id,
             agent_run_id: agent_run_id.clone(),
             tool_metadata,
-            attempt_submission,
-            agent_run_service,
-            subagent_sessions,
-            workflow_service,
-            workflow_sessions,
-            background_session,
-            command_session_port,
+            tool_registry,
+            background_teardown,
             notifier,
             cancellation,
             foreground,
@@ -81,7 +71,7 @@ pub async fn run_agent(
             )
             .await;
             return AgentRunResult {
-                terminal_result: None,
+                submission_outcome: None,
                 error: Some(summary),
             };
         }
@@ -114,7 +104,7 @@ pub async fn run_agent(
                     )
                     .await;
                     return AgentRunResult {
-                        terminal_result: None,
+                        submission_outcome: None,
                         error: Some(summary),
                     };
                 }
@@ -145,7 +135,7 @@ pub async fn run_agent(
             }
         }
     }
-    let terminal_result = prepared.ctx.terminal_result.clone();
+    let submission_outcome = prepared.ctx.submission_outcome.clone();
     publish_agent_run_completed(
         handles,
         &prepared.ctx,
@@ -179,14 +169,14 @@ pub async fn run_agent(
         .is_none_or(|registry| registry.begin_cancel(&agent_run_id).is_some());
     if won {
         prepared
-            .background_session_finalizer
+            .background_teardown_finalizer
             .finalize(&prepared.ctx, error.as_deref())
             .await;
         finish_agent_run_if_requested(
             handles,
             persistence_requested,
             &agent_run_id,
-            terminal_result.as_ref(),
+            submission_outcome.as_ref(),
             error.as_deref(),
         )
         .await;
@@ -196,11 +186,11 @@ pub async fn run_agent(
     } else {
         // A concurrent `cancel_agent_run` claimed the entry and owns the row +
         // child teardown; disarm our finalizer so it does not run a second one.
-        prepared.background_session_finalizer.disarm();
+        prepared.background_teardown_finalizer.disarm();
     }
 
     AgentRunResult {
-        terminal_result,
+        submission_outcome,
         error,
     }
 }

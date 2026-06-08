@@ -87,8 +87,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-<span class="rs-kw">mod</span> error;
 <span class="rs-kw">mod</span> command_service;
+<span class="rs-kw">mod</span> error;
 <span class="rs-kw">mod</span> gateway;
 <span class="rs-kw">mod</span> models;
 <span class="rs-kw">mod</span> ops;
@@ -97,8 +97,8 @@
 <span class="rs-kw">mod</span> tool_api;
 <span class="rs-kw">mod</span> transport;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> command_service::{<a class="symbol-link rs-type" href="eos-sandbox-port.html#item-trait-SandboxCommandApi-15">SandboxCommandApi</a>, <a class="symbol-link rs-type" href="eos-sandbox-port.html#item-struct-SandboxCommandService-63">SandboxCommandService</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-sandbox-port--src-error-rs.html#item-enum-SandboxPortError-12">SandboxPortError</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> gateway::<a class="symbol-link rs-type" href="eos-sandbox-port--src-gateway-rs.html#item-trait-SandboxGateway-22">SandboxGateway</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> models::{
     <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandOutput-9">CommandOutput</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandSessionCancelRequest-188">CommandSessionCancelRequest</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-command-rs.html#item-struct-CommandStatusView-60">CommandStatusView</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-common-rs.html#item-struct-ConflictInfo-115">ConflictInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-port--src-models-file-rs.html#item-struct-EditFileRequest-77">EditFileRequest</a>,

@@ -1,4 +1,4 @@
-//! The twelve cross-cutting typed string identifiers.
+//! The eleven cross-cutting typed string identifiers.
 //!
 //! Each is a `#[repr(transparent)]` newtype over `Arc<str>` (the Rust IDs are
 //! `UUIDv4` strings and prefixed strings such as `root-<hex16>`, so the inner
@@ -147,8 +147,7 @@ define_id!(
 define_id!(
     /// Identifier for an engine background workflow-handle session — the
     /// agent-facing `wf_<counter>` handle for one delegated workflow (distinct
-    /// from `WorkflowId`, which it tracks). Named for consistency with
-    /// `CommandSessionId`/`SubagentSessionId`; the model-facing tool param keeps
+    /// from `WorkflowId`, which it tracks). The model-facing tool param keeps
     /// the name `workflow_task_id` for tool-contract parity.
     WorkflowSessionId,
     mint
@@ -158,13 +157,6 @@ define_id!(
     CommandSessionId,
     mint
 );
-define_id!(
-    /// Identifier for an engine subagent supervisor session. The runtime mint is
-    /// `subagent_<counter>`; `new_v4` is the generic helper, not that shape.
-    SubagentSessionId,
-    mint
-);
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
@@ -228,7 +220,6 @@ mod tests {
     roundtrip_suite!(invocation_id, InvocationId);
     roundtrip_suite!(workflow_session_id, WorkflowSessionId);
     roundtrip_suite!(command_session_id, CommandSessionId);
-    roundtrip_suite!(subagent_session_id, SubagentSessionId);
 
     // AC-types-02: transparent serde, no key duplication (GC-types-01).
     #[test]
@@ -307,6 +298,5 @@ mod tests {
         assert_string_schema!(InvocationId);
         assert_string_schema!(WorkflowSessionId);
         assert_string_schema!(CommandSessionId);
-        assert_string_schema!(SubagentSessionId);
     }
 }

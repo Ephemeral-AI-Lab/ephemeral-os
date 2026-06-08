@@ -293,9 +293,9 @@ mod tests {
     #[tokio::test]
     async fn compose_rejects_missing_agent_and_missing_recipe() {
         let scope = ContextScope::for_planner(
-            eos_state::WorkflowId::new_v4(),
-            eos_state::IterationId::new_v4(),
-            eos_state::AttemptId::new_v4(),
+            eos_types::WorkflowId::new_v4(),
+            eos_types::IterationId::new_v4(),
+            eos_types::AttemptId::new_v4(),
         );
 
         // Agent absent from the registry -> error (before the engine is touched).

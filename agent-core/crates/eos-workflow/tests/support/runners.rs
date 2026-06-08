@@ -10,11 +10,11 @@ use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRegistryBuilder, AgentRole};
-use eos_state::{
+use eos_tools::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan};
+use eos_types::{
     DeferredGoal, GeneratorSubmission, JsonObject, PlanDisposition, PlanNodeId, ReducerSubmission,
     RequestId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,
 };
-use eos_tools::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan};
 use parking_lot::Mutex;
 use serde_json::json;
 use tokio::sync::Notify;
@@ -262,7 +262,7 @@ impl AgentRunner for ScriptedRunner {
                     task_id: launch.task_id().clone(),
                     status: TaskOutcomeStatus::Success,
                     outcome: "generated".to_owned(),
-                    terminal_tool_result: terminal_result(),
+                    terminal_tool_result: terminal_tool_result_fixture(),
                 })
             }
             AgentRole::Reducer => {
@@ -274,7 +274,7 @@ impl AgentRunner for ScriptedRunner {
                     task_id: launch.task_id().clone(),
                     status: self.reducer_status,
                     outcome: "reduced".to_owned(),
-                    terminal_tool_result: terminal_result(),
+                    terminal_tool_result: terminal_tool_result_fixture(),
                 })
             }
             other => panic!("ScriptedRunner does not serve role {other:?}"),
@@ -360,7 +360,7 @@ pub(crate) fn root_task(id: &str, status: TaskStatus) -> Task {
     }
 }
 
-pub(crate) fn terminal_result() -> JsonObject {
+pub(crate) fn terminal_tool_result_fixture() -> JsonObject {
     json!({"ok": true}).as_object().unwrap().clone()
 }
 

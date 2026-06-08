@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRole};
-use eos_state::{
+use eos_types::{
     Attempt, AttemptStore, IterationStore, RequestId, Task, TaskId, TaskStore, WorkflowId,
     WorkflowStore,
 };
@@ -72,11 +72,11 @@ pub struct PlannerLaunch {
     /// Request id.
     pub request_id: RequestId,
     /// Attempt id.
-    pub attempt_id: eos_state::AttemptId,
+    pub attempt_id: eos_types::AttemptId,
     /// Workflow id.
     pub workflow_id: WorkflowId,
     /// Iteration id.
-    pub iteration_id: eos_state::IterationId,
+    pub iteration_id: eos_types::IterationId,
     /// Profile name.
     pub agent_name: String,
     /// Rendered context row.
@@ -97,11 +97,11 @@ pub struct ExecutionLaunch {
     /// Request id.
     pub request_id: RequestId,
     /// Attempt id.
-    pub attempt_id: eos_state::AttemptId,
+    pub attempt_id: eos_types::AttemptId,
     /// Workflow id.
     pub workflow_id: WorkflowId,
     /// Iteration id.
-    pub iteration_id: eos_state::IterationId,
+    pub iteration_id: eos_types::IterationId,
     /// Agent role.
     pub role: AgentRole,
     /// Profile name.
@@ -149,7 +149,7 @@ impl AgentLaunch {
 
     /// Attempt id.
     #[must_use]
-    pub fn attempt_id(&self) -> &eos_state::AttemptId {
+    pub fn attempt_id(&self) -> &eos_types::AttemptId {
         match self {
             Self::Planner(launch) => &launch.attempt_id,
             Self::Generator(launch) | Self::Reducer(launch) => &launch.attempt_id,
@@ -158,7 +158,7 @@ impl AgentLaunch {
 
     /// Iteration id.
     #[must_use]
-    pub fn iteration_id(&self) -> &eos_state::IterationId {
+    pub fn iteration_id(&self) -> &eos_types::IterationId {
         match self {
             Self::Planner(launch) => &launch.iteration_id,
             Self::Generator(launch) | Self::Reducer(launch) => &launch.iteration_id,
@@ -354,8 +354,8 @@ struct LaunchBuildArgs<'a> {
     scope: ContextScope,
     task_id: TaskId,
     request_id: RequestId,
-    attempt_id: eos_state::AttemptId,
-    iteration_id: eos_state::IterationId,
+    attempt_id: eos_types::AttemptId,
+    iteration_id: eos_types::IterationId,
     needs: Vec<TaskId>,
     workflow_id: WorkflowId,
 }

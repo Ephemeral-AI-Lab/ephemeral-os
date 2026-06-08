@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tools::{CommandSessionPort, Sealed};
 use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -291,37 +290,6 @@ impl BackgroundSessionManager for CommandSessionManager {
         for session in self.sessions.lock().await.values_mut() {
             session.cancel();
         }
-    }
-}
-
-impl Sealed for CommandSessionManager {}
-
-#[async_trait]
-impl CommandSessionPort for CommandSessionManager {
-    async fn register_background_session(
-        &self,
-        command_session_id: &CommandSessionId,
-        sandbox_id: &SandboxId,
-    ) {
-        CommandSessionManager::register_background_session(self, command_session_id, sandbox_id)
-            .await;
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        BackgroundSessionManager::count(self).await
-    }
-
-    async fn cancel_all_background_sessions(&self, reason: &str) {
-        BackgroundSessionManager::cancel(self, reason).await;
-    }
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        let completions = self.poll_completions().await;
-        let count = completions.len();
-        for completion in completions {
-            self.push_notification_on_completion(completion).await;
-        }
-        count
     }
 }
 

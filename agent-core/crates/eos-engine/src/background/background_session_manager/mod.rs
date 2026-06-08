@@ -2,21 +2,20 @@ mod command_session_manager;
 mod subagent_session_manager;
 mod workflow_session_manager;
 
+use std::future::Future;
 use std::hash::Hash;
+use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_agent_run::{
-    AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest as RuntimeSpawnAgentRequest,
-};
+use eos_agent_run::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 use eos_sandbox_port::SandboxCommandApi;
 use eos_tools::WorkflowServicePort;
 use eos_tools::{
-    AgentRunServicePort, AgentSpawnError, BackgroundSessionCounts, CommandSessionPort,
-    SpawnAgentRequest, StartedWorkflow, SubagentSessionPort, WorkflowSessionPort,
+    BackgroundSessionCounts, CommandSessionToolService, SubagentToolService, WorkflowToolService,
 };
-use eos_types::{AgentRunId, CommandSessionId, SandboxId, SubagentSessionId};
+use eos_types::AgentRunId;
 
 use self::command_session_manager::{CommandSessionManager, CommandSessionMonitor};
 use self::subagent_session_manager::{SubagentSessionManager, SubagentSessionMonitor};
@@ -29,6 +28,9 @@ use crate::query::{QueryContext, QueryExitReason};
 use crate::runtime::{AgentRunControlFactory, AgentRunService};
 use crate::EngineRunHandles;
 
+type BackgroundTeardownFuture = Pin<Box<dyn Future<Output = BackgroundSessionCounts> + Send>>;
+type BackgroundTeardownCallback = Arc<dyn Fn(String) -> BackgroundTeardownFuture + Send + Sync>;
+
 /// Lifecycle status for one tracked background session.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackgroundSessionStatus {
@@ -40,7 +42,7 @@ pub enum BackgroundSessionStatus {
     Failed,
     /// The session was cancelled.
     Cancelled,
-    /// The terminal result was already delivered to the model.
+    /// The terminal tool outcome was already delivered to the model.
     Delivered,
 }
 
@@ -171,21 +173,21 @@ impl BackgroundSessionRuntime {
     }
 }
 
-/// Cloneable port-facing service for one agent run's background session runtime.
+/// Cloneable aggregate for one agent run's background session runtime.
 #[derive(Clone)]
-pub struct BackgroundSessionService {
+pub struct BackgroundManagers {
     runtime: Arc<BackgroundSessionRuntime>,
 }
 
-impl std::fmt::Debug for BackgroundSessionService {
+impl std::fmt::Debug for BackgroundManagers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BackgroundSessionService")
+        f.debug_struct("BackgroundManagers")
             .field("agent_run_id", self.runtime.agent_run_id())
             .finish_non_exhaustive()
     }
 }
 
-impl BackgroundSessionService {
+impl BackgroundManagers {
     #[must_use]
     pub fn new(
         agent_run_id: AgentRunId,
@@ -213,10 +215,6 @@ impl BackgroundSessionService {
         self.runtime.agent_run_id()
     }
 
-    pub(super) fn command_session_manager(&self) -> &CommandSessionManager {
-        self.runtime.command_session_manager()
-    }
-
     pub async fn running_background_tasks(&self) -> BackgroundSessionCounts {
         self.runtime.count().await
     }
@@ -231,28 +229,112 @@ impl BackgroundSessionService {
         self.runtime.command_session_manager().cancel(reason).await;
         self.runtime.count().await
     }
+
+    #[must_use]
+    pub fn teardown_service(&self) -> BackgroundTeardownService {
+        let background = self.clone();
+        BackgroundTeardownService::new(move |reason| {
+            let background = background.clone();
+            async move { background.teardown(&reason).await }
+        })
+    }
+
+    #[must_use]
+    pub fn subagent_tool_service(&self) -> SubagentToolService {
+        let register = self.clone();
+        let cancel = self.clone();
+        let count = self.clone();
+        let cancel_all = self.clone();
+        SubagentToolService::new(
+            move |agent_run_id| {
+                let service = register.clone();
+                async move {
+                    service
+                        .runtime
+                        .subagent_session_manager()
+                        .register_background_session(&agent_run_id)
+                        .await;
+                }
+            },
+            move |agent_run_id, reason| {
+                let service = cancel.clone();
+                async move {
+                    service
+                        .runtime
+                        .subagent_session_manager()
+                        .cancel_background_agent_run(&agent_run_id, &reason)
+                        .await
+                }
+            },
+            move || {
+                let service = count.clone();
+                async move {
+                    service
+                        .runtime
+                        .subagent_session_manager()
+                        .count_background_sessions()
+                        .await
+                }
+            },
+            move |reason| {
+                let service = cancel_all.clone();
+                async move {
+                    service
+                        .runtime
+                        .subagent_session_manager()
+                        .cancel_all_background_sessions(&reason)
+                        .await;
+                }
+            },
+        )
+    }
+
+    #[must_use]
+    pub fn workflow_tool_service(&self) -> WorkflowToolService {
+        let register = self.clone();
+        WorkflowToolService::new(move |workflow| {
+            let service = register.clone();
+            async move {
+                service
+                    .runtime
+                    .workflow_session_manager()
+                    .register_background_session(&workflow)
+                    .await;
+            }
+        })
+    }
+
+    #[must_use]
+    pub fn command_session_tool_service(&self) -> CommandSessionToolService {
+        let register = self.clone();
+        CommandSessionToolService::new(move |command_session_id, sandbox_id| {
+            let service = register.clone();
+            async move {
+                service
+                    .runtime
+                    .command_session_manager()
+                    .register_background_session(&command_session_id, &sandbox_id)
+                    .await;
+            }
+        })
+    }
 }
 
-impl eos_tools::Sealed for BackgroundSessionService {}
-
 #[async_trait]
-impl AgentRunApi for BackgroundSessionService {
+impl AgentRunApi for BackgroundManagers {
     async fn spawn_agent(
         &self,
-        request: RuntimeSpawnAgentRequest,
+        request: SpawnAgentRequest,
     ) -> Result<eos_types::AgentRunId, AgentRunError> {
         AgentRunApi::spawn_agent(self.runtime.agent_run_service().as_ref(), request).await
     }
 
-    async fn wait_for_agent_outcomes(
+    async fn wait_for_agent_outcome(
         &self,
         agent_run_id: &eos_types::AgentRunId,
     ) -> Result<AgentRunOutcome, AgentRunError> {
-        AgentRunApi::wait_for_agent_outcomes(
-            self.runtime.agent_run_service().as_ref(),
-            agent_run_id,
-        )
-        .await
+        AgentRunApi::wait_for_agent_outcome(self.runtime.agent_run_service().as_ref(), agent_run_id)
+            .await
     }
 
     async fn poll_agent_run_outcome(
@@ -277,148 +359,43 @@ impl AgentRunApi for BackgroundSessionService {
     }
 }
 
-#[async_trait]
-impl AgentRunServicePort for BackgroundSessionService {
-    async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentSpawnError> {
-        AgentRunServicePort::spawn_agent(self.runtime.agent_run_service().as_ref(), request).await
+#[derive(Clone)]
+pub struct BackgroundTeardownService {
+    teardown: BackgroundTeardownCallback,
+}
+
+impl BackgroundTeardownService {
+    #[must_use]
+    pub fn new<Teardown, TeardownFuture>(teardown: Teardown) -> Self
+    where
+        Teardown: Fn(String) -> TeardownFuture + Send + Sync + 'static,
+        TeardownFuture: Future<Output = BackgroundSessionCounts> + Send + 'static,
+    {
+        Self {
+            teardown: Arc::new(move |reason| Box::pin(teardown(reason))),
+        }
     }
 
-    async fn wait_for_agent_result(
-        &self,
-        agent_run_id: &AgentRunId,
-    ) -> Result<eos_tools::ToolResult, eos_tools::ToolError> {
-        AgentRunServicePort::wait_for_agent_result(
-            self.runtime.agent_run_service().as_ref(),
-            agent_run_id,
-        )
-        .await
+    pub async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {
+        (self.teardown)(reason.to_owned()).await
     }
 }
 
-#[async_trait]
-impl SubagentSessionPort for BackgroundSessionService {
-    async fn register_background_session(
-        &self,
-        agent_run_id: &AgentRunId,
-        agent_name: &str,
-    ) -> SubagentSessionId {
-        self.runtime
-            .subagent_session_manager()
-            .register_background_session(agent_run_id, agent_name)
-            .await
-    }
-
-    async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, reason: &str) -> bool {
-        self.runtime
-            .subagent_session_manager()
-            .cancel_agent_run(agent_run_id, reason)
-            .await
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        self.runtime
-            .subagent_session_manager()
-            .count_background_sessions()
-            .await
-    }
-
-    async fn cancel_all_background_sessions(&self, reason: &str) {
-        self.runtime
-            .subagent_session_manager()
-            .cancel_all_background_sessions(reason)
-            .await;
-    }
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        self.runtime
-            .subagent_session_manager()
-            .poll_complete_background_sessions()
-            .await
-    }
-}
-
-#[async_trait]
-impl WorkflowSessionPort for BackgroundSessionService {
-    async fn register_background_session(&self, workflow: &StartedWorkflow) {
-        self.runtime
-            .workflow_session_manager()
-            .register_background_session(workflow)
-            .await;
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        self.runtime
-            .workflow_session_manager()
-            .count_background_sessions()
-            .await
-    }
-
-    async fn cancel_all_background_sessions(&self, reason: &str) {
-        self.runtime
-            .workflow_session_manager()
-            .cancel_all_background_sessions(reason)
-            .await;
-    }
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        self.runtime
-            .workflow_session_manager()
-            .poll_complete_background_sessions()
-            .await
-    }
-}
-
-#[async_trait]
-impl CommandSessionPort for BackgroundSessionService {
-    async fn register_background_session(
-        &self,
-        command_session_id: &CommandSessionId,
-        sandbox_id: &SandboxId,
-    ) {
-        self.command_session_manager()
-            .register_background_session(command_session_id, sandbox_id)
-            .await;
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        self.command_session_manager()
-            .count_background_sessions()
-            .await
-    }
-
-    async fn cancel_all_background_sessions(&self, reason: &str) {
-        self.command_session_manager()
-            .cancel_all_background_sessions(reason)
-            .await;
-    }
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        self.command_session_manager()
-            .poll_complete_background_sessions()
-            .await
-    }
-}
-
-#[async_trait]
-pub trait BackgroundTeardownPort: Send + Sync {
-    async fn teardown(&self, reason: &str) -> BackgroundSessionCounts;
-}
-
-#[async_trait]
-impl BackgroundTeardownPort for BackgroundSessionService {
-    async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {
-        BackgroundSessionService::teardown(self, reason).await
+impl std::fmt::Debug for BackgroundTeardownService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BackgroundTeardownService")
+            .finish_non_exhaustive()
     }
 }
 
 /// Normal-exit background cleanup for one agent run.
 pub(crate) struct BackgroundSessionFinalizer {
-    background: Option<Arc<dyn BackgroundTeardownPort>>,
+    background: Option<BackgroundTeardownService>,
     armed: bool,
 }
 
 impl BackgroundSessionFinalizer {
-    pub(crate) fn new(background: Option<Arc<dyn BackgroundTeardownPort>>) -> Self {
+    pub(crate) fn new(background: Option<BackgroundTeardownService>) -> Self {
         Self {
             background,
             armed: true,
@@ -479,34 +456,30 @@ fn finalize_reason(exit_reason: Option<QueryExitReason>, error: Option<&str>) ->
 mod finalizer_tests {
     #![allow(clippy::expect_used)]
 
-    use async_trait::async_trait;
     use tokio::sync::mpsc;
     use tokio::time::{timeout, Duration};
 
     use super::*;
 
-    #[derive(Debug)]
-    struct RecordingBackground {
-        tx: mpsc::UnboundedSender<String>,
-    }
-
-    #[async_trait]
-    impl BackgroundTeardownPort for RecordingBackground {
-        async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {
-            self.tx.send(reason.to_owned()).expect("send cleanup");
-            BackgroundSessionCounts {
-                total: 0,
-                subagents: 0,
-                workflows: 0,
-                command_sessions: 0,
+    fn recording_background(tx: mpsc::UnboundedSender<String>) -> BackgroundTeardownService {
+        BackgroundTeardownService::new(move |reason| {
+            let tx = tx.clone();
+            async move {
+                tx.send(reason).expect("send cleanup");
+                BackgroundSessionCounts {
+                    total: 0,
+                    subagents: 0,
+                    workflows: 0,
+                    command_sessions: 0,
+                }
             }
-        }
+        })
     }
 
     #[tokio::test]
     async fn drop_spawns_background_cleanup_when_still_armed() {
         let (tx, mut rx) = mpsc::unbounded_channel();
-        let background = Arc::new(RecordingBackground { tx });
+        let background = recording_background(tx);
 
         {
             let _finalizer = BackgroundSessionFinalizer::new(Some(background));

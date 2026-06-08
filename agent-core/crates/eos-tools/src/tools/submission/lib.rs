@@ -1,5 +1,5 @@
-use eos_state::TaskOutcomeStatus;
 use eos_types::JsonObject;
+use eos_types::TaskOutcomeStatus;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

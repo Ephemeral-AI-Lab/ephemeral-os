@@ -9,25 +9,31 @@ use eos_agent_run::{
     SpawnAgentRequest as RuntimeSpawnAgentRequest,
 };
 use eos_llm_client::Message;
-use eos_state::AgentRun;
-use eos_tools::{
-    AgentRunServicePort, AgentSpawnError, CommandSessionPort, SubagentLaunchRejection, ToolError,
-    ToolResult,
-};
+use eos_tools::ToolResult;
+use eos_tools::{AttemptSubmissionService, WorkflowServicePort};
+use eos_types::AgentRun;
 use eos_types::{AgentRunId, JsonObject};
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::sync::watch;
 use tokio::sync::Mutex;
 use tokio::task::AbortHandle;
 
-use crate::background::BackgroundTeardownPort;
+use super::registry::AgentRunRegistry;
+use super::types::EventCallback;
+use crate::run_agent;
 use crate::runtime::AgentRunControlFactory;
-use crate::{run_agent, AgentRunInput, EngineRunHandles};
+use crate::{
+    build_agent_tool_registry, AgentRunInput, AgentToolRegistryServices, EngineRunHandles,
+};
 
 #[derive(Clone)]
 pub struct AgentRunService {
     handles: EngineRunHandles,
     control_factory: AgentRunControlFactory,
+    agent_run_registry: Option<AgentRunRegistry>,
+    attempt_submission: Option<AttemptSubmissionService>,
+    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    event_callback: Option<EventCallback>,
     runs: Arc<Mutex<HashMap<AgentRunId, SubagentRunHandle>>>,
 }
 
@@ -47,11 +53,43 @@ impl std::fmt::Debug for AgentRunService {
 impl AgentRunService {
     #[must_use]
     pub fn new(handles: EngineRunHandles, control_factory: AgentRunControlFactory) -> Self {
+        Self::with_run_services(handles, control_factory, AgentRunServiceOptions::default())
+    }
+
+    #[must_use]
+    pub fn with_run_services(
+        handles: EngineRunHandles,
+        control_factory: AgentRunControlFactory,
+        options: AgentRunServiceOptions,
+    ) -> Self {
         Self {
             handles,
             control_factory,
+            agent_run_registry: options.agent_run_registry,
+            attempt_submission: options.attempt_submission,
+            workflow_service: options.workflow_service,
+            event_callback: options.event_callback,
             runs: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct AgentRunServiceOptions {
+    pub agent_run_registry: Option<AgentRunRegistry>,
+    pub attempt_submission: Option<AttemptSubmissionService>,
+    pub workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    pub event_callback: Option<EventCallback>,
+}
+
+impl std::fmt::Debug for AgentRunServiceOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentRunServiceOptions")
+            .field("has_agent_run_registry", &self.agent_run_registry.is_some())
+            .field("has_attempt_submission", &self.attempt_submission.is_some())
+            .field("has_workflow_service", &self.workflow_service.is_some())
+            .field("has_event_callback", &self.event_callback.is_some())
+            .finish()
     }
 }
 
@@ -81,12 +119,27 @@ impl AgentRunApi for AgentRunService {
         let control = self
             .control_factory
             .persisted(agent_run_id.clone(), request.task_id.clone());
+        if let Some(registry) = &self.agent_run_registry {
+            registry.insert(control.clone());
+        }
         let background = control.background();
-        let background_port: Arc<dyn BackgroundTeardownPort> = Arc::new(background.clone());
-        let command_port: Arc<dyn CommandSessionPort> = Arc::new(background.clone());
-        let agent_run_port: Arc<dyn AgentRunServicePort> = Arc::new(background.clone());
-        let subagent_port: Arc<dyn eos_tools::SubagentSessionPort> = Arc::new(background.clone());
-        let workflow_port: Arc<dyn eos_tools::WorkflowSessionPort> = Arc::new(background);
+        let background_teardown = background.teardown_service();
+        let agent_run_port: Arc<dyn AgentRunApi> = Arc::new(background.clone());
+        let subagent_service = background.subagent_tool_service();
+        let workflow_service = background.workflow_tool_service();
+        let command_sessions = background.command_session_tool_service();
+        let tool_registry = build_agent_tool_registry(
+            &self.handles,
+            &agent_def,
+            AgentToolRegistryServices {
+                attempt_submission: self.attempt_submission.clone(),
+                agent_run_service: Some(agent_run_port),
+                subagent_sessions: Some(subagent_service),
+                workflow_service: self.workflow_service.clone(),
+                workflow_sessions: Some(workflow_service),
+                command_sessions: Some(command_sessions),
+            },
+        );
         let meta = eos_tools::ExecutionMetadata {
             agent_name: agent_def.name.as_str().to_owned(),
             agent_run_id: Some(agent_run_id.clone()),
@@ -108,17 +161,12 @@ impl AgentRunApi for AgentRunService {
             task_id: request.task_id,
             agent_run_id: agent_run_id.clone(),
             tool_metadata: meta,
-            attempt_submission: None,
-            agent_run_service: Some(agent_run_port),
-            subagent_sessions: Some(subagent_port),
-            workflow_service: None,
-            workflow_sessions: Some(workflow_port),
-            background_session: Some(background_port),
-            command_session_port: Some(command_port),
+            tool_registry,
+            background_teardown: Some(background_teardown),
             notifier: control.notifications(),
             cancellation: control.cancellation(),
             foreground: control.foreground(),
-            agent_run_registry: None,
+            agent_run_registry: self.agent_run_registry.clone(),
             persist_agent_run: request.persist,
             record_kind: request.record_kind,
         };
@@ -126,9 +174,10 @@ impl AgentRunApi for AgentRunService {
         let (outcome_tx, _) = watch::channel(None);
         let publish_tx = outcome_tx.clone();
         let handles = self.handles.clone();
+        let event_callback = self.event_callback.clone();
         let spawned_agent_run_id = agent_run_id.clone();
         let join = tokio::spawn(async move {
-            let run = run_agent(&handles, run_input, None).await;
+            let run = run_agent(&handles, run_input, event_callback.as_ref()).await;
             let outcome = outcome_from_run(spawned_agent_run_id, run);
             let _ = publish_tx.send(Some(outcome));
         });
@@ -144,7 +193,7 @@ impl AgentRunApi for AgentRunService {
         Ok(agent_run_id)
     }
 
-    async fn wait_for_agent_outcomes(
+    async fn wait_for_agent_outcome(
         &self,
         agent_run_id: &AgentRunId,
     ) -> Result<AgentRunOutcome, AgentRunError> {
@@ -191,14 +240,15 @@ impl AgentRunApi for AgentRunService {
             return Ok(None);
         };
         Ok(
-            completion_from_agent_run(&run).map(|(status, result)| AgentRunOutcome {
-                agent_run_id: agent_run_id.clone(),
-                status,
-                terminal_result: Some(result),
-                terminal_payload: run.terminal_tool_result.clone(),
-                message_history: Vec::new(),
-                token_count: Some(run.token_count),
-                error: run.error.clone(),
+            completion_from_agent_run(&run).map(|(status, submission_payload, error)| {
+                AgentRunOutcome {
+                    agent_run_id: agent_run_id.clone(),
+                    status,
+                    submission_payload,
+                    message_history: Vec::new(),
+                    token_count: Some(run.token_count),
+                    error,
+                }
             }),
         )
     }
@@ -221,11 +271,7 @@ impl AgentRunApi for AgentRunService {
         let _ = handle.outcome_tx.send(Some(AgentRunOutcome {
             agent_run_id: agent_run_id.clone(),
             status: AgentRunStatus::Cancelled,
-            terminal_result: Some(
-                ToolResult::error(format!("agent run cancelled: {reason}"))
-                    .meta("agent_run_cancelled", json!(true)),
-            ),
-            terminal_payload: None,
+            submission_payload: None,
             message_history: Vec::new(),
             token_count: None,
             error: Some(reason.to_owned()),
@@ -234,87 +280,8 @@ impl AgentRunApi for AgentRunService {
     }
 }
 
-impl eos_tools::Sealed for AgentRunService {}
-
-#[async_trait]
-impl AgentRunServicePort for AgentRunService {
-    async fn spawn_agent(
-        &self,
-        request: eos_tools::SpawnAgentRequest,
-    ) -> Result<AgentRunId, AgentSpawnError> {
-        let eos_tools::SpawnAgentRequest {
-            agent_name,
-            initial_messages,
-            parent_agent_run_id,
-            request_id,
-            task_id,
-            attempt_id,
-            workflow_id,
-            sandbox_id,
-            workspace_root,
-            is_isolated_workspace_mode,
-            persist,
-            record_kind,
-        } = request;
-        AgentRunApi::spawn_agent(
-            self,
-            RuntimeSpawnAgentRequest {
-                agent_name,
-                agent_run_id: None,
-                initial_messages,
-                parent_agent_run_id,
-                request_id,
-                task_id,
-                attempt_id,
-                workflow_id,
-                sandbox_id,
-                workspace_root,
-                is_isolated_workspace_mode,
-                persist,
-                record_kind,
-            },
-        )
-        .await
-        .map_err(|err| match err {
-            AgentRunError::AgentNotRegistered(agent_name) => {
-                AgentSpawnError::Rejected(SubagentLaunchRejection::NotRegistered { agent_name })
-            }
-            AgentRunError::WrongAgentType {
-                agent_name, actual, ..
-            } => AgentSpawnError::Rejected(SubagentLaunchRejection::NotSubagent {
-                agent_name,
-                agent_type: actual.to_owned(),
-            }),
-            AgentRunError::RecursiveSubagent => {
-                AgentSpawnError::Rejected(SubagentLaunchRejection::Recursive)
-            }
-            err => AgentSpawnError::Tool(ToolError::Internal(err.to_string())),
-        })
-    }
-
-    async fn wait_for_agent_result(
-        &self,
-        agent_run_id: &AgentRunId,
-    ) -> Result<ToolResult, ToolError> {
-        let outcome = AgentRunApi::wait_for_agent_outcomes(self, agent_run_id)
-            .await
-            .map_err(|err| ToolError::Internal(err.to_string()))?;
-        Ok(outcome_to_tool_result(outcome))
-    }
-}
-
-fn outcome_to_tool_result(outcome: AgentRunOutcome) -> ToolResult {
-    outcome.terminal_result.unwrap_or_else(|| {
-        ToolResult::error(
-            outcome
-                .error
-                .unwrap_or_else(|| "agent exited without terminal output".to_owned()),
-        )
-    })
-}
-
 fn outcome_from_run(agent_run_id: AgentRunId, run: crate::AgentRunResult) -> AgentRunOutcome {
-    let missing_terminal = run.error.is_none() && run.terminal_result.is_none();
+    let missing_terminal = run.error.is_none() && run.submission_outcome.is_none();
     let error = run.error.or_else(|| {
         missing_terminal.then(|| "agent exited without calling a terminal tool".to_owned())
     });
@@ -325,8 +292,7 @@ fn outcome_from_run(agent_run_id: AgentRunId, run: crate::AgentRunResult) -> Age
         } else {
             AgentRunStatus::Completed
         },
-        terminal_result: run.terminal_result,
-        terminal_payload: None,
+        submission_payload: run.submission_outcome.as_ref().map(tool_result_payload),
         message_history: Vec::new(),
         token_count: None,
         error,
@@ -340,12 +306,15 @@ const fn agent_type_value(agent_type: AgentType) -> &'static str {
     }
 }
 
-fn completion_from_agent_run(run: &AgentRun) -> Option<(AgentRunStatus, ToolResult)> {
+fn completion_from_agent_run(
+    run: &AgentRun,
+) -> Option<(AgentRunStatus, Option<JsonObject>, Option<String>)> {
     run.finished_at?;
     if let Some(terminal) = &run.terminal_tool_result {
         return Some((
             AgentRunStatus::Completed,
-            tool_result_from_payload(terminal),
+            Some(terminal.clone()),
+            run.error.clone(),
         ));
     }
     let message = match &run.error {
@@ -353,36 +322,14 @@ fn completion_from_agent_run(run: &AgentRun) -> Option<(AgentRunStatus, ToolResu
         None => "subagent exited without calling a terminal tool. Findings were not delivered."
             .to_owned(),
     };
-    Some((
-        AgentRunStatus::Failed,
-        ToolResult::error(message).meta("subagent_terminal_called", json!(false)),
-    ))
+    Some((AgentRunStatus::Failed, None, Some(message)))
 }
 
-fn tool_result_from_payload(payload: &JsonObject) -> ToolResult {
-    let output = payload
-        .get("output")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_owned();
-    let is_error = payload
-        .get("is_error")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let is_terminal = payload
-        .get("is_terminal")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let mut metadata = payload
-        .get("metadata")
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default();
-    metadata.insert("subagent_terminal_called".to_owned(), json!(true));
-    ToolResult {
-        output,
-        is_error,
-        metadata,
-        is_terminal,
-    }
+fn tool_result_payload(result: &ToolResult) -> JsonObject {
+    let mut payload = JsonObject::new();
+    payload.insert("output".to_owned(), json!(result.output));
+    payload.insert("is_error".to_owned(), json!(result.is_error));
+    payload.insert("metadata".to_owned(), json!(result.metadata));
+    payload.insert("is_terminal".to_owned(), json!(result.is_terminal));
+    payload
 }

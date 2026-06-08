@@ -14,7 +14,6 @@ eos-llm-client.workspace = true
 eos-tools.workspace = true
 eos-sandbox-port.workspace = true
 eos-agent-def.workspace = true
-eos-state.workspace = true
 eos-types.workspace = true
 futures.workspace = true
 schemars.workspace = true

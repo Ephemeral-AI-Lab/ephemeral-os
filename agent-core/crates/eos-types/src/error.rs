@@ -21,7 +21,7 @@ pub enum CoreError {
     #[error("invalid utc timestamp")]
     Timestamp(#[from] time::error::Parse),
     /// A persistence/store operation failed. The per-entity `Store` traits in
-    /// `eos-state` return this `CoreError`, but the concrete richer error lives
+    /// `eos-types` return this `CoreError`, but the concrete richer error lives
     /// downstream (e.g. `eos-db::DbError`), which this leaf crate cannot name —
     /// so the downstream error is flattened to its `Display` string here.
     #[error("{0}")]

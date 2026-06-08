@@ -67,7 +67,7 @@ mod tests {
             tool_metadata: metadata(),
             terminal_tools: BTreeSet::new(),
             exit_reason: None,
-            terminal_result: None,
+            submission_outcome: None,
             event_source: None,
             prompt_report: None,
             message_record: None,

@@ -115,11 +115,11 @@ mod tests {
     use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError};
     use eos_sandbox_port::SandboxTransport;
     use eos_skills::SkillRegistry;
-    use eos_state::{
-        AgentRun, AgentRunStore, CoreError, Sealed as StateSealed, TaskId, UtcDateTime,
-    };
     use eos_testkit::{metadata, test_tools_root, FakeTransport};
     use eos_tools::{SandboxToolService, SkillToolService, ToolConfigSet, ToolRegistry};
+    use eos_types::{
+        AgentRun, AgentRunStore, CoreError, Sealed as StateSealed, TaskId, UtcDateTime,
+    };
     use eos_types::{AgentRunId, JsonObject};
     use serde_json::json;
 
@@ -242,7 +242,7 @@ mod tests {
             tool_metadata,
             terminal_tools: BTreeSet::new(),
             exit_reason: Some(QueryExitReason::TerminalNotSubmitted),
-            terminal_result: None,
+            submission_outcome: None,
             event_source: None,
             prompt_report: None,
             message_record: None,

@@ -10,7 +10,7 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_config::ModelsConfig;
-use eos_state::{CoreError, JsonObject, ModelRegistration, ModelStore, Sealed, UtcDateTime};
+use eos_types::{CoreError, JsonObject, ModelRegistration, ModelStore, Sealed, UtcDateTime};
 
 use crate::error::DbError;
 use crate::json_col;

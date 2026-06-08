@@ -251,7 +251,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
             append_transcript_message(ctx, messages, result_message).await?;
 
             if outcome
-                .terminal_result
+                .submission_outcome
                 .as_ref()
                 .is_some_and(|result| result.is_terminal)
             {

@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use eos_state::{AgentRunStore, RequestStore, TaskStore};
+use eos_types::{AgentRunStore, RequestStore, TaskStore};
 
 /// Read-side store handles exposed to the backend composition root.
 ///

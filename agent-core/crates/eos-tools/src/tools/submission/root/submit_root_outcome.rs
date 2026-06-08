@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::{RequestStatus, TaskRole, TaskStatus};
 use eos_types::JsonObject;
+use eos_types::{RequestStatus, TaskRole, TaskStatus};
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -168,7 +168,7 @@ mod tests {
 
     use std::sync::Arc;
 
-    use eos_state::{RequestId, Task};
+    use eos_types::{RequestId, Task};
     use serde_json::json;
 
     use super::*;

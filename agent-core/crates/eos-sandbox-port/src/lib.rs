@@ -21,8 +21,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod error;
 mod command_service;
+mod error;
 mod gateway;
 mod models;
 mod ops;
@@ -31,8 +31,8 @@ mod timeouts;
 mod tool_api;
 mod transport;
 
-pub use error::SandboxPortError;
 pub use command_service::{SandboxCommandApi, SandboxCommandService};
+pub use error::SandboxPortError;
 pub use gateway::SandboxGateway;
 pub use models::{
     CommandOutput, CommandSessionCancelRequest, CommandStatusView, ConflictInfo, EditFileRequest,

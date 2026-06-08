@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use eos_state::{
+use eos_tools::PlannerPlan;
+use eos_types::{
     execution_outcome_for_submission, Attempt, AttemptClosure, AttemptFailReason, AttemptId,
     AttemptStage, ExecutionRole, GeneratorSubmission, MaterializedPlan, PlannerFailReason,
     PlannerFailureSubmission, PlannerSubmission, ReducerSubmission, Task, TaskOutcomeStatus,
     TaskRole, TaskStatus,
 };
-use eos_tools::PlannerPlan;
 
 use crate::attempt::plan_dag::{validate_plan_agents, validate_plan_shape};
 use crate::attempt::{
@@ -18,22 +18,22 @@ use crate::util::json_object;
 use crate::{Result, WorkflowError};
 
 struct ExecutionMark {
-    task_id: eos_state::TaskId,
+    task_id: eos_types::TaskId,
     expected_role: TaskRole,
     outcome_role: ExecutionRole,
     status: TaskOutcomeStatus,
     outcome: String,
-    terminal_tool_result: eos_state::JsonObject,
+    terminal_tool_result: eos_types::JsonObject,
 }
 
 /// One generator/reducer row to materialize. Unifies the two near-identical
 /// plan-materialization loops behind a single role-tagged path.
 struct PlanRowSpec {
-    local_id: eos_state::PlanNodeId,
+    local_id: eos_types::PlanNodeId,
     role: TaskRole,
     agent_name: String,
     instruction: String,
-    needs: Vec<eos_state::PlanNodeId>,
+    needs: Vec<eos_types::PlanNodeId>,
 }
 
 /// State machine for one Attempt.
@@ -500,7 +500,7 @@ impl AttemptOrchestrator {
     pub(crate) async fn close_attempt_passed(&self) -> Result<()> {
         self.close_attempt(AttemptClosure::Passed {
             outcomes: Vec::new(),
-            closed_at: eos_state::UtcDateTime::now(),
+            closed_at: eos_types::UtcDateTime::now(),
         })
         .await
     }
@@ -509,7 +509,7 @@ impl AttemptOrchestrator {
         self.close_attempt(AttemptClosure::Failed {
             reason,
             outcomes: Vec::new(),
-            closed_at: eos_state::UtcDateTime::now(),
+            closed_at: eos_types::UtcDateTime::now(),
         })
         .await
     }
@@ -520,7 +520,7 @@ impl AttemptOrchestrator {
             return Ok(());
         }
         let outcomes =
-            eos_state::project_attempt_outcomes(&attempt, Some(self.deps.task_store.as_ref()))
+            crate::state::project_attempt_outcomes(&attempt, Some(self.deps.task_store.as_ref()))
                 .await?;
         let closure = match closure {
             AttemptClosure::Passed { closed_at, .. } => AttemptClosure::Passed {
@@ -599,7 +599,7 @@ impl AttemptOrchestrator {
 
     async fn validate_planner_submission(
         &self,
-        planner_task_id: &eos_state::TaskId,
+        planner_task_id: &eos_types::TaskId,
     ) -> Result<Attempt> {
         let attempt = self.assert_stage(AttemptStage::Plan).await?;
         if attempt.planner_task_id() != Some(planner_task_id) {

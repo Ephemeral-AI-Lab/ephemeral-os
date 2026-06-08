@@ -1,4 +1,4 @@
-use eos_state::{AttemptId, IterationId, TaskId, WorkflowId};
+use eos_types::{AttemptId, IterationId, TaskId, WorkflowId};
 
 use super::ContextRole;
 

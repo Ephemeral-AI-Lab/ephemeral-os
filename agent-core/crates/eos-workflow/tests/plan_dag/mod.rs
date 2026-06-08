@@ -13,7 +13,7 @@
 use std::sync::Arc;
 
 use eos_agent_def::AgentRole;
-use eos_state::{AttemptBudget, AttemptStage, PlanNodeId, TaskStatus, WorkflowStatus};
+use eos_types::{AttemptBudget, AttemptStage, PlanNodeId, TaskStatus, WorkflowStatus};
 
 use crate::ids::generator_task_id;
 use crate::support::{

@@ -9,7 +9,6 @@ async-trait.workspace = true
 eos-agent-def.workspace = true
 eos-agent-message-records.workspace = true
 eos-llm-client.workspace = true
-eos-tools.workspace = true
 eos-types.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

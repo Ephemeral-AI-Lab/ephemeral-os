@@ -16,8 +16,8 @@ use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
-use crate::SubagentSessionPort;
 
+use super::super::SubagentToolService;
 use super::lib::empty_subagent_agent_run_error;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -28,13 +28,11 @@ struct CancelSubagentInput {
 }
 
 pub(in crate::tools::subagent) struct CancelSubagent {
-    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+    subagent_sessions: Option<SubagentToolService>,
 }
 
 impl CancelSubagent {
-    pub(in crate::tools::subagent) fn new(
-        subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
-    ) -> Self {
+    pub(in crate::tools::subagent) fn new(subagent_sessions: Option<SubagentToolService>) -> Self {
         Self { subagent_sessions }
     }
 }
@@ -55,10 +53,10 @@ impl ToolExecutor for CancelSubagent {
         }
         if self
             .subagent_sessions
-            .as_deref()
+            .as_ref()
             .ok_or(ToolError::MissingPort("subagent_sessions"))?
             .cancel_background_agent_run(&parsed.agent_run_id, &parsed.reason)
-            .await
+            .await?
         {
             Ok(render_cancelled(&parsed.agent_run_id, &parsed.reason))
         } else {
@@ -86,7 +84,7 @@ fn render_cancelled(agent_run_id: &AgentRunId, reason: &str) -> ToolResult {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    subagent_sessions: Option<Arc<dyn SubagentSessionPort>>,
+    subagent_sessions: Option<SubagentToolService>,
 ) {
     let cancel = config.get(ToolName::CancelSubagent);
     super::super::register_tool(

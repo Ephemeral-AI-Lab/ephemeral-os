@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
-use eos_state::{AgentRun, AgentRunId, AgentRunStore, CoreError, JsonObject, Sealed, TaskId};
+use eos_types::{AgentRun, AgentRunId, AgentRunStore, CoreError, JsonObject, Sealed, TaskId};
 
 use crate::error::DbError;
 use crate::json_col;

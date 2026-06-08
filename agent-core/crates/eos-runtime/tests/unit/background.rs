@@ -19,7 +19,7 @@ mod command_session_delivery {
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
     use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
-    use eos_state::TaskStatus;
+    use eos_types::TaskStatus;
     use eos_types::{JsonObject, RequestId, SandboxId};
     use serde_json::json;
 

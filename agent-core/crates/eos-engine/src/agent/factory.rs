@@ -165,7 +165,7 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         tool_metadata,
         terminal_tools,
         exit_reason: None,
-        terminal_result: None,
+        submission_outcome: None,
         event_source,
         prompt_report: None,
         message_record: None,

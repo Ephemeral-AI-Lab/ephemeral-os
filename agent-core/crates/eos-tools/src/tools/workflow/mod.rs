@@ -7,13 +7,13 @@ mod lib;
 
 use std::sync::Arc;
 
-use crate::{WorkflowServicePort, WorkflowSessionPort};
+use crate::{WorkflowServicePort, WorkflowToolService};
 
 pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
     workflow_service: Option<Arc<dyn WorkflowServicePort>>,
-    workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+    workflow_sessions: Option<WorkflowToolService>,
 ) {
     delegate_workflow::register(
         registry,

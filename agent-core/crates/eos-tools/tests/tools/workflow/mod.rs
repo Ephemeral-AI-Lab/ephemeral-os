@@ -15,7 +15,7 @@ use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
 use crate::{
     OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
-    WorkflowServicePort, WorkflowSessionPort,
+    WorkflowServicePort, WorkflowToolService,
 };
 
 fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
@@ -32,24 +32,17 @@ struct RecordingWorkflowSessions {
 
 impl Sealed for RecordingWorkflowSessions {}
 
-#[async_trait]
-impl WorkflowSessionPort for RecordingWorkflowSessions {
-    async fn register_background_session(&self, workflow: &StartedWorkflow) {
-        self.workflows
-            .lock()
-            .unwrap()
-            .push(workflow.workflow_task_id.as_str().to_owned());
-    }
-
-    async fn count_background_sessions(&self) -> usize {
-        0
-    }
-
-    async fn cancel_all_background_sessions(&self, _reason: &str) {}
-
-    async fn poll_complete_background_sessions(&self) -> usize {
-        0
-    }
+fn workflow_tool_service(background: Arc<RecordingWorkflowSessions>) -> WorkflowToolService {
+    WorkflowToolService::new(move |workflow| {
+        let background = background.clone();
+        async move {
+            background
+                .workflows
+                .lock()
+                .unwrap()
+                .push(workflow.workflow_task_id.as_str().to_owned());
+        }
+    })
 }
 
 struct OutstandingControl;
@@ -113,7 +106,9 @@ async fn delegate_workflow_outstanding_is_error() {
 
     let res = DelegateWorkflow::new(
         Some(Arc::new(OutstandingControl)),
-        Some(Arc::new(RecordingWorkflowSessions::default())),
+        Some(workflow_tool_service(Arc::new(
+            RecordingWorkflowSessions::default(),
+        ))),
     )
     .execute(&obj(&[("goal", json!("do something"))]), &ctx)
     .await
@@ -182,10 +177,13 @@ async fn delegate_workflow_registers_background_session() {
     let mut ctx = metadata();
     ctx.task_id = Some("parent".parse().unwrap());
 
-    let res = DelegateWorkflow::new(Some(Arc::new(StartingControl)), Some(background.clone()))
-        .execute(&obj(&[("goal", json!("do something"))]), &ctx)
-        .await
-        .expect("ok");
+    let res = DelegateWorkflow::new(
+        Some(Arc::new(StartingControl)),
+        Some(workflow_tool_service(background.clone())),
+    )
+    .execute(&obj(&[("goal", json!("do something"))]), &ctx)
+    .await
+    .expect("ok");
 
     assert!(!res.is_error, "{res:?}");
     assert_eq!(

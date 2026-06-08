@@ -19,19 +19,16 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use eos_agent_def::AgentRole;
 use eos_agent_message_records::{AgentRunRecordKind, WorkflowTaskRole};
+use eos_agent_run::{AgentRunApi, SpawnAgentRequest};
 use eos_engine::{
-    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundTeardownPort,
+    AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
 };
 use eos_llm_client::Message;
-use eos_tools::{
-    AgentRunServicePort, AttemptSubmissionPort, AttemptSubmissionService, CommandSessionPort,
-    SubagentSessionPort, WorkflowServicePort, WorkflowSessionPort,
-};
+use eos_tools::{AttemptSubmissionPort, AttemptSubmissionService, WorkflowServicePort};
 use eos_types::AgentRunId;
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
 use crate::runtime_services::RuntimeServices;
-use crate::tool_context::{build_metadata, MetadataParams};
 
 /// Runtime adapter over the shared engine loop, supplied to `AttemptDeps.runner`.
 pub(crate) struct RuntimeAgentRunner {
@@ -83,33 +80,6 @@ impl RuntimeAgentRunner {
 impl AgentRunner for RuntimeAgentRunner {
     async fn run(&self, launch: AgentLaunch) -> WorkflowResult<AgentRunReport> {
         let agent_run_id = AgentRunId::new_v4();
-        // Each delegated planner/generator/reducer run owns its own
-        // AgentRunControl — a fresh notifier, foreground executor, background
-        // supervisor, command-completion heartbeat, and cancellation token.
-        let control = self
-            .control_factory
-            .persisted(agent_run_id.clone(), Some(launch.task_id().clone()));
-        self.agent_run_registry.insert(control.clone());
-        let background = control.background();
-        let agent_run_service: Arc<dyn AgentRunServicePort> = Arc::new(background.clone());
-        let subagent_sessions: Arc<dyn SubagentSessionPort> = Arc::new(background.clone());
-        let workflow_sessions: Arc<dyn WorkflowSessionPort> = Arc::new(background.clone());
-        let background_session: Arc<dyn BackgroundTeardownPort> = Arc::new(background.clone());
-        let command_session_port: Arc<dyn CommandSessionPort> = Arc::new(background);
-        let metadata = build_metadata(
-            &self.workspace_root,
-            MetadataParams {
-                agent_name: launch.agent_name().to_owned(),
-                sandbox_id: None,
-                agent_run_id: agent_run_id.clone(),
-                request_id: Some(launch.request_id().clone()),
-                task_id: Some(launch.task_id().clone()),
-                attempt_id: Some(launch.attempt_id().clone()),
-                workflow_id: Some(launch.workflow_id().clone()),
-                is_isolated_workspace_mode: false,
-            },
-        );
-
         let mut prompt = launch.context().to_owned();
         if let Some(guidance) = launch.task_guidance() {
             prompt.push_str("\n\n");
@@ -120,50 +90,52 @@ impl AgentRunner for RuntimeAgentRunner {
             prompt.push_str(skill);
         }
 
-        let run = run_agent(
-            &self.services.engine_run_handles(&self.workspace_root),
-            AgentRunInput {
-                agent: launch.agent_def().clone(),
-                initial_messages: vec![Message::from_user_text(prompt)],
-                task_id: Some(launch.task_id().clone()),
-                agent_run_id,
-                tool_metadata: metadata,
+        let agent_runs = AgentRunService::with_run_services(
+            self.services.engine_run_handles(&self.workspace_root),
+            (*self.control_factory).clone(),
+            AgentRunServiceOptions {
+                agent_run_registry: Some(self.agent_run_registry.clone()),
                 attempt_submission: Some(AttemptSubmissionService::new(
                     self.attempt_submission.clone(),
                 )),
-                agent_run_service: Some(agent_run_service),
-                subagent_sessions: Some(subagent_sessions),
                 workflow_service: self.workflow_service.get().cloned(),
-                workflow_sessions: Some(workflow_sessions),
-                background_session: Some(background_session),
-                command_session_port: Some(command_session_port),
-                notifier: control.notifications(),
-                cancellation: control.cancellation(),
-                foreground: control.foreground(),
-                agent_run_registry: Some(self.agent_run_registry.clone()),
-                persist_agent_run: true,
+                ..AgentRunServiceOptions::default()
+            },
+        );
+        let failure_summary = match agent_runs
+            .spawn_agent(SpawnAgentRequest {
+                agent_name: launch.agent_def().name.clone(),
+                agent_run_id: Some(agent_run_id),
+                initial_messages: vec![Message::from_user_text(prompt)],
+                parent_agent_run_id: None,
+                request_id: Some(launch.request_id().clone()),
+                task_id: Some(launch.task_id().clone()),
+                attempt_id: Some(launch.attempt_id().clone()),
+                workflow_id: Some(launch.workflow_id().clone()),
+                sandbox_id: None,
+                workspace_root: self.workspace_root.clone(),
+                is_isolated_workspace_mode: false,
+                persist: true,
                 record_kind: AgentRunRecordKind::WorkflowTask {
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),
                     role: workflow_message_record_role(launch.role()),
                 },
-            },
-            None,
-        )
-        .await;
-
-        // `run_agent` claims and finalizes (or skips, if a concurrent cancel won)
-        // the row + child teardown, removing the live-run entry. Dropping `control`
-        // releases its heartbeat (RAII).
-        drop(control);
+            })
+            .await
+        {
+            Ok(agent_run_id) => agent_runs
+                .wait_for_agent_outcome(&agent_run_id)
+                .await
+                .map_or_else(|err| Some(err.to_string()), |outcome| outcome.error),
+            Err(err) => Some(err.to_string()),
+        };
 
         // The submit tool already recorded the agent's submission during the run
         // (Path A-recording); the runner reports only a framework fault, which
         // the loop uses as the still-RUNNING exhaustion summary for a dead agent.
-        Ok(AgentRunReport {
-            failure_summary: run.error,
-        })
+        Ok(AgentRunReport { failure_summary })
     }
 }
 

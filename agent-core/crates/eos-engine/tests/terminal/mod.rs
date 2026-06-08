@@ -40,7 +40,7 @@ fn ctx(source: Arc<dyn EventSource>) -> QueryContext {
         tool_metadata: metadata(),
         terminal_tools: BTreeSet::from([ToolName::SubmitRootOutcome]),
         exit_reason: None,
-        terminal_result: None,
+        submission_outcome: None,
         event_source: Some(source),
         prompt_report: None,
         message_record: None,

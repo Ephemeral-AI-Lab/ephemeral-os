@@ -9,12 +9,10 @@ path = "src/mod.rs"
 
 [dependencies]
 # Direct eos-types edge: this crate names InvocationId, ToolUseId,
-# WorkflowSessionId, CommandSessionId, SubagentSessionId, and JsonObject/CoreError
-# in its own signatures, and none of the other upstream deps re-export them
-# (eos-state re-exports only a subset). Mirrors the eos-plugin-catalog
-# precedent.
+# WorkflowSessionId, CommandSessionId, AgentRunId, and JsonObject/CoreError
+# in its own signatures. Mirrors the eos-plugin-catalog precedent.
 eos-types.workspace = true
-eos-state.workspace = true
+eos-agent-run.workspace = true
 eos-agent-def.workspace = true
 eos-agent-message-records.workspace = true
 eos-sandbox-port.workspace = true

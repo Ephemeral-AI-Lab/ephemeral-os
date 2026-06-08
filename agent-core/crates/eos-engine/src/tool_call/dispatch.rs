@@ -36,8 +36,8 @@ pub struct ToolUseRequest {
 pub struct AssistantToolDispatchOutcome {
     /// Tool-result blocks to append as the next user message.
     pub tool_results: Vec<ContentBlock>,
-    /// First terminal result in the batch, when present.
-    pub terminal_result: Option<ToolResult>,
+    /// First successful submission outcome in the batch, when present.
+    pub submission_outcome: Option<ToolResult>,
     /// Engine stream events emitted during dispatch.
     pub events: Vec<StreamEvent>,
 }
@@ -84,7 +84,7 @@ fn rejection_result(message: impl Into<String>) -> ToolResult {
     }
 }
 
-fn first_terminal_result(
+fn first_submission_outcome(
     calls: &[ToolUseRequest],
     results: &BTreeMap<String, ToolResult>,
     ctx: &QueryContext,
@@ -307,7 +307,7 @@ pub async fn dispatch_assistant_tools(
             }
         }
         return Ok(AssistantToolDispatchOutcome {
-            terminal_result: None,
+            submission_outcome: None,
             tool_results,
             events,
         });
@@ -371,14 +371,14 @@ pub async fn dispatch_assistant_tools(
         );
     }
 
-    let terminal_result = first_terminal_result(calls, &results_by_id, ctx);
-    if terminal_result.is_some() {
-        ctx.set_terminal_result(terminal_result.clone());
+    let submission_outcome = first_submission_outcome(calls, &results_by_id, ctx);
+    if submission_outcome.is_some() {
+        ctx.set_submission_outcome(submission_outcome.clone());
     }
 
     Ok(AssistantToolDispatchOutcome {
         tool_results,
-        terminal_result,
+        submission_outcome,
         events,
     })
 }

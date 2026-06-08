@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::ReducerSubmission;
 use eos_types::JsonObject;
+use eos_types::ReducerSubmission;
 use schemars::schema_for;
 use serde_json::json;
 

@@ -2,15 +2,15 @@
 
 use std::sync::Arc;
 
-use eos_state::{
+use eos_types::{
     AttemptBudget, AttemptStatus, GeneratorSubmission, IterationStatus, PlanNodeId,
     ReducerSubmission, TaskOutcomeStatus, TaskStatus, WorkflowStatus,
 };
 
 use crate::ids::{generator_task_id, reducer_task_id};
 use crate::support::{
-    one_step_plan, root_task, terminal_result, wait_for_workflow_status, MemoryStores, QueueRunner,
-    ScriptedSubmission,
+    one_step_plan, root_task, terminal_tool_result_fixture, wait_for_workflow_status, MemoryStores,
+    QueueRunner, ScriptedSubmission,
 };
 use crate::WorkflowStarter;
 
@@ -46,14 +46,14 @@ async fn reducer_is_exit_gate() {
         task_id: generator_id,
         status: TaskOutcomeStatus::Success,
         outcome: "generated".to_owned(),
-        terminal_tool_result: terminal_result(),
+        terminal_tool_result: terminal_tool_result_fixture(),
     }));
     runner.push(ScriptedSubmission::Reducer(ReducerSubmission {
         attempt_id: started.attempt_id.clone(),
         task_id: reducer_id,
         status: TaskOutcomeStatus::Success,
         outcome: "reduced".to_owned(),
-        terminal_tool_result: terminal_result(),
+        terminal_tool_result: terminal_tool_result_fixture(),
     }));
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
@@ -96,14 +96,14 @@ async fn failed_reducer_closes_attempt_failed() {
         task_id: generator_id,
         status: TaskOutcomeStatus::Success,
         outcome: "generated".to_owned(),
-        terminal_tool_result: terminal_result(),
+        terminal_tool_result: terminal_tool_result_fixture(),
     }));
     runner.push(ScriptedSubmission::Reducer(ReducerSubmission {
         attempt_id: started.attempt_id.clone(),
         task_id: reducer_id,
         status: TaskOutcomeStatus::Failed,
         outcome: "reduction failed".to_owned(),
-        terminal_tool_result: terminal_result(),
+        terminal_tool_result: terminal_tool_result_fixture(),
     }));
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Failed).await;
 
@@ -111,7 +111,7 @@ async fn failed_reducer_closes_attempt_failed() {
     assert_eq!(attempt.status(), AttemptStatus::Failed);
     assert_eq!(
         attempt.fail_reason(),
-        Some(eos_state::AttemptFailReason::TaskFailed)
+        Some(eos_types::AttemptFailReason::TaskFailed)
     );
     assert_eq!(
         stores.iteration(&started.iteration_id).unwrap().status,
@@ -124,8 +124,8 @@ async fn failed_reducer_closes_attempt_failed() {
 // agent (a model-facing validation error), not a silent accept.
 #[tokio::test]
 async fn record_plan_rejects_bad_shape_with_real_ack() {
-    use eos_state::{PlanDisposition, PlanNodeId};
     use eos_tools::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, SubmissionAck};
+    use eos_types::{PlanDisposition, PlanNodeId};
 
     use crate::AttemptSubmissionAdapter;
 
@@ -207,7 +207,7 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     // The attempt is untouched by either rejection (still in PLAN, no plan
     // tasks materialized).
     let attempt = stores.attempt(&started.attempt_id).unwrap();
-    assert_eq!(attempt.stage(), eos_state::AttemptStage::Plan);
+    assert_eq!(attempt.stage(), eos_types::AttemptStage::Plan);
     assert!(attempt.generator_task_ids().is_empty());
 }
 
@@ -218,8 +218,8 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
 // `g2`'s registry check failed.
 #[tokio::test]
 async fn record_plan_rejects_late_agent_without_orphan_rows() {
-    use eos_state::{PlanDisposition, PlanNodeId};
     use eos_tools::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, SubmissionAck};
+    use eos_types::{PlanDisposition, PlanNodeId};
 
     use crate::AttemptSubmissionAdapter;
 
@@ -286,6 +286,6 @@ async fn record_plan_rejects_late_agent_without_orphan_rows() {
         .task(&generator_task_id(&started.attempt_id, &node("g2")).unwrap())
         .is_none());
     let attempt = stores.attempt(&started.attempt_id).unwrap();
-    assert_eq!(attempt.stage(), eos_state::AttemptStage::Plan);
+    assert_eq!(attempt.stage(), eos_types::AttemptStage::Plan);
     assert!(attempt.generator_task_ids().is_empty());
 }

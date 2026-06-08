@@ -96,9 +96,9 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-db/src/error.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! The single `eos-db` error enum and its bridge to `eos-state`'s `CoreError`.</span>
+  <pre class="file-source"><code><span class="rs-comment">//! The single `eos-db` error enum and its bridge to `eos-types`'s `CoreError`.</span>
 
-<span class="rs-kw">use</span> eos_state::<span class="rs-type">CoreError</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">CoreError</span>;
 
 <span class="rs-comment">/// Errors raised by the `SQLite` persistence layer.</span>
 #[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]

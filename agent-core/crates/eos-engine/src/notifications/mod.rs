@@ -79,7 +79,7 @@ pub async fn enqueue_notification_rules(
     sink: &dyn NotificationSink,
 ) {
     if ctx
-        .terminal_result
+        .submission_outcome
         .as_ref()
         .is_some_and(|result| result.is_terminal)
     {

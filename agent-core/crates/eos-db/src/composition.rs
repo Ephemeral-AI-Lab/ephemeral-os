@@ -6,7 +6,7 @@ use std::sync::Arc;
 use sqlx::SqlitePool;
 
 use eos_config::DatabaseConfig;
-use eos_state::{
+use eos_types::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
 

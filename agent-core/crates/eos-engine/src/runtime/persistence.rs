@@ -30,16 +30,16 @@ pub(super) async fn finish_agent_run_if_requested(
     handles: &EngineRunHandles,
     persistence_requested: bool,
     agent_run_id: &AgentRunId,
-    terminal_result: Option<&ToolResult>,
+    submission_outcome: Option<&ToolResult>,
     error: Option<&str>,
 ) {
     if !persistence_requested {
         return;
     }
-    let terminal_payload = terminal_result.map(tool_result_payload);
+    let submission_payload = submission_outcome.map(tool_result_payload);
     if let Err(err) = handles
         .agent_run_store
-        .finish_run(agent_run_id, None, terminal_payload.as_ref(), 0, error)
+        .finish_run(agent_run_id, None, submission_payload.as_ref(), 0, error)
         .await
     {
         tracing::warn!(error = %err, "agent_run finish_run failed (non-fatal)");

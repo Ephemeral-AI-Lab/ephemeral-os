@@ -3,8 +3,8 @@
 Status: Proposed
 Date: 2026-06-08
 Owner: agent-core runtime / agent-run / engine / tools
-Scope: `agent-core/crates/eos-agent-run`, `agent-core/crates/eos-tool-core`,
-`agent-core/crates/eos-engine`, `agent-core/crates/eos-tools`,
+Scope: `agent-core/crates/eos-agent-run`, `agent-core/crates/eos-engine`,
+`agent-core/crates/eos-tools`,
 `agent-core/crates/eos-workflow`, `agent-core/crates/eos-sandbox-port`,
 `agent-core/crates/eos-runtime`
 Supersedes:
@@ -36,14 +36,17 @@ The central API is:
 ```rust
 async fn spawn_agent(request: SpawnAgentRequest) -> Result<AgentRunId, AgentRunError>;
 
-async fn wait_for_agent_outcomes(
+async fn wait_for_agent_outcome(
     agent_run_id: &AgentRunId,
 ) -> Result<AgentRunOutcome, AgentRunError>;
 ```
 
-`spawn_agent` and `wait_for_agent_outcomes` are agent-run service APIs. They are
-not model tools and must not return `ToolResult`. Tools may call them internally
-and then convert the result into model-facing `ToolResult` values.
+`spawn_agent` and `wait_for_agent_outcome` are agent-run service APIs. They are
+not model tools and must not return `ToolResult`. `AgentRunOutcome` must not
+contain `ToolResult` either; it contains only the agent-run id, terminal status,
+optional persisted submission payload, transcript facts, token facts, and error
+summary. Tools may call agent-run APIs internally and then convert the outcome
+into model-facing `ToolResult` values at the `eos-tools` boundary.
 
 ## 2. Problems In The Current Shape
 
@@ -79,8 +82,22 @@ agent-run lifecycle as its own domain capability.
   `eos_engine::run_agent` directly. `eos_engine::run_agent` is the engine worker
   invoked by `AgentRunService` after the run has an `AgentRunId`, durable record,
   control, tool registry, active-run entry, and completion channel.
-- `eos-tools` owns model-facing tool implementations and rendering.
-- `eos-tool-core` owns neutral tool primitives required by both engine and tools.
+- Agent runs are trigger-agnostic. A run can be task-triggered (root/task or
+  workflow lifecycle code starts it) or tool-triggered (a model-facing tool such
+  as `run_subagent` or `ask_advisor` starts it). `eos-agent-run` records neutral
+  lineage facts such as `task_id`, `parent_agent_run_id`, `workflow_id`, and
+  `record_kind`; the caller owns trigger-specific side effects such as waiting,
+  returning a child `AgentRunId`, background-session tracking, or rendering an
+  outcome into `ToolResult`.
+- `eos-tools` owns model-facing tool implementations, rendering, and the
+  tool-core primitives used by the engine loop (`ToolResult`, `ToolError`,
+  `ExecutionMetadata`, `ToolName`, `ToolIntent`, `ToolRegistry`,
+  `RegisteredTool`, `ToolExecutor`, hooks, execution helpers, and dispatch
+  policy). Do not create a standalone `eos-tool-core` crate.
+- `eos-agent-run` does not own tool contracts. It must not depend on
+  `eos-tools`, `ToolResult`, `ToolError`, `ToolRegistry`, `ToolExecutor`, or
+  model-facing tool modules. Its public returns are `AgentRunId`,
+  `AgentRunOutcome`, and `AgentRunError`.
 - `eos-workflow` owns workflow lifecycle and exposes its own workflow API.
 - `eos-sandbox-port` owns sandbox command RPC contracts and the command service
   over `SandboxTransport`.
@@ -97,21 +114,6 @@ agent-run lifecycle as its own domain capability.
 
 ```text
 agent-core/crates/
-  eos-tool-core/                         # new
-    Cargo.toml
-    src/
-      lib.rs
-      error.rs                           # ToolError
-      metadata.rs                        # ExecutionMetadata
-      result.rs                          # ToolResult, OutputShape
-      intent.rs                          # ToolIntent
-      name.rs                            # ToolName, ToolKey
-      executor.rs                        # ToolExecutor, RegisteredTool
-      registry.rs                        # ToolRegistry
-      hooks.rs                           # Hook, HookOutcome, HookDenial
-      execution.rs                       # execute_tool_once, run_pre_hooks
-      dispatch_policy.rs                 # terminal/batch dispatch decisions
-
   eos-agent-run/                         # new
     Cargo.toml
     src/
@@ -154,6 +156,17 @@ agent-core/crates/
   eos-tools/
     src/
       lib.rs
+      core/
+        error.rs                         # ToolError
+        metadata.rs                      # ExecutionMetadata
+        result.rs                        # ToolResult, OutputShape
+        intent.rs                        # ToolIntent
+        name.rs                          # ToolName, ToolKey
+        mod.rs                           # tool-core exports and owner APIs
+      runtime/
+        executor.rs                      # ToolExecutor, RegisteredTool
+        execution.rs                     # execute_tool_once, run_pre_hooks
+        dispatch.rs                      # terminal/batch dispatch decisions
       registry.rs                        # build_default_registry(...)
       services.rs                        # service bundle for tool constructors
       hooks/
@@ -193,7 +206,6 @@ agent-core/crates/
       entry.rs                           # root spawn + optional wait
       agent_runner.rs                    # may shrink or disappear
       runtime_services/
-      tool_context.rs
 
   # delete eos-ports/
 ```
@@ -204,13 +216,11 @@ Workspace changes:
 # agent-core/Cargo.toml
 [workspace]
 members = [
-  "crates/eos-tool-core",
   "crates/eos-agent-run",
   # existing crates except "crates/eos-ports"
 ]
 
 [workspace.dependencies]
-eos-tool-core = { path = "crates/eos-tool-core" }
 eos-agent-run = { path = "crates/eos-agent-run" }
 # remove eos-ports
 ```
@@ -219,7 +229,6 @@ eos-agent-run = { path = "crates/eos-agent-run" }
 
 ```mermaid
 flowchart TD
-  ToolCore["eos-tool-core"]
   SandboxPort["eos-sandbox-port"]
   Engine["eos-engine"]
   AgentRun["eos-agent-run"]
@@ -227,17 +236,13 @@ flowchart TD
   Tools["eos-tools"]
   Runtime["eos-runtime"]
 
-  Engine --> ToolCore
+  Engine --> Tools
   Engine --> SandboxPort
-  AgentRun --> Engine
-  AgentRun --> ToolCore
-  Tools --> ToolCore
   Tools --> AgentRun
   Tools --> Workflow
   Tools --> SandboxPort
-  Tools --> Engine
   Workflow --> AgentRun
-  Workflow --> ToolCore
+  Workflow --> Tools
   Runtime --> Tools
   Runtime --> AgentRun
   Runtime --> Workflow
@@ -245,15 +250,24 @@ flowchart TD
   Runtime --> SandboxPort
 ```
 
-`eos-engine` must not depend on concrete tool implementations. It should receive
-a `ToolRegistry` or a registry factory through the agent-run/runtime layer. This
-is the dependency change that makes `ask_advisor` a normal tool and makes
-`eos-agent-run` possible without circular dependencies.
+`eos-engine` may depend on `eos-tools` for tool-core contracts such as
+`ToolRegistry`, `RegisteredTool`, `ToolExecutor`, `ExecutionMetadata`, and
+`ToolResult`. It must not depend on concrete model-facing tool implementations or
+tool-constructor wiring. It should receive a `ToolRegistry` or a registry
+factory through the agent-run/runtime layer. This is the dependency change that
+makes `ask_advisor` a normal tool without reintroducing engine-dispatched tool
+special cases.
 
-`eos-tools` may depend on `eos-engine` for the concrete background session
-handle types used by per-run tool executors. The dependency must not be
-reversed: engine executes neutral `eos-tool-core` tool contracts and never
-imports concrete tool implementations.
+`eos-tools` must not depend on `eos-engine`; otherwise keeping tool-core inside
+`eos-tools` would create a crate cycle. Tool implementations receive owner API
+traits from the owning crates, such as `AgentRunApi` from `eos-agent-run`.
+Engine executes the tool-core contracts owned by
+`eos-tools::core`/`eos-tools::runtime` and never imports concrete tool
+implementation modules.
+
+`eos-agent-run` must not depend on `eos-tools`. This keeps the tool conversion
+direction one-way: `eos-tools` may turn `AgentRunOutcome` into model-facing
+`ToolResult`; `eos-agent-run` only publishes agent-run facts.
 
 Manager service fields create one compile-time constraint: `AgentRunApi`,
 `WorkflowApi`, and `SandboxCommandApi` must be available to `eos-engine`
@@ -268,7 +282,7 @@ agent-run/workflow/sandbox-command, not a generic shared port module.
 Rust "classes" here means structs, enums, and object-safe traits used at runtime
 boundaries.
 
-### 6.1 `eos-tool-core`
+### 6.1 `eos-tools` Tool Core
 
 ```rust
 pub struct ExecutionMetadata {
@@ -317,8 +331,11 @@ pub trait ToolExecutor: Send + Sync {
 }
 ```
 
-`ToolError`, `ToolResult`, `ExecutionMetadata`, `ToolExecutor`, and
-`ToolRegistry` move out of `eos-ports`/`eos-tools::core` into `eos-tool-core`.
+`ToolError`, `ToolResult`, `ExecutionMetadata`, `ToolName`, `ToolIntent`,
+`ToolExecutor`, `RegisteredTool`, `ToolRegistry`, hooks, execution helpers, and
+dispatch policy move out of any generic port layer and stay owned by
+`eos-tools`. The migration target is `eos-tools::core` and `eos-tools::runtime`,
+not a standalone `eos-tool-core` crate.
 
 ### 6.2 `eos-agent-run`
 
@@ -328,7 +345,7 @@ pub trait AgentRunApi: Send + Sync {
     async fn spawn_agent(&self, request: SpawnAgentRequest)
         -> Result<AgentRunId, AgentRunError>;
 
-    async fn wait_for_agent_outcomes(&self, agent_run_id: &AgentRunId)
+    async fn wait_for_agent_outcome(&self, agent_run_id: &AgentRunId)
         -> Result<AgentRunOutcome, AgentRunError>;
 
     async fn poll_agent_run_outcome(&self, agent_run_id: &AgentRunId)
@@ -365,12 +382,22 @@ pub struct SpawnAgentRequest {
     pub persist: bool,
     pub record_kind: AgentRunRecordKind,
 }
+```
 
+Trigger source is intentionally not a result type. Task-triggered callers and
+tool-triggered callers both construct `SpawnAgentRequest`; the distinction is in
+the caller's ownership and follow-up behavior:
+
+| Trigger source | Typical caller | After `spawn_agent` |
+| --- | --- | --- |
+| Task/root/workflow lifecycle | runtime entry or workflow service | optionally wait for `AgentRunOutcome` and persist/update task or workflow state |
+| Model-facing tool | `ask_advisor`, `run_subagent` | wait and render outcome into `ToolResult`, or return child `AgentRunId` and register background tracking |
+
+```rust
 pub struct AgentRunOutcome {
     pub agent_run_id: AgentRunId,
     pub status: AgentRunStatus,
-    pub terminal_result: Option<ToolResult>,
-    pub terminal_payload: Option<JsonObject>,
+    pub submission_payload: Option<JsonObject>,
     pub message_history: Vec<Message>,
     pub token_count: Option<i64>,
     pub error: Option<String>,
@@ -399,6 +426,12 @@ for agent runs. `ActiveAgentRuns` exists because active Tokio tasks have process
 local resources that cannot live in the database: `AgentRunControl`,
 `AbortHandle`, cancellation state, background managers, and the `watch` channel
 used to wake waiters.
+
+`AgentRunOutcome::submission_payload` is the serialized submission payload
+recorded for the run, not a model-facing `ToolResult`. Agent-run code must not
+parse that payload into `ToolResult`. The parsing/rendering boundary lives in
+the caller that needs a model-facing result, such as `ask_advisor` in
+`eos-tools` or the engine background notification path for completed subagents.
 
 Do not implement the normal wait/cancel path by repeatedly querying
 "running agent runs" from the database. Database `get_running_agent_runs` style
@@ -453,7 +486,7 @@ queue-backed wakeup, but that is outside this spec.
 Poll path:
 
 `poll_agent_run_outcome` is intentionally different from
-`wait_for_agent_outcomes`. It is a nonblocking status query for engine-local
+`wait_for_agent_outcome`. It is a nonblocking status query for engine-local
 background managers that already run on a configured interval.
 
 ```rust
@@ -497,7 +530,7 @@ pub struct EngineRunInput {
 }
 
 pub struct EngineRunOutput {
-    pub terminal_result: Option<ToolResult>,
+    pub submission_outcome: Option<ToolResult>,
     pub message_history: Vec<Message>,
     pub token_count: Option<i64>,
     pub error: Option<String>,
@@ -526,11 +559,12 @@ Remove these fields from `EngineRunInput` / current `AgentRunInput`:
 - `subagent_sessions`,
 - `workflow_service`,
 - `workflow_sessions`,
-- `command_session_port`,
+- `command_sessions`,
 - `attempt_submission`.
 
 Those dependencies are captured by concrete tool executors inside the
-`ToolRegistry` before the engine loop starts.
+`ToolRegistry` before the engine loop starts. A construction-only service set
+may exist for registry building, but it must not be part of `AgentRunInput`.
 
 ### 6.4 Engine-Local Background Managers
 
@@ -896,7 +930,7 @@ impl ToolExecutor for AskAdvisor {
 
         let outcome = self
             .agent_run
-            .wait_for_agent_outcomes(&advisor_run_id)
+            .wait_for_agent_outcome(&advisor_run_id)
             .await?;
 
         Ok(advisor_outcome_to_tool_result(outcome))
@@ -911,7 +945,8 @@ Required behavior:
 - no `eos-engine/src/runtime/advisor.rs`,
 - no background manager registration,
 - advisor is synchronous only because the tool waits,
-- advisor terminal result is converted into a non-terminal parent `ToolResult`,
+- advisor submission outcome is converted into a non-terminal parent
+  `ToolResult`,
 - advisor crash/no-terminal-output becomes in-band `ToolResult::error`.
 
 Files:
@@ -1012,10 +1047,10 @@ reason)` rather than using a session port or a session-state mutation API.
 ```mermaid
 flowchart TD
   RootApi["root API request"] --> SpawnRoot["AgentRunService::spawn_agent(root)"]
-  SpawnRoot --> WaitRoot["wait_for_agent_outcomes(root_id)"]
+  SpawnRoot --> WaitRoot["wait_for_agent_outcome(root_id)"]
 
   Workflow["workflow service"] --> SpawnWorkflowAgent["spawn_agent(workflow agent)"]
-  SpawnWorkflowAgent --> WaitWorkflowAgent["wait_for_agent_outcomes(agent_id)"]
+  SpawnWorkflowAgent --> WaitWorkflowAgent["wait_for_agent_outcome(agent_id)"]
 
   SubTool["run_subagent tool"] --> SpawnSub["spawn_agent(subagent)"]
   SpawnSub --> TrackSub["SubagentSessions.track(child id)"]
@@ -1033,7 +1068,7 @@ flowchart TD
   TrackCommand --> ReturnCommandId["return CommandSessionId"]
 
   AdvisorTool["ask_advisor tool"] --> SpawnAdvisor["spawn_agent(advisor)"]
-  SpawnAdvisor --> WaitAdvisor["wait_for_agent_outcomes(advisor_id)"]
+  SpawnAdvisor --> WaitAdvisor["wait_for_agent_outcome(advisor_id)"]
   WaitAdvisor --> AdvisorResult["convert to parent ToolResult"]
 
   SpawnRoot --> Engine["eos_engine::run_agent"]
@@ -1044,7 +1079,7 @@ flowchart TD
 
 Agent foreground/background behavior is not encoded in launch kind. For agent
 runs, it is determined by whether the caller invokes
-`wait_for_agent_outcomes`. Workflow and command background behavior is
+`wait_for_agent_outcome`. Workflow and command background behavior is
 determined by whether the tool registers the natural id with the concrete
 manager before returning.
 
@@ -1057,7 +1092,7 @@ the final phase.
 
 | Remove | Replacement |
 | --- | --- |
-| `agent-core/crates/eos-ports/` | `eos-tool-core`, `eos-agent-run`, `eos-workflow::api`, `eos-sandbox-port::command_service` |
+| `agent-core/crates/eos-ports/` | `eos-tools::core`, `eos-agent-run`, `eos-workflow::api`, `eos-sandbox-port::command_service` |
 | `eos-engine/src/services/agent_run.rs` | `eos-agent-run/src/service.rs` |
 | `eos-engine/src/services/command.rs` | `eos-sandbox-port/src/command_service.rs` |
 | `eos-engine/src/services/mod.rs` | no replacement |
@@ -1066,30 +1101,27 @@ the final phase.
 | `AgentRunServicePort::start_subagent_run` | `AgentRunApi::spawn_agent` |
 | `AgentRunServicePort::poll_terminal_agent_run` | `AgentRunApi::poll_agent_run_outcome` |
 | `SubagentSessionPort` | parent `BackgroundManagers.subagents` internal tracking |
-| `WorkflowSessionPort` | parent `BackgroundManagers.workflows` internal tracking |
-| `CommandSessionPort` | parent `BackgroundManagers.commands` internal tracking |
+| `WorkflowSessionPort` | concrete `WorkflowToolService` callback plus parent `BackgroundManagers.workflows` internal tracking |
+| `CommandSessionPort` | concrete `CommandSessionToolService` callback plus parent `BackgroundManagers.commands` internal tracking |
 | `BackgroundSessionService` as public port bundle | `AgentRunControl.background: BackgroundManagers` |
-| `BackgroundTeardownPort` | `AgentRunControl::cancel_background(reason)` concrete method |
+| `BackgroundTeardownPort` | concrete `BackgroundTeardownService` built from `BackgroundManagers::teardown_service()` |
 | engine `ask_advisor` dispatch branch | normal tool executor |
 
 ## 11. Migration Phases
 
-### Phase 1 - Extract `eos-tool-core`
+### Phase 1 - Fold Tool Core Into `eos-tools`
 
-- Add `eos-tool-core`.
 - Move `ToolError`, `ToolResult`, `ExecutionMetadata`, `ToolName`,
   `ToolIntent`, `ToolRegistry`, `RegisteredTool`, `ToolExecutor`, hooks,
-  execution helpers, and dispatch policy.
-- Update `eos-tools` to become concrete tool registration/executor crate over
-  `eos-tool-core`.
-- Keep temporary re-exports from `eos-tools` if needed for a short compile
-  bridge.
+  execution helpers, and dispatch policy into the `eos-tools` tool-core surface.
+- Keep the owning modules under `eos-tools::core`, `eos-tools::runtime`, and
+  `eos-tools::registry`; do not add an `eos-tool-core` workspace member.
+- Update downstream crates to import these contracts from `eos-tools`.
 
 Verification:
 
 ```bash
 cd agent-core
-cargo check -p eos-tool-core --all-targets
 cargo check -p eos-tools --all-targets
 ```
 
@@ -1097,6 +1129,8 @@ cargo check -p eos-tools --all-targets
 
 - Add `AgentRunApi`, `AgentRunService`, `SpawnAgentRequest`, `AgentRunOutcome`,
   `ActiveAgentRuns`.
+- Keep `eos-agent-run` independent from `eos-tools`; `AgentRunOutcome` carries
+  submission payload facts, not `ToolResult`.
 - Move agent-run orchestration out of `eos-engine/src/services/agent_run.rs`.
 - Implement watch-based outcome delivery.
 
@@ -1144,7 +1178,7 @@ cargo check -p eos-engine --all-targets
 
 - Move advisor prompt/transcript construction into `eos-tools`.
 - Inject `Arc<dyn AgentRunApi>` into `AskAdvisor`.
-- Call `spawn_agent`, then `wait_for_agent_outcomes`.
+- Call `spawn_agent`, then `wait_for_agent_outcome`.
 - Remove engine dispatch interception and `runtime/advisor.rs`.
 
 Verification:
@@ -1191,18 +1225,23 @@ cargo test --workspace
 ## 12. Acceptance Criteria
 
 - There is no `agent-core/crates/eos-ports` crate.
+- There is no standalone `agent-core/crates/eos-tool-core` crate or workspace
+  dependency; tool-core contracts are owned by `eos-tools`.
 - There is no `agent-core/crates/eos-engine/src/services` folder.
 - `eos-engine` no longer special-cases `ask_advisor` in tool dispatch.
 - `ask_advisor` is a normal tool executor that calls `spawn_agent` and
-  `wait_for_agent_outcomes`.
+  `wait_for_agent_outcome`.
 - `run_subagent` calls `spawn_agent` and returns `agent_run_id`.
+- `eos-agent-run` has no dependency edge to `eos-tools`.
+- `AgentRunOutcome` contains no `ToolResult` field; tool callers convert
+  `submission_payload` into `ToolResult` at their own boundary.
 - `run_subagent` does not call a session registration port.
 - There is no model-facing `check_subagent_progress` subagent-session tool.
 - `cancel_subagent` calls `SubagentSessionManager::cancel` with child
   `AgentRunId`.
 - `cancel_workflow` calls `WorkflowSessionManager::cancel` with `WorkflowId`.
-- `delegate_workflow` registers `WorkflowId` with `WorkflowSessions`
-  directly after workflow start.
+- `delegate_workflow` registers the started workflow through concrete
+  `WorkflowToolService` callbacks after workflow start.
 - `exec_command` registers a still-running `CommandSessionId` with
   `CommandSessions` directly after the sandbox command yields.
 - `ExecCommand` does not depend on `AgentRunApi`.
@@ -1224,10 +1263,10 @@ cargo test --workspace
   removed.
 - `spawn_agent` always returns `AgentRunId`.
 - Root, workflow, subagent, and advisor launch paths call
-  `AgentRunApi::spawn_agent`; production code outside `eos-agent-run` does not
-  call `eos_engine::run_agent` directly.
-- `wait_for_agent_outcomes` always returns `AgentRunOutcome`.
-- `wait_for_agent_outcomes` uses watch-based completion delivery and parks on
+  `AgentRunApi::spawn_agent`; production code outside the `AgentRunService`
+  adapter does not call `eos_engine::run_agent` directly.
+- `wait_for_agent_outcome` always returns `AgentRunOutcome`.
+- `wait_for_agent_outcome` uses watch-based completion delivery and parks on
   `rx.changed().await`; it does not poll the store on an interval.
 - `poll_agent_run_outcome` is nonblocking, returns `Option<AgentRunOutcome>`,
   and is called by background managers on their configured interval.
@@ -1244,10 +1283,11 @@ cargo test --workspace
 | Risk | Guardrail |
 | --- | --- |
 | Moving too much at once hides behavior regressions | Keep phases compiling one by one; tests must prove root/workflow/subagent/advisor launch paths. |
-| `eos-engine` accidentally depends on concrete `eos-tools` again | Engine accepts `ToolRegistry`; registry construction happens in runtime/agent-run/tools layer. |
-| `eos-tools -> eos-engine` grows beyond background handles | Allow session handles for launch tools and subagent/workflow manager handles for cancel tools; do not import engine loop, dispatch, query, or runtime internals into tool implementations. |
+| `eos-engine` imports concrete tool implementations instead of tool-core contracts | Engine may import `eos-tools` tool-core contracts such as `ToolRegistry`, but registry construction and concrete tool executors stay in runtime/agent-run/tools wiring. |
+| `eos-tools -> eos-engine` crate cycle reappears | Keep engine background managers behind runtime-wired tool services or owner API traits; do not import engine loop, dispatch, query, runtime, or background modules into `eos-tools`. |
+| `eos-agent-run` starts returning or storing `ToolResult` again | Keep `AgentRunOutcome` restricted to agent-run facts and serialized submission payload. Convert to `ToolResult` only in `eos-tools` or engine notification rendering code. |
 | Background managers become public service objects again | Keep them concrete under `eos-engine::background`; pass manager handles to `AgentRunControl` and only to cancel tools that need single subagent/workflow cancellation. |
-| Polling and waiting collapse into one hidden loop | Managers only call `poll_agent_run_outcome`; foreground callers only call `wait_for_agent_outcomes`, which uses a `watch` receiver and no timer. |
+| Polling and waiting collapse into one hidden loop | Managers only call `poll_agent_run_outcome`; foreground callers only call `wait_for_agent_outcome`, which uses a `watch` receiver and no timer. |
 | `ToolError` leaks into sandbox port | `eos-sandbox-port` returns `SandboxPortError`; tools map it at the boundary. |
 | Subagent launch loses progress/cancel UX | Use child `AgentRunId` as the handle and keep manager-backed progress/cancel behavior. |
 
@@ -1256,6 +1296,8 @@ cargo test --workspace
 Deleted or collapsed:
 
 - one crate: `eos-ports`,
+- the planned standalone `eos-tool-core` split; tool-core stays inside
+  `eos-tools`,
 - one engine folder: `eos-engine/src/services`,
 - three session ports,
 - one generic background service bundle,

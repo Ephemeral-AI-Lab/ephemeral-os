@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use eos_state::{AttemptClosure, AttemptFailReason, AttemptId, TaskId, TaskStatus, WorkflowStatus};
+use eos_types::{AttemptClosure, AttemptFailReason, AttemptId, TaskId, TaskStatus, WorkflowStatus};
 
 use crate::attempt::{AttemptDeps, AttemptOrchestratorRegistry};
 use crate::lifecycle::WorkflowLifecycle;
@@ -14,9 +14,9 @@ pub struct StartedWorkflow {
     /// Parent attempt, if any.
     pub parent_attempt_id: Option<AttemptId>,
     /// Created workflow id.
-    pub workflow_id: eos_state::WorkflowId,
+    pub workflow_id: eos_types::WorkflowId,
     /// Created iteration id.
-    pub iteration_id: eos_state::IterationId,
+    pub iteration_id: eos_types::IterationId,
     /// Created first attempt id.
     pub attempt_id: AttemptId,
 }
@@ -92,7 +92,7 @@ impl WorkflowStarter {
     async fn assert_parent_running_and_no_open_child(
         &self,
         parent_task_id: &TaskId,
-    ) -> Result<eos_state::Task> {
+    ) -> Result<eos_types::Task> {
         let task = self
             .deps
             .task_store
@@ -111,7 +111,7 @@ impl WorkflowStarter {
             .list_for_parent_task(parent_task_id)
             .await?
             .into_iter()
-            .find(eos_state::Workflow::is_open);
+            .find(eos_types::Workflow::is_open);
         if let Some(workflow) = open {
             return Err(WorkflowError::invariant(format!(
                 "task {:?} already has an open delegated workflow {:?}",
@@ -124,8 +124,8 @@ impl WorkflowStarter {
 
     async fn compensate_failed_start(
         &self,
-        workflow_id: &eos_state::WorkflowId,
-        iteration_id: &eos_state::IterationId,
+        workflow_id: &eos_types::WorkflowId,
+        iteration_id: &eos_types::IterationId,
     ) -> Result<()> {
         if let Some(iteration) = self.deps.iteration_store.get(iteration_id).await? {
             if let Some(attempt_id) = iteration.latest_attempt_id() {
@@ -138,7 +138,7 @@ impl WorkflowStarter {
                                 AttemptClosure::Failed {
                                     reason: AttemptFailReason::StartupFailed,
                                     outcomes: Vec::new(),
-                                    closed_at: eos_state::UtcDateTime::now(),
+                                    closed_at: eos_types::UtcDateTime::now(),
                                 },
                             )
                             .await?;
@@ -150,8 +150,8 @@ impl WorkflowStarter {
             .iteration_store
             .set_status(
                 iteration_id,
-                eos_state::IterationStatus::Cancelled,
-                Some(eos_state::UtcDateTime::now()),
+                eos_types::IterationStatus::Cancelled,
+                Some(eos_types::UtcDateTime::now()),
                 None,
             )
             .await?;
@@ -160,7 +160,7 @@ impl WorkflowStarter {
             .set_status(
                 workflow_id,
                 WorkflowStatus::Cancelled,
-                Some(eos_state::UtcDateTime::now()),
+                Some(eos_types::UtcDateTime::now()),
                 None,
             )
             .await?;
@@ -176,7 +176,7 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use std::sync::Arc;
 
-    use eos_state::{
+    use eos_types::{
         AttemptFailReason, AttemptStage, AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus,
     };
 
@@ -288,7 +288,7 @@ mod tests {
             "expected agent-definition launch failure, got {err:?}"
         );
 
-        let workflow = eos_state::WorkflowStore::list_for_parent_task(stores.as_ref(), &parent.id)
+        let workflow = eos_types::WorkflowStore::list_for_parent_task(stores.as_ref(), &parent.id)
             .await
             .unwrap()
             .pop()

@@ -2,21 +2,23 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
 use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
+use eos_agent_run::AgentRunApi;
 use eos_audit::NoopAuditSink;
 use eos_engine::{
-    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, AgentRunResult,
-    BackgroundTeardownPort, EngineRunHandles, EventCallback, EventSourceFactory,
-    ForegroundExecutorFactory, StreamEvent, ToolRegistryExtender,
+    build_agent_tool_registry, run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry,
+    AgentRunResult, AgentRunService, AgentToolRegistryServices, BackgroundTeardownService,
+    EngineRunHandles, EventCallback, EventSourceFactory, ForegroundExecutorFactory, StreamEvent,
+    ToolRegistryExtender,
 };
 use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
 use eos_sandbox_port::SandboxCommandService;
 use eos_skills::SkillRegistry;
-use eos_state::{AgentRun, AgentRunStore, CoreError, Sealed, TaskId, UtcDateTime};
 use eos_testkit::{
     agent_def, factory_by_agent, factory_from, metadata, test_tools_root, tool_use_turn,
     FakeTransport,
@@ -26,6 +28,7 @@ use eos_tools::{
     RegisteredTool, SandboxToolService, SkillToolService, SystemNotification, ToolConfigSet,
     ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry, ToolResult,
 };
+use eos_types::{AgentRun, AgentRunStore, CoreError, Sealed, TaskId, UtcDateTime};
 use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
 
@@ -206,14 +209,20 @@ fn empty_report() -> BackgroundSessionCounts {
     }
 }
 
-#[async_trait]
-impl BackgroundTeardownPort for RecordingBackgroundSession {
-    async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {
-        self.cancels.lock().unwrap().push(CancelRecord {
-            reason: reason.to_owned(),
-        });
-        empty_report()
-    }
+fn recording_background_service(
+    background: Arc<RecordingBackgroundSession>,
+) -> BackgroundTeardownService {
+    BackgroundTeardownService::new(move |reason| {
+        let background = background.clone();
+        async move {
+            background
+                .cancels
+                .lock()
+                .unwrap()
+                .push(CancelRecord { reason });
+            empty_report()
+        }
+    })
 }
 
 fn root_agent() -> AgentDefinition {
@@ -285,11 +294,12 @@ fn handles(
 }
 
 fn input(
+    handles: &EngineRunHandles,
     agent: AgentDefinition,
     agent_run_id: AgentRunId,
     task_id: TaskId,
     request_id: &str,
-    background_session: Option<Arc<dyn BackgroundTeardownPort>>,
+    background_teardown: Option<BackgroundTeardownService>,
 ) -> AgentRunInput {
     let mut tool_metadata = metadata();
     tool_metadata.agent_name = agent.name.as_str().to_owned();
@@ -299,19 +309,16 @@ fn input(
     tool_metadata.workspace_root = "/tmp".to_owned();
 
     let foreground = Arc::new(eos_engine::ForegroundExecutorFactory.create(agent_run_id.clone()));
+    let tool_registry =
+        build_agent_tool_registry(handles, &agent, AgentToolRegistryServices::default());
     AgentRunInput {
         agent,
         initial_messages: vec![eos_llm_client::Message::from_user_text("start")],
         task_id: Some(task_id),
         agent_run_id,
         tool_metadata,
-        attempt_submission: None,
-        agent_run_service: None,
-        subagent_sessions: None,
-        workflow_service: None,
-        workflow_sessions: None,
-        background_session,
-        command_session_port: None,
+        tool_registry,
+        background_teardown,
         notifier: eos_engine::NotificationService::new(),
         cancellation: eos_engine::AgentRunCancellation::new(),
         foreground,
@@ -328,7 +335,14 @@ async fn run_root_success(
 ) -> AgentRunResult {
     run_agent(
         &harness.handles,
-        input(root_agent(), agent_run_id, task_id, "req_runtime", None),
+        input(
+            &harness.handles,
+            root_agent(),
+            agent_run_id,
+            task_id,
+            "req_runtime",
+            None,
+        ),
         None,
     )
     .await
@@ -358,6 +372,7 @@ async fn run_agent_finishes_agent_run_on_setup_error() {
     let result = run_agent(
         &harness.handles,
         input(
+            &harness.handles,
             agent,
             agent_run_id.clone(),
             task_id.clone(),
@@ -410,7 +425,7 @@ async fn run_agent_finishes_message_record_completed_on_success() {
 
     assert!(result.error.is_none(), "{result:?}");
     assert!(result
-        .terminal_result
+        .submission_outcome
         .as_ref()
         .is_some_and(|result| result.is_terminal));
     assert_eq!(
@@ -435,6 +450,7 @@ async fn run_agent_finishes_message_record_failed_on_stream_error() {
     let result = run_agent(
         &harness.handles,
         input(
+            &harness.handles,
             root_agent(),
             agent_run_id.clone(),
             task_id,
@@ -456,7 +472,7 @@ async fn run_agent_finishes_message_record_failed_on_stream_error() {
 }
 
 #[tokio::test]
-async fn run_agent_finalizes_background_sessions_after_query_error() {
+async fn run_agent_finalizes_background_teardowns_after_query_error() {
     let background = Arc::new(RecordingBackgroundSession::default());
     let harness = handles(
         vec![root_agent()],
@@ -470,11 +486,12 @@ async fn run_agent_finalizes_background_sessions_after_query_error() {
     let result = run_agent(
         &harness.handles,
         input(
+            &harness.handles,
             root_agent(),
             agent_run_id.clone(),
             task_id,
             "req_background_finalize",
-            Some(background.clone()),
+            Some(recording_background_service(background.clone())),
         ),
         None,
     )
@@ -490,7 +507,7 @@ async fn run_agent_finalizes_background_sessions_after_query_error() {
 }
 
 #[tokio::test]
-async fn run_agent_finalizes_background_sessions_after_tool_stop() {
+async fn run_agent_finalizes_background_teardowns_after_tool_stop() {
     let background = Arc::new(RecordingBackgroundSession::default());
     let harness = handles(
         vec![root_agent()],
@@ -508,11 +525,12 @@ async fn run_agent_finalizes_background_sessions_after_tool_stop() {
     let result = run_agent(
         &harness.handles,
         input(
+            &harness.handles,
             root_agent(),
             agent_run_id.clone(),
             task_id,
             "req_background_tool_stop",
-            Some(background.clone()),
+            Some(recording_background_service(background.clone())),
         ),
         None,
     )
@@ -525,7 +543,7 @@ async fn run_agent_finalizes_background_sessions_after_tool_stop() {
 }
 
 #[tokio::test]
-async fn run_agent_finalizes_background_sessions_after_terminal_not_submitted() {
+async fn run_agent_finalizes_background_teardowns_after_terminal_not_submitted() {
     let background = Arc::new(RecordingBackgroundSession::default());
     let turns = std::iter::repeat_with(|| eos_testkit::text_turn("still thinking"))
         .take(12)
@@ -542,18 +560,19 @@ async fn run_agent_finalizes_background_sessions_after_terminal_not_submitted() 
     let result = run_agent(
         &harness.handles,
         input(
+            &harness.handles,
             root_agent(),
             agent_run_id.clone(),
             task_id,
             "req_background_no_terminal",
-            Some(background.clone()),
+            Some(recording_background_service(background.clone())),
         ),
         None,
     )
     .await;
 
     assert!(result.error.is_none(), "{result:?}");
-    assert!(result.terminal_result.is_none());
+    assert!(result.submission_outcome.is_none());
     let cancels = background.cancels();
     assert_eq!(cancels.len(), 1);
     assert_eq!(
@@ -609,23 +628,44 @@ async fn run_agent_routes_ask_advisor_through_child_advisor_run() {
     });
     let agent_run_id: AgentRunId = "run_advisor".parse().expect("run id");
     let task_id: TaskId = "task_advisor".parse().expect("task id");
-
-    let result = run_agent(
+    let command_service = Arc::new(SandboxCommandService::new(
+        harness.handles.sandbox_service.transport(),
+    ));
+    let control_factory = AgentRunControlFactory::new(
+        ForegroundExecutorFactory,
+        harness.handles.clone(),
+        command_service,
+        Duration::from_millis(10),
+        Arc::new(OnceLock::new()),
+    );
+    let agent_run_service: Arc<dyn AgentRunApi> = Arc::new(AgentRunService::new(
+        harness.handles.clone(),
+        control_factory,
+    ));
+    let agent = advisor_root_agent();
+    let tool_registry = build_agent_tool_registry(
         &harness.handles,
-        input(
-            advisor_root_agent(),
-            agent_run_id,
-            task_id,
-            "req_advisor",
-            None,
-        ),
-        Some(&callback),
-    )
-    .await;
+        &agent,
+        AgentToolRegistryServices {
+            agent_run_service: Some(agent_run_service),
+            ..AgentToolRegistryServices::default()
+        },
+    );
+    let mut run_input = input(
+        &harness.handles,
+        agent,
+        agent_run_id,
+        task_id,
+        "req_advisor",
+        None,
+    );
+    run_input.tool_registry = tool_registry;
+
+    let result = run_agent(&harness.handles, run_input, Some(&callback)).await;
 
     assert!(result.error.is_none(), "{result:?}");
     assert!(result
-        .terminal_result
+        .submission_outcome
         .as_ref()
         .is_some_and(|result| result.is_terminal));
     let events = seen.lock().expect("event lock");
@@ -698,26 +738,26 @@ struct NoopTaskStore;
 impl Sealed for NoopTaskStore {}
 
 #[async_trait]
-impl eos_state::TaskStore for NoopTaskStore {
-    async fn insert_task(&self, _task: &eos_state::Task) -> Result<(), CoreError> {
+impl eos_types::TaskStore for NoopTaskStore {
+    async fn insert_task(&self, _task: &eos_types::Task) -> Result<(), CoreError> {
         Ok(())
     }
-    async fn get(&self, _id: &TaskId) -> Result<Option<eos_state::Task>, CoreError> {
+    async fn get(&self, _id: &TaskId) -> Result<Option<eos_types::Task>, CoreError> {
         Ok(None)
     }
     async fn set_task_status_if_current(
         &self,
         _id: &TaskId,
-        _expected: eos_state::TaskStatus,
-        _status: eos_state::TaskStatus,
-        _outcomes: Option<&[eos_state::ExecutionTaskOutcome]>,
+        _expected: eos_types::TaskStatus,
+        _status: eos_types::TaskStatus,
+        _outcomes: Option<&[eos_types::ExecutionTaskOutcome]>,
         _terminal_tool_result: Option<&JsonObject>,
-    ) -> Result<Option<eos_state::Task>, CoreError> {
+    ) -> Result<Option<eos_types::Task>, CoreError> {
         Ok(None)
     }
     async fn latch_attempt_tasks_cancelled(
         &self,
-        _attempt_id: &eos_state::AttemptId,
+        _attempt_id: &eos_types::AttemptId,
         _ids: &[TaskId],
     ) -> Result<(), CoreError> {
         Ok(())
@@ -725,7 +765,7 @@ impl eos_state::TaskStore for NoopTaskStore {
     async fn list_for_request(
         &self,
         _request_id: &eos_types::RequestId,
-    ) -> Result<Vec<eos_state::Task>, CoreError> {
+    ) -> Result<Vec<eos_types::Task>, CoreError> {
         Ok(Vec::new())
     }
 }
@@ -751,19 +791,17 @@ async fn concurrent_cancel_and_run_finalize_exactly_once() {
 
     let cancel_port = eos_engine::EngineCancelPort::new(registry.clone(), Arc::new(NoopTaskStore));
 
+    let agent = agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]);
+    let tool_registry =
+        build_agent_tool_registry(&handles, &agent, AgentToolRegistryServices::default());
     let input = AgentRunInput {
-        agent: agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]),
+        agent,
         initial_messages: vec![eos_llm_client::Message::from_user_text("start")],
         task_id: Some(task_id.clone()),
         agent_run_id: run_id.clone(),
         tool_metadata: metadata(),
-        attempt_submission: None,
-        agent_run_service: None,
-        subagent_sessions: None,
-        workflow_service: None,
-        workflow_sessions: None,
-        background_session: None,
-        command_session_port: None,
+        tool_registry,
+        background_teardown: None,
         notifier: control.notifications(),
         cancellation: control.cancellation(),
         foreground: control.foreground(),

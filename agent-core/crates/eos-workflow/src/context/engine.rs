@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use eos_state::{
-    attempt_execution_outcomes, Attempt, AttemptId, AttemptStore, ExecutionRole,
-    ExecutionTaskOutcome, IterationId, IterationStore, TaskId, TaskOutcomeStatus, TaskRole,
-    TaskStatus, TaskStore, WorkflowId, WorkflowStore, NO_OUTCOME,
+use eos_types::{
+    Attempt, AttemptId, AttemptStore, ExecutionRole, ExecutionTaskOutcome, IterationId,
+    IterationStore, TaskId, TaskOutcomeStatus, TaskRole, TaskStatus, TaskStore, WorkflowId,
+    WorkflowStore, NO_OUTCOME,
 };
 
+use crate::state::attempt_execution_outcomes;
 use crate::{Result, WorkflowError};
 
 use super::xml::render_task_outcome;
@@ -184,7 +185,7 @@ impl ContextEngine {
 
     async fn prior_iteration_sections(
         &self,
-        workflow_id: &eos_state::WorkflowId,
+        workflow_id: &eos_types::WorkflowId,
         current_sequence: i64,
     ) -> Result<Vec<ContextSection>> {
         let mut iterations = self
@@ -255,7 +256,7 @@ impl ContextEngine {
 
     async fn dependency_sections(
         &self,
-        needs: &[eos_state::TaskId],
+        needs: &[eos_types::TaskId],
     ) -> Result<Vec<ContextSection>> {
         let mut sections = Vec::with_capacity(needs.len());
         for task_id in needs {

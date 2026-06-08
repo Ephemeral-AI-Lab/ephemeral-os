@@ -1,7 +1,7 @@
 //! The `ask_advisor` helper tool — a blocking read-only advisor audit of a
 //! pending terminal submission.
 //!
-//! Execution spawns the advisor agent through the agent-run service bridge and
+//! Execution spawns the advisor agent through the agent-run API and
 //! waits for its terminal outcome before returning a non-terminal parent result.
 
 use std::sync::Arc;
@@ -9,14 +9,15 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_agent_def::AgentName;
 use eos_agent_message_records::AgentRunRecordKind;
+use eos_agent_run::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
-use crate::core::ports::{AgentRunServicePort, AgentSpawnError, SpawnAgentRequest};
 use crate::core::result::{OutputShape, ToolResult};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
@@ -36,11 +37,11 @@ struct AskAdvisorInput {
 }
 
 struct AskAdvisor {
-    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    agent_run_service: Option<Arc<dyn AgentRunApi>>,
 }
 
 impl AskAdvisor {
-    fn new(agent_run_service: Option<Arc<dyn AgentRunServicePort>>) -> Self {
+    fn new(agent_run_service: Option<Arc<dyn AgentRunApi>>) -> Self {
         Self { agent_run_service }
     }
 }
@@ -75,6 +76,7 @@ impl ToolExecutor for AskAdvisor {
         let advisor_run_id = match agent_run_service
             .spawn_agent(SpawnAgentRequest {
                 agent_name: advisor_name,
+                agent_run_id: None,
                 initial_messages: build_advisor_messages(
                     ctx,
                     &parsed.tool_name,
@@ -102,10 +104,10 @@ impl ToolExecutor for AskAdvisor {
         };
 
         let advisor_result = match agent_run_service
-            .wait_for_agent_result(&advisor_run_id)
+            .wait_for_agent_outcome(&advisor_run_id)
             .await
         {
-            Ok(result) => result,
+            Ok(outcome) => advisor_outcome_to_tool_result(outcome),
             Err(err) => {
                 return Ok(ToolResult::error(format!(
                     "ask_advisor: advisor crashed: {err}"
@@ -113,28 +115,60 @@ impl ToolExecutor for AskAdvisor {
             }
         };
 
-        Ok(ToolResult {
-            output: advisor_result.output,
-            is_error: advisor_result.is_error,
-            metadata: advisor_result.metadata,
-            is_terminal: false,
-        })
+        Ok(advisor_result)
     }
 }
 
-fn advisor_spawn_error(err: AgentSpawnError) -> ToolResult {
+fn advisor_spawn_error(err: AgentRunError) -> ToolResult {
     match err {
-        AgentSpawnError::Rejected(_) => {
+        AgentRunError::AgentNotRegistered(_) => {
             ToolResult::error("ask_advisor: agent definition 'advisor' not registered.")
         }
-        AgentSpawnError::Tool(err) => ToolResult::error(format!("ask_advisor: {err}")),
+        _ => ToolResult::error(format!("ask_advisor: {err}")),
+    }
+}
+
+fn advisor_outcome_to_tool_result(outcome: AgentRunOutcome) -> ToolResult {
+    let Some(payload) = outcome.submission_payload.as_ref() else {
+        return ToolResult::error(
+            outcome.error.unwrap_or_else(|| {
+                "ask_advisor: advisor exited without terminal output".to_owned()
+            }),
+        );
+    };
+
+    let mut result = tool_result_from_payload(payload);
+    result.is_terminal = false;
+    result
+}
+
+fn tool_result_from_payload(payload: &JsonObject) -> ToolResult {
+    let output = payload
+        .get("output")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let is_error = payload
+        .get("is_error")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let metadata = payload
+        .get("metadata")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    ToolResult {
+        output,
+        is_error,
+        metadata,
+        is_terminal: false,
     }
 }
 
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    agent_run_service: Option<Arc<dyn AgentRunApi>>,
 ) {
     let ask_advisor = config.get(ToolName::AskAdvisor);
     super::super::register_tool(

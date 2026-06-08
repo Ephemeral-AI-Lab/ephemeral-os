@@ -17,7 +17,7 @@ use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
-use crate::{StartWorkflowRequest, WorkflowServicePort, WorkflowSessionPort};
+use crate::{StartWorkflowRequest, WorkflowServicePort, WorkflowToolService};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct DelegateWorkflowInput {
@@ -26,13 +26,13 @@ struct DelegateWorkflowInput {
 
 pub(in crate::tools::workflow) struct DelegateWorkflow {
     workflow_service: Option<Arc<dyn WorkflowServicePort>>,
-    workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+    workflow_sessions: Option<WorkflowToolService>,
 }
 
 impl DelegateWorkflow {
     pub(in crate::tools::workflow) fn new(
         workflow_service: Option<Arc<dyn WorkflowServicePort>>,
-        workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+        workflow_sessions: Option<WorkflowToolService>,
     ) -> Self {
         Self {
             workflow_service,
@@ -63,7 +63,7 @@ impl ToolExecutor for DelegateWorkflow {
             .ok_or(ToolError::MissingPort("workflow_service"))?;
         let sessions = self
             .workflow_sessions
-            .as_deref()
+            .as_ref()
             .ok_or(ToolError::MissingPort("workflow_sessions"))?;
 
         let outstanding = service
@@ -87,7 +87,7 @@ impl ToolExecutor for DelegateWorkflow {
                 workflow_goal: parsed.goal.clone(),
             })
             .await?;
-        sessions.register_background_session(&started).await;
+        sessions.register_background_session(&started).await?;
         let payload = json!({
             "workflow_task_id": started.workflow_task_id.as_str(),
             "workflow_id": started.workflow_id.as_str(),
@@ -120,7 +120,7 @@ pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
     workflow_service: Option<Arc<dyn WorkflowServicePort>>,
-    workflow_sessions: Option<Arc<dyn WorkflowSessionPort>>,
+    workflow_sessions: Option<WorkflowToolService>,
 ) {
     let delegate = config.get(ToolName::DelegateWorkflow);
     super::super::register_tool(

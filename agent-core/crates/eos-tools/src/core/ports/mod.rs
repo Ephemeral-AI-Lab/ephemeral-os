@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use eos_state::{GeneratorSubmission, PlanDisposition, PlanNodeId, ReducerSubmission};
 use eos_types::{AgentRunId, AttemptId, TaskId};
+use eos_types::{GeneratorSubmission, PlanDisposition, PlanNodeId, ReducerSubmission};
 
 /// Agent-run transition contracts.
 pub mod agent_run;

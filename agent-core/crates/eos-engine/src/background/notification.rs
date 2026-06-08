@@ -12,7 +12,7 @@
 use eos_tools::SystemNotification as ToolNotification;
 use eos_tools::ToolError;
 use eos_tools::ToolResult;
-use eos_types::{CommandSessionId, SandboxId, SubagentSessionId, WorkflowId, WorkflowSessionId};
+use eos_types::{AgentRunId, CommandSessionId, SandboxId, WorkflowId, WorkflowSessionId};
 use serde_json::Value;
 
 use super::background_session_manager::BackgroundSessionStatus;
@@ -23,11 +23,11 @@ use crate::notifications::NotificationService;
 pub enum BackgroundCompletion {
     /// A subagent run settled (the parent run is the notification target).
     Subagent {
-        /// Agent-facing subagent session id.
-        subagent_session_id: SubagentSessionId,
+        /// Natural child agent-run id.
+        agent_run_id: AgentRunId,
         /// Terminal status.
         status: BackgroundSessionStatus,
-        /// The subagent's terminal result.
+        /// The subagent's terminal tool outcome.
         result: ToolResult,
     },
     /// A delegated workflow reached a terminal state.
@@ -56,10 +56,7 @@ impl BackgroundCompletion {
     /// The notification dedup/event key (the typed session id).
     fn event_key(&self) -> String {
         match self {
-            Self::Subagent {
-                subagent_session_id,
-                ..
-            } => subagent_session_id.as_str().to_owned(),
+            Self::Subagent { agent_run_id, .. } => agent_run_id.as_str().to_owned(),
             Self::Workflow {
                 workflow_task_id, ..
             } => workflow_task_id.as_str().to_owned(),
@@ -75,12 +72,12 @@ impl BackgroundCompletion {
     fn render(&self) -> String {
         match self {
             Self::Subagent {
-                subagent_session_id,
+                agent_run_id,
                 status,
                 result,
             } => format!(
-                "[BACKGROUND COMPLETED] subagent_session_id={} status={}\n{}",
-                subagent_session_id.as_str(),
+                "[BACKGROUND COMPLETED] agent_run_id={} status={}\n{}",
+                agent_run_id.as_str(),
                 status_token(*status),
                 result.output,
             ),
@@ -178,7 +175,7 @@ mod tests {
 
         emitter
             .emit(BackgroundCompletion::Subagent {
-                subagent_session_id: "subagent_1".parse().expect("id"),
+                agent_run_id: "run-sub-1".parse().expect("id"),
                 status: BackgroundSessionStatus::Completed,
                 result: ToolResult::ok("did the work"),
             })
@@ -188,10 +185,10 @@ mod tests {
         assert!(other.drain().await.is_empty(), "isolated from other runs");
         let drained = notifier.drain().await;
         assert_eq!(drained.len(), 1, "exactly one completion notification");
-        assert_eq!(drained[0].event, "subagent_1");
+        assert_eq!(drained[0].event, "run-sub-1");
         assert!(drained[0]
             .message
-            .starts_with("[BACKGROUND COMPLETED] subagent_session_id=subagent_1"));
+            .starts_with("[BACKGROUND COMPLETED] agent_run_id=run-sub-1"));
         assert!(drained[0].message.contains("status=completed"));
         assert!(drained[0].message.contains("did the work"));
     }

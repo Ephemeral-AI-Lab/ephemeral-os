@@ -1,4 +1,4 @@
-//! Typed SQL row structs (`sqlx::FromRow`) and the row → `eos-state` DTO
+//! Typed SQL row structs (`sqlx::FromRow`) and the row → `eos-types` DTO
 //! mappers.
 //!
 //! The DB columns keep the short legacy names (`goal`, `deferred_goal`); the
@@ -9,7 +9,7 @@
 use serde_json::Value as JsonValue;
 use time::OffsetDateTime;
 
-use eos_state::{
+use eos_types::{
     present_status, AgentRun, Attempt, AttemptBudget, AttemptClosure, AttemptFailReason,
     AttemptStage, AttemptState, AttemptStatus, CoreError, DeferredGoal, ExecutionRole,
     ExecutionTaskOutcome, Iteration, MaterializedPlan, PlanDisposition, Request, RequestStatus,
@@ -375,9 +375,9 @@ pub(crate) fn row_to_attempt(r: AttemptRow) -> Result<Attempt, DbError> {
 struct AttemptLifecycleColumns<'a> {
     stage: AttemptStage,
     status: AttemptStatus,
-    planner_task_id: Option<eos_state::TaskId>,
-    generator_task_ids: Vec<eos_state::TaskId>,
-    reducer_task_ids: Vec<eos_state::TaskId>,
+    planner_task_id: Option<eos_types::TaskId>,
+    generator_task_ids: Vec<eos_types::TaskId>,
+    reducer_task_ids: Vec<eos_types::TaskId>,
     deferred_goal: Option<&'a DeferredGoal>,
     fail_reason: Option<AttemptFailReason>,
     closed_at: Option<UtcDateTime>,
@@ -628,7 +628,7 @@ mod tests {
     // if a guard were weakened (deviation → Ok) and if reconstruction broke
     // (valid → Err).
 
-    fn tid(raw: &str) -> eos_state::TaskId {
+    fn tid(raw: &str) -> eos_types::TaskId {
         raw.parse().expect("task id")
     }
 

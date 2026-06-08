@@ -5,12 +5,12 @@ mod ask_advisor;
 
 use std::sync::Arc;
 
-use crate::AgentRunServicePort;
+use eos_agent_run::AgentRunApi;
 
 pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
-    agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
+    agent_run_service: Option<Arc<dyn AgentRunApi>>,
 ) {
     ask_advisor::register(registry, config, agent_run_service);
 }
