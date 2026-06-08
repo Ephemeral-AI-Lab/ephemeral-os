@@ -9,7 +9,8 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use eos_llm_client::ToolSpec;
 use eos_tools::{
-    OutputShape, RegisteredTool, ToolExecutor, ToolIntent, ToolKey, ToolRegistry, ToolResult,
+    OutputShape, RegisteredTool, ToolExecutor, ToolIntent, ToolKey, ToolName, ToolRegistry,
+    ToolResult,
 };
 use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
@@ -337,14 +338,14 @@ async fn terminal_tool_error_does_not_project_terminal_result() {
 }
 
 #[tokio::test]
-async fn ask_advisor_without_run_handles_returns_in_band_error() {
+async fn ask_advisor_dispatches_as_normal_tool() {
     let ask_count = Arc::new(AtomicUsize::new(0));
     let mut registry = ToolRegistry::new();
     registry.register(tool_with_result(
         ToolName::AskAdvisor,
         false,
         ask_count.clone(),
-        ToolResult::ok("unreachable"),
+        ToolResult::ok("advisor result"),
     ));
     let mut ctx = ctx(registry);
     ctx.run_handles = None;
@@ -366,17 +367,17 @@ async fn ask_advisor_without_run_handles_returns_in_band_error() {
 
     assert_eq!(
         ask_count.load(Ordering::SeqCst),
-        0,
-        "ask_advisor is engine-dispatched, not executed as a normal tool"
+        1,
+        "ask_advisor should execute through the normal tool executor path"
     );
     assert!(matches!(
         outcome.tool_results.first(),
         Some(ContentBlock::ToolResult {
             content,
-            is_error: true,
+            is_error: false,
             is_terminal: false,
             ..
-        }) if content.contains("run handles are not wired")
+        }) if content == "advisor result"
     ));
     assert!(outcome.terminal_result.is_none());
 }

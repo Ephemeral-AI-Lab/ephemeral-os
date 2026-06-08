@@ -53,11 +53,11 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::ports::{
+    use crate::support::metadata;
+    use crate::{
         OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
         WorkflowServicePort,
     };
-    use crate::support::metadata;
     use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
     struct FixedDepth(u32);

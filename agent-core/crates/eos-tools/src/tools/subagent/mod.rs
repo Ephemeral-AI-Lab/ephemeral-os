@@ -7,7 +7,7 @@ mod run_subagent;
 use std::sync::Arc;
 
 use super::CallerScope;
-use crate::ports::{AgentRunServicePort, SubagentSessionPort};
+use crate::{AgentRunServicePort, SubagentSessionPort};
 
 pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,

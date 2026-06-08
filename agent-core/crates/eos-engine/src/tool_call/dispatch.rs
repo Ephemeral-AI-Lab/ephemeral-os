@@ -8,8 +8,8 @@ use eos_audit::TOOL_CALL_COMPLETED;
 use eos_audit::{AuditEvent, AuditNode, AuditSource};
 use eos_llm_client::{ContentBlock, Message};
 use eos_tools::{
-    execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, run_pre_hooks,
-    DispatchCall, ExecutionMetadata, RegisteredTool, ToolName, ToolResult,
+    execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
+    ExecutionMetadata, RegisteredTool, ToolResult,
 };
 use eos_types::{JsonObject, SystemClock, ToolUseId};
 use serde_json::{json, Value};
@@ -223,46 +223,6 @@ async fn dispatch_foreground_tools(
     }
 }
 
-/// Run an `ask_advisor` call: its pre-hooks (e.g. `BlockInIsolatedMode`) gate the
-/// call, then — if they pass — the engine drives an advisor agent
-/// (`advisor::run_advisor`). The advisor run is an engine primitive, so this is
-/// the faithful Rust form of Rust `ask_advisor` calling `run_agent`.
-async fn run_advisor_call(
-    ctx: &QueryContext,
-    conversation: &Arc<[Message]>,
-    call: ToolUseRequest,
-    tool: RegisteredTool,
-) -> Result<ForegroundCompletion, EngineError> {
-    let metadata = metadata_for_call(ctx, conversation, &call.tool_use_id);
-    let started = Instant::now();
-    let result = if let Some(denial) = run_pre_hooks(&tool, &call.input, &metadata).await? {
-        denial
-    } else if let Some(handles) = ctx.run_handles.clone() {
-        let tool_name = call
-            .input
-            .get("tool_name")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        let tool_payload = call
-            .input
-            .get("tool_payload")
-            .and_then(|v| v.as_object())
-            .cloned()
-            .unwrap_or_default();
-        crate::runtime::run_advisor(&handles, &metadata, conversation, tool_name, &tool_payload)
-            .await
-    } else {
-        rejection_result(
-            "ask_advisor is unavailable: the engine run handles are not wired for this run",
-        )
-    };
-    Ok(ForegroundCompletion {
-        call,
-        result,
-        duration_ms: elapsed_ms(started),
-    })
-}
-
 fn publish_tool_completed(
     ctx: &QueryContext,
     call: &ToolUseRequest,
@@ -360,16 +320,14 @@ pub async fn dispatch_assistant_tools(
         rejected.insert(rejection.tool_use_id, rejection_result(rejection.message));
     }
 
-    // One transcript snapshot for this dispatch; cloned (cheaply) into each tool's
-    // metadata as `conversation` (the advisor gate's only input) and read by the
-    // engine-driven `ask_advisor` run.
+    // One transcript snapshot for this dispatch; cloned cheaply into each tool's
+    // metadata as `conversation` (the advisor gate and advisor tool input).
     let conversation: Arc<[Message]> = Arc::from(messages.to_vec());
 
     let mut events = Vec::new();
     let mut tool_results = Vec::new();
     let mut results_by_id = rejected.clone();
     let mut runnable = Vec::new();
-    let mut advisor_runnable = Vec::new();
 
     for call in calls {
         if let Some(result) = rejected.get(call.tool_use_id.as_str()) {
@@ -390,19 +348,10 @@ pub async fn dispatch_assistant_tools(
         };
 
         events.push(started_event(call));
-        // `ask_advisor` is engine-driven (an advisor agent), not a
-        // generic foreground executor — route it out of the parallel fan-out.
-        if tool.name.as_builtin() == Some(ToolName::AskAdvisor) {
-            advisor_runnable.push((call.clone(), tool.clone()));
-        } else {
-            runnable.push((call.clone(), tool.clone()));
-        }
+        runnable.push((call.clone(), tool.clone()));
     }
 
-    let mut completions = dispatch_foreground_tools(ctx, &conversation, runnable).await?;
-    for (call, tool) in advisor_runnable {
-        completions.push(run_advisor_call(ctx, &conversation, call, tool).await?);
-    }
+    let completions = dispatch_foreground_tools(ctx, &conversation, runnable).await?;
 
     for completion in completions {
         events.push(completed_event(&completion.call, &completion.result));

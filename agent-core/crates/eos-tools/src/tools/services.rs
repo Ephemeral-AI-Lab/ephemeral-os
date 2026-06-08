@@ -13,9 +13,7 @@ use eos_skills::SkillRegistry;
 use eos_state::{RequestStore, TaskStore};
 use eos_types::{JsonObject, SandboxId};
 
-use crate::ports::{
-    AttemptSubmissionPort, CommandSessionPort, SubagentSessionPort, WorkflowServicePort,
-};
+use crate::{AttemptSubmissionPort, CommandSessionPort, SubagentSessionPort, WorkflowServicePort};
 
 /// Store access for the root terminal.
 #[derive(Clone)]

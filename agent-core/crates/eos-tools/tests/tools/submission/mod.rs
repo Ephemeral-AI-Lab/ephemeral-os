@@ -9,11 +9,9 @@ use eos_state::{
 use eos_types::{AttemptId, JsonObject, TaskId};
 use serde_json::{json, Value};
 
-use crate::ports::{
-    AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, Sealed, SubmissionAck,
-};
 use crate::support::{metadata, FakeTransport};
 use crate::tools::{AttemptSubmissionService, CallerScope, SandboxToolService, SkillToolService};
+use crate::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan, Sealed, SubmissionAck};
 use crate::{ToolError, ToolName, ToolRegistry};
 
 #[derive(Debug)]

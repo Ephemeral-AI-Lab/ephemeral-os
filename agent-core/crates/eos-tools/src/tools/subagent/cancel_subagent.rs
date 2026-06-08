@@ -11,12 +11,12 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::SubagentSessionPort;
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
+use crate::SubagentSessionPort;
 
 use super::lib::empty_subagent_agent_run_error;
 

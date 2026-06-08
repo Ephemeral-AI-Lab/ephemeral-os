@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_llm_client::Message;
-use eos_tools::ports::{NotificationSink, Sealed, SystemNotification as ToolNotification};
 use eos_tools::ToolError;
+use eos_tools::{NotificationSink, Sealed, SystemNotification as ToolNotification};
 use tokio::sync::Mutex;
 
 use crate::query::QueryContext;

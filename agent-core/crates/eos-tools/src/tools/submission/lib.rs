@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::core::result::ToolResult;
-use crate::ports::SubmissionAck;
+use crate::SubmissionAck;
 
 /// `Literal["success", "failed"]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]

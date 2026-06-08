@@ -12,13 +12,13 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{PlanReducer, PlanTask, PlannerPlan};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
 use crate::tools::AttemptSubmissionService;
+use crate::{PlanReducer, PlanTask, PlannerPlan};
 
 use super::super::lib::{is_blank, meta_obj, submission_ack_result};
 

@@ -1,38 +1,68 @@
-// The workspace-run manager is the Linux PTY/overlay orchestration. On non-Linux
-// the daemon serves command-session ops as stubs, so the manager is dead there —
-// it stays compiled for the scaffold unit tests and a uniform module tree.
-#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
+//! Linux workspace-run lifecycle: start/settle command sessions over the
+//! caller-keyed registry.
+//!
+//! The manager owns no policy. It acquires the snapshot lease (ephemeral),
+//! builds the runner request via the workspace crates' lifecycle free functions,
+//! spawns the PTY substrate, and on settlement either **publishes** (ephemeral
+//! complete), **records for audit** (isolated complete), or **discards** (cancel
+//! — never reaching the OCC merge). Each run owns its overlay/namespace state
+//! directly, so the publish-vs-discard branch is structural, not a flag check.
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-#[cfg(target_os = "linux")]
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-#[cfg(target_os = "linux")]
 use eos_command_session::process::spawn_current_exe_ns_runner;
-#[cfg(target_os = "linux")]
-use eos_command_session::ReapedCommand;
-#[cfg(target_os = "linux")]
-use eos_command_session::RunningCommandSessionParts;
-#[cfg(target_os = "linux")]
-use eos_command_session::{wait_for_yield, WaitOutcome};
 use eos_command_session::{
-    CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
-    CommandSession, CommandSessionCompletion, CommandSessionConfig, CommandSessionError,
-    CommandSessionSpec, ReadCommandProgress, StartCommandSession, WriteStdin,
+    wait_for_yield, CancelCommandSession, CollectCompleted, CollectCompletedResponse,
+    CommandResponse, CommandSession, CommandSessionCompletion, CommandSessionConfig,
+    CommandSessionError, CommandSessionSpec, ReadCommandProgress, ReapedCommand,
+    RunningCommandSessionParts, StartCommandSession, WaitOutcome, WriteStdin,
 };
-#[cfg(not(target_os = "linux"))]
-use eos_workspace_api::CommandWorkspacePolicy;
-use eos_workspace_api::FinalizeCommandRequest;
+use eos_ephemeral_workspace::{
+    discard_ephemeral_command, finalize_ephemeral_command, prepare_ephemeral_command,
+    EphemeralCommandPrepareContext, EphemeralSnapshot, PreparedEphemeralCommand,
+};
+use eos_isolated_workspace::{
+    finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
+    IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
+};
+use eos_layerstack::LayerStack;
+use eos_workspace_api::{
+    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
+    WorkspaceTimings,
+};
 
-use super::registry::{PolicyArc, RunSession, WorkspaceRunKind, WorkspaceRunRegistry};
+use crate::response_timings::{resource_timings, timing_map};
+use crate::services::overlay::{ephemeral_dir_allocator, DaemonPublisherPort};
+
+use super::isolated::{record_tool_call, CommandHandle};
+use super::registry::{EphemeralRun, IsolatedRun, WorkspaceRun, WorkspaceRunRegistry};
+
+/// Which workspace a starting command session belongs to. The daemon picks the
+/// kind from the caller's current mode and supplies the inputs the manager needs
+/// to lay out the run: the LayerStack roots (ephemeral) or the caller's isolated
+/// namespace handle (isolated).
+pub enum StartTarget {
+    Ephemeral {
+        root: PathBuf,
+        workspace_root: PathBuf,
+        scratch_root: PathBuf,
+    },
+    Isolated {
+        handle: CommandHandle,
+    },
+}
 
 pub struct WorkspaceRunManager {
-    // `config` drives only the Linux PTY/overlay paths (spawn, yield/cancel
-    // waits, sweep deadlines); the non-Linux scaffold needs no config.
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     config: CommandSessionConfig,
     registry: Arc<WorkspaceRunRegistry>,
+}
+
+impl Default for WorkspaceRunManager {
+    fn default() -> Self {
+        Self::new(CommandSessionConfig::default())
+    }
 }
 
 impl WorkspaceRunManager {
@@ -44,43 +74,10 @@ impl WorkspaceRunManager {
         }
     }
 
-    // Generic convenience wrapper used only by the scaffold unit tests; the
-    // daemon's Linux op path calls `start_run` directly.
-    #[cfg(not(target_os = "linux"))]
-    pub fn start<P>(
+    pub fn start(
         &self,
         request: StartCommandSession,
-        policy: P,
-        kind: WorkspaceRunKind,
-    ) -> Result<CommandResponse, CommandSessionError>
-    where
-        P: CommandWorkspacePolicy + 'static,
-    {
-        self.start_run(request, Arc::new(policy), kind)
-    }
-
-    pub fn start_run(
-        &self,
-        request: StartCommandSession,
-        policy: PolicyArc,
-        kind: WorkspaceRunKind,
-    ) -> Result<CommandResponse, CommandSessionError> {
-        #[cfg(target_os = "linux")]
-        {
-            self.start_run_linux(request, policy, kind)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            self.start_run_scaffold(request, policy, kind)
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    fn start_run_scaffold(
-        &self,
-        request: StartCommandSession,
-        policy: PolicyArc,
-        kind: WorkspaceRunKind,
+        target: StartTarget,
     ) -> Result<CommandResponse, CommandSessionError> {
         if request.cmd.trim().is_empty() {
             return Err(CommandSessionError::InvalidRequest(
@@ -88,35 +85,116 @@ impl WorkspaceRunManager {
             ));
         }
         let id = self.registry.next_id();
-        let _prepared = policy.prepare_command_workspace(request.prepare_request(id.clone()))?;
-        let caller_id = request.caller_id;
-        let command = request.cmd;
-        policy.command_session_started(&id, &caller_id);
-        let session = CommandSession::new(CommandSessionSpec {
-            id: id.clone(),
-            caller_id,
-            command,
+        let prepare_request = request.prepare_request(id.clone());
+        let yield_time_ms = request.yield_time_ms;
+        let spec = CommandSessionSpec {
+            id,
+            caller_id: request.caller_id,
+            command: request.cmd,
             timeout_seconds: request.timeout_seconds,
-        });
-        self.registry
-            .insert(Arc::new(RunSession::new(session, policy)), kind);
-        Ok(CommandResponse::running(id, String::new()))
+        };
+        match target {
+            StartTarget::Ephemeral {
+                root,
+                workspace_root,
+                scratch_root,
+            } => self.start_ephemeral(
+                spec,
+                prepare_request,
+                root,
+                workspace_root,
+                scratch_root,
+                yield_time_ms,
+            ),
+            StartTarget::Isolated { handle } => {
+                self.start_isolated(spec, prepare_request, handle, yield_time_ms)
+            }
+        }
     }
 
-    #[cfg(target_os = "linux")]
-    fn start_run_linux(
+    fn start_ephemeral(
         &self,
-        request: StartCommandSession,
-        policy: PolicyArc,
-        kind: WorkspaceRunKind,
+        spec: CommandSessionSpec,
+        prepare_request: eos_workspace_api::PrepareCommandRequest,
+        root: PathBuf,
+        workspace_root: PathBuf,
+        scratch_root: PathBuf,
+        yield_time_ms: u64,
     ) -> Result<CommandResponse, CommandSessionError> {
-        if request.cmd.trim().is_empty() {
-            return Err(CommandSessionError::InvalidRequest(
-                "cmd must be non-empty".to_owned(),
-            ));
-        }
-        let id = self.registry.next_id();
-        let prepared = policy.prepare_command_workspace(request.prepare_request(id.clone()))?;
+        let request_id = format!(
+            "command_session:{}:{}",
+            prepare_request.caller_id, prepare_request.invocation_id
+        );
+        let lease = LayerStack::open(root.clone())
+            .and_then(|stack| stack.acquire_snapshot(&request_id))
+            .map_err(layerstack_error)?;
+        let lease_id = lease.lease_id.clone();
+        let snapshot = EphemeralSnapshot {
+            lease_id: lease.lease_id,
+            manifest_version: lease.manifest_version,
+            manifest_root_hash: lease.root_hash,
+            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
+        };
+        let session_dir = scratch_root.join(&spec.id);
+        let context = EphemeralCommandPrepareContext {
+            layer_stack_root: root.clone(),
+            workspace_root,
+            writable_root: ephemeral_dir_allocator()
+                .map_err(workspace_api_error)?
+                .writable_root,
+            final_path: session_dir.join("final.json"),
+            session_dir,
+        };
+        let prepared = match prepare_ephemeral_command(context, snapshot, prepare_request) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                self.release_lease(&root, &lease_id);
+                return Err(error.into());
+            }
+        };
+        let PreparedEphemeralCommand { prepared, workspace } = prepared;
+        let session = match self.spawn_session(spec, prepared) {
+            Ok(session) => session,
+            Err(error) => {
+                discard_ephemeral_command(&workspace.dirs);
+                self.release_lease(&root, &lease_id);
+                return Err(error);
+            }
+        };
+        Ok(self.register_and_wait(session, yield_time_ms, move |session| {
+            WorkspaceRun::Ephemeral(EphemeralRun { session, workspace })
+        }))
+    }
+
+    fn start_isolated(
+        &self,
+        spec: CommandSessionSpec,
+        prepare_request: eos_workspace_api::PrepareCommandRequest,
+        handle: CommandHandle,
+        yield_time_ms: u64,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        let context = IsolatedCommandPrepareContext {
+            workspace_handle_id: handle.workspace_handle_id.clone(),
+            workspace_root: handle.workspace_root.clone(),
+            scratch_dir: handle.scratch_dir.clone(),
+            layer_paths: handle.layer_paths.clone(),
+            upperdir: handle.upperdir.clone(),
+            workdir: handle.workdir.clone(),
+            ns_fds: handle.ns_fds.clone(),
+            cgroup_path: handle.cgroup_path.clone(),
+        };
+        let prepared = prepare_isolated_command(context, prepare_request)?;
+        let session = self.spawn_session(spec, prepared)?;
+        Ok(self.register_and_wait(session, yield_time_ms, move |session| {
+            WorkspaceRun::Isolated(IsolatedRun { session, handle })
+        }))
+    }
+
+    fn spawn_session(
+        &self,
+        spec: CommandSessionSpec,
+        prepared: eos_workspace_api::PreparedCommandWorkspace,
+    ) -> Result<CommandSession, CommandSessionError> {
         let process = spawn_current_exe_ns_runner(
             &prepared.request_path,
             &prepared.run_request,
@@ -124,16 +202,8 @@ impl WorkspaceRunManager {
             prepared.transcript_path.clone(),
             &self.config.transcript_timestamp_timezone,
         )?;
-        let caller_id = request.caller_id;
-        let command = request.cmd;
-        policy.command_session_started(&id, &caller_id);
-        let session = CommandSession::new_running(
-            CommandSessionSpec {
-                id: id.clone(),
-                caller_id,
-                command,
-                timeout_seconds: request.timeout_seconds,
-            },
+        Ok(CommandSession::new_running(
+            spec,
             RunningCommandSessionParts {
                 process,
                 output_path: prepared.output_path,
@@ -141,61 +211,25 @@ impl WorkspaceRunManager {
                 transcript_path: prepared.transcript_path,
                 output_drain_grace_ms: self.config.output_drain_grace_ms,
             },
-        );
-        let run = Arc::new(RunSession::new(session, policy));
-        self.registry.insert(Arc::clone(&run), kind);
-        match wait_for_yield(&run.session, &self.config, request.yield_time_ms, 0) {
-            WaitOutcome::Completed(reaped) => Ok(self.finish_reaped(run, reaped, false)),
-            WaitOutcome::Running(stdout) => Ok(CommandResponse::running(id, stdout)),
+        ))
+    }
+
+    fn register_and_wait(
+        &self,
+        session: CommandSession,
+        yield_time_ms: u64,
+        make_run: impl FnOnce(CommandSession) -> WorkspaceRun,
+    ) -> CommandResponse {
+        let id = session.id().to_owned();
+        let run = Arc::new(make_run(session));
+        self.registry.insert(Arc::clone(&run));
+        match wait_for_yield(run.session(), &self.config, yield_time_ms, 0) {
+            WaitOutcome::Completed(reaped) => self.finish_reaped(run, reaped, false),
+            WaitOutcome::Running(stdout) => CommandResponse::running(id, stdout),
         }
     }
 
     pub fn write_stdin(&self, request: WriteStdin) -> Result<CommandResponse, CommandSessionError> {
-        #[cfg(target_os = "linux")]
-        {
-            self.write_stdin_linux(request)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            self.write_stdin_scaffold(request)
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    fn write_stdin_scaffold(
-        &self,
-        request: WriteStdin,
-    ) -> Result<CommandResponse, CommandSessionError> {
-        if is_teardown_control(&request.chars) {
-            return self.cancel(CancelCommandSession {
-                command_session_id: request.command_session_id,
-            });
-        }
-        if contains_teardown_control(&request.chars) {
-            return Err(CommandSessionError::InvalidRequest(
-                "Ctrl-C/Ctrl-D must be sent alone to cancel command session".to_owned(),
-            ));
-        }
-        let Some(run) = self.registry.get(&request.command_session_id) else {
-            return Err(CommandSessionError::NotFound(request.command_session_id));
-        };
-        if request.chars.is_empty() {
-            return Err(CommandSessionError::InvalidRequest(
-                "chars must be non-empty".to_owned(),
-            ));
-        }
-        let _ = (run, request.yield_time_ms);
-        Ok(CommandResponse::running(
-            request.command_session_id,
-            String::new(),
-        ))
-    }
-
-    #[cfg(target_os = "linux")]
-    fn write_stdin_linux(
-        &self,
-        request: WriteStdin,
-    ) -> Result<CommandResponse, CommandSessionError> {
         if is_teardown_control(&request.chars) {
             return self.cancel(CancelCommandSession {
                 command_session_id: request.command_session_id,
@@ -215,18 +249,11 @@ impl WorkspaceRunManager {
             ));
         }
         let command_session_id = request.command_session_id.clone();
-        let start_offset = run.session.transcript_len();
-        run.session.write_process_stdin(&request.chars)?;
-        match wait_for_yield(
-            &run.session,
-            &self.config,
-            request.yield_time_ms,
-            start_offset,
-        ) {
+        let start_offset = run.session().transcript_len();
+        run.session().write_process_stdin(&request.chars)?;
+        match wait_for_yield(run.session(), &self.config, request.yield_time_ms, start_offset) {
             WaitOutcome::Completed(reaped) => Ok(self.finish_reaped(run, reaped, false)),
-            WaitOutcome::Running(stdout) => {
-                Ok(CommandResponse::running(command_session_id, stdout))
-            }
+            WaitOutcome::Running(stdout) => Ok(CommandResponse::running(command_session_id, stdout)),
         }
     }
 
@@ -246,15 +273,14 @@ impl WorkspaceRunManager {
                 .map(|result| result.with_last_lines(request.last_n_lines))
                 .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
-        #[cfg(target_os = "linux")]
-        if let Some(reaped) = run.session.reap() {
+        if let Some(reaped) = run.session().reap() {
             return Ok(self
                 .finish_reaped(run, reaped, false)
                 .with_last_lines(request.last_n_lines));
         }
         Ok(CommandResponse::running(
             request.command_session_id,
-            run.session.read_recent_output(request.last_n_lines),
+            run.session().read_recent_output(request.last_n_lines),
         ))
     }
 
@@ -262,45 +288,16 @@ impl WorkspaceRunManager {
         &self,
         request: CancelCommandSession,
     ) -> Result<CommandResponse, CommandSessionError> {
-        #[cfg(target_os = "linux")]
-        {
-            self.cancel_linux(request)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            self.cancel_scaffold(request)
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    fn cancel_scaffold(
-        &self,
-        request: CancelCommandSession,
-    ) -> Result<CommandResponse, CommandSessionError> {
         let Some(run) = self.registry.get(&request.command_session_id) else {
             return self
                 .registry
                 .take_completed_result(&request.command_session_id)
                 .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
-        Ok(self.finish_cancelled_scaffold(run))
-    }
-
-    #[cfg(target_os = "linux")]
-    fn cancel_linux(
-        &self,
-        request: CancelCommandSession,
-    ) -> Result<CommandResponse, CommandSessionError> {
-        let Some(run) = self.registry.get(&request.command_session_id) else {
-            return self
-                .registry
-                .take_completed_result(&request.command_session_id)
-                .ok_or(CommandSessionError::NotFound(request.command_session_id));
-        };
-        let start_offset = run.session.transcript_len();
-        run.session.cancel_process();
+        let start_offset = run.session().transcript_len();
+        run.session().cancel_process();
         match wait_for_yield(
-            &run.session,
+            run.session(),
             &self.config,
             self.config.cancel_wait_ms,
             start_offset,
@@ -329,54 +326,36 @@ impl WorkspaceRunManager {
     /// overlay and push no completion (the caller initiated the cancel).
     #[must_use]
     pub fn cleanup_caller(&self, caller_id: &str, grace_s: Option<f64>) -> usize {
-        #[cfg(target_os = "linux")]
-        {
-            let caller_id = caller_id.trim();
-            if caller_id.is_empty() {
-                return 0;
-            }
-            self.cancel_and_drain(self.registry.caller_sessions(caller_id), grace_s)
+        let caller_id = caller_id.trim();
+        if caller_id.is_empty() {
+            return 0;
         }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let _ = (caller_id, grace_s);
-            0
-        }
+        self.cancel_and_drain(self.registry.caller_sessions(caller_id), grace_s)
     }
 
     /// Cancel and discard every live command session in the sandbox (the
-    /// whole-sandbox sweep backstop). Like `cleanup_caller` but across all
-    /// callers; cancelled sessions discard and push no completion.
+    /// whole-sandbox sweep backstop). Cancelled sessions discard and push no
+    /// completion.
     #[must_use]
     pub fn cancel_all(&self, grace_s: Option<f64>) -> usize {
-        #[cfg(target_os = "linux")]
-        {
-            self.cancel_and_drain(self.registry.live(), grace_s)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let _ = grace_s;
-            0
-        }
+        self.cancel_and_drain(self.registry.live(), grace_s)
     }
 
     /// Cancel every run, then reap+discard within `grace`, finalizing any
     /// stragglers. Returns the number of runs that were live at entry.
-    #[cfg(target_os = "linux")]
-    fn cancel_and_drain(&self, runs: Vec<Arc<RunSession>>, grace_s: Option<f64>) -> usize {
+    fn cancel_and_drain(&self, runs: Vec<Arc<WorkspaceRun>>, grace_s: Option<f64>) -> usize {
         if runs.is_empty() {
             return 0;
         }
         for run in &runs {
-            run.session.cancel_process();
+            run.session().cancel_process();
         }
-
         let cancel_wait_s = self.config.cancel_wait_ms as f64 / 1000.0;
         let wait_s = grace_s.unwrap_or(cancel_wait_s).max(cancel_wait_s);
         let deadline = Instant::now() + Duration::from_secs_f64(wait_s);
         let mut pending = runs.clone();
         loop {
-            pending.retain(|run| match run.session.reap() {
+            pending.retain(|run| match run.session().reap() {
                 Some(reaped) => {
                     let _ = self.finish_reaped(Arc::clone(run), reaped, false);
                     false
@@ -389,66 +368,35 @@ impl WorkspaceRunManager {
             std::thread::sleep(Duration::from_millis(10));
         }
         for run in pending {
-            if let Some(reaped) = run.session.reap() {
+            if let Some(reaped) = run.session().reap() {
                 let _ = self.finish_reaped(run, reaped, false);
             }
         }
         runs.len()
     }
 
-    #[must_use]
-    pub fn sweep_expired(&self, now: Instant) -> SweepReport {
-        #[cfg(target_os = "linux")]
-        {
-            self.sweep_linux(now)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            self.sweep_scaffold(now)
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    fn sweep_scaffold(&self, now: Instant) -> SweepReport {
-        let mut expired = 0;
+    /// Periodic reaper: enforce the per-session timeout backstop and finalize any
+    /// session whose child has exited without a live poller, parking the
+    /// completion for the heartbeat.
+    pub fn sweep_expired(&self, now: Instant) {
         for run in self.registry.live() {
-            if run.session.is_expired(now) && self.registry.remove(run.session.id()).is_some() {
-                expired += 1;
+            if run.session().is_past_deadline(now, self.config.max_session_s) {
+                run.session().cancel_process();
             }
-        }
-        SweepReport {
-            expired,
-            live: self.registry.live().len(),
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    fn sweep_linux(&self, now: Instant) -> SweepReport {
-        let mut expired = 0;
-        for run in self.registry.live() {
-            if run.session.is_past_deadline(now, self.config.max_session_s) {
-                expired += 1;
-                run.session.cancel_process();
-            }
-            if let Some(reaped) = run.session.reap() {
+            if let Some(reaped) = run.session().reap() {
                 let publish_completion = !reaped.cancelled;
                 let _ = self.finish_reaped(run, reaped, publish_completion);
             }
         }
-        SweepReport {
-            expired,
-            live: self.registry.live().len(),
-        }
     }
 
     /// Turn a reaped command into its final response: the run publishes (normal
-    /// completion) or discards (cancel) via its policy, then persists the final
-    /// response. Routing cancel to `discard_command_workspace` is the structural
-    /// guarantee that a cancelled command never reaches the OCC merge.
-    #[cfg(target_os = "linux")]
+    /// completion) or discards (cancel) via the workspace lifecycle helpers, then
+    /// persists the final response. Routing cancel to the discard branch is the
+    /// structural guarantee that a cancelled command never reaches the OCC merge.
     fn finish_reaped(
         &self,
-        run: Arc<RunSession>,
+        run: Arc<WorkspaceRun>,
         reaped: ReapedCommand,
         publish_completion: bool,
     ) -> CommandResponse {
@@ -459,56 +407,30 @@ impl WorkspaceRunManager {
             exit_code: Some(reaped.exit_code),
             stdout: reaped.stdout,
             stderr: String::new(),
-            command_session_id: Some(run.session.id().to_owned()),
+            command_session_id: Some(run.session().id().to_owned()),
         };
         self.finalize_run(run, request, reaped.cancelled, publish_completion)
     }
 
-    /// The non-Linux scaffold has no real process; its only settle path is
-    /// cancel, which discards (never publishes) and parks a completion.
-    #[cfg(not(target_os = "linux"))]
-    fn finish_cancelled_scaffold(&self, run: Arc<RunSession>) -> CommandResponse {
-        let request = FinalizeCommandRequest {
-            runner_result: None,
-            command_elapsed_s: run.session.elapsed_s(),
-            status: "cancelled".to_owned(),
-            exit_code: Some(130),
-            stdout: String::new(),
-            stderr: String::new(),
-            command_session_id: Some(run.session.id().to_owned()),
-        };
-        self.finalize_run(run, request, true, true)
-    }
-
-    /// Apply the run's workspace policy to `request` (publish on complete,
-    /// discard on cancel), persist the final response, fire the finished hook,
-    /// remove the run from the registry, and park a completion if requested.
     fn finalize_run(
         &self,
-        run: Arc<RunSession>,
+        run: Arc<WorkspaceRun>,
         request: FinalizeCommandRequest,
         cancelled: bool,
         publish_completion: bool,
     ) -> CommandResponse {
-        let outcome = if cancelled {
-            run.policy.discard_command_workspace(request)
-        } else {
-            run.policy.finalize_command_workspace(request)
+        let outcome = match &*run {
+            WorkspaceRun::Ephemeral(ephemeral) => settle_ephemeral(ephemeral, request, cancelled),
+            WorkspaceRun::Isolated(isolated) => settle_isolated(isolated, request, cancelled),
         };
         let response = match outcome {
             Ok(outcome) => CommandResponse::from_workspace_outcome(outcome),
             Err(error) => CommandResponse::error(error.to_string()),
         };
-        #[cfg(target_os = "linux")]
-        run.session.persist_final(&response);
-        run.policy.command_session_finished(
-            run.session.id(),
-            run.session.caller_id(),
-            &response.status,
-        );
-        let command_session_id = run.session.id().to_owned();
-        let caller_id = run.session.caller_id().to_owned();
-        let command = run.session.command().to_owned();
+        run.session().persist_final(&response);
+        let command_session_id = run.session().id().to_owned();
+        let caller_id = run.session().caller_id().to_owned();
+        let command = run.session().command().to_owned();
         self.registry.remove(&command_session_id);
         if publish_completion {
             let notification_result = response.clone();
@@ -522,6 +444,91 @@ impl WorkspaceRunManager {
         }
         response
     }
+
+    fn release_lease(&self, root: &Path, lease_id: &str) {
+        let _ = LayerStack::open(root.to_path_buf()).and_then(|mut stack| stack.release_lease(lease_id));
+    }
+}
+
+/// Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths
+/// remove the run dirs and release the snapshot lease; only the complete path
+/// captures + publishes the upperdir, so a cancelled command never OCC-merges.
+fn settle_ephemeral(
+    run: &EphemeralRun,
+    request: FinalizeCommandRequest,
+    cancelled: bool,
+) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+    let root = run.workspace.layer_stack_root.0.clone();
+    let lease_id = run.workspace.snapshot.lease_id.clone();
+    if cancelled {
+        discard_ephemeral_command(&run.workspace.dirs);
+        release_lease(&root, &lease_id);
+        return Ok(WorkspaceCommandOutcome::discarded(
+            WorkspaceMode::Ephemeral,
+            request,
+        ));
+    }
+    let base_timings = base_timings(&root)?;
+    let outcome = finalize_ephemeral_command(
+        &DaemonPublisherPort::new(&root),
+        run.workspace.clone(),
+        base_timings,
+        request,
+    );
+    discard_ephemeral_command(&run.workspace.dirs);
+    release_lease(&root, &lease_id);
+    outcome
+}
+
+/// Complete (capture for audit) or discard (cancel) one isolated command
+/// session. Isolated writes are never published; the upperdir is torn down with
+/// the namespace on exit, so discard is a no-op beyond the cancelled outcome.
+fn settle_isolated(
+    run: &IsolatedRun,
+    request: FinalizeCommandRequest,
+    cancelled: bool,
+) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+    if cancelled {
+        return Ok(WorkspaceCommandOutcome::discarded(
+            WorkspaceMode::Isolated,
+            request,
+        ));
+    }
+    let base_timings = base_timings(&run.handle.layer_stack_root)?;
+    let context = IsolatedCommandFinalizeContext {
+        caller_id: run.handle.caller_id.clone(),
+        workspace_handle_id: run.handle.workspace_handle_id.clone(),
+        manifest_version: run.handle.manifest_version,
+        manifest_root_hash: run.handle.manifest_root_hash.clone(),
+        upperdir: run.handle.upperdir.clone(),
+        base_timings,
+    };
+    let mut outcome = finalize_isolated_command(context, request)?;
+    let audit = take_isolated_audit(&mut outcome);
+    record_tool_call(&run.handle.caller_id, audit);
+    Ok(outcome)
+}
+
+fn base_timings(root: &Path) -> Result<WorkspaceTimings, WorkspaceApiError> {
+    let manifest = LayerStack::open(root.to_path_buf())
+        .and_then(|stack| stack.read_active_manifest())
+        .map_err(workspace_api_error)?;
+    Ok(timing_map(resource_timings(&manifest, 0)))
+}
+
+fn release_lease(root: &Path, lease_id: &str) {
+    let _ = LayerStack::open(root.to_path_buf()).and_then(|mut stack| stack.release_lease(lease_id));
+}
+
+fn layerstack_error(error: impl std::fmt::Display) -> CommandSessionError {
+    CommandSessionError::Workspace(WorkspaceApiError::new(
+        "snapshot_acquire_failed",
+        error.to_string(),
+    ))
+}
+
+fn workspace_api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
+    WorkspaceApiError::new("daemon_command_workspace_error", error.to_string())
 }
 
 fn is_teardown_control(chars: &str) -> bool {
@@ -530,182 +537,4 @@ fn is_teardown_control(chars: &str) -> bool {
 
 fn contains_teardown_control(chars: &str) -> bool {
     chars.contains('\u{3}') || chars.contains('\u{4}')
-}
-
-impl Default for WorkspaceRunManager {
-    fn default() -> Self {
-        Self::new(CommandSessionConfig::default())
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct SweepReport {
-    pub expired: usize,
-    pub live: usize,
-}
-
-// The manager unit tests drive the non-Linux scaffold (no real PTY); on Linux
-// the same behavior is proven by the daemon E2E suite.
-#[cfg(all(test, not(target_os = "linux")))]
-#[path = "../../../tests/workspace_run/manager_fake_policy.rs"]
-mod manager_fake_policy;
-
-#[cfg(all(test, not(target_os = "linux")))]
-mod tests {
-    use std::path::PathBuf;
-    use std::sync::Arc;
-    use std::time::{Duration, Instant};
-
-    use eos_workspace_api::{
-        FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace, WorkspaceApiError,
-        WorkspaceCommandOutcome, WorkspaceMode,
-    };
-    use serde_json::{json, Value};
-
-    use super::*;
-
-    struct ExpiringPolicy;
-
-    impl CommandWorkspacePolicy for ExpiringPolicy {
-        fn prepare_command_workspace(
-            &self,
-            request: PrepareCommandRequest,
-        ) -> Result<PreparedCommandWorkspace, WorkspaceApiError> {
-            let session_dir = PathBuf::from(format!("/sessions/{}", request.command_session_id));
-            Ok(PreparedCommandWorkspace {
-                run_request: json!({ "cmd": request.cmd }),
-                request_path: session_dir.join("runner-request.json"),
-                output_path: session_dir.join("runner-result.json"),
-                final_path: session_dir.join("final.json"),
-                session_dir: session_dir.clone(),
-                transcript_path: session_dir.join("transcript.log"),
-            })
-        }
-
-        fn finalize_command_workspace(
-            &self,
-            request: FinalizeCommandRequest,
-        ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
-            Ok(WorkspaceCommandOutcome {
-                mode: WorkspaceMode::default(),
-                success: request.command_succeeded(),
-                status: request.status,
-                exit_code: request.exit_code,
-                stdout: request.stdout,
-                stderr: request.stderr,
-                command_session_id: request.command_session_id,
-                changed_paths: Vec::new(),
-                changed_path_kinds: Default::default(),
-                mutation_source: "test".to_owned(),
-                conflict: None,
-                conflict_reason: None,
-                timings: Default::default(),
-                metadata: Value::Null,
-            })
-        }
-
-        fn discard_command_workspace(
-            &self,
-            request: FinalizeCommandRequest,
-        ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
-            Ok(WorkspaceCommandOutcome::discarded(
-                WorkspaceMode::default(),
-                request,
-            ))
-        }
-    }
-
-    #[test]
-    fn manager_registers_counts_and_sweeps_sessions() {
-        let manager = WorkspaceRunManager::default();
-        let started = manager
-            .start(
-                StartCommandSession {
-                    invocation_id: "inv".to_owned(),
-                    caller_id: "caller".to_owned(),
-                    cmd: "sleep 1".to_owned(),
-                    timeout_seconds: Some(0.001),
-                    yield_time_ms: 1000,
-                },
-                ExpiringPolicy,
-                WorkspaceRunKind::Ephemeral,
-            )
-            .unwrap_or_else(|error| panic!("start session: {error}"));
-        let id = started
-            .command_session_id
-            .unwrap_or_else(|| panic!("running session id"));
-        assert!(id.starts_with("cmd_"));
-
-        assert_eq!(manager.count_by_caller(Some("caller")), 1);
-
-        let report = manager.sweep_expired(Instant::now() + Duration::from_millis(2));
-
-        assert_eq!(report.expired, 1);
-        assert_eq!(report.live, 0);
-    }
-
-    fn ephemeral_request(caller_id: &str) -> StartCommandSession {
-        StartCommandSession {
-            invocation_id: "inv".to_owned(),
-            caller_id: caller_id.to_owned(),
-            cmd: "sleep 1".to_owned(),
-            timeout_seconds: None,
-            yield_time_ms: 1000,
-        }
-    }
-
-    #[test]
-    fn caller_may_hold_multiple_sessions_per_kind() {
-        // A caller holds many ephemeral command sessions (each its own ephemeral
-        // workspace); an isolated caller holds many sessions in its one workspace.
-        for kind in [WorkspaceRunKind::Ephemeral, WorkspaceRunKind::Isolated] {
-            let manager = WorkspaceRunManager::default();
-            for _ in 0..3 {
-                manager
-                    .start(ephemeral_request("caller"), ExpiringPolicy, kind)
-                    .unwrap_or_else(|error| panic!("start ({kind:?}): {error}"));
-            }
-            assert_eq!(manager.count_by_caller(Some("caller")), 3);
-            assert_eq!(manager.count_by_caller(Some("other")), 0);
-        }
-    }
-
-    #[test]
-    fn collected_completion_preserves_finalized_stdout() {
-        let manager = WorkspaceRunManager::default();
-        let command_session_id = "cmd_full".to_owned();
-        let session = CommandSession::new(CommandSessionSpec {
-            id: command_session_id.clone(),
-            caller_id: "caller".to_owned(),
-            command: "printf full".to_owned(),
-            timeout_seconds: None,
-        });
-        let run = Arc::new(RunSession::new(session, Arc::new(ExpiringPolicy)));
-        let request = FinalizeCommandRequest {
-            runner_result: None,
-            command_elapsed_s: 0.0,
-            status: "ok".to_owned(),
-            exit_code: Some(0),
-            stdout: "full transcript stdout".to_owned(),
-            stderr: String::new(),
-            command_session_id: Some(command_session_id.clone()),
-        };
-
-        let returned = manager.finalize_run(run, request, false, true);
-
-        assert_eq!(returned.stdout, "full transcript stdout");
-        let completions = manager.collect_completed(&CollectCompleted {
-            command_session_ids: Some(vec![command_session_id]),
-            caller_id: Some("caller".to_owned()),
-        });
-        assert_eq!(completions.completions.len(), 1);
-        assert_eq!(
-            completions.completions[0].result.stdout,
-            "full transcript stdout"
-        );
-        assert_eq!(
-            completions.completions[0].notification_result.stdout,
-            "full transcript stdout"
-        );
-    }
 }

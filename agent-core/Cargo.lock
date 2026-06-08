@@ -458,7 +458,6 @@ dependencies = [
  "eos-llm-client",
  "eos-tools",
  "eos-types",
- "serde_json",
  "thiserror",
  "tokio",
 ]
@@ -573,7 +572,6 @@ dependencies = [
  "console-subscriber",
  "eos-agent-def",
  "eos-agent-message-records",
- "eos-agent-run",
  "eos-audit",
  "eos-config",
  "eos-db",

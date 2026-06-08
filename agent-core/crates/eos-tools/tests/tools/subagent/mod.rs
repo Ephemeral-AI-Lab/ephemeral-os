@@ -7,13 +7,9 @@ use eos_types::{AgentRunId, JsonObject, SubagentSessionId};
 use serde_json::json;
 
 use super::super::{cancel_subagent::CancelSubagent, run_subagent::RunSubagent};
-use crate::ports::{
-    AgentRunServicePort, CancelledSubagent, Sealed, StartSubagentRunOutcome,
-    StartSubagentRunRequest, StartedSubagentRun, SubagentProgress, SubagentSessionPort,
-    SubagentSessionStatus, TerminalAgentRun,
-};
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
+use crate::{AgentRunServicePort, AgentSpawnError, Sealed, SpawnAgentRequest, SubagentSessionPort};
 
 #[derive(Default)]
 struct FakeBackgroundSession {
@@ -24,34 +20,32 @@ impl Sealed for FakeBackgroundSession {}
 
 #[async_trait]
 impl AgentRunServicePort for FakeBackgroundSession {
-    async fn start_subagent_run(
-        &self,
-        request: StartSubagentRunRequest,
-    ) -> Result<StartSubagentRunOutcome, crate::ToolError> {
-        self.spawned
-            .lock()
-            .unwrap()
-            .push((request.agent_name.clone(), request.prompt));
-        Ok(StartSubagentRunOutcome::Started(StartedSubagentRun {
-            agent_run_id: "agent-run-child".parse().unwrap(),
-            agent_name: request.agent_name,
-        }))
+    async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentSpawnError> {
+        self.spawned.lock().unwrap().push((
+            request.agent_name.as_str().to_owned(),
+            first_user_text(&request),
+        ));
+        Ok("agent-run-child".parse().unwrap())
     }
 
-    async fn poll_terminal_agent_run(
+    async fn wait_for_agent_result(
         &self,
         _agent_run_id: &AgentRunId,
-    ) -> Result<Option<TerminalAgentRun>, crate::ToolError> {
-        Ok(None)
+    ) -> Result<crate::ToolResult, crate::ToolError> {
+        Ok(crate::ToolResult::ok("done"))
     }
+}
 
-    async fn cancel_agent_run(
-        &self,
-        _agent_run_id: &AgentRunId,
-        _reason: &str,
-    ) -> Result<(), crate::ToolError> {
-        Ok(())
-    }
+fn first_user_text(request: &SpawnAgentRequest) -> String {
+    request
+        .initial_messages
+        .first()
+        .and_then(|message| message.content.first())
+        .and_then(|block| match block {
+            eos_llm_client::ContentBlock::Text { text } => Some(text.clone()),
+            _ => None,
+        })
+        .unwrap_or_default()
 }
 
 #[async_trait]
@@ -62,29 +56,6 @@ impl SubagentSessionPort for FakeBackgroundSession {
         _agent_name: &str,
     ) -> SubagentSessionId {
         "subagent_1".parse().unwrap()
-    }
-
-    async fn subagent_session_snapshot(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-    ) -> Option<SubagentProgress> {
-        Some(SubagentProgress::Found {
-            subagent_session_id: subagent_session_id.clone(),
-            status: SubagentSessionStatus::Running,
-            agent_name: "explorer".to_owned(),
-            result: None,
-        })
-    }
-
-    async fn cancel_background_session(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-        reason: &str,
-    ) -> CancelledSubagent {
-        CancelledSubagent::Cancelled {
-            subagent_session_id: subagent_session_id.clone(),
-            reason: reason.to_owned(),
-        }
     }
 
     async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, _reason: &str) -> bool {

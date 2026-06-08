@@ -1,6 +1,5 @@
-mod advisor;
-mod agent_run_service;
 mod agent_loop;
+mod agent_run_service;
 mod cancel;
 mod control;
 mod factory;
@@ -10,9 +9,8 @@ mod registry;
 mod setup;
 mod types;
 
-pub use agent_run_service::AgentRunService;
-pub(crate) use advisor::run_advisor;
 pub use agent_loop::run_agent;
+pub use agent_run_service::AgentRunService;
 pub use cancel::EngineCancelPort;
 pub use control::{AgentRunCancellation, AgentRunControl, AgentRunFinalization};
 pub use factory::AgentRunControlFactory;

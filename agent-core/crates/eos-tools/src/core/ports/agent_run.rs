@@ -1,72 +1,63 @@
 use async_trait::async_trait;
-use eos_types::{AgentRunId, SubagentSessionId};
+use eos_agent_def::AgentName;
+use eos_agent_message_records::AgentRunRecordKind;
+use eos_llm_client::Message;
+use eos_types::{
+    AgentRunId, AttemptId, RequestId, SandboxId, SubagentSessionId, TaskId, WorkflowId,
+};
 use serde::Serialize;
 
-use crate::core::{ExecutionMetadata, Sealed, ToolError, ToolResult};
+use crate::core::{Sealed, ToolError, ToolResult};
 
-/// Tool-owned request to start a subagent run.
+/// Tool-owned request to spawn an agent run.
 #[derive(Debug, Clone)]
-pub struct StartSubagentRunRequest {
-    /// Caller execution facts.
-    pub ctx: ExecutionMetadata,
-    /// Registered subagent name requested by the model.
-    pub agent_name: String,
-    /// User/model supplied subagent task prompt.
-    pub prompt: String,
-    /// Launch guidance appended to the child run.
-    pub guidance: String,
+pub struct SpawnAgentRequest {
+    /// Agent profile name to launch.
+    pub agent_name: AgentName,
+    /// Initial transcript.
+    pub initial_messages: Vec<Message>,
+    /// Parent agent-run id, for helper/subagent lineage.
+    pub parent_agent_run_id: Option<AgentRunId>,
+    /// Owning request id.
+    pub request_id: Option<RequestId>,
+    /// Owning task id.
+    pub task_id: Option<TaskId>,
+    /// Owning attempt id.
+    pub attempt_id: Option<AttemptId>,
+    /// Owning workflow id.
+    pub workflow_id: Option<WorkflowId>,
+    /// Bound sandbox id.
+    pub sandbox_id: Option<SandboxId>,
+    /// Request-visible workspace root.
+    pub workspace_root: String,
+    /// Whether the caller is in isolated-workspace mode.
+    pub is_isolated_workspace_mode: bool,
+    /// Whether to persist the run row.
+    pub persist: bool,
+    /// Message-record kind.
+    pub record_kind: AgentRunRecordKind,
 }
 
-/// A started subagent agent run.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StartedSubagentRun {
-    /// The durable child agent-run id.
-    pub agent_run_id: AgentRunId,
-    /// Registered child agent name.
-    pub agent_name: String,
-}
-
-/// Subagent launch result.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StartSubagentRunOutcome {
-    /// The subagent run was started.
-    Started(StartedSubagentRun),
+/// Agent spawn failure surfaced to model-facing tools.
+#[derive(Debug)]
+pub enum AgentSpawnError {
     /// Validation rejected the dispatch.
     Rejected(SubagentLaunchRejection),
+    /// Framework/tool error while spawning.
+    Tool(ToolError),
 }
 
-/// Terminal facts for a child agent run.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TerminalAgentRun {
-    /// The child agent-run id.
-    pub agent_run_id: AgentRunId,
-    /// Terminal background status.
-    pub status: SubagentSessionStatus,
-    /// Terminal result payload.
-    pub result: ToolResult,
-}
-
-/// Resource service for starting, polling, and cancelling subagent agent runs.
+/// Resource service for spawning agent runs.
 #[async_trait]
 pub trait AgentRunServicePort: Sealed + Send + Sync {
-    /// Start a subagent run, returning typed launch facts.
-    async fn start_subagent_run(
-        &self,
-        request: StartSubagentRunRequest,
-    ) -> Result<StartSubagentRunOutcome, ToolError>;
+    /// Spawn an agent run, returning its natural run id.
+    async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentSpawnError>;
 
-    /// Poll a child agent run for terminal state.
-    async fn poll_terminal_agent_run(
+    /// Wait for a spawned agent run and return its terminal model-facing result.
+    async fn wait_for_agent_result(
         &self,
         agent_run_id: &AgentRunId,
-    ) -> Result<Option<TerminalAgentRun>, ToolError>;
-
-    /// Cancel a child agent run.
-    async fn cancel_agent_run(
-        &self,
-        agent_run_id: &AgentRunId,
-        reason: &str,
-    ) -> Result<(), ToolError>;
+    ) -> Result<ToolResult, ToolError>;
 }
 
 /// Typed launch rejection facts.
@@ -88,7 +79,7 @@ pub enum SubagentLaunchRejection {
     },
 }
 
-/// Background-session status facts returned for subagent control tools.
+/// Terminal background status facts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SubagentSessionStatus {
     /// The subagent is still running.
@@ -101,44 +92,6 @@ pub enum SubagentSessionStatus {
     Cancelled,
     /// The subagent result was already delivered.
     Delivered,
-}
-
-/// Result of looking up a tracked subagent session.
-#[derive(Debug, Clone)]
-pub enum SubagentProgress {
-    /// The session exists.
-    Found {
-        /// Agent-facing subagent session id.
-        subagent_session_id: SubagentSessionId,
-        /// Current tracked status.
-        status: SubagentSessionStatus,
-        /// Registered subagent name.
-        agent_name: String,
-        /// Terminal result, when available.
-        result: Option<ToolResult>,
-    },
-    /// The session id is unknown to the owning run.
-    Missing {
-        /// Agent-facing subagent session id that was requested.
-        subagent_session_id: SubagentSessionId,
-    },
-}
-
-/// Result of a `cancel_subagent` request.
-#[derive(Debug, Clone)]
-pub enum CancelledSubagent {
-    /// A running subagent was cancelled.
-    Cancelled {
-        /// Agent-facing subagent session id.
-        subagent_session_id: SubagentSessionId,
-        /// User/tool supplied cancellation reason.
-        reason: String,
-    },
-    /// The session id is unknown or already terminal.
-    MissingOrSettled {
-        /// Agent-facing subagent session id that could not be cancelled.
-        subagent_session_id: SubagentSessionId,
-    },
 }
 
 /// Per-kind in-flight background-session count for one agent run.
@@ -163,19 +116,6 @@ pub trait SubagentSessionPort: Sealed + Send + Sync {
         agent_run_id: &AgentRunId,
         agent_name: &str,
     ) -> SubagentSessionId;
-
-    /// Snapshot one tracked subagent session for model-facing rendering.
-    async fn subagent_session_snapshot(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-    ) -> Option<SubagentProgress>;
-
-    /// Cancel one tracked subagent session.
-    async fn cancel_background_session(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-        reason: &str,
-    ) -> CancelledSubagent;
 
     /// Cancel one tracked subagent by its natural child agent-run id.
     async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, reason: &str) -> bool;

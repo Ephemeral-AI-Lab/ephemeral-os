@@ -21,10 +21,10 @@ use eos_llm_client::ToolSpec;
 
 use crate::core::name::ToolName;
 use crate::core::result::OutputShape;
-use crate::ports::AgentRunServicePort;
 use crate::registry::config::{ToolConfig, ToolConfigSet};
 use crate::registry::ToolRegistry;
 use crate::runtime::executor::{RegisteredTool, ToolExecutor};
+use crate::AgentRunServicePort;
 
 use services::InertSandboxTransport;
 pub use services::{
@@ -94,10 +94,10 @@ pub fn build_default_registry_with_services(
     root_submission: Option<RootSubmissionService>,
     attempt_submission: Option<AttemptSubmissionService>,
     agent_run_service: Option<Arc<dyn AgentRunServicePort>>,
-    subagent_sessions: Option<Arc<dyn crate::ports::SubagentSessionPort>>,
-    workflow_service: Option<Arc<dyn crate::ports::WorkflowServicePort>>,
-    workflow_sessions: Option<Arc<dyn crate::ports::WorkflowSessionPort>>,
-    command_session_port: Option<Arc<dyn crate::ports::CommandSessionPort>>,
+    subagent_sessions: Option<Arc<dyn crate::SubagentSessionPort>>,
+    workflow_service: Option<Arc<dyn crate::WorkflowServicePort>>,
+    workflow_sessions: Option<Arc<dyn crate::WorkflowSessionPort>>,
+    command_session_port: Option<Arc<dyn crate::CommandSessionPort>>,
     skill_service: SkillToolService,
 ) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
@@ -116,7 +116,7 @@ pub fn build_default_registry_with_services(
     );
     isolated_workspace::register(&mut registry, config, sandbox_service);
     submission::register(&mut registry, config, root_submission, attempt_submission);
-    ask_helper::register(&mut registry, config);
+    ask_helper::register(&mut registry, config, agent_run_service.clone());
     workflow::register(&mut registry, config, workflow_service, workflow_sessions);
     subagent::register(
         &mut registry,

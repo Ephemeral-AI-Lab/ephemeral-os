@@ -278,13 +278,6 @@ pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
-    use eos_command_session::CommandSessionSpec;
-    use eos_ephemeral_workspace::{
-        CallerId, EphemeralRunDirs, EphemeralSnapshot, InvocationId, WorkspaceRoot,
-    };
-
     use super::*;
 
     fn sample_completion(id: &str) -> CommandSessionCompletion {
@@ -298,7 +291,19 @@ mod tests {
         }
     }
 
+    // The scaffold `CommandSession::new` constructor only exists off Linux (or
+    // when `eos-command-session` itself is under test), so the registry
+    // mechanics that build a run are exercised on the host; the Linux paths are
+    // covered by the daemon E2E suite.
+    #[cfg(not(target_os = "linux"))]
     fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
+        use std::path::PathBuf;
+
+        use eos_command_session::CommandSessionSpec;
+        use eos_ephemeral_workspace::{
+            CallerId, EphemeralRunDirs, EphemeralSnapshot, InvocationId, WorkspaceRoot,
+        };
+
         let session = CommandSession::new(CommandSessionSpec {
             id: id.to_owned(),
             caller_id: caller.to_owned(),
@@ -329,6 +334,7 @@ mod tests {
         Arc::new(WorkspaceRun::Ephemeral(EphemeralRun { session, workspace }))
     }
 
+    #[cfg(not(target_os = "linux"))]
     #[test]
     fn insert_get_count_remove_track_caller_runs() {
         let registry = WorkspaceRunRegistry::new();

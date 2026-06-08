@@ -9,7 +9,7 @@
 //!
 //! It owns the *decisions*; `eos-engine` owns the async query/dispatch *loop*,
 //! background-session runtime, stream events, and `ToolResultBlock`. Tools that
-//! need downstream state depend on a **narrow [port trait](ports)** defined here
+//! need downstream state depend on a **narrow [port trait](core::ports)** defined here
 //! and implemented downstream.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -18,8 +18,6 @@
 pub mod core;
 #[path = "hooks/mod.rs"]
 mod hooks;
-#[path = "ports/mod.rs"]
-pub mod ports;
 #[path = "registry/mod.rs"]
 mod registry;
 #[path = "runtime/mod.rs"]
@@ -35,17 +33,16 @@ pub use core::error::ToolError;
 pub use core::intent::ToolIntent;
 pub use core::metadata::ExecutionMetadata;
 pub use core::name::{ToolKey, ToolName};
-pub use core::result::{OutputShape, ToolResult};
-pub use hooks::{Hook, HookDenial, HookOutcome};
-pub use ports::{
-    AgentRunServicePort, AttemptSubmissionPort, BackgroundSessionCounts, CancelPort,
-    CancelableResource, CancelledSubagent, CommandServicePort, CommandSessionPort,
-    NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed,
-    StartSubagentRunOutcome, StartSubagentRunRequest, StartWorkflowRequest, StartedSubagentRun,
-    StartedWorkflow, SubagentLaunchRejection, SubagentProgress, SubagentSessionPort,
-    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalAgentRun, TerminalWorkflow,
+pub use core::ports::{
+    AgentRunServicePort, AgentSpawnError, AttemptSubmissionPort, BackgroundSessionCounts,
+    CancelPort, CancelableResource, CommandServicePort, CommandSessionPort, NotificationSink,
+    OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, Sealed, SpawnAgentRequest,
+    StartWorkflowRequest, StartedWorkflow, SubagentLaunchRejection, SubagentSessionPort,
+    SubagentSessionStatus, SubmissionAck, SystemNotification, TerminalWorkflow,
     WorkflowServicePort, WorkflowSessionPort,
 };
+pub use core::result::{OutputShape, ToolResult};
+pub use hooks::{Hook, HookDenial, HookOutcome};
 pub use registry::config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use registry::tool_registry::ToolRegistry;
 pub use runtime::dispatch::{

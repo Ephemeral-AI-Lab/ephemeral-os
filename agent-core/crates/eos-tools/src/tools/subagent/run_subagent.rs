@@ -3,6 +3,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use eos_agent_def::AgentName;
+use eos_agent_message_records::AgentRunRecordKind;
+use eos_llm_client::Message;
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -13,15 +16,15 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{
-    AgentRunServicePort, StartSubagentRunOutcome, StartSubagentRunRequest, StartedSubagentRun,
-    SubagentLaunchRejection, SubagentSessionPort,
-};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec_with_agent_enum;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
+use crate::{
+    AgentRunServicePort, AgentSpawnError, SpawnAgentRequest, SubagentLaunchRejection,
+    SubagentSessionPort,
+};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct RunSubagentInput {
@@ -121,35 +124,52 @@ impl ToolExecutor for RunSubagent {
                 "run_subagent: `prompt` must be a non-empty string.",
             ));
         }
-        let launched = match self
+        let parent_agent_run_id = ctx.require_agent_run_id()?.clone();
+        let requested_agent_name = parsed.agent_name.clone();
+        let agent_name = match AgentName::new(&parsed.agent_name) {
+            Ok(agent_name) => agent_name,
+            Err(_) => {
+                return Ok(launch_rejection(SubagentLaunchRejection::NotRegistered {
+                    agent_name: requested_agent_name,
+                }))
+            }
+        };
+        let agent_run_id = match self
             .agent_run_service
             .as_deref()
             .ok_or(ToolError::MissingPort("agent_run_service"))?
-            .start_subagent_run(StartSubagentRunRequest {
-                ctx: ctx.clone(),
-                agent_name: parsed.agent_name.clone(),
-                prompt: parsed.prompt.clone(),
-                guidance: explorer_launch_guidance(),
+            .spawn_agent(SpawnAgentRequest {
+                agent_name: agent_name.clone(),
+                initial_messages: vec![
+                    Message::from_user_text(parsed.prompt.clone()),
+                    Message::from_user_text(explorer_launch_guidance()),
+                ],
+                parent_agent_run_id: Some(parent_agent_run_id.clone()),
+                request_id: ctx.request_id.clone(),
+                task_id: None,
+                attempt_id: None,
+                workflow_id: None,
+                sandbox_id: ctx.sandbox_id.clone(),
+                workspace_root: ctx.workspace_root.clone(),
+                is_isolated_workspace_mode: ctx.is_isolated_workspace_mode,
+                persist: true,
+                record_kind: AgentRunRecordKind::Subagent {
+                    parent_agent_run_id,
+                },
             })
             .await
         {
-            Ok(StartSubagentRunOutcome::Started(started)) => started,
-            Ok(StartSubagentRunOutcome::Rejected(rejection)) => {
-                return Ok(launch_rejection(rejection))
-            }
-            Err(err) => return Err(err),
+            Ok(agent_run_id) => agent_run_id,
+            Err(AgentSpawnError::Rejected(rejection)) => return Ok(launch_rejection(rejection)),
+            Err(AgentSpawnError::Tool(err)) => return Err(err),
         };
-        let StartedSubagentRun {
-            agent_run_id,
-            agent_name,
-        } = launched;
         let _subagent_session_id = self
             .subagent_sessions
             .as_deref()
             .ok_or(ToolError::MissingPort("subagent_sessions"))?
-            .register_background_session(&agent_run_id, &agent_name)
+            .register_background_session(&agent_run_id, agent_name.as_str())
             .await;
-        Ok(launch_result(&agent_run_id, &agent_name))
+        Ok(launch_result(&agent_run_id, agent_name.as_str()))
     }
 }
 

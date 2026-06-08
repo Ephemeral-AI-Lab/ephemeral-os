@@ -197,9 +197,9 @@ mod tests {
     use async_trait::async_trait;
     use eos_types::{AgentRunId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 
-    use crate::ports::{
-        CancelledSubagent, OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow,
-        SubagentProgress, SubagentSessionPort, TerminalWorkflow, WorkflowServicePort,
+    use crate::{
+        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, SubagentSessionPort,
+        TerminalWorkflow, WorkflowServicePort,
     };
     struct ReportSubagentSessions {
         subagents: AtomicUsize,
@@ -220,21 +220,6 @@ mod tests {
     #[async_trait]
     impl SubagentSessionPort for ReportSubagentSessions {
         async fn register_background_session(&self, _: &AgentRunId, _: &str) -> SubagentSessionId {
-            unreachable!("not used by hook tests")
-        }
-
-        async fn subagent_session_snapshot(
-            &self,
-            _: &SubagentSessionId,
-        ) -> Option<SubagentProgress> {
-            unreachable!("not used by hook tests")
-        }
-
-        async fn cancel_background_session(
-            &self,
-            _: &SubagentSessionId,
-            _: &str,
-        ) -> CancelledSubagent {
             unreachable!("not used by hook tests")
         }
 

@@ -4,7 +4,7 @@
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 #[cfg(target_os = "linux")]
 use std::time::Instant;
 
@@ -13,10 +13,6 @@ use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionCompletion, CommandSessionError,
     ReadCommandProgress, StartCommandSession, WriteStdin,
 };
-#[cfg(target_os = "linux")]
-use eos_ephemeral_workspace::command_session::EphemeralCommandPolicy;
-#[cfg(target_os = "linux")]
-use eos_isolated_workspace::command_session::IsolatedCommandPolicy;
 #[cfg(target_os = "linux")]
 use eos_layerstack::require_workspace_binding;
 use serde_json::{json, Value};
@@ -30,13 +26,7 @@ use super::config::{
     command_session_config, command_session_scratch_root, runtime_command_session_config,
 };
 #[cfg(target_os = "linux")]
-use super::manager::WorkspaceRunManager;
-#[cfg(target_os = "linux")]
-use super::ports::ephemeral::DaemonEphemeralCommandPort;
-#[cfg(target_os = "linux")]
-use super::ports::isolated::DaemonIsolatedCommandPort;
-#[cfg(target_os = "linux")]
-use super::registry::{PolicyArc, WorkspaceRunKind};
+use super::manager::{StartTarget, WorkspaceRunManager};
 #[cfg(not(target_os = "linux"))]
 use super::wire::command_result;
 #[cfg(target_os = "linux")]
@@ -87,10 +77,7 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             timeout_seconds,
             yield_time_ms,
             handle.caller_id.clone(),
-            Arc::new(IsolatedCommandPolicy::new(DaemonIsolatedCommandPort::new(
-                handle,
-            ))),
-            WorkspaceRunKind::Isolated,
+            StartTarget::Isolated { handle },
         );
     }
 
@@ -106,14 +93,11 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             timeout_seconds,
             yield_time_ms,
             caller_id_arg(args).to_owned(),
-            Arc::new(EphemeralCommandPolicy::new(
-                DaemonEphemeralCommandPort::new(
-                    root,
-                    PathBuf::from(binding.workspace_root),
-                    command_session_scratch_root(),
-                ),
-            )),
-            WorkspaceRunKind::Ephemeral,
+            StartTarget::Ephemeral {
+                root,
+                workspace_root: PathBuf::from(binding.workspace_root),
+                scratch_root: command_session_scratch_root(),
+            },
         )
     }
     #[cfg(not(target_os = "linux"))]
@@ -265,8 +249,7 @@ fn start_manager_command_session(
     timeout_seconds: Option<f64>,
     yield_time_ms: u64,
     caller_id: String,
-    policy: PolicyArc,
-    kind: WorkspaceRunKind,
+    target: StartTarget,
 ) -> Result<Value, DaemonError> {
     let request = StartCommandSession {
         invocation_id: args
@@ -280,7 +263,7 @@ fn start_manager_command_session(
         yield_time_ms,
     };
     let response = workspace_run_manager()
-        .start_run(request, policy, kind)
+        .start(request, target)
         .map_err(command_session_error)?;
     let wire = command_response_to_wire(response);
     if wire

@@ -41,6 +41,9 @@ use super::{setup_error, test_runtime_stub_enabled};
 /// data: namespace fds, scratch dirs, lease/manifest coordinates). The daemon's
 /// isolated workspace run owns one of these per session; it carries everything
 /// the run needs to build the set-ns runner request and finalize for audit.
+// The only reader of these fields is the Linux-only workspace-run manager; on
+// non-Linux the struct still compiles (uniform registry types) but reads nothing.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 #[derive(Debug, Clone)]
 pub struct CommandHandle {
     pub caller_id: String,

@@ -24,17 +24,15 @@ use crate::background::notification::{BackgroundCompletion, BackgroundNotificati
 pub(in crate::background) struct SubagentSession {
     id: SubagentSessionId,
     agent_run_id: AgentRunId,
-    agent_name: String,
     status: BackgroundSessionStatus,
     result: Option<ToolResult>,
 }
 
 impl SubagentSession {
-    fn tracked(id: SubagentSessionId, agent_run_id: AgentRunId, agent_name: String) -> Self {
+    fn tracked(id: SubagentSessionId, agent_run_id: AgentRunId) -> Self {
         Self {
             id,
             agent_run_id,
-            agent_name,
             status: BackgroundSessionStatus::Running,
             result: None,
         }
@@ -44,16 +42,8 @@ impl SubagentSession {
         &self.agent_run_id
     }
 
-    fn agent_name(&self) -> &str {
-        &self.agent_name
-    }
-
     const fn status(&self) -> BackgroundSessionStatus {
         self.status
-    }
-
-    fn result(&self) -> Option<&ToolResult> {
-        self.result.as_ref()
     }
 
     fn cancel(&mut self, reason: &str) -> bool {
@@ -133,21 +123,7 @@ impl SubagentSessionManager {
         }
     }
 
-    pub(in crate::background) async fn progress(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-    ) -> Option<(BackgroundSessionStatus, Option<ToolResult>, String)> {
-        let guard = self.sessions.lock().await;
-        let session = guard.sessions.get(subagent_session_id)?;
-        let agent_name = session.agent_name().to_owned();
-        Some((session.status(), session.result().cloned(), agent_name))
-    }
-
-    pub(in crate::background) async fn cancel_one(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-        reason: &str,
-    ) -> bool {
+    async fn cancel_one(&self, subagent_session_id: &SubagentSessionId, reason: &str) -> bool {
         let agent_run_id = {
             let mut guard = self.sessions.lock().await;
             let Some(session) = guard.sessions.get_mut(subagent_session_id) else {
@@ -364,7 +340,7 @@ impl SubagentSessionPort for SubagentSessionManager {
     async fn register_background_session(
         &self,
         agent_run_id: &AgentRunId,
-        agent_name: &str,
+        _agent_name: &str,
     ) -> SubagentSessionId {
         let subagent_session_id = self.next_session_id().await;
         trace_background_tool(
@@ -377,43 +353,9 @@ impl SubagentSessionPort for SubagentSessionManager {
         self.insert(SubagentSession::tracked(
             subagent_session_id.clone(),
             agent_run_id.clone(),
-            agent_name.to_owned(),
         ))
         .await;
         subagent_session_id
-    }
-
-    async fn subagent_session_snapshot(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-    ) -> Option<eos_tools::SubagentProgress> {
-        self.progress(subagent_session_id)
-            .await
-            .map(
-                |(status, result, agent_name)| eos_tools::SubagentProgress::Found {
-                    subagent_session_id: subagent_session_id.clone(),
-                    status: background_status_to_subagent(status),
-                    agent_name,
-                    result,
-                },
-            )
-    }
-
-    async fn cancel_background_session(
-        &self,
-        subagent_session_id: &SubagentSessionId,
-        reason: &str,
-    ) -> eos_tools::CancelledSubagent {
-        if self.cancel_one(subagent_session_id, reason).await {
-            eos_tools::CancelledSubagent::Cancelled {
-                subagent_session_id: subagent_session_id.clone(),
-                reason: reason.to_owned(),
-            }
-        } else {
-            eos_tools::CancelledSubagent::MissingOrSettled {
-                subagent_session_id: subagent_session_id.clone(),
-            }
-        }
     }
 
     async fn cancel_background_agent_run(&self, agent_run_id: &AgentRunId, reason: &str) -> bool {
@@ -454,18 +396,6 @@ const fn agent_run_status_to_background(status: AgentRunStatus) -> BackgroundSes
         AgentRunStatus::Completed => BackgroundSessionStatus::Completed,
         AgentRunStatus::Failed => BackgroundSessionStatus::Failed,
         AgentRunStatus::Cancelled => BackgroundSessionStatus::Cancelled,
-    }
-}
-
-const fn background_status_to_subagent(
-    status: BackgroundSessionStatus,
-) -> eos_tools::SubagentSessionStatus {
-    match status {
-        BackgroundSessionStatus::Running => eos_tools::SubagentSessionStatus::Running,
-        BackgroundSessionStatus::Completed => eos_tools::SubagentSessionStatus::Completed,
-        BackgroundSessionStatus::Failed => eos_tools::SubagentSessionStatus::Failed,
-        BackgroundSessionStatus::Cancelled => eos_tools::SubagentSessionStatus::Cancelled,
-        BackgroundSessionStatus::Delivered => eos_tools::SubagentSessionStatus::Delivered,
     }
 }
 
@@ -561,50 +491,6 @@ fn tool_result_from_payload(payload: &JsonObject) -> ToolResult {
 }
 
 #[cfg(test)]
-fn terminal_called(result: Option<&ToolResult>) -> bool {
-    result
-        .and_then(|result| result.metadata.get("subagent_terminal_called"))
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
-}
-
-#[cfg(test)]
-fn subagent_status_and_result(
-    status: BackgroundSessionStatus,
-    result: Option<&ToolResult>,
-) -> (&'static str, String) {
-    let metadata = result.map(|result| &result.metadata);
-    if let Some(reason) = metadata
-        .and_then(|m| m.get("subagent_termination_reason"))
-        .and_then(Value::as_str)
-    {
-        return ("terminated", format!("[terminated: {reason}] "));
-    }
-    if metadata
-        .and_then(|m| m.get("subagent_cancelled"))
-        .and_then(Value::as_bool)
-        == Some(true)
-    {
-        return ("cancelled", "[cancelled] ".to_owned());
-    }
-    let output = || {
-        result
-            .map(|result| result.output.clone())
-            .unwrap_or_default()
-    };
-    match status {
-        BackgroundSessionStatus::Running => ("running", String::new()),
-        BackgroundSessionStatus::Completed | BackgroundSessionStatus::Delivered
-            if terminal_called(result) =>
-        {
-            ("finished", output())
-        }
-        BackgroundSessionStatus::Cancelled => ("cancelled", "[cancelled] ".to_owned()),
-        _ => ("failed", output()),
-    }
-}
-
-#[cfg(test)]
 mod tests {
     #![allow(clippy::expect_used)]
 
@@ -688,10 +574,8 @@ mod tests {
         assert_eq!(status, BackgroundSessionStatus::Completed);
         assert!(result.is_error);
         assert_eq!(exit_code, 1);
-        assert_eq!(
-            subagent_status_and_result(BackgroundSessionStatus::Completed, Some(&result)).0,
-            "finished"
-        );
+        assert_eq!(result.output, "partial but delivered");
+        assert_eq!(result.metadata["subagent_terminal_called"], json!(true));
     }
 
     #[test]
@@ -711,7 +595,6 @@ mod tests {
             .insert(SubagentSession::tracked(
                 running_id.clone(),
                 "run-sub-1".parse().expect("agent run id"),
-                "explorer".to_owned(),
             ))
             .await;
 
@@ -724,7 +607,6 @@ mod tests {
             .insert(SubagentSession::tracked(
                 done_id.clone(),
                 "run-sub-2".parse().expect("agent run id"),
-                "explorer".to_owned(),
             ))
             .await;
         let completion = manager
