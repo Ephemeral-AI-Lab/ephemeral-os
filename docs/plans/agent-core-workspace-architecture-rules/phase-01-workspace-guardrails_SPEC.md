@@ -24,7 +24,6 @@ agent-core/workspace-guard/
 │   └── lib.rs
 └── tests/
     ├── dependency_dag.rs
-    ├── profiles.rs
     ├── crate_inventory.rs
     ├── crate_layout.rs
     ├── naming_rules.rs
@@ -35,15 +34,20 @@ agent-core/workspace-guard/
 
 ## Rule Set
 
-| Rule file | Responsibility |
-| --- | --- |
-| `crate_inventory.rs` | exact allowed crate set and retired crate names |
-| `crate_layout.rs` | banned folders, thin `lib.rs`, no `mod.rs` maze |
-| `naming_rules.rs` | `api`, `service`, `port`, forbidden vocabulary |
-| `service_boundaries.rs` | every service has a sibling-crate reference |
-| `public_surface.rs` | accidental `pub mod` and public export drift |
-| `module_budget.rs` | total and per-crate module ceilings |
-| `dependency_dag.rs` | target internal dependency graph |
+| Rule file | Responsibility | Gate |
+| --- | --- | --- |
+| `crate_inventory.rs` | exact allowed crate set and retired crate names | hard |
+| `crate_layout.rs` | banned folders, thin `lib.rs`, no `mod.rs` maze | hard |
+| `naming_rules.rs` | `api`, `service`, `port`, forbidden vocabulary | hard |
+| `service_boundaries.rs` | every service has a sibling-crate reference | hard |
+| `public_surface.rs` | accidental `pub mod` and public export drift | hard |
+| `dependency_dag.rs` | target internal dependency graph | hard |
+| `module_budget.rs` | reports total/per-crate module counts and the 170 ceiling | advisory |
+
+Only seven rule files exist. `module_budget.rs` is **advisory**: it reports
+counts and flags the strict 170 ceiling but never gates a merge, because file
+count is a coarse proxy and cohesion outranks it (Phase 6). There is no
+`profiles.rs` rule; do not add an undocumented guard test.
 
 ## Target Checks
 
@@ -161,7 +165,6 @@ a final count above 170.
 ```text
 agent-core/workspace-guard/tests/
 ├── dependency_dag.rs
-├── profiles.rs
 ├── crate_inventory.rs
 ├── crate_layout.rs
 ├── naming_rules.rs

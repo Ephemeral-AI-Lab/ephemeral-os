@@ -204,7 +204,6 @@ dependencies = [
  "eos-runner",
  "eos-workspace-api",
  "eos-workspace-run-host",
- "ignore",
  "nix 0.29.0",
  "serde",
  "serde_json",

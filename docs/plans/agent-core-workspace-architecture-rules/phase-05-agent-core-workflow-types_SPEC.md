@@ -89,12 +89,20 @@ agent-core/crates/eos-workflow/
 │   ├── model.rs
 │   ├── services.rs
 │   ├── attempts.rs
+│   ├── run_stage.rs
 │   ├── iterations.rs
 │   ├── planning.rs
 │   └── context.rs
 └── tests/
     └── workflow/
 ```
+
+The current `attempt/` tree is 2414 LOC (`orchestrator.rs` 653, `run_stage.rs`
+611, `launch.rs` 540, `plan_dag.rs` 506). Do **not** collapse it into a single
+`attempts.rs`; that would be a ~1900 LOC god-file (Phase 6, "Cohesion outranks
+file count"). Split it by ownership boundary instead — attempt lifecycle in
+`attempts.rs`, stage orchestration in `run_stage.rs`, the plan DAG in
+`planning.rs` — which still lands well under the `<= 10` module budget.
 
 ```text
 agent-core/crates/eos-types/
@@ -147,9 +155,14 @@ runtime_services
   first target.
 - Workflow state mutation stays in `eos-workflow`.
 - Tool-facing workflow registration helpers live in `eos-tool`.
-- Engine hooks may call workflow service surfaces but must not own workflow
-  state transitions.
-- `eos-agent-core` constructs workflow handles but does not implement workflow
+- Engine hooks reach workflow behavior **only** through the injected workflow
+  handle (trait defined in `eos-tool`, captured in `ToolRuntime`); they invoke
+  it but must not own workflow state transitions. `eos-engine` has no crate
+  dependency on `eos-workflow` — adding one would close a cycle
+  (`eos-engine -> eos-workflow -> eos-agent-run -> eos-engine`).
+- `eos-agent-core` is the composition root: it depends on both `eos-tool` and
+  `eos-workflow`, builds the concrete workflow handle impl, and injects it into
+  the engine's `AgentLoopExecutionRequest`. It does not implement workflow
   lifecycle rules.
 
 ## Types Rules

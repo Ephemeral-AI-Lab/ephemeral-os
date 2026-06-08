@@ -24,387 +24,251 @@ pub enum OpFamily {
     WorkspaceRun,
 }
 
-/// One built-in daemon operation in the wire protocol catalog.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[non_exhaustive]
-pub enum BuiltinDaemonOp {
+macro_rules! declare_builtin_daemon_ops {
+    (
+        $(
+            $(#[$variant_meta:meta])*
+            $variant:ident, $const_name:ident, $wire:literal, $family:ident,
+            $mutates_state:literal, $test_only:literal, [
+                $(#[$const_meta:meta])*
+            ];
+        )+
+    ) => {
+        /// One built-in daemon operation in the wire protocol catalog.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+        #[non_exhaustive]
+        pub enum BuiltinDaemonOp {
+            $(
+                $(#[$variant_meta])*
+                $variant,
+            )+
+        }
+
+        /// Protocol metadata for one built-in daemon op.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        pub struct BuiltinOpSpec {
+            /// Typed op identity.
+            pub op: BuiltinDaemonOp,
+            /// Verbatim wire string.
+            pub wire: &'static str,
+            /// Functional owner.
+            pub family: OpFamily,
+            /// Whether the op may change daemon, workspace, or process state.
+            pub mutates_state: bool,
+            /// Whether the op is a daemon-side test hook.
+            pub test_only: bool,
+        }
+
+        impl BuiltinOpSpec {
+            const fn new(
+                op: BuiltinDaemonOp,
+                wire: &'static str,
+                family: OpFamily,
+                mutates_state: bool,
+                test_only: bool,
+            ) -> Self {
+                Self {
+                    op,
+                    wire,
+                    family,
+                    mutates_state,
+                    test_only,
+                }
+            }
+        }
+
+        impl BuiltinDaemonOp {
+            /// Verbatim wire string for this op.
+            #[must_use]
+            pub const fn wire(self) -> &'static str {
+                self.spec().wire
+            }
+
+            /// Functional owner for this op.
+            #[must_use]
+            pub const fn family(self) -> OpFamily {
+                self.spec().family
+            }
+
+            /// Whether this op may change daemon, workspace, or process state.
+            #[must_use]
+            pub const fn mutates_state(self) -> bool {
+                self.spec().mutates_state
+            }
+
+            /// Whether this op is a daemon-side test hook.
+            #[must_use]
+            pub const fn test_only(self) -> bool {
+                self.spec().test_only
+            }
+
+            /// Protocol catalog entry for this op.
+            #[must_use]
+            pub const fn spec(self) -> BuiltinOpSpec {
+                match self {
+                    $(
+                        Self::$variant => BuiltinOpSpec::new(
+                            Self::$variant,
+                            $wire,
+                            OpFamily::$family,
+                            $mutates_state,
+                            $test_only,
+                        ),
+                    )+
+                }
+            }
+        }
+
+        $(
+            $(#[$const_meta])*
+            pub const $const_name: &str = BuiltinDaemonOp::$variant.wire();
+        )+
+
+        /// Built-in daemon op metadata expected to be available over the wire.
+        pub const BUILTIN_DAEMON_OP_SPECS: &[BuiltinOpSpec] = &[
+            $(
+                BuiltinDaemonOp::$variant.spec(),
+            )+
+        ];
+
+        /// Built-in daemon ops expected to be available over the wire.
+        pub const BUILTIN_DAEMON_OPS: &[&str] = &[
+            $(
+                $const_name,
+            )+
+        ];
+    };
+}
+
+declare_builtin_daemon_ops! {
     /// `api.runtime.ready`
-    RuntimeReady,
+    RuntimeReady, API_RUNTIME_READY, "api.runtime.ready", Control, false, false, [
+        /// Runtime readiness probe.
+    ];
     /// `api.v1.heartbeat`
-    InvocationHeartbeat,
+    InvocationHeartbeat, API_V1_HEARTBEAT, "api.v1.heartbeat", Control, true, false, [
+        /// Invocation heartbeat.
+    ];
     /// `api.v1.cancel`
-    InvocationCancel,
+    InvocationCancel, API_V1_CANCEL, "api.v1.cancel", Control, true, false, [
+        /// Cancel an in-flight invocation.
+    ];
     /// `api.v1.inflight_count`
-    InflightCount,
+    InflightCount, API_V1_INFLIGHT_COUNT, "api.v1.inflight_count", Control, false, false, [
+        /// Count in-flight invocations.
+    ];
     /// `api.layer_metrics`
-    LayerMetrics,
+    LayerMetrics, API_LAYER_METRICS, "api.layer_metrics", Checkpoint, false, false, [
+        /// LayerStack/storage metrics.
+    ];
     /// `api.ensure_workspace_base`
-    EnsureWorkspaceBase,
+    EnsureWorkspaceBase, API_ENSURE_WORKSPACE_BASE, "api.ensure_workspace_base", Checkpoint, true, false, [
+        /// Ensure a workspace base binding exists.
+    ];
     /// `api.build_workspace_base`
-    BuildWorkspaceBase,
+    BuildWorkspaceBase, API_BUILD_WORKSPACE_BASE, "api.build_workspace_base", Checkpoint, true, false, [
+        /// Build or rebuild a workspace base binding.
+    ];
     /// `api.commit_to_workspace`
-    CommitToWorkspace,
+    CommitToWorkspace, API_COMMIT_TO_WORKSPACE, "api.commit_to_workspace", Checkpoint, true, false, [
+        /// Materialize LayerStack state into the bound workspace.
+    ];
     /// `api.commit_to_git`
-    CommitToGit,
+    CommitToGit, API_COMMIT_TO_GIT, "api.commit_to_git", Checkpoint, true, false, [
+        /// Commit a LayerStack snapshot into the bound workspace's durable Git repo.
+    ];
     /// `api.workspace_binding`
-    WorkspaceBinding,
+    WorkspaceBinding, API_WORKSPACE_BINDING, "api.workspace_binding", Checkpoint, false, false, [
+        /// Inspect the workspace binding for a layer stack root.
+    ];
     /// `api.audit.pull`
-    AuditPull,
+    AuditPull, API_AUDIT_PULL, "api.audit.pull", Audit, false, false, [
+        /// Pull audit events after a cursor.
+    ];
     /// `api.audit.snapshot`
-    AuditSnapshot,
+    AuditSnapshot, API_AUDIT_SNAPSHOT, "api.audit.snapshot", Audit, false, false, [
+        /// Snapshot audit ring metadata.
+    ];
     /// `api.audit.reset_floor`
-    AuditResetFloor,
+    AuditResetFloor, API_AUDIT_RESET_FLOOR, "api.audit.reset_floor", Audit, true, false, [
+        /// Reset the audit floor when daemon-side test gate allows it.
+    ];
     /// `api.v1.read_file`
-    ReadFile,
+    ReadFile, API_V1_READ_FILE, "api.v1.read_file", Files, false, false, [
+        /// Direct LayerStack read.
+    ];
     /// `api.v1.write_file`
-    WriteFile,
+    WriteFile, API_V1_WRITE_FILE, "api.v1.write_file", Files, true, false, [
+        /// Direct OCC-gated write.
+    ];
     /// `api.v1.edit_file`
-    EditFile,
+    EditFile, API_V1_EDIT_FILE, "api.v1.edit_file", Files, true, false, [
+        /// Direct OCC-gated edit.
+    ];
     /// `api.plugin.ensure`
-    PluginEnsure,
+    PluginEnsure, API_PLUGIN_ENSURE, "api.plugin.ensure", Plugins, true, false, [
+        /// Ensure a plugin service is available.
+    ];
     /// `api.plugin.status`
-    PluginStatus,
+    PluginStatus, API_PLUGIN_STATUS, "api.plugin.status", Plugins, false, false, [
+        /// Inspect plugin service status.
+    ];
     /// `api.isolated_workspace.enter`
-    IsolatedWorkspaceEnter,
+    IsolatedWorkspaceEnter, API_ISOLATED_WORKSPACE_ENTER, "api.isolated_workspace.enter", IsolatedWorkspace, true, false, [
+        /// Enter isolated workspace mode.
+    ];
     /// `api.isolated_workspace.exit`
-    IsolatedWorkspaceExit,
+    IsolatedWorkspaceExit, API_ISOLATED_WORKSPACE_EXIT, "api.isolated_workspace.exit", IsolatedWorkspace, true, false, [
+        /// Exit isolated workspace mode.
+    ];
     /// `api.isolated_workspace.status`
-    IsolatedWorkspaceStatus,
+    IsolatedWorkspaceStatus, API_ISOLATED_WORKSPACE_STATUS, "api.isolated_workspace.status", IsolatedWorkspace, false, false, [
+        /// Inspect isolated workspace status.
+    ];
     /// `api.isolated_workspace.list_open`
-    IsolatedWorkspaceListOpen,
+    IsolatedWorkspaceListOpen, API_ISOLATED_WORKSPACE_LIST_OPEN, "api.isolated_workspace.list_open", IsolatedWorkspace, false, false, [
+        /// List open isolated workspaces.
+    ];
     /// `api.isolated_workspace.test_reset`
-    IsolatedWorkspaceTestReset,
+    IsolatedWorkspaceTestReset, API_ISOLATED_WORKSPACE_TEST_RESET, "api.isolated_workspace.test_reset", IsolatedWorkspace, true, true, [
+        /// Test-only isolated workspace reset hook.
+    ];
     /// `api.v1.exec_command`
-    ExecCommand,
+    ExecCommand, API_V1_EXEC_COMMAND, "api.v1.exec_command", CommandSession, true, false, [
+        /// Start or poll a command session.
+    ];
     /// `api.v1.write_stdin`
-    WriteStdin,
+    WriteStdin, API_V1_WRITE_STDIN, "api.v1.write_stdin", CommandSession, true, false, [
+        /// Write stdin to a command session.
+    ];
     /// `api.v1.command.read_progress`
-    CommandReadProgress,
+    CommandReadProgress, API_V1_COMMAND_READ_PROGRESS, "api.v1.command.read_progress", CommandSession, false, false, [
+        /// Read command-session progress without writing stdin.
+    ];
     /// `api.v1.command.cancel`
-    CommandCancel,
+    CommandCancel, API_V1_COMMAND_CANCEL, "api.v1.command.cancel", CommandSession, true, false, [
+        /// Cancel a command session.
+    ];
     /// `api.v1.command.collect_completed`
-    CommandCollectCompleted,
+    CommandCollectCompleted, API_V1_COMMAND_COLLECT_COMPLETED, "api.v1.command.collect_completed", CommandSession, true, false, [
+        /// Collect completed command-session notifications.
+    ];
     /// `api.v1.command_session_count`
-    CommandSessionCount,
+    CommandSessionCount, API_V1_COMMAND_SESSION_COUNT, "api.v1.command_session_count", CommandSession, false, false, [
+        /// Count live command sessions.
+    ];
     /// `api.v1.cancel_workspace_runs_by_caller_id`
-    CancelWorkspaceRunsByCaller,
+    CancelWorkspaceRunsByCaller, API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER, "api.v1.cancel_workspace_runs_by_caller_id", WorkspaceRun, true, false, [
+        /// Cancel every workspace run owned by one caller (`caller_id == agent_run_id`):
+        /// discards the caller's command session(s) and exits its isolated workspace if
+        /// open. The agent-core per-run cancellation RPC.
+    ];
     /// `api.v1.cancel_workspace_runs`
-    CancelWorkspaceRuns,
+    CancelWorkspaceRuns, API_V1_CANCEL_WORKSPACE_RUNS, "api.v1.cancel_workspace_runs", WorkspaceRun, true, false, [
+        /// Cancel every workspace run in the sandbox (whole-sandbox sweep backstop):
+        /// discards all command sessions, exits all isolated callers, reaps orphans.
+    ];
 }
-
-impl BuiltinDaemonOp {
-    /// Verbatim wire string for this op.
-    #[must_use]
-    pub const fn wire(self) -> &'static str {
-        match self {
-            Self::RuntimeReady => "api.runtime.ready",
-            Self::InvocationHeartbeat => "api.v1.heartbeat",
-            Self::InvocationCancel => "api.v1.cancel",
-            Self::InflightCount => "api.v1.inflight_count",
-            Self::LayerMetrics => "api.layer_metrics",
-            Self::EnsureWorkspaceBase => "api.ensure_workspace_base",
-            Self::BuildWorkspaceBase => "api.build_workspace_base",
-            Self::CommitToWorkspace => "api.commit_to_workspace",
-            Self::CommitToGit => "api.commit_to_git",
-            Self::WorkspaceBinding => "api.workspace_binding",
-            Self::AuditPull => "api.audit.pull",
-            Self::AuditSnapshot => "api.audit.snapshot",
-            Self::AuditResetFloor => "api.audit.reset_floor",
-            Self::ReadFile => "api.v1.read_file",
-            Self::WriteFile => "api.v1.write_file",
-            Self::EditFile => "api.v1.edit_file",
-            Self::PluginEnsure => "api.plugin.ensure",
-            Self::PluginStatus => "api.plugin.status",
-            Self::IsolatedWorkspaceEnter => "api.isolated_workspace.enter",
-            Self::IsolatedWorkspaceExit => "api.isolated_workspace.exit",
-            Self::IsolatedWorkspaceStatus => "api.isolated_workspace.status",
-            Self::IsolatedWorkspaceListOpen => "api.isolated_workspace.list_open",
-            Self::IsolatedWorkspaceTestReset => "api.isolated_workspace.test_reset",
-            Self::ExecCommand => "api.v1.exec_command",
-            Self::WriteStdin => "api.v1.write_stdin",
-            Self::CommandReadProgress => "api.v1.command.read_progress",
-            Self::CommandCancel => "api.v1.command.cancel",
-            Self::CommandCollectCompleted => "api.v1.command.collect_completed",
-            Self::CommandSessionCount => "api.v1.command_session_count",
-            Self::CancelWorkspaceRunsByCaller => "api.v1.cancel_workspace_runs_by_caller_id",
-            Self::CancelWorkspaceRuns => "api.v1.cancel_workspace_runs",
-        }
-    }
-
-    /// Functional owner for this op.
-    #[must_use]
-    pub const fn family(self) -> OpFamily {
-        match self {
-            Self::RuntimeReady
-            | Self::InvocationHeartbeat
-            | Self::InvocationCancel
-            | Self::InflightCount => OpFamily::Control,
-            Self::LayerMetrics
-            | Self::EnsureWorkspaceBase
-            | Self::BuildWorkspaceBase
-            | Self::CommitToWorkspace
-            | Self::CommitToGit
-            | Self::WorkspaceBinding => OpFamily::Checkpoint,
-            Self::AuditPull | Self::AuditSnapshot | Self::AuditResetFloor => OpFamily::Audit,
-            Self::ReadFile | Self::WriteFile | Self::EditFile => OpFamily::Files,
-            Self::PluginEnsure | Self::PluginStatus => OpFamily::Plugins,
-            Self::IsolatedWorkspaceEnter
-            | Self::IsolatedWorkspaceExit
-            | Self::IsolatedWorkspaceStatus
-            | Self::IsolatedWorkspaceListOpen
-            | Self::IsolatedWorkspaceTestReset => OpFamily::IsolatedWorkspace,
-            Self::ExecCommand
-            | Self::WriteStdin
-            | Self::CommandReadProgress
-            | Self::CommandCancel
-            | Self::CommandCollectCompleted
-            | Self::CommandSessionCount => OpFamily::CommandSession,
-            Self::CancelWorkspaceRunsByCaller | Self::CancelWorkspaceRuns => OpFamily::WorkspaceRun,
-        }
-    }
-
-    /// Whether this op may change daemon, workspace, or process state.
-    #[must_use]
-    pub const fn mutates_state(self) -> bool {
-        match self {
-            Self::RuntimeReady
-            | Self::InflightCount
-            | Self::LayerMetrics
-            | Self::WorkspaceBinding
-            | Self::AuditPull
-            | Self::AuditSnapshot
-            | Self::ReadFile
-            | Self::PluginStatus
-            | Self::IsolatedWorkspaceStatus
-            | Self::IsolatedWorkspaceListOpen
-            | Self::CommandReadProgress
-            | Self::CommandSessionCount => false,
-            Self::InvocationHeartbeat
-            | Self::InvocationCancel
-            | Self::EnsureWorkspaceBase
-            | Self::BuildWorkspaceBase
-            | Self::CommitToWorkspace
-            | Self::CommitToGit
-            | Self::AuditResetFloor
-            | Self::WriteFile
-            | Self::EditFile
-            | Self::PluginEnsure
-            | Self::IsolatedWorkspaceEnter
-            | Self::IsolatedWorkspaceExit
-            | Self::IsolatedWorkspaceTestReset
-            | Self::ExecCommand
-            | Self::WriteStdin
-            | Self::CommandCancel
-            | Self::CommandCollectCompleted
-            | Self::CancelWorkspaceRunsByCaller
-            | Self::CancelWorkspaceRuns => true,
-        }
-    }
-
-    /// Whether this op is a daemon-side test hook.
-    #[must_use]
-    pub const fn test_only(self) -> bool {
-        match self {
-            Self::IsolatedWorkspaceTestReset => true,
-            Self::RuntimeReady
-            | Self::InvocationHeartbeat
-            | Self::InvocationCancel
-            | Self::InflightCount
-            | Self::LayerMetrics
-            | Self::EnsureWorkspaceBase
-            | Self::BuildWorkspaceBase
-            | Self::CommitToWorkspace
-            | Self::CommitToGit
-            | Self::WorkspaceBinding
-            | Self::AuditPull
-            | Self::AuditSnapshot
-            | Self::AuditResetFloor
-            | Self::ReadFile
-            | Self::WriteFile
-            | Self::EditFile
-            | Self::PluginEnsure
-            | Self::PluginStatus
-            | Self::IsolatedWorkspaceEnter
-            | Self::IsolatedWorkspaceExit
-            | Self::IsolatedWorkspaceStatus
-            | Self::IsolatedWorkspaceListOpen
-            | Self::ExecCommand
-            | Self::WriteStdin
-            | Self::CommandReadProgress
-            | Self::CommandCancel
-            | Self::CommandCollectCompleted
-            | Self::CommandSessionCount
-            | Self::CancelWorkspaceRunsByCaller
-            | Self::CancelWorkspaceRuns => false,
-        }
-    }
-
-    /// Build the protocol catalog entry for this op.
-    #[must_use]
-    pub const fn spec(self) -> BuiltinOpSpec {
-        BuiltinOpSpec {
-            op: self,
-            wire: self.wire(),
-            family: self.family(),
-            mutates_state: self.mutates_state(),
-            test_only: self.test_only(),
-        }
-    }
-}
-
-/// Protocol metadata for one built-in daemon op.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BuiltinOpSpec {
-    /// Typed op identity.
-    pub op: BuiltinDaemonOp,
-    /// Verbatim wire string.
-    pub wire: &'static str,
-    /// Functional owner.
-    pub family: OpFamily,
-    /// Whether the op may change daemon, workspace, or process state.
-    pub mutates_state: bool,
-    /// Whether the op is a daemon-side test hook.
-    pub test_only: bool,
-}
-
-/// Runtime readiness probe.
-pub const API_RUNTIME_READY: &str = BuiltinDaemonOp::RuntimeReady.wire();
-/// Invocation heartbeat.
-pub const API_V1_HEARTBEAT: &str = BuiltinDaemonOp::InvocationHeartbeat.wire();
-/// Cancel an in-flight invocation.
-pub const API_V1_CANCEL: &str = BuiltinDaemonOp::InvocationCancel.wire();
-/// Count in-flight invocations.
-pub const API_V1_INFLIGHT_COUNT: &str = BuiltinDaemonOp::InflightCount.wire();
-/// LayerStack/storage metrics.
-pub const API_LAYER_METRICS: &str = BuiltinDaemonOp::LayerMetrics.wire();
-/// Ensure a workspace base binding exists.
-pub const API_ENSURE_WORKSPACE_BASE: &str = BuiltinDaemonOp::EnsureWorkspaceBase.wire();
-/// Build or rebuild a workspace base binding.
-pub const API_BUILD_WORKSPACE_BASE: &str = BuiltinDaemonOp::BuildWorkspaceBase.wire();
-/// Materialize LayerStack state into the bound workspace.
-pub const API_COMMIT_TO_WORKSPACE: &str = BuiltinDaemonOp::CommitToWorkspace.wire();
-/// Commit a LayerStack snapshot into the bound workspace's durable Git repo.
-pub const API_COMMIT_TO_GIT: &str = BuiltinDaemonOp::CommitToGit.wire();
-/// Inspect the workspace binding for a layer stack root.
-pub const API_WORKSPACE_BINDING: &str = BuiltinDaemonOp::WorkspaceBinding.wire();
-/// Pull audit events after a cursor.
-pub const API_AUDIT_PULL: &str = BuiltinDaemonOp::AuditPull.wire();
-/// Snapshot audit ring metadata.
-pub const API_AUDIT_SNAPSHOT: &str = BuiltinDaemonOp::AuditSnapshot.wire();
-/// Reset the audit floor when daemon-side test gate allows it.
-pub const API_AUDIT_RESET_FLOOR: &str = BuiltinDaemonOp::AuditResetFloor.wire();
-/// Direct LayerStack read.
-pub const API_V1_READ_FILE: &str = BuiltinDaemonOp::ReadFile.wire();
-/// Direct OCC-gated write.
-pub const API_V1_WRITE_FILE: &str = BuiltinDaemonOp::WriteFile.wire();
-/// Direct OCC-gated edit.
-pub const API_V1_EDIT_FILE: &str = BuiltinDaemonOp::EditFile.wire();
-/// Ensure a plugin service is available.
-pub const API_PLUGIN_ENSURE: &str = BuiltinDaemonOp::PluginEnsure.wire();
-/// Inspect plugin service status.
-pub const API_PLUGIN_STATUS: &str = BuiltinDaemonOp::PluginStatus.wire();
-/// Enter isolated workspace mode.
-pub const API_ISOLATED_WORKSPACE_ENTER: &str = BuiltinDaemonOp::IsolatedWorkspaceEnter.wire();
-/// Exit isolated workspace mode.
-pub const API_ISOLATED_WORKSPACE_EXIT: &str = BuiltinDaemonOp::IsolatedWorkspaceExit.wire();
-/// Inspect isolated workspace status.
-pub const API_ISOLATED_WORKSPACE_STATUS: &str = BuiltinDaemonOp::IsolatedWorkspaceStatus.wire();
-/// List open isolated workspaces.
-pub const API_ISOLATED_WORKSPACE_LIST_OPEN: &str =
-    BuiltinDaemonOp::IsolatedWorkspaceListOpen.wire();
-/// Test-only isolated workspace reset hook.
-pub const API_ISOLATED_WORKSPACE_TEST_RESET: &str =
-    BuiltinDaemonOp::IsolatedWorkspaceTestReset.wire();
-/// Start or poll a command session.
-pub const API_V1_EXEC_COMMAND: &str = BuiltinDaemonOp::ExecCommand.wire();
-/// Write stdin to a command session.
-pub const API_V1_WRITE_STDIN: &str = BuiltinDaemonOp::WriteStdin.wire();
-/// Read command-session progress without writing stdin.
-pub const API_V1_COMMAND_READ_PROGRESS: &str = BuiltinDaemonOp::CommandReadProgress.wire();
-/// Cancel a command session.
-pub const API_V1_COMMAND_CANCEL: &str = BuiltinDaemonOp::CommandCancel.wire();
-/// Collect completed command-session notifications.
-pub const API_V1_COMMAND_COLLECT_COMPLETED: &str = BuiltinDaemonOp::CommandCollectCompleted.wire();
-/// Count live command sessions.
-pub const API_V1_COMMAND_SESSION_COUNT: &str = BuiltinDaemonOp::CommandSessionCount.wire();
-/// Cancel every workspace run owned by one caller (`caller_id == agent_run_id`):
-/// discards the caller's command session(s) and exits its isolated workspace if
-/// open. The agent-core per-run cancellation RPC.
-pub const API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER: &str =
-    BuiltinDaemonOp::CancelWorkspaceRunsByCaller.wire();
-/// Cancel every workspace run in the sandbox (whole-sandbox sweep backstop):
-/// discards all command sessions, exits all isolated callers, reaps orphans.
-pub const API_V1_CANCEL_WORKSPACE_RUNS: &str = BuiltinDaemonOp::CancelWorkspaceRuns.wire();
-
-/// Built-in daemon op metadata expected to be available over the wire.
-pub const BUILTIN_DAEMON_OP_SPECS: &[BuiltinOpSpec] = &[
-    BuiltinDaemonOp::RuntimeReady.spec(),
-    BuiltinDaemonOp::InvocationHeartbeat.spec(),
-    BuiltinDaemonOp::InvocationCancel.spec(),
-    BuiltinDaemonOp::InflightCount.spec(),
-    BuiltinDaemonOp::LayerMetrics.spec(),
-    BuiltinDaemonOp::EnsureWorkspaceBase.spec(),
-    BuiltinDaemonOp::BuildWorkspaceBase.spec(),
-    BuiltinDaemonOp::CommitToWorkspace.spec(),
-    BuiltinDaemonOp::CommitToGit.spec(),
-    BuiltinDaemonOp::WorkspaceBinding.spec(),
-    BuiltinDaemonOp::AuditPull.spec(),
-    BuiltinDaemonOp::AuditSnapshot.spec(),
-    BuiltinDaemonOp::AuditResetFloor.spec(),
-    BuiltinDaemonOp::ReadFile.spec(),
-    BuiltinDaemonOp::WriteFile.spec(),
-    BuiltinDaemonOp::EditFile.spec(),
-    BuiltinDaemonOp::PluginEnsure.spec(),
-    BuiltinDaemonOp::PluginStatus.spec(),
-    BuiltinDaemonOp::IsolatedWorkspaceEnter.spec(),
-    BuiltinDaemonOp::IsolatedWorkspaceExit.spec(),
-    BuiltinDaemonOp::IsolatedWorkspaceStatus.spec(),
-    BuiltinDaemonOp::IsolatedWorkspaceListOpen.spec(),
-    BuiltinDaemonOp::IsolatedWorkspaceTestReset.spec(),
-    BuiltinDaemonOp::ExecCommand.spec(),
-    BuiltinDaemonOp::WriteStdin.spec(),
-    BuiltinDaemonOp::CommandReadProgress.spec(),
-    BuiltinDaemonOp::CommandCancel.spec(),
-    BuiltinDaemonOp::CommandCollectCompleted.spec(),
-    BuiltinDaemonOp::CommandSessionCount.spec(),
-    BuiltinDaemonOp::CancelWorkspaceRunsByCaller.spec(),
-    BuiltinDaemonOp::CancelWorkspaceRuns.spec(),
-];
-
-/// Built-in daemon ops expected to be available over the wire.
-pub const BUILTIN_DAEMON_OPS: &[&str] = &[
-    API_RUNTIME_READY,
-    API_V1_HEARTBEAT,
-    API_V1_CANCEL,
-    API_V1_INFLIGHT_COUNT,
-    API_LAYER_METRICS,
-    API_ENSURE_WORKSPACE_BASE,
-    API_BUILD_WORKSPACE_BASE,
-    API_COMMIT_TO_WORKSPACE,
-    API_COMMIT_TO_GIT,
-    API_WORKSPACE_BINDING,
-    API_AUDIT_PULL,
-    API_AUDIT_SNAPSHOT,
-    API_AUDIT_RESET_FLOOR,
-    API_V1_READ_FILE,
-    API_V1_WRITE_FILE,
-    API_V1_EDIT_FILE,
-    API_PLUGIN_ENSURE,
-    API_PLUGIN_STATUS,
-    API_ISOLATED_WORKSPACE_ENTER,
-    API_ISOLATED_WORKSPACE_EXIT,
-    API_ISOLATED_WORKSPACE_STATUS,
-    API_ISOLATED_WORKSPACE_LIST_OPEN,
-    API_ISOLATED_WORKSPACE_TEST_RESET,
-    API_V1_EXEC_COMMAND,
-    API_V1_WRITE_STDIN,
-    API_V1_COMMAND_READ_PROGRESS,
-    API_V1_COMMAND_CANCEL,
-    API_V1_COMMAND_COLLECT_COMPLETED,
-    API_V1_COMMAND_SESSION_COUNT,
-    API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER,
-    API_V1_CANCEL_WORKSPACE_RUNS,
-];
 
 #[cfg(test)]
 mod tests {
@@ -436,12 +300,9 @@ mod tests {
     }
 
     #[test]
-    fn builtin_spec_metadata_matches_op_methods() {
+    fn builtin_specs_are_returned_by_ops() {
         for spec in BUILTIN_DAEMON_OP_SPECS {
-            assert_eq!(spec.wire, spec.op.wire());
-            assert_eq!(spec.family, spec.op.family());
-            assert_eq!(spec.mutates_state, spec.op.mutates_state());
-            assert_eq!(spec.test_only, spec.op.test_only());
+            assert_eq!(*spec, spec.op.spec());
         }
     }
 }

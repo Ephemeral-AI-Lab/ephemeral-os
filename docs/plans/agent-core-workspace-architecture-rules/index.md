@@ -196,8 +196,8 @@ agent-core/
 │   │       ├── model.rs
 │   │       ├── events.rs
 │   │       ├── services.rs
-│   │       ├── loop.rs
-│   │       ├── loop/
+│   │       ├── agent_loop.rs
+│   │       ├── agent_loop/
 │   │       │   ├── executor.rs
 │   │       │   ├── state.rs
 │   │       │   └── turn.rs
@@ -252,7 +252,6 @@ agent-core/
 ├── workspace-guard/
 │   └── tests/
 │       ├── dependency_dag.rs
-│       ├── profiles.rs
 │       ├── crate_inventory.rs
 │       ├── crate_layout.rs
 │       ├── naming_rules.rs
@@ -267,6 +266,7 @@ agent-core/
             ├── phase-01-workspace-guardrails_SPEC.md
             ├── phase-02-crate-map-and-dag_SPEC.md
             ├── phase-03-eos-tool_SPEC.md
+            ├── phase-03b-execution-lineage-materialization_SPEC.md
             ├── phase-04-eos-engine-agent-run_SPEC.md
             ├── phase-05-agent-core-workflow-types_SPEC.md
             └── phase-06-verification-module-budget_SPEC.md
@@ -280,7 +280,8 @@ agent-core/
 | 1 | `phase-01-workspace-guardrails_SPEC.md` | executable architecture rules | Guardrails |
 | 2 | `phase-02-crate-map-and-dag_SPEC.md` | crate collapse, renames, dependency DAG | Integration |
 | 3 | `phase-03-eos-tool_SPEC.md` | `eos-tool` consolidation and service surface | Tool |
-| 4 | `phase-04-eos-engine-agent-run_SPEC.md` | engine execution and run lifecycle split | Engine/run |
+| 3B | `phase-03b-execution-lineage-materialization_SPEC.md` | request/task/workflow/agent-run lineage, DB store contract, message-record materialization | Store/materialization |
+| 4 | `phase-04-eos-engine-agent-run_SPEC.md` | engine execution and run lifecycle split over established lineage | Engine/run |
 | 5 | `phase-05-agent-core-workflow-types_SPEC.md` | external facade runtime, workflow, types cleanup | Agent-core/workflow |
 | 6 | `phase-06-verification-module-budget_SPEC.md` | inventory reduction, tests, clippy, final cleanup | Verification |
 
@@ -292,7 +293,8 @@ agent-core/
 | 1. Workspace guardrails | Not started | `cargo test -p workspace-guard` enforces naming and budget rules |
 | 2. Crate map and DAG | Not started | target crate list builds with expected internal edges |
 | 3. `eos-tool` | Not started | no `eos-tool-ports`; tool modules collapsed |
-| 4. `eos-engine` and `eos-agent-run` | Not started | engine is execution-only; run lifecycle is isolated |
+| 3B. Execution lineage/materialization | Not started | DB lineage supports task/run/workflow/message-record materialization |
+| 4. `eos-engine` and `eos-agent-run` | Not started | engine is execution-only; run lifecycle is isolated over established lineage |
 | 5. Agent core/workflow/types | Not started | `eos-agent-core` owns hidden runtime wiring |
 | 6. Verification and budget | Not started | module count is 150-170 and full checks pass |
 
