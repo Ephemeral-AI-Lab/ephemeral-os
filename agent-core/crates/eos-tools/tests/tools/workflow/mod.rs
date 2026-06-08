@@ -3,20 +3,19 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{AgentRunId, JsonObject, TaskId, WorkflowId, WorkflowSessionId};
+use eos_types::{
+    AgentRunId, JsonObject, OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TaskId,
+    TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowId,
+};
 use serde_json::json;
 
 use super::super::{
     cancel_workflow::CancelWorkflow, check_workflow_status::CheckWorkflowStatus,
     delegate_workflow::DelegateWorkflow,
 };
-use crate::core::error::ToolError;
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
-use crate::{
-    OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
-    WorkflowServicePort, WorkflowToolService,
-};
+use crate::WorkflowToolService;
 
 fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
     pairs
@@ -30,55 +29,49 @@ struct RecordingWorkflowSessions {
     workflows: Mutex<Vec<String>>,
 }
 
-impl Sealed for RecordingWorkflowSessions {}
-
 fn workflow_tool_service(background: Arc<RecordingWorkflowSessions>) -> WorkflowToolService {
-    WorkflowToolService::new(move |workflow| {
+    WorkflowToolService::new(move |workflow: StartedWorkflow| {
         let background = background.clone();
         async move {
             background
                 .workflows
                 .lock()
                 .unwrap()
-                .push(workflow.workflow_task_id.as_str().to_owned());
+                .push(workflow.workflow_id.as_str().to_owned());
         }
     })
 }
 
 struct OutstandingControl;
 
-impl Sealed for OutstandingControl {}
-
 #[async_trait]
-impl WorkflowServicePort for OutstandingControl {
+impl WorkflowApi for OutstandingControl {
     async fn start_workflow(
         &self,
         _request: StartWorkflowRequest,
-    ) -> Result<StartedWorkflow, ToolError> {
+    ) -> Result<StartedWorkflow, WorkflowApiError> {
         unreachable!("outstanding short-circuit returns before start")
     }
 
     async fn check_workflow_status(
         &self,
         _workflow_id: &WorkflowId,
-        _workflow_task_id: Option<&WorkflowSessionId>,
-    ) -> Result<String, ToolError> {
+    ) -> Result<String, WorkflowApiError> {
         unreachable!()
     }
 
-    async fn cancel_workflow_session(
+    async fn cancel_workflow(
         &self,
-        _workflow_task_id: &WorkflowSessionId,
+        _workflow_id: &WorkflowId,
         _reason: &str,
-    ) -> Result<String, ToolError> {
+    ) -> Result<String, WorkflowApiError> {
         unreachable!()
     }
 
     async fn poll_terminal_workflow(
         &self,
         _workflow_id: &WorkflowId,
-        _workflow_task_id: &WorkflowSessionId,
-    ) -> Result<Option<TerminalWorkflow>, ToolError> {
+    ) -> Result<Option<TerminalWorkflow>, WorkflowApiError> {
         unreachable!()
     }
 
@@ -86,15 +79,14 @@ impl WorkflowServicePort for OutstandingControl {
         &self,
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
-    ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+    ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
         Ok(vec![OutstandingWorkflow {
             workflow_id: WorkflowId::new_v4(),
-            workflow_task_id: WorkflowSessionId::new_v4(),
             workflow_goal: "prior goal".to_owned(),
         }])
     }
 
-    async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, ToolError> {
+    async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, WorkflowApiError> {
         Ok(1)
     }
 }
@@ -120,41 +112,37 @@ async fn delegate_workflow_outstanding_is_error() {
 
 struct StartingControl;
 
-impl Sealed for StartingControl {}
-
 #[async_trait]
-impl WorkflowServicePort for StartingControl {
+impl WorkflowApi for StartingControl {
     async fn start_workflow(
         &self,
         _request: StartWorkflowRequest,
-    ) -> Result<StartedWorkflow, ToolError> {
+    ) -> Result<StartedWorkflow, WorkflowApiError> {
         Ok(StartedWorkflow {
-            workflow_id: WorkflowId::new_v4(),
-            workflow_task_id: "wf_1".parse()?,
+            workflow_id: "workflow-1".parse()?,
+            workflow_goal: "do something".to_owned(),
         })
     }
 
     async fn check_workflow_status(
         &self,
         _workflow_id: &WorkflowId,
-        _workflow_task_id: Option<&WorkflowSessionId>,
-    ) -> Result<String, ToolError> {
+    ) -> Result<String, WorkflowApiError> {
         unreachable!()
     }
 
-    async fn cancel_workflow_session(
+    async fn cancel_workflow(
         &self,
-        _workflow_task_id: &WorkflowSessionId,
+        _workflow_id: &WorkflowId,
         _reason: &str,
-    ) -> Result<String, ToolError> {
+    ) -> Result<String, WorkflowApiError> {
         unreachable!()
     }
 
     async fn poll_terminal_workflow(
         &self,
         _workflow_id: &WorkflowId,
-        _workflow_task_id: &WorkflowSessionId,
-    ) -> Result<Option<TerminalWorkflow>, ToolError> {
+    ) -> Result<Option<TerminalWorkflow>, WorkflowApiError> {
         unreachable!()
     }
 
@@ -162,11 +150,11 @@ impl WorkflowServicePort for StartingControl {
         &self,
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
-    ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+    ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
         Ok(Vec::new())
     }
 
-    async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, ToolError> {
+    async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, WorkflowApiError> {
         Ok(1)
     }
 }
@@ -188,7 +176,7 @@ async fn delegate_workflow_registers_background_session() {
     assert!(!res.is_error, "{res:?}");
     assert_eq!(
         background.workflows.lock().unwrap().as_slice(),
-        ["wf_1"],
+        ["workflow-1"],
         "delegate_workflow must register the workflow as background work"
     );
 }
@@ -197,25 +185,17 @@ async fn delegate_workflow_registers_background_session() {
 async fn workflow_tools_reject_empty_ids() {
     let ctx = metadata();
 
-    for input in [
-        obj(&[("workflow_id", json!(""))]),
-        obj(&[
-            ("workflow_id", json!("workflow-1")),
-            ("workflow_task_id", json!("")),
-        ]),
-    ] {
-        let res = CheckWorkflowStatus::new(None)
-            .execute(&input, &ctx)
-            .await
-            .expect("ok");
-        assert!(res.is_error);
-        assert!(res.output.contains("workflow"), "{}", res.output);
-    }
+    let check = CheckWorkflowStatus::new(None)
+        .execute(&obj(&[("workflow_id", json!(""))]), &ctx)
+        .await
+        .expect("ok");
+    assert!(check.is_error);
+    assert!(check.output.contains("workflow_id"), "{}", check.output);
 
     let cancel = CancelWorkflow::new(None)
-        .execute(&obj(&[("workflow_task_id", json!(""))]), &ctx)
+        .execute(&obj(&[("workflow_id", json!(""))]), &ctx)
         .await
         .expect("ok");
     assert!(cancel.is_error);
-    assert!(cancel.output.contains("workflow_task_id"));
+    assert!(cancel.output.contains("workflow_id"));
 }

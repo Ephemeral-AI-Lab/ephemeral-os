@@ -8,6 +8,8 @@ use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use eos_types::{StartWorkflowRequest, WorkflowApi};
+
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
@@ -17,7 +19,7 @@ use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
-use crate::{StartWorkflowRequest, WorkflowServicePort, WorkflowToolService};
+use crate::WorkflowToolService;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct DelegateWorkflowInput {
@@ -25,13 +27,13 @@ struct DelegateWorkflowInput {
 }
 
 pub(in crate::tools::workflow) struct DelegateWorkflow {
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
     workflow_sessions: Option<WorkflowToolService>,
 }
 
 impl DelegateWorkflow {
     pub(in crate::tools::workflow) fn new(
-        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+        workflow_service: Option<Arc<dyn WorkflowApi>>,
         workflow_sessions: Option<WorkflowToolService>,
     ) -> Self {
         Self {
@@ -71,7 +73,6 @@ impl ToolExecutor for DelegateWorkflow {
             .await?;
         if let Some(existing) = outstanding.first() {
             let payload = json!({
-                "workflow_task_id": existing.workflow_task_id.as_str(),
                 "workflow_id": existing.workflow_id.as_str(),
                 "status": "running",
                 "message": "A delegated workflow is already outstanding for this task. \
@@ -89,21 +90,16 @@ impl ToolExecutor for DelegateWorkflow {
             .await?;
         sessions.register_background_session(&started).await?;
         let payload = json!({
-            "workflow_task_id": started.workflow_task_id.as_str(),
             "workflow_id": started.workflow_id.as_str(),
             "status": "running",
             "message": format!(
                 "Started delegated workflow {}. Use check_workflow_status to inspect progress \
                  or cancel_workflow to stop it.",
-                started.workflow_task_id
+                started.workflow_id
             ),
         });
         let metadata: JsonObject = [
             ("submission_kind".to_owned(), json!("workflow_delegated")),
-            (
-                "workflow_task_id".to_owned(),
-                json!(started.workflow_task_id.as_str()),
-            ),
             (
                 "workflow_id".to_owned(),
                 json!(started.workflow_id.as_str()),
@@ -119,7 +115,7 @@ impl ToolExecutor for DelegateWorkflow {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
     workflow_sessions: Option<WorkflowToolService>,
 ) {
     let delegate = config.get(ToolName::DelegateWorkflow);

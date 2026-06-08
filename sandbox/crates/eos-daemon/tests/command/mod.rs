@@ -167,7 +167,6 @@ fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandSessionCom
         command_session_id: id.to_owned(),
         caller_id: caller_id.to_owned(),
         command: "test".to_owned(),
-        result: result.clone(),
-        notification_result: result,
+        result,
     }
 }

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_types::{JsonObject, WorkflowSessionId};
+use eos_types::{JsonObject, WorkflowApi, WorkflowId};
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
@@ -16,24 +16,23 @@ use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
-use crate::WorkflowServicePort;
 
 use super::lib::empty_workflow_id_error;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct CancelWorkflowInput {
-    workflow_task_id: WorkflowSessionId,
+    workflow_id: WorkflowId,
     #[serde(default)]
     reason: String,
 }
 
 pub(in crate::tools::workflow) struct CancelWorkflow {
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
 }
 
 impl CancelWorkflow {
     pub(in crate::tools::workflow) fn new(
-        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+        workflow_service: Option<Arc<dyn WorkflowApi>>,
     ) -> Self {
         Self { workflow_service }
     }
@@ -50,17 +49,17 @@ impl ToolExecutor for CancelWorkflow {
             Ok(v) => v,
             Err(err) => return Ok(err),
         };
-        if parsed.workflow_task_id.as_str().is_empty() {
+        if parsed.workflow_id.as_str().is_empty() {
             return Ok(empty_workflow_id_error(
                 ToolName::CancelWorkflow,
-                "workflow_task_id",
+                "workflow_id",
             ));
         }
         let output = self
             .workflow_service
             .as_deref()
             .ok_or(ToolError::MissingPort("workflow_service"))?
-            .cancel_workflow_session(&parsed.workflow_task_id, &parsed.reason)
+            .cancel_workflow(&parsed.workflow_id, &parsed.reason)
             .await?;
         Ok(ToolResult::ok(output))
     }
@@ -69,7 +68,7 @@ impl ToolExecutor for CancelWorkflow {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
 ) {
     let cancel = config.get(ToolName::CancelWorkflow);
     super::super::register_tool(

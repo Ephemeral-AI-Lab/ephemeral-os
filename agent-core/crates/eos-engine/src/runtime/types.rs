@@ -10,10 +10,10 @@ use eos_llm_client::{LlmClient, Message};
 use eos_tools::{
     AttemptSubmissionService, CommandSessionToolService, ExecutionMetadata, RootSubmissionService,
     SandboxToolService, SkillToolService, SubagentToolService, ToolConfigSet, ToolRegistry,
-    ToolResult, WorkflowServicePort, WorkflowToolService,
+    ToolResult, WorkflowToolService,
 };
 use eos_types::AgentRunStore;
-use eos_types::{AgentRunId, TaskId};
+use eos_types::{AgentRunId, TaskId, WorkflowApi};
 
 use crate::background::BackgroundTeardownService;
 use crate::notifications::NotificationService;
@@ -158,7 +158,7 @@ pub struct AgentToolRegistryServices {
     /// Subagent background-session service for this run.
     pub subagent_sessions: Option<SubagentToolService>,
     /// Workflow service for workflow tools and workflow-state hooks.
-    pub workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    pub workflow_service: Option<Arc<dyn WorkflowApi>>,
     /// Workflow background-session tracking service for this run.
     pub workflow_sessions: Option<WorkflowToolService>,
     /// Command-session background tracking service for shell tools.

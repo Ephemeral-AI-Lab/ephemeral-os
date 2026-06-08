@@ -16,7 +16,7 @@ use eos_command_session::process::spawn_current_exe_ns_runner;
 use eos_command_session::{
     wait_for_yield, CancelCommandSession, CollectCompleted, CollectCompletedResponse,
     CommandResponse, CommandSession, CommandSessionCompletion, CommandSessionConfig,
-    CommandSessionError, CommandSessionSpec, ReadCommandProgress, ReapedCommand,
+    CommandSessionError, CommandSessionSpec, KillReason, ReadCommandProgress, ReapedCommand,
     RunningCommandSessionParts, StartCommandSession, WaitOutcome, WriteStdin,
 };
 use eos_ephemeral_workspace::{
@@ -373,21 +373,53 @@ impl WorkspaceRunManager {
         for run in pending {
             if let Some(reaped) = run.session().reap() {
                 let _ = self.finish_reaped(run, reaped, false);
+            } else {
+                // The kill could not reap the child within grace (e.g. an
+                // uninterruptible D-state task). Teardown must NOT depend on a
+                // successful reap (spec §3.3): force the run out of the registry
+                // and release its overlay lease + dirs, or a stuck process would
+                // leak the snapshot lease the whole-sandbox assert-no-leases gate
+                // checks. Never publishes — this is the discard branch.
+                self.force_discard(&run);
             }
         }
         runs.len()
     }
 
+    /// Reap-independent teardown for a run the cancel grace could not reap.
+    /// Releases an ephemeral run's overlay lease + dirs (best-effort: a still-live
+    /// process may leave its dirs for the orphan reaper, but the lease is freed);
+    /// an isolated session only needs its registry entry dropped, since the
+    /// namespace + lease are torn down by `exit_isolated`.
+    fn force_discard(&self, run: &Arc<WorkspaceRun>) {
+        if self.registry.remove(run.session().id()).is_none() {
+            // A concurrent reap already finalized + discarded it.
+            return;
+        }
+        if let WorkspaceRun::Ephemeral(ephemeral) = &**run {
+            discard_ephemeral_command(&ephemeral.workspace.dirs);
+            release_lease(
+                &ephemeral.workspace.layer_stack_root.0,
+                &ephemeral.workspace.snapshot.lease_id,
+            );
+        }
+    }
+
     /// Periodic reaper: enforce the per-session timeout backstop and finalize any
     /// session whose child has exited without a live poller, parking the
     /// completion for the heartbeat.
+    ///
+    /// A past-deadline session is killed as a **timeout** (not a user cancel), so
+    /// its completion is still parked — a fire-and-forget session that hits its
+    /// timeout must reach the heartbeat, or its agent-core background session is
+    /// stuck Running forever. Only a caller-initiated cancel parks nothing.
     pub fn sweep_expired(&self, now: Instant) {
         for run in self.registry.live() {
             if run.session().is_past_deadline(now, self.config.max_session_s) {
-                run.session().cancel_process();
+                run.session().time_out_process();
             }
             if let Some(reaped) = run.session().reap() {
-                let publish_completion = !reaped.cancelled;
+                let publish_completion = reaped.kill != Some(KillReason::Cancelled);
                 let _ = self.finish_reaped(run, reaped, publish_completion);
             }
         }
@@ -412,7 +444,9 @@ impl WorkspaceRunManager {
             stderr: String::new(),
             command_session_id: Some(run.session().id().to_owned()),
         };
-        self.finalize_run(run, request, reaped.cancelled, publish_completion)
+        // A kill of EITHER reason (cancel or timeout) DISCARDS — only a natural
+        // exit (`kill == None`) takes the publish branch in `settle_*`.
+        self.finalize_run(run, request, reaped.kill.is_some(), publish_completion)
     }
 
     fn finalize_run(
@@ -436,13 +470,11 @@ impl WorkspaceRunManager {
         let command = run.session().command().to_owned();
         self.registry.remove(&command_session_id);
         if publish_completion {
-            let notification_result = response.clone();
             self.registry.push_completed(CommandSessionCompletion {
                 command_session_id,
                 caller_id,
                 command,
                 result: response.clone(),
-                notification_result,
             });
         }
         response

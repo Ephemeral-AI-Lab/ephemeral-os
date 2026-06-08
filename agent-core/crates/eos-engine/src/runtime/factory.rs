@@ -13,7 +13,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tools::WorkflowServicePort;
+use eos_types::WorkflowApi;
 use eos_types::{AgentRunId, TaskId};
 
 use crate::background::BackgroundManagers;
@@ -30,7 +30,7 @@ pub struct AgentRunControlFactory {
     handles: EngineRunHandles,
     command_service: Arc<dyn SandboxCommandApi>,
     completion_poll_interval: Duration,
-    workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
+    workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
 }
 
 impl std::fmt::Debug for AgentRunControlFactory {
@@ -49,7 +49,7 @@ impl AgentRunControlFactory {
         handles: EngineRunHandles,
         command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
-        workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
+        workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     ) -> Self {
         Self {
             foreground,

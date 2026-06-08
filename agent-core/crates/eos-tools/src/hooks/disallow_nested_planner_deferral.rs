@@ -54,45 +54,41 @@ mod tests {
 
     use super::*;
     use crate::support::metadata;
-    use crate::{
-        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
-        WorkflowServicePort,
+    use eos_types::{
+        AgentRunId, OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TaskId,
+        TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowId,
     };
-    use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
     struct FixedDepth(u32);
-    impl Sealed for FixedDepth {}
 
     #[async_trait]
-    impl WorkflowServicePort for FixedDepth {
+    impl WorkflowApi for FixedDepth {
         async fn start_workflow(
             &self,
             _: StartWorkflowRequest,
-        ) -> Result<StartedWorkflow, ToolError> {
+        ) -> Result<StartedWorkflow, WorkflowApiError> {
             unreachable!("depth hook never starts workflows")
         }
 
         async fn check_workflow_status(
             &self,
             _: &WorkflowId,
-            _: Option<&WorkflowSessionId>,
-        ) -> Result<String, ToolError> {
+        ) -> Result<String, WorkflowApiError> {
             unreachable!("depth hook never reads status")
         }
 
-        async fn cancel_workflow_session(
+        async fn cancel_workflow(
             &self,
-            _: &WorkflowSessionId,
+            _: &WorkflowId,
             _: &str,
-        ) -> Result<String, ToolError> {
+        ) -> Result<String, WorkflowApiError> {
             unreachable!("depth hook never cancels workflows")
         }
 
         async fn poll_terminal_workflow(
             &self,
             _: &WorkflowId,
-            _: &WorkflowSessionId,
-        ) -> Result<Option<TerminalWorkflow>, ToolError> {
+        ) -> Result<Option<TerminalWorkflow>, WorkflowApiError> {
             unreachable!("depth hook never polls workflows")
         }
 
@@ -100,11 +96,11 @@ mod tests {
             &self,
             _: &TaskId,
             _: &AgentRunId,
-        ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+        ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
             unreachable!("depth hook never checks outstanding workflows")
         }
 
-        async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, ToolError> {
+        async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, WorkflowApiError> {
             Ok(self.0)
         }
     }

@@ -59,6 +59,18 @@ pub enum ProcessReap {
     Exited(CommandProcessExit),
 }
 
+/// Why the substrate killed a command session's process group. The owning run
+/// maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →
+/// "timed_out"/124 — and either reason DISCARDS the overlay (a killed command
+/// never OCC-merges).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KillReason {
+    /// A caller asked to cancel (Ctrl-C/Ctrl-D, the cancel op, or run teardown).
+    Cancelled,
+    /// The session exceeded its deadline and the reaper killed it as a backstop.
+    TimedOut,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandCompletionStatus {
     status: String,
@@ -70,7 +82,7 @@ impl CommandCompletionStatus {
     pub fn from_process_and_runner(
         process_exit: CommandProcessExit,
         runner: Option<&CommandRunnerResult>,
-        cancelled: bool,
+        kill: Option<KillReason>,
     ) -> Self {
         let mut exit_code = runner
             .map(CommandRunnerResult::exit_code)
@@ -80,9 +92,16 @@ impl CommandCompletionStatus {
             .and_then(CommandRunnerResult::status)
             .unwrap_or("error")
             .to_owned();
-        if cancelled {
-            status = "cancelled".to_owned();
-            exit_code = 130;
+        match kill {
+            Some(KillReason::Cancelled) => {
+                status = "cancelled".to_owned();
+                exit_code = 130;
+            }
+            Some(KillReason::TimedOut) => {
+                status = "timed_out".to_owned();
+                exit_code = 124;
+            }
+            None => {}
         }
         Self { status, exit_code }
     }
@@ -359,4 +378,42 @@ fn stdin_backpressure() -> io::Error {
         io::ErrorKind::WouldBlock,
         "stdin_backpressure: command is not draining its stdin",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn runner_ok() -> Option<CommandRunnerResult> {
+        CommandRunnerResult::from_value(json!({"exit_code": 0, "tool_result": {"status": "ok"}}))
+    }
+
+    #[test]
+    fn kill_reason_maps_to_terminal_status() {
+        let exit = CommandProcessExit::unwaitable();
+        let runner = runner_ok();
+
+        // Natural exit (`None`): the runner's own status is preserved.
+        let ok = CommandCompletionStatus::from_process_and_runner(exit, runner.as_ref(), None);
+        assert_eq!((ok.status(), ok.exit_code()), ("ok", 0));
+
+        // A user cancel overrides the runner result with cancelled/130.
+        let cancelled = CommandCompletionStatus::from_process_and_runner(
+            exit,
+            runner.as_ref(),
+            Some(KillReason::Cancelled),
+        );
+        assert_eq!((cancelled.status(), cancelled.exit_code()), ("cancelled", 130));
+
+        // A deadline timeout is distinct: timed_out/124, so the parked completion
+        // tells the agent the command timed out rather than was cancelled.
+        let timed_out = CommandCompletionStatus::from_process_and_runner(
+            exit,
+            runner.as_ref(),
+            Some(KillReason::TimedOut),
+        );
+        assert_eq!((timed_out.status(), timed_out.exit_code()), ("timed_out", 124));
+    }
 }

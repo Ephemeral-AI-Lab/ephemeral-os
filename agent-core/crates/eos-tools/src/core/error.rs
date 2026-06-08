@@ -32,3 +32,12 @@ pub enum ToolError {
     #[error("internal tool error: {0}")]
     Internal(String),
 }
+
+impl From<eos_types::WorkflowApiError> for ToolError {
+    fn from(err: eos_types::WorkflowApiError) -> Self {
+        match err {
+            eos_types::WorkflowApiError::Store(err) => Self::Store(err),
+            other => Self::Internal(other.to_string()),
+        }
+    }
+}

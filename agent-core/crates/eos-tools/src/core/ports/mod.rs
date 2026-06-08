@@ -8,14 +8,8 @@ use eos_types::{GeneratorSubmission, PlanDisposition, PlanNodeId, ReducerSubmiss
 
 /// Agent-run transition contracts.
 pub mod agent_run;
-/// Sandbox command transition contracts.
-pub mod command;
-/// Workflow transition contracts.
-pub mod workflow;
 
 pub use agent_run::*;
-pub use command::*;
-pub use workflow::*;
 
 /// Friend-seal for agent-core contract traits.
 #[doc(hidden)]

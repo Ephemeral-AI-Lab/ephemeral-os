@@ -722,7 +722,7 @@ fn control_factory_for(handles: EngineRunHandles) -> AgentRunControlFactory {
         handles,
         Arc::new(SandboxCommandService::new(Arc::new(FakeTransport))),
         std::time::Duration::from_secs(3600),
-        Arc::new(std::sync::OnceLock::<Arc<dyn eos_tools::WorkflowServicePort>>::new()),
+        Arc::new(std::sync::OnceLock::<Arc<dyn eos_types::WorkflowApi>>::new()),
     )
 }
 

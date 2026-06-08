@@ -51,50 +51,48 @@ impl WorkspaceRun {
     }
 }
 
-/// A caller's workspace runs. The XOR — many ephemeral workspaces (each one
-/// session) **or** the one isolated workspace (many sessions) — is enforced by
-/// the isolated enter/exit gate and encoded structurally here.
-enum CallerRun {
-    Ephemeral(HashMap<String, Arc<WorkspaceRun>>),
-    Isolated(HashMap<String, Arc<WorkspaceRun>>),
-}
+/// A caller's command-session runs, keyed by command-session id. A caller holds
+/// many ephemeral workspace runs (each one session) **or** its one isolated run's
+/// many sessions; the ephemeral-vs-isolated XOR is enforced by the isolated
+/// enter/exit gate, not here. Each [`WorkspaceRun`] is self-describing
+/// (`Ephemeral`/`Isolated`), so cancel/settle dispatch on the run, and the
+/// registry needs no per-caller variant tag — one map holds whichever kind the
+/// caller currently runs.
+#[derive(Default)]
+struct CallerRuns(HashMap<String, Arc<WorkspaceRun>>);
 
-impl CallerRun {
+impl CallerRuns {
     fn sessions(&self) -> Vec<Arc<WorkspaceRun>> {
-        match self {
-            Self::Ephemeral(runs) | Self::Isolated(runs) => runs.values().cloned().collect(),
-        }
+        self.0.values().cloned().collect()
     }
 
     fn get(&self, session_id: &str) -> Option<Arc<WorkspaceRun>> {
-        match self {
-            Self::Ephemeral(runs) | Self::Isolated(runs) => runs.get(session_id).cloned(),
-        }
+        self.0.get(session_id).cloned()
     }
 
     fn count(&self) -> usize {
-        match self {
-            Self::Ephemeral(runs) | Self::Isolated(runs) => runs.len(),
-        }
+        self.0.len()
     }
 
-    /// Remove `session_id`, returning the removed run and whether this caller
-    /// run is now empty (so the registry can drop the caller entry).
+    fn insert(&mut self, session_id: String, run: Arc<WorkspaceRun>) {
+        self.0.insert(session_id, run);
+    }
+
+    /// Remove `session_id`, returning the removed run and whether this caller is
+    /// now empty (so the registry can drop the caller entry).
     fn take(&mut self, session_id: &str) -> (Option<Arc<WorkspaceRun>>, bool) {
-        match self {
-            Self::Ephemeral(runs) | Self::Isolated(runs) => {
-                let removed = runs.remove(session_id);
-                (removed, runs.is_empty())
-            }
-        }
+        let removed = self.0.remove(session_id);
+        (removed, self.0.is_empty())
     }
 }
 
-/// Hard cap on parked (completed-but-uncollected) sessions. A caller that never
-/// calls `collect_completed` would otherwise grow this map without bound; on
-/// overflow the oldest uncollected completion is dropped. Silently losing a stale
-/// completion is acceptable at a backstop this high — normal callers collect
-/// promptly and never approach it.
+/// Hard cap on parked (completed-but-uncollected) sessions across **all** callers
+/// — the completion queue is one daemon-global map, not per caller. A caller that
+/// never calls `collect_completed` would otherwise grow it without bound; on
+/// overflow the oldest uncollected completion is dropped (silently — the daemon
+/// has no log surface). The cap is high enough that normal callers, which the
+/// heartbeat drains every tick, never approach it; the accepted residual is that
+/// one caller bursting past the cap could evict another caller's stale completion.
 const MAX_COMPLETED_ENTRIES: usize = 1024;
 
 struct CompletedEntry {
@@ -103,12 +101,12 @@ struct CompletedEntry {
 }
 
 /// Single caller-keyed command-session authority. Each caller maps to its
-/// `CallerRun` (many ephemeral workspace runs or the one isolated run).
-/// Session-targeted ops resolve by scanning runs for the session id (caller count
-/// is small).
+/// [`CallerRuns`] (many ephemeral workspace runs or the one isolated run's
+/// sessions). Session-targeted ops resolve by scanning runs for the session id
+/// (caller count is small).
 #[derive(Default)]
 pub(crate) struct WorkspaceRunRegistry {
-    runs: Mutex<HashMap<String, CallerRun>>,
+    runs: Mutex<HashMap<String, CallerRuns>>,
     completed: Mutex<HashMap<String, CompletedEntry>>,
     counter: AtomicU64,
     completed_seq: AtomicU64,
@@ -130,30 +128,15 @@ impl WorkspaceRunRegistry {
         format!("cmd_{}", self.counter.fetch_add(1, Ordering::Relaxed))
     }
 
-    /// Place a started run into its caller's runs, keyed by the run's own kind: a
-    /// fresh ephemeral workspace run, or a session of the caller's isolated run.
+    /// File a started run under its caller, keyed by command-session id. Total by
+    /// construction — a freshly spawned run is never silently dropped.
     pub(crate) fn insert(&self, run: Arc<WorkspaceRun>) {
         let caller_id = run.session().caller_id().to_owned();
         let session_id = run.session().id().to_owned();
-        let mut runs = lock(&self.runs);
-        match &*run {
-            WorkspaceRun::Ephemeral(_) => {
-                if let CallerRun::Ephemeral(ephemeral) = runs
-                    .entry(caller_id)
-                    .or_insert_with(|| CallerRun::Ephemeral(HashMap::new()))
-                {
-                    ephemeral.insert(session_id, run);
-                }
-            }
-            WorkspaceRun::Isolated(_) => {
-                if let CallerRun::Isolated(isolated) = runs
-                    .entry(caller_id)
-                    .or_insert_with(|| CallerRun::Isolated(HashMap::new()))
-                {
-                    isolated.insert(session_id, run);
-                }
-            }
-        }
+        lock(&self.runs)
+            .entry(caller_id)
+            .or_default()
+            .insert(session_id, run);
     }
 
     #[must_use]
@@ -181,8 +164,8 @@ impl WorkspaceRunRegistry {
     pub(crate) fn count_by_caller(&self, caller_id: Option<&str>) -> usize {
         let runs = lock(&self.runs);
         match caller_id {
-            Some(caller) => runs.get(caller).map_or(0, CallerRun::count),
-            None => runs.values().map(CallerRun::count).sum(),
+            Some(caller) => runs.get(caller).map_or(0, CallerRuns::count),
+            None => runs.values().map(CallerRuns::count).sum(),
         }
     }
 
@@ -190,7 +173,7 @@ impl WorkspaceRunRegistry {
     pub(crate) fn live(&self) -> Vec<Arc<WorkspaceRun>> {
         lock(&self.runs)
             .values()
-            .flat_map(CallerRun::sessions)
+            .flat_map(CallerRuns::sessions)
             .collect()
     }
 
@@ -199,7 +182,7 @@ impl WorkspaceRunRegistry {
     pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<WorkspaceRun>> {
         lock(&self.runs)
             .get(caller_id)
-            .map(CallerRun::sessions)
+            .map(CallerRuns::sessions)
             .unwrap_or_default()
     }
 
@@ -257,11 +240,7 @@ impl WorkspaceRunRegistry {
         let completions = matched
             .iter()
             .filter_map(|id| completed.remove(id))
-            .map(|entry| {
-                let mut completion = entry.completion;
-                completion.result = completion.notification_result.clone();
-                completion
-            })
+            .map(|entry| entry.completion)
             .collect();
         CollectCompletedResponse {
             success: true,
@@ -281,13 +260,11 @@ mod tests {
     use super::*;
 
     fn sample_completion(id: &str) -> CommandSessionCompletion {
-        let result = CommandResponse::error("");
         CommandSessionCompletion {
             command_session_id: id.to_owned(),
             caller_id: "caller".to_owned(),
             command: "cmd".to_owned(),
-            result: result.clone(),
-            notification_result: result,
+            result: CommandResponse::error(""),
         }
     }
 

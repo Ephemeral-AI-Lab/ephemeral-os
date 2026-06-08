@@ -34,6 +34,8 @@ pub use response::{CollectCompletedResponse, CommandResponse, CommandSessionComp
 pub use session::{CommandSession, CommandSessionSpec};
 
 #[cfg(target_os = "linux")]
+pub use process::KillReason;
+#[cfg(target_os = "linux")]
 pub use session::{ReapedCommand, RunningCommandSessionParts};
 #[cfg(target_os = "linux")]
 pub use wait::{wait_for_yield, CommandSessionWaitTarget, WaitOutcome};

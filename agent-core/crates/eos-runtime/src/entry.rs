@@ -19,13 +19,13 @@ use eos_engine::{
 };
 use eos_llm_client::Message;
 use eos_sandbox_port::SandboxCommandService;
-use eos_tools::{AttemptSubmissionPort, CancelPort, WorkflowServicePort};
-use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
+use eos_tools::{AttemptSubmissionPort, CancelPort};
+use eos_types::{AgentRunId, JsonObject, RequestId, TaskId, WorkflowApi};
 use eos_types::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_workflow::{
     AgentEntryComposer, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
     AttemptSubmissionAdapter, ContextEngine, ContextEngineDeps, OpenIterationCoordinatorRegistry,
-    WorkflowLifecycleConfig, WorkflowServiceAdapter, WorkflowStarter,
+    WorkflowLifecycleConfig, WorkflowService, WorkflowStarter,
 };
 use serde_json::json;
 
@@ -104,8 +104,7 @@ pub async fn run_request(
     // GUARDRAIL: workflow service construction closes over the starter/control
     // adapter built below, while the runner/control factory need a handle up
     // front. The cell is set before any root or workflow agent starts.
-    let workflow_service_cell: Arc<OnceLock<Arc<dyn WorkflowServicePort>>> =
-        Arc::new(OnceLock::new());
+    let workflow_service_cell: Arc<OnceLock<Arc<dyn WorkflowApi>>> = Arc::new(OnceLock::new());
     // Per-agent-run runtime. The request owns only the shared, immutable factory
     // and the live-run registry — never per-agent mutable state. Each
     // root/workflow/subagent run mints one fresh `AgentRunControl` (its own
@@ -177,7 +176,7 @@ pub async fn run_request(
     let _cancel_guard = services
         .cancel_registry
         .register(request_id.clone(), cancel_port.clone());
-    let workflow_service: Arc<dyn WorkflowServicePort> = Arc::new(WorkflowServiceAdapter::new(
+    let workflow_service: Arc<dyn WorkflowApi> = Arc::new(WorkflowService::new(
         starter,
         services.db.workflow_store.clone(),
         services.db.iteration_store.clone(),

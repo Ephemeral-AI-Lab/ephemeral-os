@@ -35,9 +35,8 @@ pub use core::metadata::ExecutionMetadata;
 pub use core::name::{ToolKey, ToolName};
 pub use core::ports::{
     AttemptSubmissionPort, BackgroundSessionCounts, CancelPort, CancelableResource,
-    CommandServicePort, NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan,
-    Sealed, StartWorkflowRequest, StartedWorkflow, SubagentLaunchRejection, SubagentSessionStatus,
-    SubmissionAck, SystemNotification, TerminalWorkflow, WorkflowServicePort,
+    NotificationSink, PlanReducer, PlanTask, PlannerPlan, Sealed, SubagentLaunchRejection,
+    SubagentSessionStatus, SubmissionAck, SystemNotification,
 };
 pub use core::result::{OutputShape, ToolResult};
 pub use hooks::{Hook, HookDenial, HookOutcome};

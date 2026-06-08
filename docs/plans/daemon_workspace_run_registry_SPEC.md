@@ -1,6 +1,6 @@
 # Daemon Workspace-Run Registry — Migration SPEC
 
-Status: complete — Phases 1–8 landed. Phase 8 was completed via the full §3.4 migration (not the earlier re-keyed-in-place divergence): the caller-keyed registry + manager were relocated from `eos-command-session` into `eos-daemon/src/services/workspace_run/`, `CommandSession` was reduced to a pure PTY substrate (`reap`/`persist_final`, no policy) with the publish-vs-discard decision lifted into the daemon-side run, `command_session/` + `isolated_workspace/` were merged under `services/workspace_run/`, and `OnceLock<CommandSessionManager>` became the daemon-owned `OnceLock<WorkspaceRunManager>`. Wire-op strings and the `cancel_workspace_runs[_by_caller_id]` coordinator are unchanged. (See Progress tracker below.)
+Status: complete — Phases 1–8 landed. Phase 8 was completed via the full §3.4 migration (not the earlier re-keyed-in-place divergence): the caller-keyed registry + manager were relocated from `eos-command-session` into `eos-daemon/src/services/workspace_run/`, `CommandSession` was reduced to a pure PTY substrate (`reap`/`persist_final`, no policy) with the publish-vs-discard decision lifted into the daemon-side run, `command_session/` + `isolated_workspace/` were merged under `services/workspace_run/`, and `OnceLock<CommandSessionManager>` became the daemon-owned `OnceLock<WorkspaceRunManager>`. Wire-op strings and the `cancel_workspace_runs[_by_caller_id]` coordinator are unchanged. (See Progress tracker below.) A post-landing audit hardened five gaps — most notably a silent timeout-completion loss and a cancel lease leak — and recorded the real spec-vs-impl divergences; see **§10**.
 Owner: sandbox (daemon substrate)
 Scope: `sandbox/crates/eos-daemon`, `eos-command-session`,
 `eos-ephemeral-workspace`, `eos-isolated-workspace`, `eos-workspace-api`
@@ -535,3 +535,55 @@ LAYER 2 — sandbox stage, per request       (backend_server_cancellation_wiring
   isolated sessions without tearing down the persistent isolated run.
 - **Service merge churn.** Merging `command_session/` + `isolated_workspace/` into
   `workspace_run/` is sizable; the shim option (phase 8) de-risks it.
+
+## 10. Post-landing audit & hardening (2026-06-08)
+
+A read-only audit (parallel subagents + adversarial invariant traces) verified the
+landed migration against §3/§6/§7 and then hardened five gaps. The core model holds:
+`CommandSession` is substrate-only (`reap → ReapedCommand`, no policy), the daemon owns
+the caller-keyed registry, cancel routes structurally to discard, and agent-core drives
+`api.v1.cancel_workspace_runs_by_caller_id`. The §3.2/§3.4 struct/layout and the Phase-1
+`Lifecycle` value object never matched the prose (acknowledged below); they are harmless.
+
+### Verified invariants (unchanged code)
+
+- **Cancel never OCC-publishes** (§3.3/§6): every reap→settle path keys discard on the
+  kill flag; `settle_isolated` is audit-only; start-time failures release lease + dirs
+  without publishing. Confirmed by E2E `cancel_workspace_runs_by_caller_id_discards_overlay_writes`.
+- **Caller-keyed XOR + central reaper + completion drain + agent-core wiring**: hold.
+
+### Gaps fixed
+
+| # | Severity | Gap | Fix |
+|---|---|---|---|
+| F1 | high | Per-caller/whole-sandbox cancel only removed a run when `reap()` succeeded, so a child the grace could not reap (SIGKILL-immune D-state) leaked its `CallerRun` entry **and** its snapshot lease — defeating the Layer-2 assert-no-leases gate (§3.3 mandates unconditional removal). | `manager.rs`: added `force_discard` — after the drain, un-reaped runs are removed from the registry and (ephemeral) their lease + dirs released, reap-independently. Best-effort dirs (orphan-reaper backstop); the lease is the gate-relevant resource. |
+| F2 | medium | `CallerRun` was a degenerate enum whose two arms were identical maps; `insert` silently **dropped** a freshly spawned PTY on a (post-F1-impossible) variant mismatch — orphaning the process. | Collapsed `CallerRun` → a `CallerRuns(HashMap)` newtype; `insert` is now total. Net-negative, removes the bug class (XOR stays enforced by the enter gate; each `WorkspaceRun` is self-describing). |
+| F3 | high | `sweep_expired` killed a past-deadline session via `cancel_process` (cancel flag) → `publish_completion = !cancelled` → **no completion parked**. A fire-and-forget command that hit its timeout was removed silently, leaving its agent-core background session stuck `Running` forever; a `bool` could not distinguish a timeout kill from a user cancel across sweep ticks. | Replaced `CommandSession.cancelled: bool` with `kill: Option<KillReason>` (`Cancelled` → "cancelled"/130, `TimedOut` → "timed_out"/124). New `time_out_process` records `TimedOut` (a user cancel still wins). The sweep now parks a completion unless the kill was a user cancel; discard stays keyed on `kill.is_some()` (both reasons discard — cancel-never-publishes preserved). No kill-*timing* change. New host-runnable unit test locks the status mapping. |
+| F4 | low | `CommandSessionCompletion.notification_result` + the `result = notification_result` swap were dead surface — every producer wrote it equal to `result`, no consumer (agent-core or wire client) read it; a latent footgun if they ever diverged. | Removed the field, the swap, and its wire serialization across all producers. Confirmed by E2E `collect_completed_drains`. |
+| F5 | low | The completed-queue eviction comment under-described the daemon-global (cross-caller), silent drop. | Comment now explicitly owns the cross-caller eviction; no log line added (eos-daemon has no log surface — matching existing style over adding a `tracing` dep). |
+
+### Verification
+
+musl `cargo check --all-targets` + `clippy -D warnings` clean (the Linux-gated floor;
+macOS does not compile the core). Host unit tests pass. E2E against a rebuilt `eosd`
+in the Docker `sweevo-dask__dask-10042` container: all **registry-correctness** tests
+pass — the three `cancel_workspace_runs*` tests, `collect_completed_drains`, `exec_timeout`,
+`session_count_accuracy`. The one failure, `ctrl_c_char_cancels_command_session`, is a
+pre-existing qemu timing flake (the cancel exceeds `cancel_wait_ms=500ms` under x86-on-arm64
+emulation and returns the inline `CommandResponse::cancelled` (`exit_code: null`) path — code
+untouched by this audit), in the documented process/signal/PTY flake set.
+
+### Acknowledged divergences (left as-is) & deferred cross-spec findings
+
+- **§3.2/§3.4 prose vs impl**: run logic lives in `manager.rs` (no `ephemeral.rs`/`isolated.rs`/
+  `completion.rs`/`ports/`); the isolated run is N single-session `IsolatedRun` entries (namespace
+  owned by `IsolatedSession`, torn down by `exit_isolated`), not one `IsolatedWorkspaceRun{sessions}`;
+  the Phase-1 `Lifecycle` value object was never created. All functionally harmless.
+- **`EphemeralSnapshot = SnapshotLease` alias** and **`PreparedCommandWorkspace.session_dir`**
+  (only a test reads it): transitional churn, left as-is (broad rename / no production cost).
+- **Deferred — agent-core delivery semantics (owned by `agent_run_local_background_supervisor_SPEC`,
+  dirty worktree)**: (1) daemon `read_progress` on a finalized session returns the terminal result
+  via a non-removing `completed_result`, so the heartbeat re-delivers it — the same completion is
+  surfaced to the model twice; (2) a per-session Ctrl-C/cancel on an already-parked session removes
+  the completion inline but the agent-core tool never flips the background session off `Running`.
+  Both fixes belong in the agent-core background supervisor, not this daemon spec.

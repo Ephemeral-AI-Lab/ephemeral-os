@@ -12,7 +12,7 @@
 use eos_tools::SystemNotification as ToolNotification;
 use eos_tools::ToolError;
 use eos_tools::ToolResult;
-use eos_types::{AgentRunId, CommandSessionId, SandboxId, WorkflowId, WorkflowSessionId};
+use eos_types::{AgentRunId, CommandSessionId, SandboxId, WorkflowId};
 use serde_json::Value;
 
 use super::background_session_manager::BackgroundSessionStatus;
@@ -32,8 +32,6 @@ pub enum BackgroundCompletion {
     },
     /// A delegated workflow reached a terminal state.
     Workflow {
-        /// Agent-facing workflow session id.
-        workflow_task_id: WorkflowSessionId,
         /// The persisted workflow id.
         workflow_id: WorkflowId,
         /// Terminal status.
@@ -57,9 +55,7 @@ impl BackgroundCompletion {
     fn event_key(&self) -> String {
         match self {
             Self::Subagent { agent_run_id, .. } => agent_run_id.as_str().to_owned(),
-            Self::Workflow {
-                workflow_task_id, ..
-            } => workflow_task_id.as_str().to_owned(),
+            Self::Workflow { workflow_id, .. } => workflow_id.as_str().to_owned(),
             Self::CommandSession {
                 command_session_id, ..
             } => command_session_id.as_str().to_owned(),
@@ -82,12 +78,10 @@ impl BackgroundCompletion {
                 result.output,
             ),
             Self::Workflow {
-                workflow_task_id,
                 workflow_id,
                 status,
             } => format!(
-                "[BACKGROUND COMPLETED] workflow_task_id={} workflow_id={} status={}",
-                workflow_task_id.as_str(),
+                "[BACKGROUND COMPLETED] workflow_id={} status={}",
                 workflow_id.as_str(),
                 status_token(*status),
             ),

@@ -9570,13 +9570,13 @@
       "path": "crates/eos-engine",
       "stats": {
         "modules": 41,
-        "items": 304,
+        "items": 303,
         "structs": 69,
         "enums": 6,
         "traits": 4,
         "functions": 129,
-        "impls": 87,
-        "fields": 298,
+        "impls": 86,
+        "fields": 295,
         "methods": 224
       },
       "modules": [
@@ -10939,7 +10939,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (agent_run_id : AgentRunId , handles : EngineRunHandles , command_service : Arc < dyn SandboxCommandApi > , completion_poll_interval : Duration , notifications : NotificationService , control_factory : AgentRunControlFactory , workflow_service : & Arc < OnceLock < Arc < dyn WorkflowServicePort > > > ,) -> Self",
+                  "signature": "pub fn new (agent_run_id : AgentRunId , handles : EngineRunHandles , command_service : Arc < dyn SandboxCommandApi > , completion_poll_interval : Duration , notifications : NotificationService , control_factory : AgentRunControlFactory , workflow_service : & Arc < OnceLock < Arc < dyn WorkflowApi > > > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
                   "line": 191
@@ -12049,7 +12049,7 @@
               "kind": "type",
               "name": "WorkflowServiceCell",
               "visibility": "pub(crate :: background)",
-              "signature": "pub(crate :: background) type WorkflowServiceCell = Arc < OnceLock < Arc < dyn WorkflowServicePort > > >",
+              "signature": "pub(crate :: background) type WorkflowServiceCell = Arc < OnceLock < Arc < dyn WorkflowApi > > >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12059,7 +12059,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 14
+              "line": 13
             },
             {
               "kind": "struct",
@@ -12067,11 +12067,6 @@
               "visibility": "pub(crate :: background)",
               "signature": "pub(crate :: background) struct WorkflowSession",
               "fields": [
-                {
-                  "name": "id",
-                  "visibility": "private",
-                  "ty": "WorkflowSessionId"
-                },
                 {
                   "name": "workflow_id",
                   "visibility": "private",
@@ -12087,7 +12082,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "One delegated workflow tracked as background work for the owning agent run.",
+              "docs": "One delegated workflow tracked as background work for the owning agent run,\nkeyed by its natural [`WorkflowId`].",
               "tags": [
                 "derive: Clone",
                 "derive: Debug",
@@ -12096,7 +12091,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 16
+              "line": 15
             },
             {
               "kind": "impl",
@@ -12108,38 +12103,38 @@
               "methods": [
                 {
                   "name": "running",
-                  "signature": "fn running (id : WorkflowSessionId , workflow_id : WorkflowId) -> Self",
+                  "signature": "fn running (workflow_id : WorkflowId) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 25
+                  "line": 24
                 },
                 {
                   "name": "workflow_id",
                   "signature": "fn workflow_id (& self) -> & WorkflowId",
                   "kind": "method",
                   "docs": null,
-                  "line": 33
+                  "line": 31
                 },
                 {
                   "name": "status",
                   "signature": "const fn status (& self) -> BackgroundSessionStatus",
                   "kind": "method",
                   "docs": null,
-                  "line": 37
+                  "line": 35
                 },
                 {
                   "name": "cancel",
                   "signature": "fn cancel (& mut self) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 41
+                  "line": 39
                 },
                 {
                   "name": "settle_running",
                   "signature": "fn settle_running (& mut self , status : BackgroundSessionStatus) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 49
+                  "line": 47
                 }
               ],
               "impl_target": "WorkflowSession",
@@ -12150,7 +12145,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 24
+              "line": 23
             },
             {
               "kind": "impl",
@@ -12165,7 +12160,7 @@
                   "signature": "fn id (& self) -> & Self :: Id",
                   "kind": "method",
                   "docs": null,
-                  "line": 61
+                  "line": 59
                 }
               ],
               "impl_target": "WorkflowSession",
@@ -12177,7 +12172,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 58
+              "line": 56
             },
             {
               "kind": "struct",
@@ -12185,11 +12180,6 @@
               "visibility": "pub(crate :: background)",
               "signature": "pub(crate :: background) struct WorkflowCompletion",
               "fields": [
-                {
-                  "name": "workflow_task_id",
-                  "visibility": "pub(super)",
-                  "ty": "WorkflowSessionId"
-                },
                 {
                   "name": "workflow_id",
                   "visibility": "pub(super)",
@@ -12212,7 +12202,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 66
+              "line": 64
             },
             {
               "kind": "struct",
@@ -12228,7 +12218,7 @@
                 {
                   "name": "sessions",
                   "visibility": "private",
-                  "ty": "Arc < Mutex < HashMap < WorkflowSessionId , WorkflowSession > > >"
+                  "ty": "Arc < Mutex < HashMap < WorkflowId , WorkflowSession > > >"
                 },
                 {
                   "name": "workflow_service",
@@ -12251,7 +12241,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 73
+              "line": 70
             },
             {
               "kind": "impl",
@@ -12266,7 +12256,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 83
+                  "line": 80
                 }
               ],
               "impl_target": "WorkflowSessionManager",
@@ -12278,7 +12268,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 82
+              "line": 79
             },
             {
               "kind": "impl",
@@ -12293,56 +12283,56 @@
                   "signature": "pub(crate :: background) fn new (agent_run_id : AgentRunId , workflow_service : WorkflowServiceCell , notification : BackgroundNotificationEmitter ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 91
+                  "line": 88
                 },
                 {
                   "name": "register_background_session",
                   "signature": "pub(crate :: background) async fn register_background_session (& self , workflow : & StartedWorkflow ,)",
                   "kind": "method",
                   "docs": null,
-                  "line": 104
+                  "line": 101
                 },
                 {
                   "name": "cancel_session",
-                  "signature": "pub(crate :: background) async fn cancel_session (& self , workflow_task_id : & WorkflowSessionId ,) -> bool",
+                  "signature": "pub(crate :: background) async fn cancel_session (& self , workflow_id : & WorkflowId) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 115
+                  "line": 109
                 },
                 {
                   "name": "cancel_background_sessions",
                   "signature": "pub(crate :: background) async fn cancel_background_sessions (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 126
+                  "line": 117
                 },
                 {
                   "name": "running_ids",
-                  "signature": "pub(super) async fn running_ids (& self) -> Vec < WorkflowSessionId >",
+                  "signature": "pub(super) async fn running_ids (& self) -> Vec < WorkflowId >",
                   "kind": "method",
                   "docs": null,
-                  "line": 146
+                  "line": 134
                 },
                 {
                   "name": "running_sessions",
                   "signature": "async fn running_sessions (& self) -> Vec < WorkflowSession >",
                   "kind": "method",
                   "docs": null,
-                  "line": 156
+                  "line": 144
                 },
                 {
                   "name": "settle_running",
-                  "signature": "async fn settle_running (& self , workflow_task_id : & WorkflowSessionId , status : BackgroundSessionStatus ,) -> Option < WorkflowCompletion >",
+                  "signature": "async fn settle_running (& self , workflow_id : & WorkflowId , status : BackgroundSessionStatus ,) -> Option < WorkflowCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 166
+                  "line": 154
                 },
                 {
                   "name": "poll_completions",
                   "signature": "pub(crate :: background) async fn poll_completions (& self) -> Vec < WorkflowCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 183
+                  "line": 170
                 }
               ],
               "impl_target": "WorkflowSessionManager",
@@ -12353,7 +12343,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 90
+              "line": 87
             },
             {
               "kind": "struct",
@@ -12375,7 +12365,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 214
+              "line": 199
             },
             {
               "kind": "impl",
@@ -12390,7 +12380,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 219
+                  "line": 204
                 }
               ],
               "impl_target": "WorkflowSessionMonitor",
@@ -12402,7 +12392,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 218
+              "line": 203
             },
             {
               "kind": "impl",
@@ -12417,7 +12407,7 @@
                   "signature": "pub(crate :: background) fn spawn (manager : WorkflowSessionManager , interval : Duration ,) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 225
+                  "line": 210
                 }
               ],
               "impl_target": "WorkflowSessionMonitor",
@@ -12428,7 +12418,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 224
+              "line": 209
             },
             {
               "kind": "impl",
@@ -12443,28 +12433,28 @@
                   "signature": "async fn insert (& self , session : Self :: Session)",
                   "kind": "method",
                   "docs": null,
-                  "line": 247
+                  "line": 232
                 },
                 {
                   "name": "count",
                   "signature": "async fn count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 254
+                  "line": 239
                 },
                 {
                   "name": "push_notification_on_completion",
                   "signature": "async fn push_notification_on_completion (& self , completion : Self :: Completion)",
                   "kind": "method",
                   "docs": null,
-                  "line": 263
+                  "line": 248
                 },
                 {
                   "name": "cancel",
                   "signature": "async fn cancel (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 274
+                  "line": 258
                 }
               ],
               "impl_target": "WorkflowSessionManager",
@@ -12477,7 +12467,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager",
-              "line": 242
+              "line": 227
             },
             {
               "kind": "struct",
@@ -12496,80 +12486,61 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager::tests",
-              "line": 298
+              "line": 280
             },
             {
               "kind": "impl",
-              "name": "impl Sealed for AlwaysSucceededService",
+              "name": "impl WorkflowApi for AlwaysSucceededService",
               "visibility": "private",
-              "signature": "impl Sealed for AlwaysSucceededService",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "AlwaysSucceededService",
-              "trait_name": "Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
-              "module": "background::background_session_manager::workflow_session_manager::tests",
-              "line": 301
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkflowServicePort for AlwaysSucceededService",
-              "visibility": "private",
-              "signature": "impl WorkflowServicePort for AlwaysSucceededService",
+              "signature": "impl WorkflowApi for AlwaysSucceededService",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "start_workflow",
-                  "signature": "async fn start_workflow (& self , _request : StartWorkflowRequest ,) -> Result < StartedWorkflow , ToolError >",
+                  "signature": "async fn start_workflow (& self , _request : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 305
+                  "line": 285
                 },
                 {
                   "name": "check_workflow_status",
-                  "signature": "async fn check_workflow_status (& self , _workflow_id : & WorkflowId , _workflow_task_id : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
+                  "signature": "async fn check_workflow_status (& self , _workflow_id : & WorkflowId ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 312
+                  "line": 292
                 },
                 {
-                  "name": "cancel_workflow_session",
-                  "signature": "async fn cancel_workflow_session (& self , _workflow_task_id : & WorkflowSessionId , _reason : & str ,) -> Result < String , ToolError >",
+                  "name": "cancel_workflow",
+                  "signature": "async fn cancel_workflow (& self , _workflow_id : & WorkflowId , _reason : & str ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 320
+                  "line": 299
                 },
                 {
                   "name": "poll_terminal_workflow",
-                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId , workflow_task_id : & WorkflowSessionId ,) -> Result < Option < TerminalWorkflow > , ToolError >",
+                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 328
+                  "line": 307
                 },
                 {
                   "name": "find_outstanding_workflows",
-                  "signature": "async fn find_outstanding_workflows (& self , _parent_task_id : & TaskId , _agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
+                  "signature": "async fn find_outstanding_workflows (& self , _parent_task_id : & TaskId , _agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 340
+                  "line": 317
                 },
                 {
                   "name": "workflow_depth",
-                  "signature": "async fn workflow_depth (& self , _workflow_id : & WorkflowId) -> Result < u32 , ToolError >",
+                  "signature": "async fn workflow_depth (& self , _workflow_id : & WorkflowId) -> Result < u32 , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 348
+                  "line": 325
                 }
               ],
               "impl_target": "AlwaysSucceededService",
-              "trait_name": "WorkflowServicePort",
+              "trait_name": "WorkflowApi",
               "docs": null,
               "tags": [
                 "async_trait",
@@ -12578,7 +12549,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager::tests",
-              "line": 303
+              "line": 283
             },
             {
               "kind": "fn",
@@ -12594,7 +12565,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager::tests",
-              "line": 353
+              "line": 330
             },
             {
               "kind": "fn",
@@ -12613,7 +12584,7 @@
               ],
               "file": "crates/eos-engine/src/background/background_session_manager/workflow_session_manager.rs",
               "module": "background::background_session_manager::workflow_session_manager::tests",
-              "line": 363
+              "line": 340
             }
           ]
         },
@@ -12656,11 +12627,6 @@
                 {
                   "name": "Workflow",
                   "fields": [
-                    {
-                      "name": "workflow_task_id",
-                      "visibility": "private",
-                      "ty": "WorkflowSessionId"
-                    },
                     {
                       "name": "workflow_id",
                       "visibility": "private",
@@ -12724,14 +12690,14 @@
                   "signature": "fn event_key (& self) -> String",
                   "kind": "method",
                   "docs": "The notification dedup/event key (the typed session id).",
-                  "line": 56
+                  "line": 54
                 },
                 {
                   "name": "render",
                   "signature": "fn render (& self) -> String",
                   "kind": "method",
                   "docs": "Render the model-visible `[BACKGROUND COMPLETED]` body. The payload names\nthe background kind and its typed session id so the model can call the\nmatching progress/check tool for details.",
-                  "line": 69
+                  "line": 65
                 }
               ],
               "impl_target": "BackgroundCompletion",
@@ -12742,7 +12708,7 @@
               ],
               "file": "crates/eos-engine/src/background/notification.rs",
               "module": "background::notification",
-              "line": 55
+              "line": 53
             },
             {
               "kind": "fn",
@@ -12758,7 +12724,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/notification.rs",
               "module": "background::notification",
-              "line": 120
+              "line": 114
             },
             {
               "kind": "struct",
@@ -12784,7 +12750,7 @@
               ],
               "file": "crates/eos-engine/src/background/notification.rs",
               "module": "background::notification",
-              "line": 130
+              "line": 124
             },
             {
               "kind": "impl",
@@ -12799,21 +12765,21 @@
                   "signature": "pub fn new (notifications : NotificationService) -> Self",
                   "kind": "constructor",
                   "docs": "Wrap the agent run's notification service.",
-                  "line": 137
+                  "line": 131
                 },
                 {
                   "name": "notifications",
                   "signature": "pub fn notifications (& self) -> NotificationService",
                   "kind": "method",
                   "docs": "The wrapped notification service (the exact run-local queue).",
-                  "line": 143
+                  "line": 137
                 },
                 {
                   "name": "emit",
                   "signature": "pub async fn emit (& self , completion : BackgroundCompletion) -> Result < () , ToolError >",
                   "kind": "method",
                   "docs": "Render and enqueue one background completion into the run's notifier.",
-                  "line": 149
+                  "line": 143
                 }
               ],
               "impl_target": "BackgroundNotificationEmitter",
@@ -12824,7 +12790,7 @@
               ],
               "file": "crates/eos-engine/src/background/notification.rs",
               "module": "background::notification",
-              "line": 136
+              "line": 130
             },
             {
               "kind": "fn",
@@ -12843,7 +12809,7 @@
               ],
               "file": "crates/eos-engine/src/background/notification.rs",
               "module": "background::notification::tests",
-              "line": 167
+              "line": 161
             }
           ]
         },
@@ -14540,7 +14506,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "private",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 },
                 {
                   "name": "event_callback",
@@ -14679,7 +14645,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "pub",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 },
                 {
                   "name": "event_callback",
@@ -15456,7 +15422,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "private",
-                  "ty": "Arc < OnceLock < Arc < dyn WorkflowServicePort > > >"
+                  "ty": "Arc < OnceLock < Arc < dyn WorkflowApi > > >"
                 }
               ],
               "variants": [],
@@ -15508,7 +15474,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (foreground : ForegroundExecutorFactory , handles : EngineRunHandles , command_service : Arc < dyn SandboxCommandApi > , completion_poll_interval : Duration , workflow_service : Arc < OnceLock < Arc < dyn WorkflowServicePort > > > ,) -> Self",
+                  "signature": "pub fn new (foreground : ForegroundExecutorFactory , handles : EngineRunHandles , command_service : Arc < dyn SandboxCommandApi > , completion_poll_interval : Duration , workflow_service : Arc < OnceLock < Arc < dyn WorkflowApi > > > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Compose the factory from the per-request foreground and background\nbuilders.",
                   "line": 44
@@ -16602,7 +16568,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "pub",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 },
                 {
                   "name": "workflow_sessions",
@@ -24417,7 +24383,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "private",
-                  "ty": "Arc < OnceLock < Arc < dyn WorkflowServicePort > > >"
+                  "ty": "Arc < OnceLock < Arc < dyn WorkflowApi > > >"
                 },
                 {
                   "name": "control_factory",
@@ -24477,7 +24443,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub(crate) fn new (services : RuntimeServices , workspace_root : impl Into < String > , attempt_submission : Arc < dyn AttemptSubmissionPort > , workflow_service : Arc < OnceLock < Arc < dyn WorkflowServicePort > > > , control_factory : Arc < AgentRunControlFactory > , agent_run_registry : AgentRunRegistry ,) -> Self",
+                  "signature": "pub(crate) fn new (services : RuntimeServices , workspace_root : impl Into < String > , attempt_submission : Arc < dyn AttemptSubmissionPort > , workflow_service : Arc < OnceLock < Arc < dyn WorkflowApi > > > , control_factory : Arc < AgentRunControlFactory > , agent_run_registry : AgentRunRegistry ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
                   "line": 60
@@ -24681,7 +24647,7 @@
               ],
               "file": "crates/eos-runtime/src/entry.rs",
               "module": "entry",
-              "line": 297
+              "line": 296
             }
           ]
         },
@@ -32429,15 +32395,15 @@
       "name": "eos-tools",
       "path": "crates/eos-tools",
       "stats": {
-        "modules": 68,
-        "items": 424,
-        "structs": 91,
+        "modules": 66,
+        "items": 417,
+        "structs": 87,
         "enums": 14,
-        "traits": 8,
+        "traits": 6,
         "functions": 207,
-        "impls": 97,
-        "fields": 246,
-        "methods": 174
+        "impls": 96,
+        "fields": 234,
+        "methods": 163
       },
       "modules": [
         {
@@ -32525,6 +32491,33 @@
               "file": "crates/eos-tools/src/core/error.rs",
               "module": "core::error",
               "line": 6
+            },
+            {
+              "kind": "impl",
+              "name": "impl From < eos_types :: WorkflowApiError > for ToolError",
+              "visibility": "private",
+              "signature": "impl From < eos_types :: WorkflowApiError > for ToolError",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "from",
+                  "signature": "fn from (err : eos_types :: WorkflowApiError) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 37
+                }
+              ],
+              "impl_target": "ToolError",
+              "trait_name": "From < eos_types :: WorkflowApiError >",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-tools/src/core/error.rs",
+              "module": "core::error",
+              "line": 36
             }
           ]
         },
@@ -33507,74 +33500,6 @@
           ]
         },
         {
-          "path": "crates/eos-tools/src/core/ports/command.rs",
-          "module": "core::ports::command",
-          "items": [
-            {
-              "kind": "trait",
-              "name": "CommandServicePort",
-              "visibility": "pub",
-              "signature": "pub trait CommandServicePort",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "exec_command",
-                  "signature": "async fn exec_command (& self , sandbox_id : & SandboxId , request : & ExecCommandRequest ,) -> Result < ExecCommandResult , ToolError >",
-                  "kind": "required",
-                  "docs": "Run or start a managed command session.",
-                  "line": 13
-                },
-                {
-                  "name": "write_stdin",
-                  "signature": "async fn write_stdin (& self , sandbox_id : & SandboxId , request : & ExecStdinRequest ,) -> Result < ExecCommandResult , ToolError >",
-                  "kind": "required",
-                  "docs": "Write stdin to an open command session.",
-                  "line": 20
-                },
-                {
-                  "name": "read_command_progress",
-                  "signature": "async fn read_command_progress (& self , sandbox_id : & SandboxId , request : & ReadCommandProgressRequest ,) -> Result < ExecCommandResult , ToolError >",
-                  "kind": "required",
-                  "docs": "Read command progress.",
-                  "line": 27
-                },
-                {
-                  "name": "cancel_command_session",
-                  "signature": "async fn cancel_command_session (& self , sandbox_id : & SandboxId , request : & CommandSessionCancelRequest ,) -> Result < ExecCommandResult , ToolError >",
-                  "kind": "required",
-                  "docs": "Cancel one command session.",
-                  "line": 34
-                },
-                {
-                  "name": "collect_completed_commands",
-                  "signature": "async fn collect_completed_commands (& self , sandbox_id : & SandboxId , caller_id : & AgentRunId , command_session_ids : & [CommandSessionId] ,) -> Result < Vec < JsonObject > , ToolError >",
-                  "kind": "required",
-                  "docs": "Collect completed background command sessions for one caller.",
-                  "line": 41
-                },
-                {
-                  "name": "cancel_commands_for_run",
-                  "signature": "async fn cancel_commands_for_run (& self , sandbox_id : & SandboxId , caller_id : & AgentRunId , reason : & str ,) -> Result < () , ToolError >",
-                  "kind": "required",
-                  "docs": "Cancel every command/workspace run owned by one caller.",
-                  "line": 49
-                }
-              ],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Resource service for sandbox command operations.",
-              "tags": [
-                "async_trait",
-                "port/service"
-              ],
-              "file": "crates/eos-tools/src/core/ports/command.rs",
-              "module": "core::ports::command",
-              "line": 10
-            }
-          ]
-        },
-        {
           "path": "crates/eos-tools/src/core/ports/mod.rs",
           "module": "core::ports",
           "items": [
@@ -33592,7 +33517,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 20
+              "line": 14
             },
             {
               "kind": "struct",
@@ -33629,7 +33554,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 24
+              "line": 18
             },
             {
               "kind": "struct",
@@ -33666,7 +33591,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 35
+              "line": 29
             },
             {
               "kind": "struct",
@@ -33718,7 +33643,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 46
+              "line": 40
             },
             {
               "kind": "enum",
@@ -33754,7 +33679,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 63
+              "line": 57
             },
             {
               "kind": "trait",
@@ -33769,21 +33694,21 @@
                   "signature": "async fn apply_plan (& self , plan : PlannerPlan) -> Result < SubmissionAck , super :: ToolError >",
                   "kind": "required",
                   "docs": "Apply a validated planner DAG.",
-                  "line": 75
+                  "line": 69
                 },
                 {
                   "name": "submit_generator",
                   "signature": "async fn submit_generator (& self , submission : GeneratorSubmission ,) -> Result < SubmissionAck , super :: ToolError >",
                   "kind": "required",
                   "docs": "Record one generator task's terminal outcome.",
-                  "line": 78
+                  "line": 72
                 },
                 {
                   "name": "apply_reducer",
                   "signature": "async fn apply_reducer (& self , submission : ReducerSubmission ,) -> Result < SubmissionAck , super :: ToolError >",
                   "kind": "required",
                   "docs": "Record one reducer task's terminal outcome.",
-                  "line": 84
+                  "line": 78
                 }
               ],
               "impl_target": null,
@@ -33795,7 +33720,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 72
+              "line": 66
             },
             {
               "kind": "struct",
@@ -33827,7 +33752,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 91
+              "line": 85
             },
             {
               "kind": "trait",
@@ -33842,7 +33767,7 @@
                   "signature": "async fn notify_system (& self , notification : SystemNotification) -> Result < () , super :: ToolError >",
                   "kind": "required",
                   "docs": "Surface one system notification.",
-                  "line": 103
+                  "line": 97
                 }
               ],
               "impl_target": null,
@@ -33853,7 +33778,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 100
+              "line": 94
             },
             {
               "kind": "trait",
@@ -33868,7 +33793,7 @@
                   "signature": "async fn teardown (& self , reason : & str) -> Result < () , super :: ToolError >",
                   "kind": "required",
                   "docs": "Tear down the spawned effect.",
-                  "line": 111
+                  "line": 105
                 }
               ],
               "impl_target": null,
@@ -33879,7 +33804,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 108
+              "line": 102
             },
             {
               "kind": "trait",
@@ -33894,14 +33819,14 @@
                   "signature": "async fn cancel_task (& self , task_id : & TaskId , reason : & str) -> Result < () , super :: ToolError >",
                   "kind": "required",
                   "docs": "Cancel a persisted task.",
-                  "line": 118
+                  "line": 112
                 },
                 {
                   "name": "cancel_agent_run",
                   "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , super :: ToolError >",
                   "kind": "required",
                   "docs": "Cancel a live agent run.",
-                  "line": 121
+                  "line": 115
                 }
               ],
               "impl_target": null,
@@ -33913,219 +33838,7 @@
               ],
               "file": "crates/eos-tools/src/core/ports/mod.rs",
               "module": "core::ports",
-              "line": 115
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-tools/src/core/ports/workflow.rs",
-          "module": "core::ports::workflow",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "StartWorkflowRequest",
-              "visibility": "pub",
-              "signature": "pub struct StartWorkflowRequest",
-              "fields": [
-                {
-                  "name": "parent_task_id",
-                  "visibility": "pub",
-                  "ty": "TaskId"
-                },
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "AgentRunId"
-                },
-                {
-                  "name": "workflow_goal",
-                  "visibility": "pub",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Request to start a delegated workflow.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "dto"
-              ],
-              "file": "crates/eos-tools/src/core/ports/workflow.rs",
-              "module": "core::ports::workflow",
-              "line": 7
-            },
-            {
-              "kind": "struct",
-              "name": "StartedWorkflow",
-              "visibility": "pub",
-              "signature": "pub struct StartedWorkflow",
-              "fields": [
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowId"
-                },
-                {
-                  "name": "workflow_task_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowSessionId"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A started delegated workflow.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-tools/src/core/ports/workflow.rs",
-              "module": "core::ports::workflow",
-              "line": 18
-            },
-            {
-              "kind": "struct",
-              "name": "TerminalWorkflow",
-              "visibility": "pub",
-              "signature": "pub struct TerminalWorkflow",
-              "fields": [
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowId"
-                },
-                {
-                  "name": "workflow_task_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowSessionId"
-                },
-                {
-                  "name": "status",
-                  "visibility": "pub",
-                  "ty": "super :: agent_run :: SubagentSessionStatus"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Terminal workflow facts.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-tools/src/core/ports/workflow.rs",
-              "module": "core::ports::workflow",
-              "line": 27
-            },
-            {
-              "kind": "trait",
-              "name": "WorkflowServicePort",
-              "visibility": "pub",
-              "signature": "pub trait WorkflowServicePort",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "start_workflow",
-                  "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> Result < StartedWorkflow , ToolError >",
-                  "kind": "required",
-                  "docs": "Start a delegated workflow.",
-                  "line": 41
-                },
-                {
-                  "name": "check_workflow_status",
-                  "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId , workflow_task_id : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
-                  "kind": "required",
-                  "docs": "Render workflow status for the model-facing check tool.",
-                  "line": 47
-                },
-                {
-                  "name": "cancel_workflow_session",
-                  "signature": "async fn cancel_workflow_session (& self , workflow_task_id : & WorkflowSessionId , reason : & str ,) -> Result < String , ToolError >",
-                  "kind": "required",
-                  "docs": "Cancel a workflow by the agent-facing background handle.",
-                  "line": 54
-                },
-                {
-                  "name": "poll_terminal_workflow",
-                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId , workflow_task_id : & WorkflowSessionId ,) -> Result < Option < TerminalWorkflow > , ToolError >",
-                  "kind": "required",
-                  "docs": "Poll terminal workflow state for background accounting.",
-                  "line": 61
-                },
-                {
-                  "name": "find_outstanding_workflows",
-                  "signature": "async fn find_outstanding_workflows (& self , parent_task_id : & TaskId , agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
-                  "kind": "required",
-                  "docs": "All workflows this parent task still has outstanding for `agent_run_id`.",
-                  "line": 68
-                },
-                {
-                  "name": "workflow_depth",
-                  "signature": "async fn workflow_depth (& self , workflow_id : & WorkflowId) -> Result < u32 , ToolError >",
-                  "kind": "required",
-                  "docs": "The delegation-ancestry depth of `workflow_id`.",
-                  "line": 75
-                }
-              ],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Resource service for workflow lifecycle operations.",
-              "tags": [
-                "async_trait",
-                "port/service"
-              ],
-              "file": "crates/eos-tools/src/core/ports/workflow.rs",
-              "module": "core::ports::workflow",
-              "line": 38
-            },
-            {
-              "kind": "struct",
-              "name": "OutstandingWorkflow",
-              "visibility": "pub",
-              "signature": "pub struct OutstandingWorkflow",
-              "fields": [
-                {
-                  "name": "workflow_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowId"
-                },
-                {
-                  "name": "workflow_task_id",
-                  "visibility": "pub",
-                  "ty": "WorkflowSessionId"
-                },
-                {
-                  "name": "workflow_goal",
-                  "visibility": "pub",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One outstanding workflow launched by a parent task.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-tools/src/core/ports/workflow.rs",
-              "module": "core::ports::workflow",
-              "line": 79
+              "line": 109
             }
           ]
         },
@@ -34564,80 +34277,61 @@
               "tags": [],
               "file": "crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs",
               "module": "hooks::disallow_nested_planner_deferral::tests",
-              "line": 63
+              "line": 62
             },
             {
               "kind": "impl",
-              "name": "impl Sealed for FixedDepth",
+              "name": "impl WorkflowApi for FixedDepth",
               "visibility": "private",
-              "signature": "impl Sealed for FixedDepth",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "FixedDepth",
-              "trait_name": "Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs",
-              "module": "hooks::disallow_nested_planner_deferral::tests",
-              "line": 64
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkflowServicePort for FixedDepth",
-              "visibility": "private",
-              "signature": "impl WorkflowServicePort for FixedDepth",
+              "signature": "impl WorkflowApi for FixedDepth",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "start_workflow",
-                  "signature": "async fn start_workflow (& self , _ : StartWorkflowRequest ,) -> Result < StartedWorkflow , ToolError >",
+                  "signature": "async fn start_workflow (& self , _ : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 68
+                  "line": 66
                 },
                 {
                   "name": "check_workflow_status",
-                  "signature": "async fn check_workflow_status (& self , _ : & WorkflowId , _ : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
+                  "signature": "async fn check_workflow_status (& self , _ : & WorkflowId ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 75
+                  "line": 73
                 },
                 {
-                  "name": "cancel_workflow_session",
-                  "signature": "async fn cancel_workflow_session (& self , _ : & WorkflowSessionId , _ : & str ,) -> Result < String , ToolError >",
+                  "name": "cancel_workflow",
+                  "signature": "async fn cancel_workflow (& self , _ : & WorkflowId , _ : & str ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 83
+                  "line": 80
                 },
                 {
                   "name": "poll_terminal_workflow",
-                  "signature": "async fn poll_terminal_workflow (& self , _ : & WorkflowId , _ : & WorkflowSessionId ,) -> Result < Option < TerminalWorkflow > , ToolError >",
+                  "signature": "async fn poll_terminal_workflow (& self , _ : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 91
+                  "line": 88
                 },
                 {
                   "name": "find_outstanding_workflows",
-                  "signature": "async fn find_outstanding_workflows (& self , _ : & TaskId , _ : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
+                  "signature": "async fn find_outstanding_workflows (& self , _ : & TaskId , _ : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 99
+                  "line": 95
                 },
                 {
                   "name": "workflow_depth",
-                  "signature": "async fn workflow_depth (& self , _ : & WorkflowId) -> Result < u32 , ToolError >",
+                  "signature": "async fn workflow_depth (& self , _ : & WorkflowId) -> Result < u32 , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 107
+                  "line": 103
                 }
               ],
               "impl_target": "FixedDepth",
-              "trait_name": "WorkflowServicePort",
+              "trait_name": "WorkflowApi",
               "docs": null,
               "tags": [
                 "async_trait",
@@ -34646,7 +34340,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs",
               "module": "hooks::disallow_nested_planner_deferral::tests",
-              "line": 66
+              "line": 64
             },
             {
               "kind": "fn",
@@ -34665,7 +34359,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs",
               "module": "hooks::disallow_nested_planner_deferral::tests",
-              "line": 112
+              "line": 108
             },
             {
               "kind": "fn",
@@ -34684,7 +34378,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/disallow_nested_planner_deferral.rs",
               "module": "hooks::disallow_nested_planner_deferral::tests",
-              "line": 138
+              "line": 134
             }
           ]
         },
@@ -35403,76 +35097,57 @@
             },
             {
               "kind": "impl",
-              "name": "impl Sealed for OneOutstanding",
+              "name": "impl WorkflowApi for OneOutstanding",
               "visibility": "private",
-              "signature": "impl Sealed for OneOutstanding",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "OneOutstanding",
-              "trait_name": "Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
-              "module": "hooks::require_no_background_sessions::tests",
-              "line": 247
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkflowServicePort for OneOutstanding",
-              "visibility": "private",
-              "signature": "impl WorkflowServicePort for OneOutstanding",
+              "signature": "impl WorkflowApi for OneOutstanding",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "start_workflow",
-                  "signature": "async fn start_workflow (& self , _ : StartWorkflowRequest ,) -> Result < StartedWorkflow , ToolError >",
+                  "signature": "async fn start_workflow (& self , _ : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 251
+                  "line": 250
                 },
                 {
                   "name": "check_workflow_status",
-                  "signature": "async fn check_workflow_status (& self , _ : & WorkflowId , _ : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
+                  "signature": "async fn check_workflow_status (& self , _ : & WorkflowId ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 258
+                  "line": 257
                 },
                 {
-                  "name": "cancel_workflow_session",
-                  "signature": "async fn cancel_workflow_session (& self , _ : & WorkflowSessionId , _ : & str ,) -> Result < String , ToolError >",
+                  "name": "cancel_workflow",
+                  "signature": "async fn cancel_workflow (& self , _ : & WorkflowId , _ : & str ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 266
+                  "line": 264
                 },
                 {
                   "name": "poll_terminal_workflow",
-                  "signature": "async fn poll_terminal_workflow (& self , _ : & WorkflowId , _ : & WorkflowSessionId ,) -> Result < Option < TerminalWorkflow > , ToolError >",
+                  "signature": "async fn poll_terminal_workflow (& self , _ : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 274
+                  "line": 272
                 },
                 {
                   "name": "find_outstanding_workflows",
-                  "signature": "async fn find_outstanding_workflows (& self , _ : & TaskId , _ : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
+                  "signature": "async fn find_outstanding_workflows (& self , _ : & TaskId , _ : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 282
+                  "line": 279
                 },
                 {
                   "name": "workflow_depth",
-                  "signature": "async fn workflow_depth (& self , _ : & WorkflowId) -> Result < u32 , ToolError >",
+                  "signature": "async fn workflow_depth (& self , _ : & WorkflowId) -> Result < u32 , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 294
+                  "line": 290
                 }
               ],
               "impl_target": "OneOutstanding",
-              "trait_name": "WorkflowServicePort",
+              "trait_name": "WorkflowApi",
               "docs": null,
               "tags": [
                 "async_trait",
@@ -35481,7 +35156,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 249
+              "line": 248
             },
             {
               "kind": "fn",
@@ -35497,7 +35172,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 299
+              "line": 295
             },
             {
               "kind": "fn",
@@ -35513,7 +35188,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 306
+              "line": 302
             },
             {
               "kind": "fn",
@@ -35532,7 +35207,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 314
+              "line": 310
             },
             {
               "kind": "fn",
@@ -35551,7 +35226,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 359
+              "line": 355
             },
             {
               "kind": "fn",
@@ -35570,7 +35245,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 389
+              "line": 385
             },
             {
               "kind": "fn",
@@ -35589,7 +35264,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 422
+              "line": 418
             },
             {
               "kind": "fn",
@@ -35608,7 +35283,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 454
+              "line": 450
             },
             {
               "kind": "fn",
@@ -35627,7 +35302,7 @@
               ],
               "file": "crates/eos-tools/src/hooks/require_no_background_sessions.rs",
               "module": "hooks::require_no_background_sessions::tests",
-              "line": 495
+              "line": 491
             }
           ]
         },
@@ -37764,7 +37439,7 @@
               "kind": "fn",
               "name": "advisor_spawn_error",
               "visibility": "private",
-              "signature": "fn advisor_spawn_error (err : AgentRunError) -> ToolResult",
+              "signature": "fn advisor_spawn_error (err : & AgentRunError) -> ToolResult",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -38339,7 +38014,7 @@
               "kind": "fn",
               "name": "build_default_registry_with_services",
               "visibility": "pub",
-              "signature": "pub fn build_default_registry_with_services (config : & ToolConfigSet , caller : & CallerScope , sandbox_service : SandboxToolService , root_submission : Option < RootSubmissionService > , attempt_submission : Option < AttemptSubmissionService > , agent_run_service : Option < Arc < dyn AgentRunApi > > , subagent_sessions : Option < SubagentToolService > , workflow_service : Option < Arc < dyn crate :: WorkflowServicePort > > , workflow_sessions : Option < WorkflowToolService > , command_sessions : Option < CommandSessionToolService > , skill_service : SkillToolService ,) -> ToolRegistry",
+              "signature": "pub fn build_default_registry_with_services (config : & ToolConfigSet , caller : & CallerScope , sandbox_service : SandboxToolService , root_submission : Option < RootSubmissionService > , attempt_submission : Option < AttemptSubmissionService > , agent_run_service : Option < Arc < dyn AgentRunApi > > , subagent_sessions : Option < SubagentToolService > , workflow_service : Option < Arc < dyn eos_types :: WorkflowApi > > , workflow_sessions : Option < WorkflowToolService > , command_sessions : Option < CommandSessionToolService > , skill_service : SkillToolService ,) -> ToolRegistry",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -40681,7 +40356,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "pub(crate)",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 },
                 {
                   "name": "subagent_sessions",
@@ -40712,7 +40387,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (sandbox_transport : Option < Arc < dyn SandboxTransport > > , workflow_service : Option < Arc < dyn WorkflowServicePort > > , subagent_sessions : Option < SubagentToolService > ,) -> Self",
+                  "signature": "pub fn new (sandbox_transport : Option < Arc < dyn SandboxTransport > > , workflow_service : Option < Arc < dyn WorkflowApi > > , subagent_sessions : Option < SubagentToolService > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build hook services for tools that need downstream state during pre-hooks.",
                   "line": 358
@@ -43048,9 +42723,9 @@
               "signature": "struct CancelWorkflowInput",
               "fields": [
                 {
-                  "name": "workflow_task_id",
+                  "name": "workflow_id",
                   "visibility": "private",
-                  "ty": "WorkflowSessionId"
+                  "ty": "WorkflowId"
                 },
                 {
                   "name": "reason",
@@ -43072,7 +42747,7 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/cancel_workflow.rs",
               "module": "tools::workflow::cancel_workflow",
-              "line": 23
+              "line": 22
             },
             {
               "kind": "struct",
@@ -43083,7 +42758,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "private",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 }
               ],
               "variants": [],
@@ -43094,7 +42769,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/cancel_workflow.rs",
               "module": "tools::workflow::cancel_workflow",
-              "line": 30
+              "line": 29
             },
             {
               "kind": "impl",
@@ -43106,10 +42781,10 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub(crate :: tools :: workflow) fn new (workflow_service : Option < Arc < dyn WorkflowServicePort > > ,) -> Self",
+                  "signature": "pub(crate :: tools :: workflow) fn new (workflow_service : Option < Arc < dyn WorkflowApi > > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 35
+                  "line": 34
                 }
               ],
               "impl_target": "CancelWorkflow",
@@ -43120,7 +42795,7 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/cancel_workflow.rs",
               "module": "tools::workflow::cancel_workflow",
-              "line": 34
+              "line": 33
             },
             {
               "kind": "impl",
@@ -43135,7 +42810,7 @@
                   "signature": "async fn execute (& self , input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 44
+                  "line": 43
                 }
               ],
               "impl_target": "CancelWorkflow",
@@ -43148,13 +42823,13 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/cancel_workflow.rs",
               "module": "tools::workflow::cancel_workflow",
-              "line": 42
+              "line": 41
             },
             {
               "kind": "fn",
               "name": "register",
               "visibility": "pub(super)",
-              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowServicePort > > ,)",
+              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowApi > > ,)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -43164,7 +42839,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/cancel_workflow.rs",
               "module": "tools::workflow::cancel_workflow",
-              "line": 69
+              "line": 68
             }
           ]
         },
@@ -43182,11 +42857,6 @@
                   "name": "workflow_id",
                   "visibility": "private",
                   "ty": "WorkflowId"
-                },
-                {
-                  "name": "workflow_task_id",
-                  "visibility": "private",
-                  "ty": "Option < WorkflowSessionId >"
                 }
               ],
               "variants": [],
@@ -43203,7 +42873,7 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/check_workflow_status.rs",
               "module": "tools::workflow::check_workflow_status",
-              "line": 23
+              "line": 22
             },
             {
               "kind": "struct",
@@ -43214,7 +42884,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "private",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 }
               ],
               "variants": [],
@@ -43225,7 +42895,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/check_workflow_status.rs",
               "module": "tools::workflow::check_workflow_status",
-              "line": 30
+              "line": 27
             },
             {
               "kind": "impl",
@@ -43237,10 +42907,10 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub(crate :: tools :: workflow) fn new (workflow_service : Option < Arc < dyn WorkflowServicePort > > ,) -> Self",
+                  "signature": "pub(crate :: tools :: workflow) fn new (workflow_service : Option < Arc < dyn WorkflowApi > > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 35
+                  "line": 32
                 }
               ],
               "impl_target": "CheckWorkflowStatus",
@@ -43251,7 +42921,7 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/check_workflow_status.rs",
               "module": "tools::workflow::check_workflow_status",
-              "line": 34
+              "line": 31
             },
             {
               "kind": "impl",
@@ -43266,7 +42936,7 @@
                   "signature": "async fn execute (& self , input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 44
+                  "line": 41
                 }
               ],
               "impl_target": "CheckWorkflowStatus",
@@ -43279,13 +42949,13 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/check_workflow_status.rs",
               "module": "tools::workflow::check_workflow_status",
-              "line": 42
+              "line": 39
             },
             {
               "kind": "fn",
               "name": "register",
               "visibility": "pub(super)",
-              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowServicePort > > ,)",
+              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowApi > > ,)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -43295,7 +42965,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/check_workflow_status.rs",
               "module": "tools::workflow::check_workflow_status",
-              "line": 80
+              "line": 67
             }
           ]
         },
@@ -43329,7 +42999,7 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/delegate_workflow.rs",
               "module": "tools::workflow::delegate_workflow",
-              "line": 22
+              "line": 24
             },
             {
               "kind": "struct",
@@ -43340,7 +43010,7 @@
                 {
                   "name": "workflow_service",
                   "visibility": "private",
-                  "ty": "Option < Arc < dyn WorkflowServicePort > >"
+                  "ty": "Option < Arc < dyn WorkflowApi > >"
                 },
                 {
                   "name": "workflow_sessions",
@@ -43356,7 +43026,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/delegate_workflow.rs",
               "module": "tools::workflow::delegate_workflow",
-              "line": 27
+              "line": 29
             },
             {
               "kind": "impl",
@@ -43368,10 +43038,10 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub(crate :: tools :: workflow) fn new (workflow_service : Option < Arc < dyn WorkflowServicePort > > , workflow_sessions : Option < WorkflowToolService > ,) -> Self",
+                  "signature": "pub(crate :: tools :: workflow) fn new (workflow_service : Option < Arc < dyn WorkflowApi > > , workflow_sessions : Option < WorkflowToolService > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 33
+                  "line": 35
                 }
               ],
               "impl_target": "DelegateWorkflow",
@@ -43382,7 +43052,7 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/delegate_workflow.rs",
               "module": "tools::workflow::delegate_workflow",
-              "line": 32
+              "line": 34
             },
             {
               "kind": "impl",
@@ -43397,7 +43067,7 @@
                   "signature": "async fn execute (& self , input : & JsonObject , ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 46
+                  "line": 48
                 }
               ],
               "impl_target": "DelegateWorkflow",
@@ -43410,13 +43080,13 @@
               ],
               "file": "crates/eos-tools/src/tools/workflow/delegate_workflow.rs",
               "module": "tools::workflow::delegate_workflow",
-              "line": 44
+              "line": 46
             },
             {
               "kind": "fn",
               "name": "register",
               "visibility": "pub(super)",
-              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowServicePort > > , workflow_sessions : Option < WorkflowToolService > ,)",
+              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowApi > > , workflow_sessions : Option < WorkflowToolService > ,)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -43426,7 +43096,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/delegate_workflow.rs",
               "module": "tools::workflow::delegate_workflow",
-              "line": 119
+              "line": 115
             }
           ]
         },
@@ -43460,7 +43130,7 @@
               "kind": "fn",
               "name": "register",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) fn register (registry : & mut crate :: registry :: ToolRegistry , config : & crate :: registry :: config :: ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowServicePort > > , workflow_sessions : Option < WorkflowToolService > ,)",
+              "signature": "pub(crate) fn register (registry : & mut crate :: registry :: ToolRegistry , config : & crate :: registry :: config :: ToolConfigSet , workflow_service : Option < Arc < dyn WorkflowApi > > , workflow_sessions : Option < WorkflowToolService > ,)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -43470,7 +43140,7 @@
               "tags": [],
               "file": "crates/eos-tools/src/tools/workflow/mod.rs",
               "module": "tools::workflow",
-              "line": 12
+              "line": 14
             }
           ]
         }
@@ -43480,15 +43150,15 @@
       "name": "eos-types",
       "path": "crates/eos-types",
       "stats": {
-        "modules": 27,
-        "items": 97,
-        "structs": 22,
-        "enums": 18,
-        "traits": 9,
+        "modules": 28,
+        "items": 104,
+        "structs": 26,
+        "enums": 20,
+        "traits": 10,
         "functions": 16,
         "impls": 30,
-        "fields": 122,
-        "methods": 104
+        "fields": 133,
+        "methods": 110
       },
       "modules": [
         {
@@ -47355,6 +47025,284 @@
               "line": 221
             }
           ]
+        },
+        {
+          "path": "crates/eos-types/src/workflow_api.rs",
+          "module": "workflow_api",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "StartWorkflowRequest",
+              "visibility": "pub",
+              "signature": "pub struct StartWorkflowRequest",
+              "fields": [
+                {
+                  "name": "parent_task_id",
+                  "visibility": "pub",
+                  "ty": "TaskId"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "pub",
+                  "ty": "AgentRunId"
+                },
+                {
+                  "name": "workflow_goal",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Request to start a delegated workflow.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq",
+                "dto"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 19
+            },
+            {
+              "kind": "struct",
+              "name": "StartedWorkflow",
+              "visibility": "pub",
+              "signature": "pub struct StartedWorkflow",
+              "fields": [
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "workflow_goal",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A started delegated workflow, keyed by its natural [`WorkflowId`].",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 30
+            },
+            {
+              "kind": "enum",
+              "name": "WorkflowTerminalStatus",
+              "visibility": "pub",
+              "signature": "pub enum WorkflowTerminalStatus",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Completed",
+                  "fields": []
+                },
+                {
+                  "name": "Failed",
+                  "fields": []
+                },
+                {
+                  "name": "Cancelled",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Terminal status for a delegated workflow.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 39
+            },
+            {
+              "kind": "struct",
+              "name": "TerminalWorkflow",
+              "visibility": "pub",
+              "signature": "pub struct TerminalWorkflow",
+              "fields": [
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "pub",
+                  "ty": "WorkflowTerminalStatus"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Terminal workflow facts for background accounting.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 50
+            },
+            {
+              "kind": "struct",
+              "name": "OutstandingWorkflow",
+              "visibility": "pub",
+              "signature": "pub struct OutstandingWorkflow",
+              "fields": [
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "workflow_goal",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One outstanding workflow launched by a parent task.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 59
+            },
+            {
+              "kind": "enum",
+              "name": "WorkflowApiError",
+              "visibility": "pub",
+              "signature": "pub enum WorkflowApiError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Store",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "CoreError"
+                    }
+                  ]
+                },
+                {
+                  "name": "Internal",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Error returned by the delegated-workflow API. Tool callers map this onto\ntheir own framework-fault enum at the tool boundary.",
+              "tags": [
+                "derive: Debug",
+                "derive: thiserror::Error",
+                "error",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 68
+            },
+            {
+              "kind": "trait",
+              "name": "WorkflowApi",
+              "visibility": "pub",
+              "signature": "pub trait WorkflowApi",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "start_workflow",
+                  "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Start a delegated workflow.",
+                  "line": 85
+                },
+                {
+                  "name": "check_workflow_status",
+                  "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId ,) -> Result < String , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Render workflow status for the model-facing check tool.",
+                  "line": 91
+                },
+                {
+                  "name": "cancel_workflow",
+                  "signature": "async fn cancel_workflow (& self , workflow_id : & WorkflowId , reason : & str ,) -> Result < String , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Cancel a workflow by its natural id, returning a model-facing message.",
+                  "line": 97
+                },
+                {
+                  "name": "poll_terminal_workflow",
+                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "Poll terminal workflow state for background accounting.",
+                  "line": 104
+                },
+                {
+                  "name": "find_outstanding_workflows",
+                  "signature": "async fn find_outstanding_workflows (& self , parent_task_id : & TaskId , agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "All workflows this parent task still has outstanding for `agent_run_id`.",
+                  "line": 110
+                },
+                {
+                  "name": "workflow_depth",
+                  "signature": "async fn workflow_depth (& self , workflow_id : & WorkflowId) -> Result < u32 , WorkflowApiError >",
+                  "kind": "required",
+                  "docs": "The delegation-ancestry depth of `workflow_id` (1 = top-level).",
+                  "line": 117
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Delegated-workflow lifecycle operations used by the model-facing workflow\ntools and the engine background workflow manager.",
+              "tags": [
+                "async_trait"
+              ],
+              "file": "crates/eos-types/src/workflow_api.rs",
+              "module": "workflow_api",
+              "line": 81
+            }
+          ]
         }
       ]
     },
@@ -47362,15 +47310,15 @@
       "name": "eos-workflow",
       "path": "crates/eos-workflow",
       "stats": {
-        "modules": 22,
-        "items": 140,
-        "structs": 29,
+        "modules": 23,
+        "items": 133,
+        "structs": 26,
         "enums": 5,
         "traits": 1,
-        "functions": 63,
-        "impls": 39,
-        "fields": 131,
-        "methods": 142
+        "functions": 62,
+        "impls": 36,
+        "fields": 125,
+        "methods": 139
       },
       "modules": [
         {
@@ -50971,168 +50919,14 @@
           ]
         },
         {
-          "path": "crates/eos-workflow/src/ports.rs",
-          "module": "ports",
+          "path": "crates/eos-workflow/src/service.rs",
+          "module": "service",
           "items": [
             {
               "kind": "struct",
-              "name": "AttemptSubmissionAdapter",
+              "name": "WorkflowService",
               "visibility": "pub",
-              "signature": "pub struct AttemptSubmissionAdapter",
-              "fields": [
-                {
-                  "name": "registry",
-                  "visibility": "private",
-                  "ty": "Arc < AttemptOrchestratorRegistry >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Recording adapter from the `eos-tools` planner/generator/reducer terminal\nports to the active per-attempt orchestrators (Path A-recording).\n\nThe submit tool writes the agent's real submission straight to the\norchestrator's non-advancing `record_*` variants and returns the\norchestrator's real ack; advancing the DAG stays the exclusive job of the\nsingle `advance_run_stage` loop (D4: exactly one writer). This is the wired\nimplementor of [`AttemptSubmissionPort`], constructed once at the composition\nroot over the shared attempt registry.",
-              "tags": [
-                "derive: Clone"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 21
-            },
-            {
-              "kind": "impl",
-              "name": "impl std :: fmt :: Debug for AttemptSubmissionAdapter",
-              "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for AttemptSubmissionAdapter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 36
-                }
-              ],
-              "impl_target": "AttemptSubmissionAdapter",
-              "trait_name": "std :: fmt :: Debug",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 35
-            },
-            {
-              "kind": "impl",
-              "name": "impl AttemptSubmissionAdapter",
-              "visibility": "private",
-              "signature": "impl AttemptSubmissionAdapter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (registry : Arc < AttemptOrchestratorRegistry >) -> Self",
-                  "kind": "constructor",
-                  "docs": "Create a submission adapter over the active attempt registry.",
-                  "line": 43
-                }
-              ],
-              "impl_target": "AttemptSubmissionAdapter",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 42
-            },
-            {
-              "kind": "impl",
-              "name": "impl Sealed for AttemptSubmissionAdapter",
-              "visibility": "private",
-              "signature": "impl Sealed for AttemptSubmissionAdapter",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "AttemptSubmissionAdapter",
-              "trait_name": "Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 50
-            },
-            {
-              "kind": "impl",
-              "name": "impl AttemptSubmissionPort for AttemptSubmissionAdapter",
-              "visibility": "private",
-              "signature": "impl AttemptSubmissionPort for AttemptSubmissionAdapter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "apply_plan",
-                  "signature": "async fn apply_plan (& self , plan : PlannerPlan) -> Result < SubmissionAck , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 54
-                },
-                {
-                  "name": "submit_generator",
-                  "signature": "async fn submit_generator (& self , submission : GeneratorSubmission ,) -> Result < SubmissionAck , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 64
-                },
-                {
-                  "name": "apply_reducer",
-                  "signature": "async fn apply_reducer (& self , submission : ReducerSubmission ,) -> Result < SubmissionAck , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 77
-                }
-              ],
-              "impl_target": "AttemptSubmissionAdapter",
-              "trait_name": "AttemptSubmissionPort",
-              "docs": null,
-              "tags": [
-                "async_trait",
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 52
-            },
-            {
-              "kind": "fn",
-              "name": "submission_ack",
-              "visibility": "private",
-              "signature": "fn submission_ack (result : crate :: Result < () >) -> Result < SubmissionAck , ToolError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 91
-            },
-            {
-              "kind": "struct",
-              "name": "WorkflowServiceAdapter",
-              "visibility": "pub",
-              "signature": "pub struct WorkflowServiceAdapter",
+              "signature": "pub struct WorkflowService",
               "fields": [
                 {
                   "name": "starter",
@@ -51160,11 +50954,6 @@
                   "ty": "Arc < dyn TaskStore >"
                 },
                 {
-                  "name": "handles",
-                  "visibility": "private",
-                  "ty": "Arc < WorkflowHandleRegistry >"
-                },
-                {
                   "name": "cancel_port",
                   "visibility": "private",
                   "ty": "Arc < dyn CancelPort >"
@@ -51174,19 +50963,20 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Adapter from the workflow service port to delegated workflow state.",
+              "docs": "Workflow lifecycle service over delegated workflow state.",
               "tags": [
-                "derive: Clone"
+                "derive: Clone",
+                "port/service"
               ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 101
+              "file": "crates/eos-workflow/src/service.rs",
+              "module": "service",
+              "line": 19
             },
             {
               "kind": "impl",
-              "name": "impl std :: fmt :: Debug for WorkflowServiceAdapter",
+              "name": "impl std :: fmt :: Debug for WorkflowService",
               "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for WorkflowServiceAdapter",
+              "signature": "impl std :: fmt :: Debug for WorkflowService",
               "fields": [],
               "variants": [],
               "methods": [
@@ -51195,25 +50985,25 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 116
+                  "line": 33
                 }
               ],
-              "impl_target": "WorkflowServiceAdapter",
+              "impl_target": "WorkflowService",
               "trait_name": "std :: fmt :: Debug",
               "docs": null,
               "tags": [
                 "impl",
                 "trait-impl"
               ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 115
+              "file": "crates/eos-workflow/src/service.rs",
+              "module": "service",
+              "line": 32
             },
             {
               "kind": "impl",
-              "name": "impl WorkflowServiceAdapter",
+              "name": "impl WorkflowService",
               "visibility": "private",
-              "signature": "impl WorkflowServiceAdapter",
+              "signature": "impl WorkflowService",
               "fields": [],
               "variants": [],
               "methods": [
@@ -51221,147 +51011,135 @@
                   "name": "new",
                   "signature": "pub fn new (starter : WorkflowStarter , workflow_store : Arc < dyn eos_types :: WorkflowStore > , iteration_store : Arc < dyn eos_types :: IterationStore > , attempt_store : Arc < dyn eos_types :: AttemptStore > , task_store : Arc < dyn TaskStore > , cancel_port : Arc < dyn CancelPort > ,) -> Self",
                   "kind": "constructor",
-                  "docs": "Create a workflow service adapter.",
-                  "line": 123
+                  "docs": "Create a workflow service over the delegated workflow stores.",
+                  "line": 39
                 }
               ],
-              "impl_target": "WorkflowServiceAdapter",
+              "impl_target": "WorkflowService",
               "trait_name": null,
               "docs": null,
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 122
+              "file": "crates/eos-workflow/src/service.rs",
+              "module": "service",
+              "line": 38
             },
             {
               "kind": "impl",
-              "name": "impl Sealed for WorkflowServiceAdapter",
+              "name": "impl WorkflowApi for WorkflowService",
               "visibility": "private",
-              "signature": "impl Sealed for WorkflowServiceAdapter",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "WorkflowServiceAdapter",
-              "trait_name": "Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 145
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkflowServicePort for WorkflowServiceAdapter",
-              "visibility": "private",
-              "signature": "impl WorkflowServicePort for WorkflowServiceAdapter",
+              "signature": "impl WorkflowApi for WorkflowService",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "start_workflow",
-                  "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> Result < StartedWorkflow , ToolError >",
+                  "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> Result < StartedWorkflow , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 149
+                  "line": 62
                 },
                 {
                   "name": "check_workflow_status",
-                  "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId , workflow_task_id : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
+                  "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 165
+                  "line": 77
                 },
                 {
-                  "name": "cancel_workflow_session",
-                  "signature": "async fn cancel_workflow_session (& self , workflow_task_id : & WorkflowSessionId , reason : & str ,) -> Result < String , ToolError >",
+                  "name": "cancel_workflow",
+                  "signature": "async fn cancel_workflow (& self , workflow_id : & WorkflowId , reason : & str ,) -> Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 174
+                  "line": 86
                 },
                 {
                   "name": "poll_terminal_workflow",
-                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId , workflow_task_id : & WorkflowSessionId ,) -> Result < Option < TerminalWorkflow > , ToolError >",
+                  "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId ,) -> Result < Option < TerminalWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 195
+                  "line": 96
                 },
                 {
                   "name": "find_outstanding_workflows",
-                  "signature": "async fn find_outstanding_workflows (& self , parent_task_id : & eos_types :: TaskId , _agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
+                  "signature": "async fn find_outstanding_workflows (& self , parent_task_id : & TaskId , _agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 222
+                  "line": 115
                 },
                 {
                   "name": "workflow_depth",
-                  "signature": "async fn workflow_depth (& self , workflow_id : & WorkflowId) -> Result < u32 , ToolError >",
+                  "signature": "async fn workflow_depth (& self , workflow_id : & WorkflowId) -> Result < u32 , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 242
+                  "line": 133
                 }
               ],
-              "impl_target": "WorkflowServiceAdapter",
-              "trait_name": "WorkflowServicePort",
+              "impl_target": "WorkflowService",
+              "trait_name": "WorkflowApi",
               "docs": null,
               "tags": [
                 "async_trait",
                 "impl",
                 "trait-impl"
               ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 147
+              "file": "crates/eos-workflow/src/service.rs",
+              "module": "service",
+              "line": 60
             },
             {
               "kind": "impl",
-              "name": "impl WorkflowServiceAdapter",
+              "name": "impl WorkflowService",
               "visibility": "private",
-              "signature": "impl WorkflowServiceAdapter",
+              "signature": "impl WorkflowService",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "workflow_status_text",
-                  "signature": "async fn workflow_status_text (& self , workflow_id : & WorkflowId , workflow_task_id : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
+                  "signature": "async fn workflow_status_text (& self , workflow_id : & WorkflowId) -> crate :: Result < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 269
+                  "line": 160
+                },
+                {
+                  "name": "cancel_workflow_inner",
+                  "signature": "async fn cancel_workflow_inner (& self , workflow_id : & WorkflowId , reason : & str ,) -> crate :: Result < String >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 175
                 },
                 {
                   "name": "cancel_workflow_state",
-                  "signature": "async fn cancel_workflow_state (& self , workflow : & eos_types :: Workflow , reason : & str ,) -> Result < () , ToolError >",
+                  "signature": "async fn cancel_workflow_state (& self , workflow : & eos_types :: Workflow , reason : & str ,) -> crate :: Result < () >",
                   "kind": "method",
                   "docs": "Decompose workflow cancellation through `cancel_iteration` -> `cancel_attempt`\n-> `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*\nattempts (the idempotency guards), so a re-entrant cancel (a child workflow\ncancelled while tearing down a parent) terminates.",
-                  "line": 299
+                  "line": 193
                 },
                 {
                   "name": "cancel_attempt",
-                  "signature": "async fn cancel_attempt (& self , attempt : & eos_types :: Attempt , reason : & str , now : eos_types :: UtcDateTime ,) -> Result < () , ToolError >",
+                  "signature": "async fn cancel_attempt (& self , attempt : & eos_types :: Attempt , reason : & str , now : eos_types :: UtcDateTime ,) -> crate :: Result < () >",
                   "kind": "method",
                   "docs": "Cancel one attempt (spec §12.4): latch every planner/generator/reducer task\nrow to `Cancelled` *before* any teardown (closing the scheduler gap), then\nrecurse `cancel_task` per task to tear down any live agent run, then close\nthe attempt as `Cancelled`.",
-                  "line": 345
+                  "line": 239
                 }
               ],
-              "impl_target": "WorkflowServiceAdapter",
+              "impl_target": "WorkflowService",
               "trait_name": null,
               "docs": null,
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 268
+              "file": "crates/eos-workflow/src/service.rs",
+              "module": "service",
+              "line": 159
             },
             {
               "kind": "fn",
-              "name": "workflow_service_error",
+              "name": "workflow_api_error",
               "visibility": "private",
-              "signature": "fn workflow_service_error (err : WorkflowError) -> ToolError",
+              "signature": "fn workflow_api_error (err : WorkflowError) -> WorkflowApiError",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -51369,180 +51147,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 393
-            },
-            {
-              "kind": "struct",
-              "name": "WorkflowHandleRegistry",
-              "visibility": "private",
-              "signature": "struct WorkflowHandleRegistry",
-              "fields": [
-                {
-                  "name": "next_handle",
-                  "visibility": "private",
-                  "ty": "AtomicU64"
-                },
-                {
-                  "name": "inner",
-                  "visibility": "private",
-                  "ty": "Mutex < WorkflowHandleMaps >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Debug",
-                "derive: Default"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 401
-            },
-            {
-              "kind": "struct",
-              "name": "WorkflowHandleMaps",
-              "visibility": "private",
-              "signature": "struct WorkflowHandleMaps",
-              "fields": [
-                {
-                  "name": "workflow_by_handle",
-                  "visibility": "private",
-                  "ty": "HashMap < WorkflowSessionId , WorkflowId >"
-                },
-                {
-                  "name": "handle_by_workflow",
-                  "visibility": "private",
-                  "ty": "HashMap < WorkflowId , WorkflowSessionId >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Debug",
-                "derive: Default"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 407
-            },
-            {
-              "kind": "impl",
-              "name": "impl WorkflowHandleRegistry",
-              "visibility": "private",
-              "signature": "impl WorkflowHandleRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "handle_for_workflow",
-                  "signature": "fn handle_for_workflow (& self , workflow_id : & WorkflowId ,) -> Result < WorkflowSessionId , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 414
-                },
-                {
-                  "name": "workflow_id_for_handle",
-                  "signature": "fn workflow_id_for_handle (& self , handle : & WorkflowSessionId) -> Option < WorkflowId >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 433
-                }
-              ],
-              "impl_target": "WorkflowHandleRegistry",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports",
-              "line": 413
-            },
-            {
-              "kind": "struct",
-              "name": "TestCancelPort",
-              "visibility": "private",
-              "signature": "struct TestCancelPort",
-              "fields": [
-                {
-                  "name": "task_store",
-                  "visibility": "private",
-                  "ty": "Arc < dyn TaskStore >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A `CancelPort` fake mirroring `EngineCancelPort::cancel_task`'s persisted\nflip; these store-level tests have no live-run registry.",
-              "tags": [
-                "port/service"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports::tests",
-              "line": 452
-            },
-            {
-              "kind": "impl",
-              "name": "impl CancelPort for TestCancelPort",
-              "visibility": "private",
-              "signature": "impl CancelPort for TestCancelPort",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "cancel_task",
-                  "signature": "async fn cancel_task (& self , task_id : & eos_types :: TaskId , reason : & str ,) -> Result < () , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 460
-                },
-                {
-                  "name": "cancel_agent_run",
-                  "signature": "async fn cancel_agent_run (& self , _agent_run_id : & AgentRunId , _reason : & str ,) -> Result < () , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 484
-                }
-              ],
-              "impl_target": "TestCancelPort",
-              "trait_name": "CancelPort",
-              "docs": null,
-              "tags": [
-                "async_trait",
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports::tests",
-              "line": 458
-            },
-            {
-              "kind": "fn",
-              "name": "workflow_service_uses_runtime_handles_and_cancels_child_state",
-              "visibility": "private",
-              "signature": "async fn workflow_service_uses_runtime_handles_and_cancels_child_state ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-workflow/src/ports.rs",
-              "module": "ports::tests",
-              "line": 497
+              "file": "crates/eos-workflow/src/service.rs",
+              "module": "service",
+              "line": 287
             }
           ]
         },
@@ -51823,6 +51430,166 @@
               "file": "crates/eos-workflow/src/state/projections.rs",
               "module": "state::projections",
               "line": 46
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-workflow/src/submission.rs",
+          "module": "submission",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "AttemptSubmissionAdapter",
+              "visibility": "pub",
+              "signature": "pub struct AttemptSubmissionAdapter",
+              "fields": [
+                {
+                  "name": "registry",
+                  "visibility": "private",
+                  "ty": "Arc < AttemptOrchestratorRegistry >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Recording adapter from the `eos-tools` planner/generator/reducer terminal\nports to the active per-attempt orchestrators (Path A-recording).\n\nThe submit tool writes the agent's real submission straight to the\norchestrator's non-advancing `record_*` variants and returns the\norchestrator's real ack; advancing the DAG stays the exclusive job of the\nsingle `advance_run_stage` loop (D4: exactly one writer). This is the wired\nimplementor of [`AttemptSubmissionPort`], constructed once at the composition\nroot over the shared attempt registry.",
+              "tags": [
+                "derive: Clone"
+              ],
+              "file": "crates/eos-workflow/src/submission.rs",
+              "module": "submission",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for AttemptSubmissionAdapter",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for AttemptSubmissionAdapter",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 28
+                }
+              ],
+              "impl_target": "AttemptSubmissionAdapter",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-workflow/src/submission.rs",
+              "module": "submission",
+              "line": 27
+            },
+            {
+              "kind": "impl",
+              "name": "impl AttemptSubmissionAdapter",
+              "visibility": "private",
+              "signature": "impl AttemptSubmissionAdapter",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (registry : Arc < AttemptOrchestratorRegistry >) -> Self",
+                  "kind": "constructor",
+                  "docs": "Create a submission adapter over the active attempt registry.",
+                  "line": 35
+                }
+              ],
+              "impl_target": "AttemptSubmissionAdapter",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-workflow/src/submission.rs",
+              "module": "submission",
+              "line": 34
+            },
+            {
+              "kind": "impl",
+              "name": "impl Sealed for AttemptSubmissionAdapter",
+              "visibility": "private",
+              "signature": "impl Sealed for AttemptSubmissionAdapter",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": "AttemptSubmissionAdapter",
+              "trait_name": "Sealed",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-workflow/src/submission.rs",
+              "module": "submission",
+              "line": 42
+            },
+            {
+              "kind": "impl",
+              "name": "impl AttemptSubmissionPort for AttemptSubmissionAdapter",
+              "visibility": "private",
+              "signature": "impl AttemptSubmissionPort for AttemptSubmissionAdapter",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "apply_plan",
+                  "signature": "async fn apply_plan (& self , plan : PlannerPlan) -> Result < SubmissionAck , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 46
+                },
+                {
+                  "name": "submit_generator",
+                  "signature": "async fn submit_generator (& self , submission : GeneratorSubmission ,) -> Result < SubmissionAck , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 56
+                },
+                {
+                  "name": "apply_reducer",
+                  "signature": "async fn apply_reducer (& self , submission : ReducerSubmission ,) -> Result < SubmissionAck , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 69
+                }
+              ],
+              "impl_target": "AttemptSubmissionAdapter",
+              "trait_name": "AttemptSubmissionPort",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-workflow/src/submission.rs",
+              "module": "submission",
+              "line": 44
+            },
+            {
+              "kind": "fn",
+              "name": "submission_ack",
+              "visibility": "private",
+              "signature": "fn submission_ack (result : crate :: Result < () >) -> Result < SubmissionAck , ToolError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-workflow/src/submission.rs",
+              "module": "submission",
+              "line": 83
             }
           ]
         },

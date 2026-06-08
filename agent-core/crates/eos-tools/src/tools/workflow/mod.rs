@@ -7,12 +7,14 @@ mod lib;
 
 use std::sync::Arc;
 
-use crate::{WorkflowServicePort, WorkflowToolService};
+use eos_types::WorkflowApi;
+
+use crate::WorkflowToolService;
 
 pub(crate) fn register(
     registry: &mut crate::registry::ToolRegistry,
     config: &crate::registry::config::ToolConfigSet,
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
     workflow_sessions: Option<WorkflowToolService>,
 ) {
     delegate_workflow::register(

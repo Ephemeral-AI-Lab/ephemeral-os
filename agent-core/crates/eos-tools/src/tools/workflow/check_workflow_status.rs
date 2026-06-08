@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_types::{JsonObject, WorkflowId, WorkflowSessionId};
+use eos_types::{JsonObject, WorkflowApi, WorkflowId};
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
@@ -16,24 +16,21 @@ use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
 use crate::runtime::execution::parse_input;
 use crate::runtime::executor::ToolExecutor;
-use crate::WorkflowServicePort;
 
 use super::lib::empty_workflow_id_error;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct CheckWorkflowStatusInput {
     workflow_id: WorkflowId,
-    #[serde(default)]
-    workflow_task_id: Option<WorkflowSessionId>,
 }
 
 pub(in crate::tools::workflow) struct CheckWorkflowStatus {
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
 }
 
 impl CheckWorkflowStatus {
     pub(in crate::tools::workflow) fn new(
-        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+        workflow_service: Option<Arc<dyn WorkflowApi>>,
     ) -> Self {
         Self { workflow_service }
     }
@@ -57,21 +54,11 @@ impl ToolExecutor for CheckWorkflowStatus {
                 "workflow_id",
             ));
         }
-        if parsed
-            .workflow_task_id
-            .as_ref()
-            .is_some_and(|id| id.as_str().is_empty())
-        {
-            return Ok(empty_workflow_id_error(
-                ToolName::CheckWorkflowStatus,
-                "workflow_task_id",
-            ));
-        }
         let output = self
             .workflow_service
             .as_deref()
             .ok_or(ToolError::MissingPort("workflow_service"))?
-            .check_workflow_status(&parsed.workflow_id, parsed.workflow_task_id.as_ref())
+            .check_workflow_status(&parsed.workflow_id)
             .await?;
         Ok(ToolResult::ok(output))
     }
@@ -80,7 +67,7 @@ impl ToolExecutor for CheckWorkflowStatus {
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
 ) {
     let check = config.get(ToolName::CheckWorkflowStatus);
     super::super::register_tool(

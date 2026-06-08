@@ -9,10 +9,10 @@ use eos_agent_run::{
     SpawnAgentRequest as RuntimeSpawnAgentRequest,
 };
 use eos_llm_client::Message;
+use eos_tools::AttemptSubmissionService;
 use eos_tools::ToolResult;
-use eos_tools::{AttemptSubmissionService, WorkflowServicePort};
 use eos_types::AgentRun;
-use eos_types::{AgentRunId, JsonObject};
+use eos_types::{AgentRunId, JsonObject, WorkflowApi};
 use serde_json::json;
 use tokio::sync::watch;
 use tokio::sync::Mutex;
@@ -32,7 +32,7 @@ pub struct AgentRunService {
     control_factory: AgentRunControlFactory,
     agent_run_registry: Option<AgentRunRegistry>,
     attempt_submission: Option<AttemptSubmissionService>,
-    workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn WorkflowApi>>,
     event_callback: Option<EventCallback>,
     runs: Arc<Mutex<HashMap<AgentRunId, AgentRunHandle>>>,
 }
@@ -78,7 +78,7 @@ impl AgentRunService {
 pub struct AgentRunServiceOptions {
     pub agent_run_registry: Option<AgentRunRegistry>,
     pub attempt_submission: Option<AttemptSubmissionService>,
-    pub workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    pub workflow_service: Option<Arc<dyn WorkflowApi>>,
     pub event_callback: Option<EventCallback>,
 }
 

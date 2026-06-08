@@ -9,7 +9,7 @@ use serde_json::Value;
 
 #[cfg(target_os = "linux")]
 use crate::process::{
-    CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, ProcessReap,
+    CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, KillReason, ProcessReap,
 };
 #[cfg(target_os = "linux")]
 use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
@@ -33,7 +33,10 @@ pub struct ReapedCommand {
     pub runner_result: Option<Value>,
     pub stdout: String,
     pub elapsed_s: f64,
-    pub cancelled: bool,
+    /// Why the substrate killed this session, if it did. `None` is a natural
+    /// exit; `Some(_)` means a kill (cancel or timeout) and the owning run
+    /// DISCARDS rather than publishes.
+    pub kill: Option<KillReason>,
 }
 
 /// PTY/process substrate for one command session. It owns the child process,
@@ -51,8 +54,11 @@ pub struct CommandSession {
     final_path: PathBuf,
     #[cfg(target_os = "linux")]
     transcript_path: PathBuf,
+    /// Why this session was killed, if it has been. Set once by `cancel_process`
+    /// (user cancel) or `time_out_process` (deadline backstop); a user cancel
+    /// wins, so a cancelled session is never relabeled as timed-out.
     #[cfg(target_os = "linux")]
-    cancelled: Mutex<bool>,
+    kill: Mutex<Option<KillReason>>,
     #[cfg(target_os = "linux")]
     output_drain_grace_ms: u64,
     /// Reaped-once guard so two pollers can't both finalize the same child.
@@ -108,7 +114,7 @@ impl CommandSession {
             #[cfg(target_os = "linux")]
             transcript_path: inactive.transcript_path,
             #[cfg(target_os = "linux")]
-            cancelled: Mutex::new(false),
+            kill: Mutex::new(None),
             #[cfg(target_os = "linux")]
             output_drain_grace_ms: inactive.output_drain_grace_ms,
             #[cfg(target_os = "linux")]
@@ -128,7 +134,7 @@ impl CommandSession {
             output_path: running.output_path,
             final_path: running.final_path,
             transcript_path: running.transcript_path,
-            cancelled: Mutex::new(false),
+            kill: Mutex::new(None),
             output_drain_grace_ms: running.output_drain_grace_ms,
             reaped: Mutex::new(false),
             started_at: Instant::now(),
@@ -166,9 +172,26 @@ impl CommandSession {
         Ok(())
     }
 
+    /// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run
+    /// teardown): record the reason and kill the process group. A cancel always
+    /// wins over a later timeout mark.
     #[cfg(target_os = "linux")]
     pub fn cancel_process(&self) {
-        *lock(&self.cancelled) = true;
+        *lock(&self.kill) = Some(KillReason::Cancelled);
+        self.process.terminate();
+    }
+
+    /// Kill a session that exceeded its deadline (the reaper backstop). Records
+    /// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps
+    /// its `Cancelled` label; either way the process group is killed.
+    #[cfg(target_os = "linux")]
+    pub fn time_out_process(&self) {
+        {
+            let mut kill = lock(&self.kill);
+            if kill.is_none() {
+                *kill = Some(KillReason::TimedOut);
+            }
+        }
         self.process.terminate();
     }
 
@@ -222,7 +245,7 @@ impl CommandSession {
     /// Reap the child if it has exited, returning the raw command result. Returns
     /// `None` while the process is still running or has already been reaped. This
     /// only reaps the substrate — it does not publish or discard; the owning run
-    /// decides that from `ReapedCommand::cancelled`.
+    /// decides that from `ReapedCommand::kill`.
     #[cfg(target_os = "linux")]
     pub fn reap(&self) -> Option<ReapedCommand> {
         let mut reaped = lock(&self.reaped);
@@ -239,19 +262,16 @@ impl CommandSession {
         self.process
             .wait_for_reader_done(Duration::from_millis(self.output_drain_grace_ms));
         let runner = CommandRunnerResult::read_from_path(&self.output_path);
-        let cancelled = *lock(&self.cancelled);
-        let completion = CommandCompletionStatus::from_process_and_runner(
-            process_exit,
-            runner.as_ref(),
-            cancelled,
-        );
+        let kill = *lock(&self.kill);
+        let completion =
+            CommandCompletionStatus::from_process_and_runner(process_exit, runner.as_ref(), kill);
         Some(ReapedCommand {
             status: completion.status().to_owned(),
             exit_code: completion.exit_code(),
             runner_result: runner.map(|runner| runner.value().clone()),
             stdout: self.final_stdout(),
             elapsed_s: self.started_at.elapsed().as_secs_f64(),
-            cancelled,
+            kill,
         })
     }
 
@@ -402,7 +422,7 @@ mod tests {
 
         let reaped = session.reap().expect("inactive process reaps");
         assert_eq!(reaped.stdout, "captured transcript output");
-        assert!(!reaped.cancelled);
+        assert!(reaped.kill.is_none());
         // Reaping is idempotent.
         assert!(session.reap().is_none());
 

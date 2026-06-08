@@ -195,12 +195,12 @@ mod tests {
     };
 
     use async_trait::async_trait;
-    use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
-
-    use crate::{
-        OutstandingWorkflow, Sealed, StartWorkflowRequest, StartedWorkflow, SubagentToolService,
-        TerminalWorkflow, WorkflowServicePort,
+    use eos_types::{
+        AgentRunId, OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TaskId,
+        TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowId,
     };
+
+    use crate::SubagentToolService;
     struct ReportSubagentSessions {
         subagents: AtomicUsize,
         cancel_called: AtomicBool,
@@ -244,38 +244,35 @@ mod tests {
     }
 
     struct OneOutstanding;
-    impl Sealed for OneOutstanding {}
 
     #[async_trait]
-    impl WorkflowServicePort for OneOutstanding {
+    impl WorkflowApi for OneOutstanding {
         async fn start_workflow(
             &self,
             _: StartWorkflowRequest,
-        ) -> Result<StartedWorkflow, ToolError> {
+        ) -> Result<StartedWorkflow, WorkflowApiError> {
             unreachable!("deny short-circuits before start")
         }
 
         async fn check_workflow_status(
             &self,
             _: &WorkflowId,
-            _: Option<&WorkflowSessionId>,
-        ) -> Result<String, ToolError> {
+        ) -> Result<String, WorkflowApiError> {
             unreachable!()
         }
 
-        async fn cancel_workflow_session(
+        async fn cancel_workflow(
             &self,
-            _: &WorkflowSessionId,
+            _: &WorkflowId,
             _: &str,
-        ) -> Result<String, ToolError> {
+        ) -> Result<String, WorkflowApiError> {
             unreachable!()
         }
 
         async fn poll_terminal_workflow(
             &self,
             _: &WorkflowId,
-            _: &WorkflowSessionId,
-        ) -> Result<Option<TerminalWorkflow>, ToolError> {
+        ) -> Result<Option<TerminalWorkflow>, WorkflowApiError> {
             unreachable!()
         }
 
@@ -283,15 +280,14 @@ mod tests {
             &self,
             _: &TaskId,
             _: &AgentRunId,
-        ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+        ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
             Ok(vec![OutstandingWorkflow {
                 workflow_id: WorkflowId::new_v4(),
-                workflow_task_id: WorkflowSessionId::new_v4(),
                 workflow_goal: "prior goal".to_owned(),
             }])
         }
 
-        async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, ToolError> {
+        async fn workflow_depth(&self, _: &WorkflowId) -> Result<u32, WorkflowApiError> {
             Ok(1)
         }
     }

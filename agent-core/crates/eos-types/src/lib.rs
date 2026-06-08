@@ -18,6 +18,7 @@ mod json;
 pub mod ports;
 pub mod state;
 mod time;
+mod workflow_api;
 
 pub use error::CoreError;
 pub use ids::{
@@ -39,3 +40,7 @@ pub use state::{
     TaskRole, TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};
+pub use workflow_api::{
+    OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow, WorkflowApi,
+    WorkflowApiError, WorkflowTerminalStatus,
+};

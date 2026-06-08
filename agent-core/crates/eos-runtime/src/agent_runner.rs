@@ -24,8 +24,8 @@ use eos_engine::{
     AgentRunControlFactory, AgentRunRegistry, AgentRunService, AgentRunServiceOptions,
 };
 use eos_llm_client::Message;
-use eos_tools::{AttemptSubmissionPort, AttemptSubmissionService, WorkflowServicePort};
-use eos_types::AgentRunId;
+use eos_tools::{AttemptSubmissionPort, AttemptSubmissionService};
+use eos_types::{AgentRunId, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
 use crate::runtime_services::RuntimeServices;
@@ -41,7 +41,7 @@ pub(crate) struct RuntimeAgentRunner {
     /// downstream of this runner via the `starter→attempt_deps→runner` chain).
     /// `get()` is `Some` by the time any run starts, so workflow agents' hooks
     /// can read `workflow_depth` (deferral) and `find_outstanding` (no-inflight).
-    workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
+    workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     /// Request-scoped factory that mints one fresh `AgentRunControl` (notifier,
     /// foreground, background supervisor, heartbeat, cancellation) per run — the
     /// runner stores no per-agent mutable supervisor or notifier.
@@ -61,7 +61,7 @@ impl RuntimeAgentRunner {
         services: RuntimeServices,
         workspace_root: impl Into<String>,
         attempt_submission: Arc<dyn AttemptSubmissionPort>,
-        workflow_service: Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
+        workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
         control_factory: Arc<AgentRunControlFactory>,
         agent_run_registry: AgentRunRegistry,
     ) -> Self {

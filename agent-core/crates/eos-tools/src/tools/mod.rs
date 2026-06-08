@@ -96,7 +96,7 @@ pub fn build_default_registry_with_services(
     attempt_submission: Option<AttemptSubmissionService>,
     agent_run_service: Option<Arc<dyn AgentRunApi>>,
     subagent_sessions: Option<SubagentToolService>,
-    workflow_service: Option<Arc<dyn crate::WorkflowServicePort>>,
+    workflow_service: Option<Arc<dyn eos_types::WorkflowApi>>,
     workflow_sessions: Option<WorkflowToolService>,
     command_sessions: Option<CommandSessionToolService>,
     skill_service: SkillToolService,

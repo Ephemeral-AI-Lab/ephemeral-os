@@ -163,7 +163,6 @@ pub struct CommandSessionCompletion {
     pub caller_id: String,
     pub command: String,
     pub result: CommandResponse,
-    pub notification_result: CommandResponse,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

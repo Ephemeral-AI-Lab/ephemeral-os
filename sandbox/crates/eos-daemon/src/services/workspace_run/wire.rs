@@ -123,6 +123,5 @@ pub(super) fn command_session_completion_to_wire(completion: CommandSessionCompl
         "caller_id": completion.caller_id,
         "command": completion.command,
         "result": completion.result.to_wire_value(),
-        "notification_result": completion.notification_result.to_wire_value(),
     })
 }

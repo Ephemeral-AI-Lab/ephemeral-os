@@ -13,9 +13,9 @@ use eos_sandbox_port::{
 };
 use eos_skills::SkillRegistry;
 use eos_types::{AgentRunId, CommandSessionId, JsonObject, SandboxId};
-use eos_types::{RequestStore, TaskStore};
+use eos_types::{RequestStore, StartedWorkflow, TaskStore, WorkflowApi};
 
-use crate::{AttemptSubmissionPort, StartedWorkflow, ToolError, WorkflowServicePort};
+use crate::{AttemptSubmissionPort, ToolError};
 
 type BoxServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
 type RegisterSubagentSession = Arc<dyn Fn(AgentRunId) -> BoxServiceFuture<()> + Send + Sync>;
@@ -350,7 +350,7 @@ impl fmt::Debug for SkillToolService {
 #[derive(Clone, Default)]
 pub struct HookServices {
     pub(crate) sandbox_transport: Option<Arc<dyn SandboxTransport>>,
-    pub(crate) workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+    pub(crate) workflow_service: Option<Arc<dyn WorkflowApi>>,
     pub(crate) subagent_sessions: Option<SubagentToolService>,
 }
 
@@ -359,7 +359,7 @@ impl HookServices {
     #[must_use]
     pub fn new(
         sandbox_transport: Option<Arc<dyn SandboxTransport>>,
-        workflow_service: Option<Arc<dyn WorkflowServicePort>>,
+        workflow_service: Option<Arc<dyn WorkflowApi>>,
         subagent_sessions: Option<SubagentToolService>,
     ) -> Self {
         Self {

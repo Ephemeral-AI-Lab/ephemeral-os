@@ -13,9 +13,10 @@ mod error;
 mod ids;
 mod iteration;
 mod lifecycle;
-mod ports;
+mod service;
 mod starter;
 mod state;
+mod submission;
 mod util;
 
 // Layer-B doubles (in-memory stores + `AgentRunner` doubles + `wait_until`).
@@ -38,5 +39,6 @@ pub use context::{
 pub use error::{Result, WorkflowError};
 pub use ids::{generator_task_id, planner_task_id, reducer_task_id, WorkflowLifecycleConfig};
 pub use iteration::OpenIterationCoordinatorRegistry;
-pub use ports::{AttemptSubmissionAdapter, WorkflowServiceAdapter};
+pub use service::WorkflowService;
 pub use starter::{StartedWorkflow, WorkflowStarter};
+pub use submission::AttemptSubmissionAdapter;

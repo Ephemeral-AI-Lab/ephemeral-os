@@ -11,11 +11,11 @@ use std::time::Duration;
 use async_trait::async_trait;
 use eos_agent_run::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tools::WorkflowServicePort;
 use eos_tools::{
     BackgroundSessionCounts, CommandSessionToolService, SubagentToolService, WorkflowToolService,
 };
 use eos_types::AgentRunId;
+use eos_types::WorkflowApi;
 
 use self::command_session_manager::{CommandSessionManager, CommandSessionMonitor};
 use self::subagent_session_manager::{SubagentSessionManager, SubagentSessionMonitor};
@@ -196,7 +196,7 @@ impl BackgroundManagers {
         completion_poll_interval: Duration,
         notifications: NotificationService,
         control_factory: AgentRunControlFactory,
-        workflow_service: &Arc<OnceLock<Arc<dyn WorkflowServicePort>>>,
+        workflow_service: &Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     ) -> Self {
         Self {
             runtime: Arc::new(BackgroundSessionRuntime::new(
