@@ -106,13 +106,13 @@ impl CommandWorkspacePolicy for FakePolicy {
 }
 
 #[test]
-fn manager_starts_boxed_policy_and_counts_by_caller() -> Result<(), Box<dyn std::error::Error>> {
+fn manager_starts_policy_and_counts_by_caller() -> Result<(), Box<dyn std::error::Error>> {
     let manager = WorkspaceRunManager::new(CommandSessionConfig::default());
     let policy = FakePolicy::new();
 
-    let response = manager.start_boxed(
+    let response = manager.start_run(
         start_request("caller-1", "printf ok"),
-        Box::new(policy.clone()),
+        Arc::new(policy.clone()),
         WorkspaceRunKind::Ephemeral,
     )?;
 

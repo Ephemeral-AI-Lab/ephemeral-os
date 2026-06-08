@@ -1,9 +1,8 @@
-//! Shared snapshot-lease and lifecycle value objects.
+//! Shared snapshot-lease value object.
 //!
 //! Both ephemeral and isolated workspace runs borrow a LayerStack snapshot to
-//! mount their overlay and track create/last-activity timestamps for TTL
-//! sweeps. These are pure value objects with no daemon, LayerStack, or OCC
-//! dependency; releasing a lease is rollback/teardown and NEVER a publish.
+//! mount their overlay. This is a pure value object with no daemon, LayerStack,
+//! or OCC dependency; releasing a lease is rollback/teardown and NEVER a publish.
 
 use std::path::PathBuf;
 
@@ -25,13 +24,4 @@ pub struct SnapshotLease {
     pub manifest_root_hash: String,
     /// Lower-layer paths to feed the overlay mount (newest-first).
     pub layer_paths: Vec<PathBuf>,
-}
-
-/// Create/last-activity timestamps for a workspace run (TTL sweep input).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Lifecycle {
-    /// Monotonic create time (seconds).
-    pub created_at: f64,
-    /// Monotonic last-activity time (seconds); TTL input.
-    pub last_activity: f64,
 }

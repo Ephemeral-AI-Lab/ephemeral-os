@@ -228,6 +228,15 @@ fn execute_shell(
 ) -> Result<RunResult, RunnerError> {
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
+    // Open a handle to the real /proc before the mount mask hides it, so the
+    // scope-wait can still enumerate same-pgid background processes even though
+    // the model shell sees an empty masked /proc.
+    let proc_dir = rustix::fs::open(
+        "/proc",
+        rustix::fs::OFlags::RDONLY | rustix::fs::OFlags::DIRECTORY | rustix::fs::OFlags::CLOEXEC,
+        rustix::fs::Mode::empty(),
+    )
+    .ok();
     if let Some(hidden_paths) = hidden_paths {
         crate::mount_mask::mask_model_shell_paths(hidden_paths)?;
     }
@@ -242,12 +251,15 @@ fn execute_shell(
         .stderr(Stdio::inherit());
 
     let mut child = command.spawn().map_err(RunnerError::Child)?;
-    let (exit_code, timed_out) =
-        match wait_for_command_execution_scope(&mut child, request.timeout_seconds) {
-            Ok(exit_code) => (exit_code, false),
-            Err(RunnerError::TimedOut) => (124, true),
-            Err(err) => return Err(err),
-        };
+    let (exit_code, timed_out) = match wait_for_command_execution_scope(
+        &mut child,
+        request.timeout_seconds,
+        proc_dir.as_ref().map(std::os::fd::AsFd::as_fd),
+    ) {
+        Ok(exit_code) => (exit_code, false),
+        Err(RunnerError::TimedOut) => (124, true),
+        Err(err) => return Err(err),
+    };
     let status = if timed_out {
         "timed_out"
     } else if exit_code == 0 {

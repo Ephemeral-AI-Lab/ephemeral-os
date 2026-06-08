@@ -3,6 +3,10 @@
 #[cfg(target_os = "linux")]
 use std::fs;
 #[cfg(target_os = "linux")]
+use std::io::Read;
+#[cfg(target_os = "linux")]
+use std::os::fd::BorrowedFd;
+#[cfg(target_os = "linux")]
 use std::os::unix::process::ExitStatusExt;
 #[cfg(target_os = "linux")]
 use std::thread;
@@ -58,6 +62,7 @@ pub(super) fn wait_for_child(
 pub(super) fn wait_for_command_execution_scope(
     child: &mut std::process::Child,
     timeout_seconds: Option<f64>,
+    proc_dir: Option<BorrowedFd>,
 ) -> Result<i32, RunnerError> {
     let deadline = timeout_seconds
         .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
@@ -76,7 +81,9 @@ pub(super) fn wait_for_command_execution_scope(
                 );
             }
         }
-        if root_exit_code.is_some() && !process_group_has_other_live_members(pgid, self_pid) {
+        if root_exit_code.is_some()
+            && !process_group_has_other_live_members(pgid, self_pid, proc_dir)
+        {
             return Ok(root_exit_code.unwrap_or(0));
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -90,8 +97,46 @@ pub(super) fn wait_for_command_execution_scope(
     }
 }
 
+/// True when a process other than the runner (`self_pid`) shares `pgid` and is
+/// not a zombie. When `proc_dir` is set it enumerates through that pre-opened
+/// `/proc` handle so the model-shell `/proc` mount mask cannot hide live
+/// background members from the scope-wait; otherwise it reads `/proc` by path.
 #[cfg(target_os = "linux")]
-fn process_group_has_other_live_members(pgid: i32, self_pid: i32) -> bool {
+fn process_group_has_other_live_members(
+    pgid: i32,
+    self_pid: i32,
+    proc_dir: Option<BorrowedFd>,
+) -> bool {
+    let Some(proc_dir) = proc_dir else {
+        return process_group_has_other_live_members_by_path(pgid, self_pid);
+    };
+    let Ok(dir) = rustix::fs::Dir::read_from(proc_dir) else {
+        return false;
+    };
+    for entry in dir {
+        let Ok(entry) = entry else { continue };
+        let Some(pid) = entry
+            .file_name()
+            .to_str()
+            .ok()
+            .and_then(|name| name.parse::<i32>().ok())
+        else {
+            continue;
+        };
+        if pid == self_pid {
+            continue;
+        }
+        if proc_stat_process_group_at(proc_dir, pid)
+            .is_some_and(|(entry_pgid, state)| entry_pgid == pgid && state != 'Z')
+        {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(target_os = "linux")]
+fn process_group_has_other_live_members_by_path(pgid: i32, self_pid: i32) -> bool {
     let Ok(entries) = fs::read_dir("/proc") else {
         return false;
     };
@@ -106,14 +151,29 @@ fn process_group_has_other_live_members(pgid: i32, self_pid: i32) -> bool {
         if pid == self_pid {
             return false;
         }
-        proc_stat_process_group(pid)
+        fs::read_to_string(format!("/proc/{pid}/stat"))
+            .ok()
+            .and_then(|stat| parse_proc_stat(&stat))
             .is_some_and(|(entry_pgid, state)| entry_pgid == pgid && state != 'Z')
     })
 }
 
 #[cfg(target_os = "linux")]
-fn proc_stat_process_group(pid: i32) -> Option<(i32, char)> {
-    let stat = fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+fn proc_stat_process_group_at(proc_dir: BorrowedFd, pid: i32) -> Option<(i32, char)> {
+    let fd = rustix::fs::openat(
+        proc_dir,
+        format!("{pid}/stat"),
+        rustix::fs::OFlags::RDONLY | rustix::fs::OFlags::CLOEXEC,
+        rustix::fs::Mode::empty(),
+    )
+    .ok()?;
+    let mut stat = String::new();
+    fs::File::from(fd).read_to_string(&mut stat).ok()?;
+    parse_proc_stat(&stat)
+}
+
+#[cfg(target_os = "linux")]
+fn parse_proc_stat(stat: &str) -> Option<(i32, char)> {
     let close = stat.rfind(") ")?;
     let fields: Vec<&str> = stat[close + 2..].split_whitespace().collect();
     let state = fields.first()?.chars().next()?;

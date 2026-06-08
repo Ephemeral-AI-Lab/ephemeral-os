@@ -4,14 +4,14 @@
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 #[cfg(target_os = "linux")]
 use std::time::Instant;
 
 #[cfg(target_os = "linux")]
 use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionCompletion, CommandSessionError,
-    DynCommandWorkspacePolicy, ReadCommandProgress, StartCommandSession, WriteStdin,
+    ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 #[cfg(target_os = "linux")]
 use eos_ephemeral_workspace::command_session::EphemeralCommandPolicy;
@@ -36,13 +36,11 @@ use super::ports::ephemeral::DaemonEphemeralCommandPort;
 #[cfg(target_os = "linux")]
 use super::ports::isolated::DaemonIsolatedCommandPort;
 #[cfg(target_os = "linux")]
-use super::registry::WorkspaceRunKind;
+use super::registry::{PolicyArc, WorkspaceRunKind};
 #[cfg(not(target_os = "linux"))]
 use super::wire::command_result;
 #[cfg(target_os = "linux")]
 use super::wire::require_nonempty_string;
-#[cfg(test)]
-use super::wire::should_publish_command_session_completion;
 use super::wire::{caller_id_arg, command_session_not_found, optional_u64, require_command_string};
 #[cfg(target_os = "linux")]
 use super::wire::{
@@ -89,7 +87,7 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             timeout_seconds,
             yield_time_ms,
             handle.caller_id.clone(),
-            Box::new(IsolatedCommandPolicy::new(DaemonIsolatedCommandPort::new(
+            Arc::new(IsolatedCommandPolicy::new(DaemonIsolatedCommandPort::new(
                 handle,
             ))),
             WorkspaceRunKind::Isolated,
@@ -108,7 +106,7 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             timeout_seconds,
             yield_time_ms,
             caller_id_arg(args).to_owned(),
-            Box::new(EphemeralCommandPolicy::new(
+            Arc::new(EphemeralCommandPolicy::new(
                 DaemonEphemeralCommandPort::new(
                     root,
                     PathBuf::from(binding.workspace_root),
@@ -267,7 +265,7 @@ fn start_manager_command_session(
     timeout_seconds: Option<f64>,
     yield_time_ms: u64,
     caller_id: String,
-    policy: DynCommandWorkspacePolicy,
+    policy: PolicyArc,
     kind: WorkspaceRunKind,
 ) -> Result<Value, DaemonError> {
     let request = StartCommandSession {
@@ -282,7 +280,7 @@ fn start_manager_command_session(
         yield_time_ms,
     };
     let response = workspace_run_manager()
-        .start_boxed(request, policy, kind)
+        .start_run(request, policy, kind)
         .map_err(command_session_error)?;
     let wire = command_response_to_wire(response);
     if wire

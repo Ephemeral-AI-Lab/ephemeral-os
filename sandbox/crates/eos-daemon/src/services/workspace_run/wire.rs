@@ -72,15 +72,6 @@ pub(super) fn command_session_not_found() -> Value {
     command_result("error", None, "", "command_session_not_found", None)
 }
 
-#[cfg(test)]
-pub(super) const fn should_publish_command_session_completion(
-    publish_completion: bool,
-    cancelled: bool,
-    owned_live_session: bool,
-) -> bool {
-    publish_completion && !cancelled && owned_live_session
-}
-
 #[cfg(target_os = "linux")]
 pub(super) fn command_response_to_wire(response: CommandResponse) -> Value {
     response.to_wire_value()

@@ -37,6 +37,3 @@ pub use session::{CommandSession, CommandSessionSpec};
 pub use session::{ReapedCommand, RunningCommandSessionParts};
 #[cfg(target_os = "linux")]
 pub use wait::{wait_for_yield, CommandSessionWaitTarget, WaitOutcome};
-
-pub type DynCommandWorkspacePolicy =
-    Box<dyn eos_workspace_api::CommandWorkspacePolicy + Send + Sync + 'static>;

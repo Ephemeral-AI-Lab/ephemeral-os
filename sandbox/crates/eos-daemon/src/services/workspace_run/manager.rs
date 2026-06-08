@@ -19,14 +19,13 @@ use eos_command_session::{wait_for_yield, WaitOutcome};
 use eos_command_session::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
     CommandSession, CommandSessionCompletion, CommandSessionConfig, CommandSessionError,
-    CommandSessionSpec, DynCommandWorkspacePolicy, ReadCommandProgress, StartCommandSession,
-    WriteStdin,
+    CommandSessionSpec, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 #[cfg(not(target_os = "linux"))]
 use eos_workspace_api::CommandWorkspacePolicy;
 use eos_workspace_api::FinalizeCommandRequest;
 
-use super::registry::{RunSession, WorkspaceRunKind, WorkspaceRunRegistry};
+use super::registry::{PolicyArc, RunSession, WorkspaceRunKind, WorkspaceRunRegistry};
 
 pub struct WorkspaceRunManager {
     // `config` drives only the Linux PTY/overlay paths (spawn, yield/cancel
@@ -46,7 +45,7 @@ impl WorkspaceRunManager {
     }
 
     // Generic convenience wrapper used only by the scaffold unit tests; the
-    // daemon's Linux op path calls `start_boxed` directly.
+    // daemon's Linux op path calls `start_run` directly.
     #[cfg(not(target_os = "linux"))]
     pub fn start<P>(
         &self,
@@ -57,30 +56,30 @@ impl WorkspaceRunManager {
     where
         P: CommandWorkspacePolicy + 'static,
     {
-        self.start_boxed(request, Box::new(policy), kind)
+        self.start_run(request, Arc::new(policy), kind)
     }
 
-    pub fn start_boxed(
+    pub fn start_run(
         &self,
         request: StartCommandSession,
-        policy: DynCommandWorkspacePolicy,
+        policy: PolicyArc,
         kind: WorkspaceRunKind,
     ) -> Result<CommandResponse, CommandSessionError> {
         #[cfg(target_os = "linux")]
         {
-            self.start_boxed_linux(request, policy, kind)
+            self.start_run_linux(request, policy, kind)
         }
         #[cfg(not(target_os = "linux"))]
         {
-            self.start_boxed_scaffold(request, policy, kind)
+            self.start_run_scaffold(request, policy, kind)
         }
     }
 
     #[cfg(not(target_os = "linux"))]
-    fn start_boxed_scaffold(
+    fn start_run_scaffold(
         &self,
         request: StartCommandSession,
-        policy: DynCommandWorkspacePolicy,
+        policy: PolicyArc,
         kind: WorkspaceRunKind,
     ) -> Result<CommandResponse, CommandSessionError> {
         if request.cmd.trim().is_empty() {
@@ -100,15 +99,15 @@ impl WorkspaceRunManager {
             timeout_seconds: request.timeout_seconds,
         });
         self.registry
-            .insert(Arc::new(RunSession::new(session, Arc::from(policy))), kind);
+            .insert(Arc::new(RunSession::new(session, policy)), kind);
         Ok(CommandResponse::running(id, String::new()))
     }
 
     #[cfg(target_os = "linux")]
-    fn start_boxed_linux(
+    fn start_run_linux(
         &self,
         request: StartCommandSession,
-        policy: DynCommandWorkspacePolicy,
+        policy: PolicyArc,
         kind: WorkspaceRunKind,
     ) -> Result<CommandResponse, CommandSessionError> {
         if request.cmd.trim().is_empty() {
@@ -143,7 +142,7 @@ impl WorkspaceRunManager {
                 output_drain_grace_ms: self.config.output_drain_grace_ms,
             },
         );
-        let run = Arc::new(RunSession::new(session, Arc::from(policy)));
+        let run = Arc::new(RunSession::new(session, policy));
         self.registry.insert(Arc::clone(&run), kind);
         match wait_for_yield(&run.session, &self.config, request.yield_time_ms, 0) {
             WaitOutcome::Completed(reaped) => Ok(self.finish_reaped(run, reaped, false)),

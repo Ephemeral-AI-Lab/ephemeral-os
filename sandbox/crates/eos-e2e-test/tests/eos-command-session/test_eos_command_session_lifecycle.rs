@@ -1055,3 +1055,31 @@ fn ctrl_c_char_cancels_command_session() -> Result<()> {
     let lease = pool.acquire()?;
     assert_teardown_control_reaps_marker_process(&lease, "ctrl-c", "\u{3}")
 }
+
+#[test]
+fn model_shell_sees_masked_proc() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // The runner masks /proc from the model shell (security: hide the host
+    // process list). The scope-wait reads a pre-mask /proc fd internally, but the
+    // command itself must STILL see an empty /proc — this guards that the masking
+    // fd stays CLOEXEC and is never inherited by the command.
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'printf \"procvisible=%s\\n\" \"$(ls /proc 2>/dev/null | grep -cE \"^[0-9]+$\")\"'",
+            "yield_time_ms": 2000,
+            "timeout_seconds": 30
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+    assert!(
+        stdout(&exec).contains("procvisible=0"),
+        "model shell must see an empty masked /proc (no host process list): {exec}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}

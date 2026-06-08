@@ -51,21 +51,6 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 }
 
 #[test]
-fn command_session_cancel_suppresses_background_completion_publication() {
-    assert!(should_publish_command_session_completion(true, false, true));
-    assert!(!should_publish_command_session_completion(true, true, true));
-    assert!(!should_publish_command_session_completion(
-        true, false, false
-    ));
-    assert!(!should_publish_command_session_completion(
-        false, false, true
-    ));
-    assert!(!should_publish_command_session_completion(
-        false, true, false
-    ));
-}
-
-#[test]
 #[cfg(target_os = "linux")]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
     let manager = WorkspaceRunManager::default();

@@ -22,7 +22,7 @@ pub use file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     SearchReplaceError, WorkspaceFileOps, WriteFileOutcome, WriteFileRequest,
 };
-pub use lease::{Lifecycle, SnapshotLease};
+pub use lease::SnapshotLease;
 pub use mode::WorkspaceMode;
 pub use mutation::{
     WorkspaceMutationKind, WorkspaceMutationOutcome, WorkspaceMutationRequest,
