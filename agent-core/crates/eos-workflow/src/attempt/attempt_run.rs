@@ -139,9 +139,9 @@ impl AttemptRun {
     }
 
     pub(crate) fn validate_run_concurrency(&self) -> Result<()> {
-        if self.deps.max_concurrent_task_runs == 0 {
+        if self.deps.max_concurrent_worker_runs == 0 {
             return Err(WorkflowError::invariant(
-                "max_concurrent_task_runs must be at least 1",
+                "max_concurrent_worker_runs must be at least 1",
             ));
         }
         Ok(())

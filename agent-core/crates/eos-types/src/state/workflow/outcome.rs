@@ -29,10 +29,10 @@ pub struct WorkerOutcome {
     pub outcome: String,
 }
 
-/// Workflow-task family outcome for root, planner, and worker agent rows.
+/// Terminal submission outcome for root, planner, and worker agent runs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum TaskOutcome {
+pub enum SubmissionOutcome {
     /// Root request result.
     Root {
         /// Whether the request passed.
@@ -59,7 +59,7 @@ pub enum TaskOutcome {
     },
 }
 
-impl TaskOutcome {
+impl SubmissionOutcome {
     /// Build a planner payload from the planner variant.
     #[must_use]
     pub fn planner_outcome(&self) -> Option<PlannerOutcome> {

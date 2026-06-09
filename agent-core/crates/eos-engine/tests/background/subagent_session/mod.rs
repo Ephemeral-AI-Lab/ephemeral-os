@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentName, AgentRun, AgentRunError, RequestId, SpawnAgentRequest, TaskId, TaskRole, TaskStatus,
+    AgentName, AgentRun, AgentRunError, RequestId, SpawnAgentRequest, TaskId, TaskRole, ExecutionStatus,
     UtcDateTime,
 };
 
@@ -126,13 +126,13 @@ fn finished_run(terminal_payload: Option<JsonObject>, error: Option<&str>) -> Ag
         request_id: RequestId::new_v4(),
         role: TaskRole::Root,
         status: if error.is_some() {
-            TaskStatus::Failed
+            ExecutionStatus::Failed
         } else {
-            TaskStatus::Done
+            ExecutionStatus::Done
         },
         agent_name: AgentName::new("subagent").expect("valid agent name"),
         terminal_payload,
-        task_outcome: None,
+        submission_outcome: None,
         token_count: 0,
         error: error.map(str::to_owned),
         created_at: UtcDateTime::now(),

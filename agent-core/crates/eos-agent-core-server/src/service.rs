@@ -5,7 +5,7 @@ use std::sync::Arc;
 use eos_agent_run::AgentRunService;
 use eos_sandbox_port::SandboxGateway;
 use eos_types::{
-    AgentName, AgentRun, AttemptStore, IterationStore, RequestId, RequestStore, TaskAgentRunStore,
+    AgentName, AgentRun, AgentRunStore, AttemptStore, IterationStore, RequestId, RequestStore,
     WorkflowStore,
 };
 
@@ -19,7 +19,7 @@ use crate::error::AgentCoreServerError;
 #[derive(Clone)]
 pub struct AgentCoreService {
     pub(crate) request_store: Arc<dyn RequestStore>,
-    pub(crate) task_agent_run_store: Arc<dyn TaskAgentRunStore>,
+    pub(crate) agent_run_store: Arc<dyn AgentRunStore>,
     pub(crate) workflow_store: Arc<dyn WorkflowStore>,
     pub(crate) iteration_store: Arc<dyn IterationStore>,
     pub(crate) attempt_store: Arc<dyn AttemptStore>,
@@ -50,8 +50,8 @@ pub struct AgentCoreServiceSettings {
 pub struct AgentCoreServiceDependencies {
     /// Durable top-level request rows.
     pub request_store: Arc<dyn RequestStore>,
-    /// Durable task-agent-run lineage rows.
-    pub task_agent_run_store: Arc<dyn TaskAgentRunStore>,
+    /// Durable agent-run lineage rows.
+    pub agent_run_store: Arc<dyn AgentRunStore>,
     /// Workflow rows.
     pub workflow_store: Arc<dyn WorkflowStore>,
     /// Iteration rows.
@@ -81,7 +81,7 @@ impl AgentCoreService {
     pub fn new(dependencies: AgentCoreServiceDependencies) -> Self {
         Self {
             request_store: dependencies.request_store,
-            task_agent_run_store: dependencies.task_agent_run_store,
+            agent_run_store: dependencies.agent_run_store,
             workflow_store: dependencies.workflow_store,
             iteration_store: dependencies.iteration_store,
             attempt_store: dependencies.attempt_store,
@@ -136,14 +136,14 @@ impl AgentCoreService {
         crate::user_request::query::list_user_requests(self).await
     }
 
-    /// List task-agent-runs for a user request.
+    /// List agent runs for a user request.
     ///
     /// # Errors
     /// Returns [`AgentCoreServerError`] on store failure.
-    pub async fn list_user_request_tasks(
+    pub async fn list_user_request_agent_runs(
         &self,
         request_id: &RequestId,
     ) -> Result<Vec<AgentRun>, AgentCoreServerError> {
-        crate::user_request::query::list_user_request_tasks(self, request_id).await
+        crate::user_request::query::list_user_request_agent_runs(self, request_id).await
     }
 }

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use eos_types::{
-    AttemptFailReason, AttemptStage, PlanOutcomeSubmission, Task, TaskId, TaskOutcome, TaskRole,
-    TaskStatus,
+    AttemptFailReason, AttemptStage, PlanOutcomeSubmission, Task, TaskId, SubmissionOutcome, TaskRole,
+    ExecutionStatus,
 };
 
 use crate::{Result, WorkflowError};
@@ -49,9 +49,9 @@ impl PlannerRun {
                     request_id: launch.request_id.clone(),
                     role: TaskRole::Planner,
                     instruction: launch.instruction.clone(),
-                    status: TaskStatus::Running,
+                    status: ExecutionStatus::Running,
                     agent_name: Some(launch.agent_name.as_str().to_owned()),
-                    task_outcome: None,
+                    submission_outcome: None,
                 })
                 .await?;
             self.attempt_run
@@ -98,14 +98,14 @@ impl PlannerRun {
             .get(&planner_task_id)
             .await?
             .ok_or_else(|| WorkflowError::not_found("planner task", planner_task_id.as_str()))?;
-        if planner_task.role != TaskRole::Planner || planner_task.status != TaskStatus::Running {
+        if planner_task.role != TaskRole::Planner || planner_task.status != ExecutionStatus::Running {
             return Err(WorkflowError::invariant(format!(
                 "planner task {:?} is not running",
                 planner_task_id.as_str()
             )));
         }
 
-        let task_outcome = TaskOutcome::Planner {
+        let submission_outcome = SubmissionOutcome::Planner {
             plan_spec: submission.plan_spec.clone(),
             work_items: submission.work_items.clone(),
             deferred_goal_for_next_iteration: submission.deferred_goal_for_next_iteration.clone(),
@@ -115,9 +115,9 @@ impl PlannerRun {
             .task_store
             .set_task_status_if_current(
                 &planner_task_id,
-                TaskStatus::Running,
-                TaskStatus::Done,
-                Some(&task_outcome),
+                ExecutionStatus::Running,
+                ExecutionStatus::Done,
+                Some(&submission_outcome),
             )
             .await?
             .ok_or_else(|| {
@@ -188,17 +188,17 @@ impl PlannerRun {
             ));
         };
         match task.status {
-            TaskStatus::Done => {
+            ExecutionStatus::Done => {
                 WorkItemsRun::new(Arc::clone(&self.attempt_run))
                     .advance()
                     .await
             }
-            TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::Cancelled => {
+            ExecutionStatus::Failed | ExecutionStatus::Blocked | ExecutionStatus::Cancelled => {
                 self.attempt_run
-                    .close_attempt_failed(AttemptFailReason::TaskFailed)
+                    .close_attempt_failed(AttemptFailReason::WorkItemFailed)
                     .await
             }
-            TaskStatus::Pending | TaskStatus::Running => {
+            ExecutionStatus::Pending | ExecutionStatus::Running => {
                 self.synthesize_planner_failure(&launch).await
             }
         }
@@ -210,13 +210,13 @@ impl PlannerRun {
             .task_store
             .set_task_status_if_current(
                 &launch.task_id,
-                TaskStatus::Running,
-                TaskStatus::Failed,
+                ExecutionStatus::Running,
+                ExecutionStatus::Failed,
                 None,
             )
             .await?;
         self.attempt_run
-            .close_attempt_failed(AttemptFailReason::TaskFailed)
+            .close_attempt_failed(AttemptFailReason::WorkItemFailed)
             .await
     }
 }

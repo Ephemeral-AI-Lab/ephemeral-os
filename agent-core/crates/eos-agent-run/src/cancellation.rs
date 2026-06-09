@@ -1,7 +1,7 @@
 //! Agent-run cancellation orchestration.
 
 use eos_types::{
-    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, JsonObject, TaskStatus,
+    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, JsonObject, ExecutionStatus,
 };
 
 use crate::persistence::finish_agent_run;
@@ -18,11 +18,11 @@ pub(crate) async fn cancel_agent_run(
         completion.cancel(reason);
     }
 
-    let payload = cancelled_task_payload(reason);
+    let payload = cancelled_agent_run_payload(reason);
     let finish = finish_agent_run(
         &*service.agent_run_store,
         agent_run_id,
-        TaskStatus::Cancelled,
+        ExecutionStatus::Cancelled,
         Some(&payload),
         0,
         Some(reason),
@@ -57,7 +57,7 @@ pub(crate) async fn cancel_agent_run(
     }
 }
 
-fn cancelled_task_payload(reason: &str) -> JsonObject {
+fn cancelled_agent_run_payload(reason: &str) -> JsonObject {
     let mut payload = JsonObject::new();
     payload.insert("fail_reason".to_owned(), serde_json::json!("cancelled"));
     payload.insert("reason".to_owned(), serde_json::json!(reason));

@@ -278,21 +278,21 @@
 </details>
 
   <p class="source">crates/eos-agent-run/src/completion.rs:131</p>
-</article><article id="item-fn-task-status-for-agent-status-142" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_status_for_agent_status private const fn task_status_for_agent_status (status : AgentRunStatus) -&gt; TaskStatus crates/eos-agent-run/src/completion.rs  ">
+</article><article id="item-fn-task-status-for-agent-status-142" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_status_for_agent_status private const fn task_status_for_agent_status (status : AgentRunStatus) -&gt; ExecutionStatus crates/eos-agent-run/src/completion.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>task_status_for_agent_status</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-agent-run--src-completion-rs.html#item-fn-task-status-for-agent-status-142">task_status_for_agent_status</a> (status : AgentRunStatus) -&gt; TaskStatus</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-agent-run--src-completion-rs.html#item-fn-task-status-for-agent-status-142">task_status_for_agent_status</a> (status : AgentRunStatus) -&gt; ExecutionStatus</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-completion-rs.html#item-fn-task-status-for-agent-status-142">task_status_for_agent_status</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <span class="rs-type">TaskStatus</span> {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-completion-rs.html#item-fn-task-status-for-agent-status-142">task_status_for_agent_status</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <span class="rs-type">ExecutionStatus</span> {
     <span class="rs-kw">match</span> status {
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Done</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Cancelled</span>,
     }
 }
 </code></pre>
@@ -311,7 +311,7 @@
 
 <span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">AgentLoopCompletion</span>, <span class="rs-type">AgentLoopMessage</span>, <span class="rs-type">AgentLoopOutcome</span>, <span class="rs-type">AgentLoopOutcomeKind</span>, <span class="rs-type">AgentRunError</span>,
-    <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">Message</span>, <span class="rs-type">TaskStatus</span>,
+    <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">Message</span>, <span class="rs-type">ExecutionStatus</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::persistence::{completion_from_agent_run, finish_agent_run};
@@ -448,11 +448,11 @@
         .collect()
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-completion-rs.html#item-fn-task-status-for-agent-status-142">task_status_for_agent_status</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <span class="rs-type">TaskStatus</span> {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-completion-rs.html#item-fn-task-status-for-agent-status-142">task_status_for_agent_status</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <span class="rs-type">ExecutionStatus</span> {
     <span class="rs-kw">match</span> status {
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Done</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Cancelled</span>,
     }
 }
 </code></pre>

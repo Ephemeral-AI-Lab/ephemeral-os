@@ -32,7 +32,7 @@ mod model_registry {
         async fn active(&self) -> Result<Option<ModelRegistration>, CoreError>;
     }
 }
-mod request_task {
+mod request {
     //! Runtime-facing request persistence contracts.
 
     use async_trait::async_trait;
@@ -67,15 +67,15 @@ mod request_task {
         async fn list(&self) -> Result<Vec<Request>, CoreError>;
     }
 }
-mod task_agent_run {
+mod agent_run {
     //! Agent-run lineage persistence contract.
 
     use async_trait::async_trait;
 
     use crate::{
         AgentName, AgentRun, AgentRunId, AgentRunRecordIndex, AgentType, CoreError,
-        CreatedAgentRun, JsonObject, RequestId, RunningRequestAgentRun, TaskOutcome, TaskStatus,
-        ToolUseId,
+        CreatedAgentRun, ExecutionStatus, JsonObject, RequestId, RunningRequestAgentRun,
+        SubmissionOutcome, ToolUseId,
     };
 
     use super::Sealed;
@@ -98,9 +98,9 @@ mod task_agent_run {
         async fn finish_agent_run(
             &self,
             agent_run_id: &AgentRunId,
-            status: TaskStatus,
+            status: ExecutionStatus,
             terminal_payload: Option<&JsonObject>,
-            task_outcome: Option<&TaskOutcome>,
+            submission_outcome: Option<&SubmissionOutcome>,
             token_count: i64,
             error: Option<&str>,
         ) -> Result<Option<AgentRun>, CoreError>;
@@ -265,7 +265,7 @@ mod workflow {
         async fn record_plan_outcome(
             &self,
             id: &AttemptId,
-            planner_outcome: &crate::TaskOutcome,
+            planner_outcome: &crate::SubmissionOutcome,
             nodes: &[ExecutionNode],
         ) -> Result<Attempt, CoreError>;
 
@@ -282,8 +282,8 @@ mod workflow {
             &self,
             id: &AttemptId,
             work_item_id: &WorkItemId,
-            status: crate::TaskStatus,
-            outcome: &crate::TaskOutcome,
+            status: crate::ExecutionStatus,
+            outcome: &crate::SubmissionOutcome,
         ) -> Result<Attempt, CoreError>;
 
         /// Close the attempt with a typed terminal closure.
@@ -308,8 +308,8 @@ mod workflow {
 }
 
 pub use model_registry::ModelStore;
-pub use request_task::RequestStore;
-pub use task_agent_run::AgentRunStore;
+pub use agent_run::AgentRunStore;
+pub use request::RequestStore;
 pub use workflow::{AttemptStore, IterationStore, WorkflowStore};
 
 /// Alias for the error every store method returns.

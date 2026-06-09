@@ -21,7 +21,7 @@ pub(crate) async fn cancel_user_request(
     }
 
     let running = service
-        .task_agent_run_store
+        .agent_run_store
         .list_running_agent_runs_for_request(&input.request_id)
         .await?;
     for run in &running {

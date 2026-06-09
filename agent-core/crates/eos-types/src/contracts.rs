@@ -196,7 +196,7 @@ pub use agent_run::{
 pub use cancellation::{AgentCoreCancellationApi, CancelError};
 pub use record::{
     format_record_dir, AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget,
-    CreatedAgentRun, WorkflowCoordinates, WorkflowTaskRole,
+    CreatedAgentRun, WorkflowCoordinates, WorkflowAgentRole,
 };
 pub use workflow::{
     OpenDelegatedWorkflow, StartWorkflowRequest, StartedWorkflow, SubmissionAck, TerminalWorkflow,

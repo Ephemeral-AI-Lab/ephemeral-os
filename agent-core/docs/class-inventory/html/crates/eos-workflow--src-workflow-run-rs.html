@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>19</b><span>modules</span></div>
   <div><b>85</b><span>items</span></div>
-  <div><b>73</b><span>fields</span></div>
+  <div><b>72</b><span>fields</span></div>
   <div><b>111</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -86,7 +86,7 @@
         coordinators: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            deps: deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-203">with_iteration_coordinators</a>(coordinators.clone()),
+            deps: deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-199">with_iteration_coordinators</a>(coordinators.clone()),
             iteration_coordinators: coordinators,
         }
     }
@@ -156,7 +156,7 @@
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(parent_task_id)
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task&quot;, parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+        <span class="rs-kw">if</span> task.status != <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;task {:?} is not running; delegated workflow start requires a running parent task&quot;,
                 parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
@@ -527,7 +527,7 @@
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">AgentRunId</span>, <span class="rs-type">IterationCreationReason</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">OpenDelegatedWorkflow</span>,
-    <span class="rs-type">StartWorkflowRequest</span>, <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">TerminalWorkflow</span>, <span class="rs-type">ToolUseId</span>,
+    <span class="rs-type">StartWorkflowRequest</span>, <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">ExecutionStatus</span>, <span class="rs-type">TerminalWorkflow</span>, <span class="rs-type">ToolUseId</span>,
     <span class="rs-type">Workflow</span>, <span class="rs-type">WorkflowApi</span>, <span class="rs-type">WorkflowApiError</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowStatus</span>, <span class="rs-type">WorkflowTerminalStatus</span>,
 };
 
@@ -581,7 +581,7 @@
         coordinators: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            deps: deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-203">with_iteration_coordinators</a>(coordinators.clone()),
+            deps: deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-199">with_iteration_coordinators</a>(coordinators.clone()),
             iteration_coordinators: coordinators,
         }
     }
@@ -647,7 +647,7 @@
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(parent_task_id)
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task&quot;, parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+        <span class="rs-kw">if</span> task.status != <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;task {:?} is not running; delegated workflow start requires a running parent task&quot;,
                 parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()

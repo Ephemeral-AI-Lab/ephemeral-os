@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>9</b><span>modules</span></div>
   <div><b>20</b><span>items</span></div>
-  <div><b>45</b><span>fields</span></div>
+  <div><b>43</b><span>fields</span></div>
   <div><b>8</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -81,7 +81,7 @@
     }
 
     <span class="rs-kw">let</span> running = service
-        .task_agent_run_store
+        .agent_run_store
         .list_running_agent_runs_for_request(&amp;input.request_id)
         .<span class="rs-kw">await</span>?;
     <span class="rs-kw">for</span> run <span class="rs-kw">in</span> &amp;running {
@@ -147,7 +147,7 @@
     }
 
     <span class="rs-kw">let</span> running = service
-        .task_agent_run_store
+        .agent_run_store
         .list_running_agent_runs_for_request(&amp;input.request_id)
         .<span class="rs-kw">await</span>?;
     <span class="rs-kw">for</span> run <span class="rs-kw">in</span> &amp;running {

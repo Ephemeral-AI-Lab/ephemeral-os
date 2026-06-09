@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 use eos_types::{
     format_record_dir, AgentName, AgentRun, AgentRunId, AgentRunRecordIndex,
     AgentRunRecordTarget, AgentRunStore, CoreError, CreatedAgentRun, RequestId,
-    RunningRequestAgentRun, Sealed, TaskOutcome, TaskStatus, ToolUseId, AgentType,
+    RunningRequestAgentRun, Sealed, SubmissionOutcome, ExecutionStatus, ToolUseId, AgentType,
 };
 
 use crate::error::DbError;
@@ -44,14 +44,14 @@ impl AgentRunStore for SqlAgentRunStore {
         sqlx::query(
             "INSERT INTO agent_runs \
              (agent_run_id, request_id, agent_type, status, agent_name, parent_agent_run_id, \
-              tool_use_id, terminal_payload, task_outcome, token_count, error, created_at, \
+              tool_use_id, terminal_payload, submission_outcome, token_count, error, created_at, \
               updated_at, finished_at) \
              VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, NULL, ?, ?, NULL)",
         )
         .bind(agent_run_id.as_str())
         .bind(request_id.as_str())
         .bind(enum_to_db(&agent_type))
-        .bind(enum_to_db(&TaskStatus::Running))
+        .bind(enum_to_db(&ExecutionStatus::Running))
         .bind(agent_name.as_str())
         .bind(parent_agent_run_id.map(AgentRunId::as_str))
         .bind(tool_use_id.map(ToolUseId::as_str))
@@ -70,18 +70,18 @@ impl AgentRunStore for SqlAgentRunStore {
     async fn finish_agent_run(
         &self,
         agent_run_id: &AgentRunId,
-        status: TaskStatus,
+        status: ExecutionStatus,
         terminal_payload: Option<&eos_types::JsonObject>,
-        task_outcome: Option<&TaskOutcome>,
+        submission_outcome: Option<&SubmissionOutcome>,
         token_count: i64,
         error: Option<&str>,
     ) -> Result<Option<AgentRun>, CoreError> {
         let now = OffsetDateTime::now_utc();
         let terminal = terminal_payload.map(json_col::encode).transpose()?;
-        let outcome = task_outcome.map(json_col::encode).transpose()?;
+        let outcome = submission_outcome.map(json_col::encode).transpose()?;
         let row = sqlx::query_as::<Sqlite, AgentRunRow>(
             "UPDATE agent_runs SET status = ?, terminal_payload = COALESCE(?, terminal_payload), \
-             task_outcome = COALESCE(?, task_outcome), token_count = ?, error = ?, \
+             submission_outcome = COALESCE(?, submission_outcome), token_count = ?, error = ?, \
              updated_at = ?, finished_at = ? WHERE agent_run_id = ? RETURNING *",
         )
         .bind(enum_to_db(&status))
@@ -204,7 +204,7 @@ struct AgentRunRow {
     parent_agent_run_id: Option<String>,
     tool_use_id: Option<String>,
     terminal_payload: Option<String>,
-    task_outcome: Option<String>,
+    submission_outcome: Option<String>,
     token_count: i64,
     error: Option<String>,
     created_at: OffsetDateTime,
@@ -269,7 +269,7 @@ fn row_to_agent_run(row: AgentRunRow) -> Result<AgentRun, DbError> {
         )?,
         tool_use_id: opt_parsed_id("agent_runs.tool_use_id", row.tool_use_id.as_deref())?,
         terminal_payload: json_col::decode_opt(row.terminal_payload.as_deref())?,
-        task_outcome: json_col::decode_opt(row.task_outcome.as_deref())?,
+        submission_outcome: json_col::decode_opt(row.submission_outcome.as_deref())?,
         token_count: row.token_count,
         error: row.error,
         created_at: eos_types::UtcDateTime::from_offset(row.created_at),

@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>19</b><span>modules</span></div>
   <div><b>85</b><span>items</span></div>
-  <div><b>73</b><span>fields</span></div>
+  <div><b>72</b><span>fields</span></div>
   <div><b>111</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -56,20 +56,20 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-render-planner-agent-context-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_planner_agent_context pub(crate) pub(crate) async fn render_planner_agent_context (deps : &amp; AttemptResources , attempt : &amp; Attempt , planner_task_id : &amp; eos_types :: TaskId ,) -&gt; Result &lt; AgentContext &gt; crates/eos-workflow/src/context/planner_context.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-render-planner-agent-context-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_planner_agent_context pub(crate) pub(crate) async fn render_planner_agent_context (deps : &amp; AttemptResources , attempt : &amp; Attempt , planner_agent_run_id : &amp; eos_types :: AgentRunId ,) -&gt; Result &lt; AgentContext &gt; crates/eos-workflow/src/context/planner_context.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_planner_agent_context</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a> (deps : &amp; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a> , attempt : &amp; Attempt , planner_task_id : &amp; eos_types :: TaskId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a> &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a> (deps : &amp; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a> , attempt : &amp; Attempt , planner_agent_run_id : &amp; eos_types :: AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a> &gt;</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a>(
     deps: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
     attempt: &amp;<span class="rs-type">Attempt</span>,
-    planner_task_id: &amp;eos_types::<span class="rs-type">TaskId</span>,
+    planner_agent_run_id: &amp;eos_types::<span class="rs-type">AgentRunId</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a>&gt; {
     <span class="rs-kw">let</span> iteration = deps
         .iteration_store
@@ -119,8 +119,8 @@
                     (&quot;iteration_id&quot;.to_owned(), iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
                     (&quot;attempt_id&quot;.to_owned(), attempt.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
                     (
-                        &quot;planner_task_id&quot;.to_owned(),
-                        planner_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
+                        &quot;planner_agent_run_id&quot;.to_owned(),
+                        planner_agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
                     ),
                 ])
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-children-67">with_children</a>(vec![
@@ -158,7 +158,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a>(
     deps: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
     attempt: &amp;<span class="rs-type">Attempt</span>,
-    planner_task_id: &amp;eos_types::<span class="rs-type">TaskId</span>,
+    planner_agent_run_id: &amp;eos_types::<span class="rs-type">AgentRunId</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a>&gt; {
     <span class="rs-kw">let</span> iteration = deps
         .iteration_store
@@ -208,8 +208,8 @@
                     (&quot;iteration_id&quot;.to_owned(), iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
                     (&quot;attempt_id&quot;.to_owned(), attempt.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
                     (
-                        &quot;planner_task_id&quot;.to_owned(),
-                        planner_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
+                        &quot;planner_agent_run_id&quot;.to_owned(),
+                        planner_agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
                     ),
                 ])
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-children-67">with_children</a>(vec![

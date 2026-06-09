@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>19</b><span>modules</span></div>
   <div><b>85</b><span>items</span></div>
-  <div><b>73</b><span>fields</span></div>
+  <div><b>72</b><span>fields</span></div>
   <div><b>111</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -56,13 +56,13 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-render-worker-agent-context-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_worker_agent_context pub(crate) pub(crate) async fn render_worker_agent_context (deps : &amp; AttemptResources , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec , task_id : &amp; eos_types :: TaskId ,) -&gt; Result &lt; AgentContext &gt; crates/eos-workflow/src/context/worker_context.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-render-worker-agent-context-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_worker_agent_context pub(crate) pub(crate) async fn render_worker_agent_context (deps : &amp; AttemptResources , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec , agent_run_id : &amp; eos_types :: AgentRunId ,) -&gt; Result &lt; AgentContext &gt; crates/eos-workflow/src/context/worker_context.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_worker_agent_context</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-context-worker-context-rs.html#item-fn-render-worker-agent-context-8">render_worker_agent_context</a> (deps : &amp; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a> , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec , task_id : &amp; eos_types :: TaskId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a> &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-context-worker-context-rs.html#item-fn-render-worker-agent-context-8">render_worker_agent_context</a> (deps : &amp; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a> , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec , agent_run_id : &amp; eos_types :: AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a> &gt;</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -70,10 +70,10 @@
     deps: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
     attempt: &amp;<span class="rs-type">Attempt</span>,
     work_item: &amp;<span class="rs-type">WorkItemSpec</span>,
-    task_id: &amp;eos_types::<span class="rs-type">TaskId</span>,
+    agent_run_id: &amp;eos_types::<span class="rs-type">AgentRunId</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a>&gt; {
-    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-85">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
-    <span class="rs-kw">let</span> needs = <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-43">dependency_sections</a>(deps, attempt, work_item).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-87">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> needs = <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-46">dependency_sections</a>(deps, attempt, work_item).<span class="rs-kw">await</span>?;
 
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a> {
         role: <a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-enum-ContextRole-4">ContextRole</a>::<span class="rs-type">Worker</span>,
@@ -82,7 +82,10 @@
             <a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(&quot;work_item&quot;)
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-attrs-53">with_attrs</a>(vec![
                     (&quot;work_item_id&quot;.to_owned(), work_item.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
-                    (&quot;task_id&quot;.to_owned(), task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
+                    (
+                        &quot;agent_run_id&quot;.to_owned(),
+                        agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
+                    ),
                     (
                         &quot;agent_name&quot;.to_owned(),
                         work_item.agent_name.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
@@ -104,49 +107,44 @@
 </details>
 
   <p class="source">crates/eos-workflow/src/context/worker_context.rs:8</p>
-</article><article id="item-fn-dependency-sections-43" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dependency_sections private async fn dependency_sections (deps : &amp; AttemptResources , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec ,) -&gt; Result &lt; Vec &lt; ContextSection &gt; &gt; crates/eos-workflow/src/context/worker_context.rs  ">
+</article><article id="item-fn-dependency-sections-46" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dependency_sections private async fn dependency_sections (deps : &amp; AttemptResources , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec ,) -&gt; Result &lt; Vec &lt; ContextSection &gt; &gt; crates/eos-workflow/src/context/worker_context.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dependency_sections</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-43">dependency_sections</a> (deps : &amp; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a> , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; <a class="symbol-link" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a> &gt; &gt;</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-46">dependency_sections</a> (deps : &amp; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a> , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; <a class="symbol-link" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a> &gt; &gt;</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-43">dependency_sections</a>(
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-46">dependency_sections</a>(
     deps: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
     attempt: &amp;<span class="rs-type">Attempt</span>,
     work_item: &amp;<span class="rs-type">WorkItemSpec</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a>&gt;&gt; {
-    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-85">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-87">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sections = <span class="rs-type">Vec</span>::with_capacity(work_item.needs.len());
     <span class="rs-kw">for</span> need <span class="rs-kw">in</span> &amp;work_item.needs {
         <span class="rs-kw">let</span> node = attempt
             .execution_tree
             .node(need)
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;work item&quot;, need.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">let</span> task_id = node.task_id.as_ref().ok_or_else(|| {
+        <span class="rs-kw">let</span> agent_run_id = node.agent_run_id.as_ref().ok_or_else(|| {
             <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;dependency work item {:?} has no bound task&quot;,
+                &quot;dependency work item {:?} has no bound agent run&quot;,
                 need.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             ))
         })?;
-        <span class="rs-kw">let</span> task = deps
-            .task_store
-            .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(task_id)
-            .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">let</span> <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { is_pass, outcome } = task.task_outcome.ok_or_else(|| {
+        <span class="rs-kw">let</span> <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { is_pass, outcome } = node.outcome.clone().ok_or_else(|| {
             <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;dependency worker task {:?} has no worker outcome&quot;,
-                task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
+                &quot;dependency worker agent run {:?} has no worker outcome&quot;,
+                agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             ))
         })?
         <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;dependency task {:?} did not record a worker outcome&quot;,
-                task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
+                &quot;dependency agent run {:?} did not record a worker outcome&quot;,
+                agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             )));
         };
         <span class="rs-kw">let</span> work_spec = planner
@@ -159,7 +157,7 @@
             <a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(&quot;need&quot;)
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-attrs-53">with_attrs</a>(vec![
                     (&quot;work_item_id&quot;.to_owned(), need.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
-                    (&quot;task_id&quot;.to_owned(), task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
+                    (&quot;agent_run_id&quot;.to_owned(), agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
                     (&quot;is_pass&quot;.to_owned(), is_pass.to_string()),
                 ])
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-children-67">with_children</a>(vec![
@@ -173,7 +171,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/context/worker_context.rs:43</p>
+  <p class="source">crates/eos-workflow/src/context/worker_context.rs:46</p>
 </article></div>
 </section></div>
 </main>
@@ -193,10 +191,10 @@
     deps: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
     attempt: &amp;<span class="rs-type">Attempt</span>,
     work_item: &amp;<span class="rs-type">WorkItemSpec</span>,
-    task_id: &amp;eos_types::<span class="rs-type">TaskId</span>,
+    agent_run_id: &amp;eos_types::<span class="rs-type">AgentRunId</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a>&gt; {
-    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-85">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
-    <span class="rs-kw">let</span> needs = <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-43">dependency_sections</a>(deps, attempt, work_item).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-87">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> needs = <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-46">dependency_sections</a>(deps, attempt, work_item).<span class="rs-kw">await</span>?;
 
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-AgentContext-75">AgentContext</a> {
         role: <a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-enum-ContextRole-4">ContextRole</a>::<span class="rs-type">Worker</span>,
@@ -205,7 +203,10 @@
             <a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(&quot;work_item&quot;)
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-attrs-53">with_attrs</a>(vec![
                     (&quot;work_item_id&quot;.to_owned(), work_item.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
-                    (&quot;task_id&quot;.to_owned(), task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
+                    (
+                        &quot;agent_run_id&quot;.to_owned(),
+                        agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
+                    ),
                     (
                         &quot;agent_name&quot;.to_owned(),
                         work_item.agent_name.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned(),
@@ -224,39 +225,34 @@
     })
 }
 
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-43">dependency_sections</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-dependency-sections-46">dependency_sections</a>(
     deps: &amp;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
     attempt: &amp;<span class="rs-type">Attempt</span>,
     work_item: &amp;<span class="rs-type">WorkItemSpec</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a>&gt;&gt; {
-    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-85">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-87">planner_outcome_for_attempt</a>(deps, attempt).<span class="rs-kw">await</span>?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sections = <span class="rs-type">Vec</span>::with_capacity(work_item.needs.len());
     <span class="rs-kw">for</span> need <span class="rs-kw">in</span> &amp;work_item.needs {
         <span class="rs-kw">let</span> node = attempt
             .execution_tree
             .node(need)
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;work item&quot;, need.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">let</span> task_id = node.task_id.as_ref().ok_or_else(|| {
+        <span class="rs-kw">let</span> agent_run_id = node.agent_run_id.as_ref().ok_or_else(|| {
             <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;dependency work item {:?} has no bound task&quot;,
+                &quot;dependency work item {:?} has no bound agent run&quot;,
                 need.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             ))
         })?;
-        <span class="rs-kw">let</span> task = deps
-            .task_store
-            .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(task_id)
-            .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">let</span> <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { is_pass, outcome } = task.task_outcome.ok_or_else(|| {
+        <span class="rs-kw">let</span> <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { is_pass, outcome } = node.outcome.clone().ok_or_else(|| {
             <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;dependency worker task {:?} has no worker outcome&quot;,
-                task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
+                &quot;dependency worker agent run {:?} has no worker outcome&quot;,
+                agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             ))
         })?
         <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;dependency task {:?} did not record a worker outcome&quot;,
-                task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
+                &quot;dependency agent run {:?} did not record a worker outcome&quot;,
+                agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             )));
         };
         <span class="rs-kw">let</span> work_spec = planner
@@ -269,7 +265,7 @@
             <a class="symbol-link rs-type" href="eos-workflow--src-context-render-rs.html#item-struct-ContextSection-25">ContextSection</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(&quot;need&quot;)
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-attrs-53">with_attrs</a>(vec![
                     (&quot;work_item_id&quot;.to_owned(), need.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
-                    (&quot;task_id&quot;.to_owned(), task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
+                    (&quot;agent_run_id&quot;.to_owned(), agent_run_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
                     (&quot;is_pass&quot;.to_owned(), is_pass.to_string()),
                 ])
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-with-children-67">with_children</a>(vec![

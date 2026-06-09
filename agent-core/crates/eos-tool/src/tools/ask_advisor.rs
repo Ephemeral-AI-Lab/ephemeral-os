@@ -245,8 +245,8 @@ mod implementation {
     use async_trait::async_trait;
     use eos_types::JsonObject;
     use eos_types::{
-        AgentName, AgentRunApi, AgentRunError, AgentRunOutcome, ParentAgentRunAnchor,
-        SpawnAgentRequest, SpawnAgentTarget,
+        AgentName, AgentRunApi, AgentRunError, AgentRunId, AgentRunOutcome, AgentType,
+        SpawnAgentRequest,
     };
     use schemars::{schema_for, JsonSchema};
     use serde::{Deserialize, Serialize};
@@ -300,23 +300,20 @@ mod implementation {
 
             let agent_run_service = self.agent_run_service.as_ref();
             let parent_agent_run_id = ctx.require_agent_run_id()?.clone();
-            let parent_task_id = ctx.require_task_id()?.clone();
             let parent_request_id = ctx.require_request_id()?.clone();
+            let advisor_run_id = AgentRunId::new_v4();
             let advisor_run_id = match agent_run_service
                 .spawn_agent(SpawnAgentRequest {
+                    agent_run_id: advisor_run_id,
                     agent_name: AgentName::new("advisor").expect("advisor agent name is valid"),
+                    agent_type: AgentType::Advisor,
+                    request_id: parent_request_id,
+                    parent_agent_run_id: Some(parent_agent_run_id),
                     initial_messages: build_advisor_messages(
                         ctx,
                         &parsed.tool_name,
                         &parsed.tool_payload,
                     ),
-                    target: SpawnAgentTarget::Advisor {
-                        parent: ParentAgentRunAnchor {
-                            request_id: parent_request_id,
-                            parent_task_id,
-                            agent_run_id: parent_agent_run_id,
-                        },
-                    },
                     tool_use_id: ctx.tool_use_id.clone(),
                     sandbox_id: ctx.sandbox_id.clone(),
                     workspace_root: ctx.workspace_root.clone(),

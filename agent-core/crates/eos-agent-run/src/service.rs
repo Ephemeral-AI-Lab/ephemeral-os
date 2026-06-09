@@ -93,12 +93,12 @@ mod tests {
         Message, ParentAgentRunAnchor, ParentedAgentRunKind, ParentedOutcome, ParentedRun, PlanId,
         RequestId, RunningRequestAgentRun, SpawnAgentRequest, SpawnAgentTarget,
         StartAgentLoopRequest, StartedAgentLoop, TaskAgentRunKind, TaskAgentRunStore,
-        TaskExecutionIndex, TaskId, TaskOutcome, TaskRole, TaskStatus, ToolUseId, UtcDateTime,
-        WorkItemId, WorkflowCoordinates, WorkflowTaskRole,
+        TaskExecutionIndex, TaskId, SubmissionOutcome, TaskRole, ExecutionStatus, ToolUseId, UtcDateTime,
+        WorkItemId, WorkflowCoordinates, WorkflowAgentRole,
     };
 
     #[test]
-    fn task_agent_run_kind_declares_required_agent_type() {
+    fn agent_run_kind_declares_required_agent_type() {
         let parent_agent_run_id = AgentRunId::new_v4();
         assert_eq!(
             expected_agent_type(&TaskAgentRunKind::Root),
@@ -142,7 +142,7 @@ mod tests {
             .expect("waiter task joins")
             .expect("waiter returns outcome");
         assert_eq!(outcome.status, AgentRunStatus::Completed);
-        assert_eq!(harness.task_agent_run_store.finish_count(), 1);
+        assert_eq!(harness.agent_run_store.finish_count(), 1);
         assert_eq!(
             harness
                 .service
@@ -185,18 +185,18 @@ mod tests {
             harness.launcher.cancellation_reason(),
             Some("caller cancelled".to_owned())
         );
-        assert_eq!(harness.task_agent_run_store.finish_count(), 1);
+        assert_eq!(harness.agent_run_store.finish_count(), 1);
 
         harness.launcher.complete(successful_loop_outcome());
         tokio::time::sleep(Duration::from_millis(20)).await;
 
-        assert_eq!(harness.task_agent_run_store.finish_count(), 1);
+        assert_eq!(harness.agent_run_store.finish_count(), 1);
     }
 
     struct ServiceHarness {
         service: AgentRunService,
         launcher: Arc<ControlledLauncher>,
-        task_agent_run_store: Arc<FakeTaskAgentRunStore>,
+        agent_run_store: Arc<FakeTaskAgentRunStore>,
     }
 
     impl ServiceHarness {
@@ -204,16 +204,16 @@ mod tests {
             let mut registry = AgentRegistryBuilder::new();
             registry.add(root_agent_definition());
             let launcher = Arc::new(ControlledLauncher::default());
-            let task_agent_run_store = Arc::new(FakeTaskAgentRunStore::default());
+            let agent_run_store = Arc::new(FakeTaskAgentRunStore::default());
             let service = AgentRunService::new(
                 Arc::new(registry.build()),
                 launcher.clone(),
-                task_agent_run_store.clone(),
+                agent_run_store.clone(),
             );
             Self {
                 service,
                 launcher,
-                task_agent_run_store,
+                agent_run_store,
             }
         }
     }
@@ -343,7 +343,7 @@ mod tests {
 
     #[async_trait]
     impl TaskAgentRunStore for FakeTaskAgentRunStore {
-        async fn create_root_task_agent_run(
+        async fn create_root_agent_run(
             &self,
             request_id: &RequestId,
             agent_run_id: &AgentRunId,
@@ -359,17 +359,17 @@ mod tests {
             lock(&self.indexes).insert(agent_run_id.clone(), index.clone());
             lock(&self.runs).insert(
                 agent_run_id.clone(),
-                task_run_from_index(&index, TaskStatus::Running, None, 0, None),
+                task_run_from_index(&index, ExecutionStatus::Running, None, 0, None),
             );
             Ok(created_from_index(&index))
         }
 
-        async fn create_workflow_task_agent_run(
+        async fn create_workflow_agent_run(
             &self,
             _request_id: &RequestId,
             _agent_run_id: &AgentRunId,
             _coords: &WorkflowCoordinates,
-            _role: WorkflowTaskRole,
+            _role: WorkflowAgentRole,
             _plan_id: &PlanId,
             _work_item_id: Option<&WorkItemId>,
             _agent_name: &AgentName,
@@ -377,7 +377,7 @@ mod tests {
             Err(CoreError::Store("workflow fake not implemented".to_owned()))
         }
 
-        async fn create_parented_task_agent_run(
+        async fn create_parented_agent_run(
             &self,
             _agent_run_id: &AgentRunId,
             _parent: &ParentAgentRunAnchor,
@@ -391,9 +391,9 @@ mod tests {
         async fn finish_task_run(
             &self,
             agent_run_id: &AgentRunId,
-            status: TaskStatus,
+            status: ExecutionStatus,
             terminal_payload: Option<&JsonObject>,
-            task_outcome: Option<&TaskOutcome>,
+            submission_outcome: Option<&SubmissionOutcome>,
             token_count: i64,
             error: Option<&str>,
         ) -> Result<Option<AgentRun>, CoreError> {
@@ -409,7 +409,7 @@ mod tests {
                 status,
                 agent_name: AgentName::new("root").expect("valid agent name"),
                 terminal_payload: terminal_payload.cloned(),
-                task_outcome: task_outcome.cloned(),
+                submission_outcome: submission_outcome.cloned(),
                 token_count,
                 error: error.map(str::to_owned),
                 created_at: UtcDateTime::now(),
@@ -423,7 +423,7 @@ mod tests {
         async fn finish_parented_run(
             &self,
             _agent_run_id: &AgentRunId,
-            _status: TaskStatus,
+            _status: ExecutionStatus,
             _terminal_payload: Option<&JsonObject>,
             _parented_outcome: Option<&ParentedOutcome>,
             _token_count: i64,
@@ -467,7 +467,7 @@ mod tests {
             Ok(lock(&self.indexes)
                 .values()
                 .filter(|index| &index.request_id == request_id)
-                .map(|index| task_run_from_index(index, TaskStatus::Running, None, 0, None))
+                .map(|index| task_run_from_index(index, ExecutionStatus::Running, None, 0, None))
                 .collect())
         }
 
@@ -482,7 +482,7 @@ mod tests {
                     request_id: index.request_id.clone(),
                     task_id: index.task_id.clone(),
                     agent_run_id: index.agent_run_id.clone(),
-                    status: TaskStatus::Running,
+                    status: ExecutionStatus::Running,
                 })
                 .collect())
         }
@@ -515,7 +515,7 @@ mod tests {
                 request_id: index.request_id.clone(),
                 agent_run_id: index.agent_run_id.clone(),
                 task_id: index.task_id.clone(),
-                task_agent_run_kind: index.kind.clone(),
+                agent_run_kind: index.kind.clone(),
                 record_dir: format_record_dir(index),
             },
         }
@@ -523,7 +523,7 @@ mod tests {
 
     fn task_run_from_index(
         index: &AgentRunRecordIndex,
-        status: TaskStatus,
+        status: ExecutionStatus,
         terminal_payload: Option<&JsonObject>,
         token_count: i64,
         error: Option<&str>,
@@ -536,7 +536,7 @@ mod tests {
             status,
             agent_name: AgentName::new("root").expect("valid agent name"),
             terminal_payload: terminal_payload.cloned(),
-            task_outcome: None,
+            submission_outcome: None,
             token_count,
             error: error.map(str::to_owned),
             created_at: UtcDateTime::now(),
@@ -549,11 +549,11 @@ mod tests {
         match &index.kind {
             TaskAgentRunKind::Root => TaskRole::Root,
             TaskAgentRunKind::Workflow {
-                role: WorkflowTaskRole::Planner,
+                role: WorkflowAgentRole::Planner,
                 ..
             } => TaskRole::Planner,
             TaskAgentRunKind::Workflow {
-                role: WorkflowTaskRole::Worker,
+                role: WorkflowAgentRole::Worker,
                 ..
             } => TaskRole::Worker,
             TaskAgentRunKind::Parented { .. } => TaskRole::Root,

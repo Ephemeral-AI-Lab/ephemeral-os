@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>19</b><span>modules</span></div>
   <div><b>85</b><span>items</span></div>
-  <div><b>73</b><span>fields</span></div>
+  <div><b>72</b><span>fields</span></div>
   <div><b>111</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -82,7 +82,7 @@
             <span class="rs-kw">if</span> attempt.stage() != <span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span> {
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
             }
-            <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-85">planner_outcome_for_attempt</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>(), &amp;attempt).<span class="rs-kw">await</span>?;
+            <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-87">planner_outcome_for_attempt</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>(), &amp;attempt).<span class="rs-kw">await</span>?;
             <span class="rs-kw">let</span> states = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-run-rs.html#method-node-states-250">node_states</a>(&amp;attempt).<span class="rs-kw">await</span>?;
             <span class="rs-kw">if</span> states.values().any(|state| *state == <a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>) {
                 <span class="rs-kw">return</span> <span class="rs-self">self</span>
@@ -115,7 +115,7 @@
             }
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> spawned = 0usize;
             <span class="rs-kw">for</span> node <span class="rs-kw">in</span> ready.into_iter().take(capacity) {
-                <span class="rs-kw">let</span> work_item = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-work-item-by-id-75">work_item_by_id</a>(&amp;planner.work_items, &amp;node.work_item_id)?.clone();
+                <span class="rs-kw">let</span> work_item = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-work-item-by-id-77">work_item_by_id</a>(&amp;planner.work_items, &amp;node.work_item_id)?.clone();
                 <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-run-rs.html#method-spawn-worker-145">spawn_worker</a>(&amp;attempt, &amp;work_item).<span class="rs-kw">await</span>?;
                 spawned += 1;
             }
@@ -154,18 +154,18 @@
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(&amp;submission.task_id)
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;worker task&quot;, submission.task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">if</span> task.role != <span class="rs-type">TaskRole</span>::<span class="rs-type">Worker</span> || task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+        <span class="rs-kw">if</span> task.role != <span class="rs-type">TaskRole</span>::<span class="rs-type">Worker</span> || task.status != <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;worker task {:?} is not running&quot;,
                 submission.task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             )));
         }
         <span class="rs-kw">let</span> task_status = <span class="rs-kw">if</span> submission.status.is_pass() {
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Done</span>
         } <span class="rs-kw">else</span> {
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span>
         };
-        <span class="rs-kw">let</span> task_outcome = <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> {
+        <span class="rs-kw">let</span> submission_outcome = <span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> {
             is_pass: submission.status.is_pass(),
             outcome: submission.outcome,
         };
@@ -174,9 +174,9 @@
             .task_store
             .set_task_status_if_current(
                 &amp;submission.task_id,
-                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+                <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>,
                 task_status,
-                <span class="rs-type">Some</span>(&amp;task_outcome),
+                <span class="rs-type">Some</span>(&amp;submission_outcome),
             )
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| {
@@ -192,8 +192,8 @@
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-run-rs.html#method-spawn-worker-145">spawn_worker</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>, work_item: &amp;<span class="rs-type">WorkItemSpec</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> task_id = <span class="rs-type">TaskId</span>::new_v4();
-        <span class="rs-kw">let</span> launch = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-237">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>().clone())
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-287">for_worker</a>(attempt, work_item, task_id.clone())
+        <span class="rs-kw">let</span> launch = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-233">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>().clone())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-283">for_worker</a>(attempt, work_item, task_id.clone())
             .<span class="rs-kw">await</span>?;
         <span class="rs-self">self</span>.attempt_run
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>()
@@ -203,9 +203,9 @@
                 request_id: launch.request_id.clone(),
                 role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Worker</span>,
                 instruction: launch.instruction.clone(),
-                status: <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+                status: <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>,
                 agent_name: <span class="rs-type">Some</span>(launch.agent_name.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
-                task_outcome: <span class="rs-type">None</span>,
+                submission_outcome: <span class="rs-type">None</span>,
             })
             .<span class="rs-kw">await</span>?;
         <span class="rs-self">self</span>.attempt_run
@@ -264,7 +264,7 @@
                 launch.task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>(),
             ));
         };
-        <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
+        <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>) {
             <span class="rs-kw">let</span> work_item_id = launch.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-work-item-id-106">work_item_id</a>().cloned().ok_or_else(|| {
                 <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(&quot;worker settlement missing work_item_id&quot;)
             })?;
@@ -281,7 +281,7 @@
         task_id: &amp;<span class="rs-type">TaskId</span>,
         work_item_id: &amp;<span class="rs-type">WorkItemId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> task_outcome = <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> {
+        <span class="rs-kw">let</span> submission_outcome = <span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> {
             is_pass: <span class="rs-kw">false</span>,
             outcome: format!(
                 &quot;worker {:?} finished without submit_worker_outcome&quot;,
@@ -293,9 +293,9 @@
             .task_store
             .set_task_status_if_current(
                 task_id,
-                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
-                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>,
-                <span class="rs-type">Some</span>(&amp;task_outcome),
+                <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>,
+                <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span>,
+                <span class="rs-type">Some</span>(&amp;submission_outcome),
             )
             .<span class="rs-kw">await</span>?;
         <span class="rs-type">Ok</span>(())
@@ -326,16 +326,16 @@
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;worker task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
         <span class="rs-kw">match</span> task.status {
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Running</span>),
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span> =&gt; <span class="rs-kw">match</span> task.task_outcome {
-                <span class="rs-type">Some</span>(<span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { is_pass: <span class="rs-kw">true</span>, .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Passed</span>),
-                <span class="rs-type">Some</span>(<span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>),
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Running</span>),
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Done</span> =&gt; <span class="rs-kw">match</span> task.submission_outcome {
+                <span class="rs-type">Some</span>(<span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> { is_pass: <span class="rs-kw">true</span>, .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Passed</span>),
+                <span class="rs-type">Some</span>(<span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> { .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>),
                 _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;worker task {:?} is done without worker outcome&quot;,
                     task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
                 ))),
             },
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Blocked</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span> =&gt; {
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Blocked</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Cancelled</span> =&gt; {
                 <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>)
             }
         }
@@ -409,14 +409,14 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptFailReason</span>, <span class="rs-type">AttemptStage</span>, <span class="rs-type">ExecutionNode</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskOutcome</span>, <span class="rs-type">TaskRole</span>,
-    <span class="rs-type">TaskStatus</span>, <span class="rs-type">WorkItemId</span>, <span class="rs-type">WorkItemSpec</span>, <span class="rs-type">WorkerOutcomeSubmission</span>,
+    <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptFailReason</span>, <span class="rs-type">AttemptStage</span>, <span class="rs-type">ExecutionNode</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">SubmissionOutcome</span>, <span class="rs-type">TaskRole</span>,
+    <span class="rs-type">ExecutionStatus</span>, <span class="rs-type">WorkItemId</span>, <span class="rs-type">WorkItemSpec</span>, <span class="rs-type">WorkerOutcomeSubmission</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::work_items::{planner_outcome_for_attempt, work_item_by_id};
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-237">AgentLaunchFactory</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentRunReport-19">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-attempt-run-rs.html#item-struct-AttemptRun-14">AttemptRun</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-233">AgentLaunchFactory</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentRunReport-19">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-attempt-run-rs.html#item-struct-AttemptRun-14">AttemptRun</a>};
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
 <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a> {
@@ -445,7 +445,7 @@
             <span class="rs-kw">if</span> attempt.stage() != <span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span> {
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
             }
-            <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-85">planner_outcome_for_attempt</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>(), &amp;attempt).<span class="rs-kw">await</span>?;
+            <span class="rs-kw">let</span> planner = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-planner-outcome-for-attempt-87">planner_outcome_for_attempt</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>(), &amp;attempt).<span class="rs-kw">await</span>?;
             <span class="rs-kw">let</span> states = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-run-rs.html#method-node-states-250">node_states</a>(&amp;attempt).<span class="rs-kw">await</span>?;
             <span class="rs-kw">if</span> states.values().any(|state| *state == <a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>) {
                 <span class="rs-kw">return</span> <span class="rs-self">self</span>
@@ -478,7 +478,7 @@
             }
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> spawned = 0usize;
             <span class="rs-kw">for</span> node <span class="rs-kw">in</span> ready.into_iter().take(capacity) {
-                <span class="rs-kw">let</span> work_item = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-work-item-by-id-75">work_item_by_id</a>(&amp;planner.work_items, &amp;node.work_item_id)?.clone();
+                <span class="rs-kw">let</span> work_item = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-rs.html#item-fn-work-item-by-id-77">work_item_by_id</a>(&amp;planner.work_items, &amp;node.work_item_id)?.clone();
                 <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-run-rs.html#method-spawn-worker-145">spawn_worker</a>(&amp;attempt, &amp;work_item).<span class="rs-kw">await</span>?;
                 spawned += 1;
             }
@@ -515,18 +515,18 @@
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(&amp;submission.task_id)
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;worker task&quot;, submission.task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">if</span> task.role != <span class="rs-type">TaskRole</span>::<span class="rs-type">Worker</span> || task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+        <span class="rs-kw">if</span> task.role != <span class="rs-type">TaskRole</span>::<span class="rs-type">Worker</span> || task.status != <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;worker task {:?} is not running&quot;,
                 submission.task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
             )));
         }
         <span class="rs-kw">let</span> task_status = <span class="rs-kw">if</span> submission.status.is_pass() {
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Done</span>
         } <span class="rs-kw">else</span> {
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span>
         };
-        <span class="rs-kw">let</span> task_outcome = <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> {
+        <span class="rs-kw">let</span> submission_outcome = <span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> {
             is_pass: submission.status.is_pass(),
             outcome: submission.outcome,
         };
@@ -535,9 +535,9 @@
             .task_store
             .set_task_status_if_current(
                 &amp;submission.task_id,
-                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+                <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>,
                 task_status,
-                <span class="rs-type">Some</span>(&amp;task_outcome),
+                <span class="rs-type">Some</span>(&amp;submission_outcome),
             )
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| {
@@ -551,8 +551,8 @@
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-work-items-run-rs.html#method-spawn-worker-145">spawn_worker</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>, work_item: &amp;<span class="rs-type">WorkItemSpec</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> task_id = <span class="rs-type">TaskId</span>::new_v4();
-        <span class="rs-kw">let</span> launch = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-237">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>().clone())
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-287">for_worker</a>(attempt, work_item, task_id.clone())
+        <span class="rs-kw">let</span> launch = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-233">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(<span class="rs-self">self</span>.attempt_run.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>().clone())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-283">for_worker</a>(attempt, work_item, task_id.clone())
             .<span class="rs-kw">await</span>?;
         <span class="rs-self">self</span>.attempt_run
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-attempt-run-rs.html#method-deps-137">deps</a>()
@@ -562,9 +562,9 @@
                 request_id: launch.request_id.clone(),
                 role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Worker</span>,
                 instruction: launch.instruction.clone(),
-                status: <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+                status: <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>,
                 agent_name: <span class="rs-type">Some</span>(launch.agent_name.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>().to_owned()),
-                task_outcome: <span class="rs-type">None</span>,
+                submission_outcome: <span class="rs-type">None</span>,
             })
             .<span class="rs-kw">await</span>?;
         <span class="rs-self">self</span>.attempt_run
@@ -619,7 +619,7 @@
                 launch.task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>(),
             ));
         };
-        <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
+        <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>) {
             <span class="rs-kw">let</span> work_item_id = launch.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-work-item-id-106">work_item_id</a>().cloned().ok_or_else(|| {
                 <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(&quot;worker settlement missing work_item_id&quot;)
             })?;
@@ -634,7 +634,7 @@
         task_id: &amp;<span class="rs-type">TaskId</span>,
         work_item_id: &amp;<span class="rs-type">WorkItemId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> task_outcome = <span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> {
+        <span class="rs-kw">let</span> submission_outcome = <span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> {
             is_pass: <span class="rs-kw">false</span>,
             outcome: format!(
                 &quot;worker {:?} finished without submit_worker_outcome&quot;,
@@ -646,9 +646,9 @@
             .task_store
             .set_task_status_if_current(
                 task_id,
-                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
-                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>,
-                <span class="rs-type">Some</span>(&amp;task_outcome),
+                <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span>,
+                <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span>,
+                <span class="rs-type">Some</span>(&amp;submission_outcome),
             )
             .<span class="rs-kw">await</span>?;
         <span class="rs-type">Ok</span>(())
@@ -675,16 +675,16 @@
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;worker task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
         <span class="rs-kw">match</span> task.status {
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Running</span>),
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span> =&gt; <span class="rs-kw">match</span> task.task_outcome {
-                <span class="rs-type">Some</span>(<span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { is_pass: <span class="rs-kw">true</span>, .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Passed</span>),
-                <span class="rs-type">Some</span>(<span class="rs-type">TaskOutcome</span>::<span class="rs-type">Worker</span> { .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>),
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Running</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Running</span>),
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Done</span> =&gt; <span class="rs-kw">match</span> task.submission_outcome {
+                <span class="rs-type">Some</span>(<span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> { is_pass: <span class="rs-kw">true</span>, .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Passed</span>),
+                <span class="rs-type">Some</span>(<span class="rs-type">SubmissionOutcome</span>::<span class="rs-type">Worker</span> { .. }) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>),
                 _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;worker task {:?} is done without worker outcome&quot;,
                     task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()
                 ))),
             },
-            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Blocked</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span> =&gt; {
+            <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Failed</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Blocked</span> | <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Cancelled</span> =&gt; {
                 <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-work-items-run-rs.html#item-enum-NodeState-14">NodeState</a>::<span class="rs-type">Failed</span>)
             }
         }

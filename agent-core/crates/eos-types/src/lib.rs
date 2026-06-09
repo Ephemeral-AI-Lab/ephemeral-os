@@ -1,7 +1,7 @@
 //! eos-types — shared id, timestamp, clock, json, errors, and state contracts.
 //!
 //! This is the upstream contract crate of the agent-core dependency DAG. It
-//! holds the eleven typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`]
+//! holds the typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`]
 //! seam, the transitional [`JsonObject`] alias, the minimal [`CoreError`], and
 //! the persisted DTO/store contracts shared across runtime, engine, workflow,
 //! tools, and database crates. It deliberately holds no SQL, HTTP, provider, or
@@ -37,14 +37,14 @@ pub use contracts::{
     AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget, AgentRunRuntimeSnapshot,
     AgentRunStatus, CancelError, CreatedAgentRun, OpenDelegatedWorkflow, SpawnAgentRequest,
     StartWorkflowRequest, StartedWorkflow, SubmissionAck, TerminalWorkflow, WorkflowApi,
-    WorkflowApiError, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowTaskRole,
+    WorkflowApiError, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowAgentRole,
     WorkflowTerminalStatus,
 };
 pub use error::CoreError;
 pub use frontmatter::parse_markdown_frontmatter;
 pub use ids::{
     AgentRunId, AttemptId, CommandSessionId, InvocationId, IterationId, RequestId, SandboxId,
-    TaskId, ToolUseId, WorkflowId,
+    ToolUseId, WorkflowId,
 };
 pub use llm::{ContentBlock, Message, MessageRole, ToolSpec, DEFAULT_MAX_TOKENS};
 pub use models::{ConfigError, JsonObject, ModelRegistrationConfig, ModelsConfig};
@@ -54,8 +54,8 @@ pub use state::{
     BackgroundSessionCounts, DeferredGoal, ExecutionNode, Iteration, IterationCreationReason,
     IterationOutcome, IterationStatus, ModelRegistration, PlanId, PlanOutcomeSubmission,
     PlannerOutcome, Request, RequestStatus, RunningRequestAgentRun, SubmissionStatus,
-    TaskOutcome, TaskStatus, WorkItemId, WorkItemSpec, WorkerOutcome, WorkerOutcomeSubmission,
-    Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
+    SubmissionOutcome, ExecutionStatus, WorkItemId, WorkItemSpec, WorkerOutcome,
+    WorkerOutcomeSubmission, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
 };
 pub use stores::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,

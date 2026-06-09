@@ -81,7 +81,7 @@
     <span class="rs-kw">let</span> finish = <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a>(
         &amp;*service.agent_run_store,
         agent_run_id,
-        <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+        <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Cancelled</span>,
         <span class="rs-type">Some</span>(&amp;payload),
         0,
         <span class="rs-type">Some</span>(reason),
@@ -150,7 +150,7 @@
   <pre class="file-source"><code><span class="rs-comment">//! Agent-run cancellation orchestration.</span>
 
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">AgentRunError</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">TaskStatus</span>,
+    <span class="rs-type">AgentRunError</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">ExecutionStatus</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::persistence::finish_agent_run;
@@ -171,7 +171,7 @@
     <span class="rs-kw">let</span> finish = <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a>(
         &amp;*service.agent_run_store,
         agent_run_id,
-        <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+        <span class="rs-type">ExecutionStatus</span>::<span class="rs-type">Cancelled</span>,
         <span class="rs-type">Some</span>(&amp;payload),
         0,
         <span class="rs-type">Some</span>(reason),

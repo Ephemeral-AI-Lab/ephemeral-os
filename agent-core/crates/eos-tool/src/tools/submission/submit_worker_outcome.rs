@@ -40,13 +40,11 @@ impl ToolExecutor for SubmitWorkerOutcome {
             return Ok(ToolResult::error("outcome must be nonblank"));
         }
         let attempt_id = ctx.require_attempt_id()?.clone();
-        let task_id = ctx.require_task_id()?.clone();
         let work_item_id = ctx.require_work_item_id()?.clone();
         let is_pass = parsed.status.is_pass();
         let outcome = parsed.outcome.clone();
         let submission = WorkerOutcomeSubmission {
             attempt_id,
-            task_id: task_id.clone(),
             work_item_id: work_item_id.clone(),
             status: parsed.status,
             outcome: parsed.outcome,
@@ -59,7 +57,6 @@ impl ToolExecutor for SubmitWorkerOutcome {
                 ("kind", json!("worker")),
                 ("is_pass", json!(is_pass)),
                 ("outcome", json!(outcome)),
-                ("task_id", json!(task_id.as_str())),
                 ("work_item_id", json!(work_item_id.as_str())),
                 (
                     "attempt_id",

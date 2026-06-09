@@ -1,6 +1,6 @@
 //! Public request/response DTOs for [`AgentCoreService`](crate::AgentCoreService).
 
-use eos_types::{RequestId, RequestStatus, SandboxId, TaskId, UtcDateTime};
+use eos_types::{RequestId, RequestStatus, SandboxId, UtcDateTime};
 
 /// Input for creating a top-level user request.
 #[derive(Debug, Clone)]
@@ -43,8 +43,6 @@ pub struct UserRequestSummary {
     pub request_id: RequestId,
     /// Request lifecycle status.
     pub status: RequestStatus,
-    /// Root task id, once the root task-agent-run is created.
-    pub root_task_id: Option<TaskId>,
     /// Bound sandbox id.
     pub sandbox_id: Option<SandboxId>,
     /// Creation timestamp.
@@ -60,8 +58,6 @@ pub struct UserRequestDetail {
     pub request_id: RequestId,
     /// Request lifecycle status.
     pub status: RequestStatus,
-    /// Root task id, once the root task-agent-run is created.
-    pub root_task_id: Option<TaskId>,
     /// Bound sandbox id.
     pub sandbox_id: Option<SandboxId>,
     /// Original request prompt.

@@ -43,7 +43,7 @@ fn classify(messages: &[Message], target: ToolName) -> Option<&'static str> {
 fn missing_when_no_advisor_result() {
     let msgs = [Message::from_user_text("hi")];
     assert_eq!(
-        classify(&msgs, ToolName::SubmitRootTaskOutcome),
+        classify(&msgs, ToolName::SubmitRootOutcome),
         Some("missing")
     );
 }
@@ -51,48 +51,48 @@ fn missing_when_no_advisor_result() {
 #[test]
 fn approve_paired_to_target_passes() {
     let msgs = [
-        ask_advisor_turn("t1", "submit_root_task_outcome"),
+        ask_advisor_turn("t1", "submit_root_outcome"),
         advisor_result("t1", Some("approve"), false),
     ];
-    assert_eq!(classify(&msgs, ToolName::SubmitRootTaskOutcome), None);
+    assert_eq!(classify(&msgs, ToolName::SubmitRootOutcome), None);
 }
 
 #[test]
 fn classification_order_covers_each_tag() {
     // advisor_failed: result is an error.
     let failed = [
-        ask_advisor_turn("t1", "submit_root_task_outcome"),
+        ask_advisor_turn("t1", "submit_root_outcome"),
         advisor_result("t1", Some("approve"), true),
     ];
     assert_eq!(
-        classify(&failed, ToolName::SubmitRootTaskOutcome),
+        classify(&failed, ToolName::SubmitRootOutcome),
         Some("advisor_failed")
     );
 
     // structural: verdict not in the valid set.
     let structural = [
-        ask_advisor_turn("t1", "submit_root_task_outcome"),
+        ask_advisor_turn("t1", "submit_root_outcome"),
         advisor_result("t1", None, false),
     ];
     assert_eq!(
-        classify(&structural, ToolName::SubmitRootTaskOutcome),
+        classify(&structural, ToolName::SubmitRootOutcome),
         Some("structural")
     );
 
     // rejected.
     let rejected = [
-        ask_advisor_turn("t1", "submit_root_task_outcome"),
+        ask_advisor_turn("t1", "submit_root_outcome"),
         advisor_result("t1", Some("reject"), false),
     ];
     assert_eq!(
-        classify(&rejected, ToolName::SubmitRootTaskOutcome),
+        classify(&rejected, ToolName::SubmitRootOutcome),
         Some("rejected")
     );
 
     // unpaired: an advisor result with no originating ask_advisor.
     let unpaired = [advisor_result("t1", Some("approve"), false)];
     assert_eq!(
-        classify(&unpaired, ToolName::SubmitRootTaskOutcome),
+        classify(&unpaired, ToolName::SubmitRootOutcome),
         Some("unpaired")
     );
 
@@ -102,7 +102,7 @@ fn classification_order_covers_each_tag() {
         advisor_result("t1", Some("approve"), false),
     ];
     assert_eq!(
-        classify(&wrong, ToolName::SubmitRootTaskOutcome),
+        classify(&wrong, ToolName::SubmitRootOutcome),
         Some("wrong_tool")
     );
 }

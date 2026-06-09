@@ -2,7 +2,7 @@
 
 use eos_types::{
     AgentLoopCompletion, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind, AgentRunError,
-    AgentRunId, AgentRunOutcome, AgentRunStatus, Message, TaskStatus,
+    AgentRunId, AgentRunOutcome, AgentRunStatus, Message, ExecutionStatus,
 };
 
 use crate::persistence::{completion_from_agent_run, finish_agent_run};
@@ -83,7 +83,7 @@ async fn finalize_agent_run_from_agent_loop_outcome(
     let finish = finish_agent_run(
         &*service.agent_run_store,
         &agent_run_id,
-        task_status_for_agent_status(agent_outcome.status),
+        execution_status_for_agent_status(agent_outcome.status),
         agent_outcome.submission_payload.as_ref(),
         agent_outcome.token_count.unwrap_or_default(),
         error,
@@ -139,10 +139,10 @@ fn loop_messages_to_llm_messages(messages: Vec<AgentLoopMessage>) -> Vec<Message
         .collect()
 }
 
-const fn task_status_for_agent_status(status: AgentRunStatus) -> TaskStatus {
+const fn execution_status_for_agent_status(status: AgentRunStatus) -> ExecutionStatus {
     match status {
-        AgentRunStatus::Completed => TaskStatus::Done,
-        AgentRunStatus::Failed => TaskStatus::Failed,
-        AgentRunStatus::Cancelled => TaskStatus::Cancelled,
+        AgentRunStatus::Completed => ExecutionStatus::Done,
+        AgentRunStatus::Failed => ExecutionStatus::Failed,
+        AgentRunStatus::Cancelled => ExecutionStatus::Cancelled,
     }
 }

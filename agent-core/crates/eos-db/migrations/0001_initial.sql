@@ -39,7 +39,7 @@ CREATE TABLE agent_runs (
     parent_agent_run_id TEXT,
     tool_use_id       TEXT,
     terminal_payload  TEXT,
-    task_outcome      TEXT,
+    submission_outcome      TEXT,
     token_count       INTEGER NOT NULL DEFAULT 0,
     error             TEXT,
     created_at        TEXT NOT NULL,

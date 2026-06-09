@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::CoreError;
 use crate::{
-    AgentRunId, AttemptId, IterationId, PlanId, TaskOutcome, TaskStatus, UtcDateTime, WorkItemId,
+    AgentRunId, AttemptId, IterationId, PlanId, SubmissionOutcome, ExecutionStatus, UtcDateTime, WorkItemId,
     WorkflowId,
 };
 
@@ -123,7 +123,7 @@ impl AttemptStatus {
 #[serde(rename_all = "snake_case")]
 pub enum AttemptFailReason {
     /// A worker task in the plan failed.
-    TaskFailed,
+    WorkItemFailed,
     /// The attempt failed to start up.
     StartupFailed,
 }
@@ -242,7 +242,7 @@ pub struct AttemptExecutionTree {
     pub planner_agent_run_id: Option<AgentRunId>,
     /// Planner terminal outcome, recorded by `submit_plan_outcome`.
     #[serde(default)]
-    pub planner_outcome: Option<TaskOutcome>,
+    pub planner_outcome: Option<SubmissionOutcome>,
     /// Work item nodes materialized when the planner submits a plan.
     #[serde(default)]
     pub nodes: Vec<ExecutionNode>,
@@ -291,10 +291,10 @@ pub struct ExecutionNode {
     pub agent_run_id: Option<AgentRunId>,
     /// Worker lifecycle status, recorded by scheduler and terminal submissions.
     #[serde(default)]
-    pub status: Option<TaskStatus>,
+    pub status: Option<ExecutionStatus>,
     /// Worker terminal outcome, recorded by `submit_worker_outcome`.
     #[serde(default)]
-    pub outcome: Option<TaskOutcome>,
+    pub outcome: Option<SubmissionOutcome>,
 }
 
 /// Immutable view of a persisted Attempt.

@@ -1,7 +1,7 @@
 //! Create user-request orchestration.
 
 use eos_types::{
-    AgentRunApi, Message, RequestId, RequestStatus, SpawnAgentRequest, SpawnAgentTarget,
+    AgentRunApi, AgentRunId, AgentType, Message, RequestId, RequestStatus, SpawnAgentRequest,
 };
 
 use crate::dto::{CreateUserRequestInput, CreateUserRequestOutput};
@@ -34,14 +34,16 @@ pub(crate) async fn create_user_request(
         )
         .await?;
 
+    let root_agent_run_id = AgentRunId::new_v4();
     let spawn = service
         .agent_run_service
         .spawn_agent(SpawnAgentRequest {
+            agent_run_id: root_agent_run_id,
             agent_name: service.settings.root_agent_name.clone(),
+            agent_type: AgentType::Agent,
+            request_id: request_id.clone(),
+            parent_agent_run_id: None,
             initial_messages: vec![Message::from_user_text(input.prompt)],
-            target: SpawnAgentTarget::Root {
-                request_id: request_id.clone(),
-            },
             tool_use_id: None,
             sandbox_id: Some(binding.sandbox_id),
             workspace_root: service.settings.workspace_root.clone(),

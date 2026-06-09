@@ -9,7 +9,7 @@ pub(crate) async fn render_worker_agent_context(
     deps: &AttemptResources,
     attempt: &Attempt,
     work_item: &WorkItemSpec,
-    task_id: &eos_types::TaskId,
+    agent_run_id: &eos_types::AgentRunId,
 ) -> Result<AgentContext> {
     let planner = planner_outcome_for_attempt(deps, attempt).await?;
     let needs = dependency_sections(deps, attempt, work_item).await?;
@@ -21,7 +21,10 @@ pub(crate) async fn render_worker_agent_context(
             ContextSection::new("work_item")
                 .with_attrs(vec![
                     ("work_item_id".to_owned(), work_item.id.as_str().to_owned()),
-                    ("task_id".to_owned(), task_id.as_str().to_owned()),
+                    (
+                        "agent_run_id".to_owned(),
+                        agent_run_id.as_str().to_owned(),
+                    ),
                     (
                         "agent_name".to_owned(),
                         work_item.agent_name.as_str().to_owned(),
@@ -52,27 +55,22 @@ async fn dependency_sections(
             .execution_tree
             .node(need)
             .ok_or_else(|| WorkflowError::not_found("work item", need.as_str()))?;
-        let task_id = node.task_id.as_ref().ok_or_else(|| {
+        let agent_run_id = node.agent_run_id.as_ref().ok_or_else(|| {
             WorkflowError::invariant(format!(
-                "dependency work item {:?} has no bound task",
+                "dependency work item {:?} has no bound agent run",
                 need.as_str()
             ))
         })?;
-        let task = deps
-            .task_store
-            .get(task_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("task", task_id.as_str()))?;
-        let TaskOutcome::Worker { is_pass, outcome } = task.task_outcome.ok_or_else(|| {
+        let TaskOutcome::Worker { is_pass, outcome } = node.outcome.clone().ok_or_else(|| {
             WorkflowError::invariant(format!(
-                "dependency worker task {:?} has no worker outcome",
-                task_id.as_str()
+                "dependency worker agent run {:?} has no worker outcome",
+                agent_run_id.as_str()
             ))
         })?
         else {
             return Err(WorkflowError::invariant(format!(
-                "dependency task {:?} did not record a worker outcome",
-                task_id.as_str()
+                "dependency agent run {:?} did not record a worker outcome",
+                agent_run_id.as_str()
             )));
         };
         let work_spec = planner
@@ -85,7 +83,7 @@ async fn dependency_sections(
             ContextSection::new("need")
                 .with_attrs(vec![
                     ("work_item_id".to_owned(), need.as_str().to_owned()),
-                    ("task_id".to_owned(), task_id.as_str().to_owned()),
+                    ("agent_run_id".to_owned(), agent_run_id.as_str().to_owned()),
                     ("is_pass".to_owned(), is_pass.to_string()),
                 ])
                 .with_children(vec![

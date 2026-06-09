@@ -11,13 +11,13 @@ use eos_types::{AttemptBudget, ConfigError};
 pub struct AttemptConfig {
     /// Per-attempt cap on concurrently launched worker agent runs.
     /// Range-checked `>= 1` by [`AttemptConfig::validate`].
-    pub max_concurrent_task_runs: usize,
+    pub max_concurrent_worker_runs: usize,
 }
 
 impl Default for AttemptConfig {
     fn default() -> Self {
         Self {
-            max_concurrent_task_runs: 8,
+            max_concurrent_worker_runs: 8,
         }
     }
 }
@@ -26,13 +26,13 @@ impl AttemptConfig {
     /// Enforce numeric-range constraints.
     ///
     /// # Errors
-    /// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs < 1`.
+    /// Returns [`ConfigError::OutOfRange`] when `max_concurrent_worker_runs < 1`.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        self.validate_with_field("attempt.max_concurrent_task_runs")
+        self.validate_with_field("attempt.max_concurrent_worker_runs")
     }
 
     pub(crate) fn validate_with_field(&self, field: &str) -> Result<(), ConfigError> {
-        if self.max_concurrent_task_runs < 1 {
+        if self.max_concurrent_worker_runs < 1 {
             return Err(ConfigError::OutOfRange {
                 field: field.to_owned(),
                 detail: "must be >= 1".to_owned(),
@@ -81,7 +81,7 @@ impl WorkflowConfig {
             });
         }
         self.attempt
-            .validate_with_field("workflow.attempt.max_concurrent_task_runs")
+            .validate_with_field("workflow.attempt.max_concurrent_worker_runs")
     }
 }
 

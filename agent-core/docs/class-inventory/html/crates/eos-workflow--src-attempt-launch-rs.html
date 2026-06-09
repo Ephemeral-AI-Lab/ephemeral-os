@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>19</b><span>modules</span></div>
   <div><b>85</b><span>items</span></div>
-  <div><b>73</b><span>fields</span></div>
+  <div><b>72</b><span>fields</span></div>
   <div><b>111</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -88,7 +88,7 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:19</p>
-</article><article id="item-struct-AgentLaunch-63" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentLaunch pub pub struct AgentLaunch crates/eos-workflow/src/attempt/launch.rs kind AgentLaunchKind task_id TaskId request_id RequestId coords WorkflowCoordinates plan_id PlanId agent_name AgentName instruction String context String task_guidance Option &lt; String &gt; agent_def AgentDefinition skill Option &lt; String &gt; ">
+</article><article id="item-struct-AgentLaunch-63" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentLaunch pub pub struct AgentLaunch crates/eos-workflow/src/attempt/launch.rs kind AgentLaunchKind agent_run_id AgentRunId request_id RequestId coords WorkflowCoordinates plan_id PlanId agent_name AgentName instruction String context String task_guidance Option &lt; String &gt; agent_def AgentDefinition skill Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentLaunch</h3>
@@ -97,7 +97,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a></code>
   <p class="docstring">Launch descriptor for one workflow agent.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a></code></td></tr><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>coords</td><td><code>WorkflowCoordinates</code></td></tr><tr><td>pub</td><td>plan_id</td><td><code>PlanId</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>AgentName</code></td></tr><tr><td>pub</td><td>instruction</td><td><code>String</code></td></tr><tr><td>pub</td><td>context</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_guidance</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>agent_def</td><td><code>AgentDefinition</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-role-91"><td>method</td><td>role</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-role-91">role</a> (&amp; self) -&gt; WorkflowTaskRole</code><p class="docstring">Workflow task role.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a></code></td></tr><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>coords</td><td><code>WorkflowCoordinates</code></td></tr><tr><td>pub</td><td>plan_id</td><td><code>PlanId</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>AgentName</code></td></tr><tr><td>pub</td><td>instruction</td><td><code>String</code></td></tr><tr><td>pub</td><td>context</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_guidance</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>agent_def</td><td><code>AgentDefinition</code></td></tr><tr><td>pub</td><td>skill</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-role-91"><td>method</td><td>role</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-role-91">role</a> (&amp; self) -&gt; WorkflowTaskRole</code><p class="docstring">Workflow task role.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Workflow task role.</span>
     #[must_use]
@@ -108,12 +108,12 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-task-id-100"><td>method</td><td>task_id</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-task-id-100">task_id</a> (&amp; self) -&gt; &amp; TaskId</code><p class="docstring">Task id.</p><details class="function-source">
+</details></td></tr><tr id="method-agent-run-id-100"><td>method</td><td>agent_run_id</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-agent-run-id-100">agent_run_id</a> (&amp; self) -&gt; &amp; AgentRunId</code><p class="docstring">Agent-run id.</p><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Task id.</span>
+  <pre><code>    <span class="rs-comment">/// Agent-run id.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-task-id-100">task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">TaskId</span> {
-        &amp;<span class="rs-self">self</span>.task_id
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-run-id-100">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
+        &amp;<span class="rs-self">self</span>.agent_run_id
     }
 </code></pre>
 </details></td></tr><tr id="method-work-item-id-106"><td>method</td><td>work_item_id</td><td><code>pub const fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-work-item-id-106">work_item_id</a> (&amp; self) -&gt; Option &lt; &amp; WorkItemId &gt;</code><p class="docstring">Worker work item id, if this launch is a worker.</p><details class="function-source">
@@ -154,7 +154,7 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:63</p>
-</article><article id="item-struct-AttemptResources-134" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptResources pub pub struct AttemptResources crates/eos-workflow/src/attempt/launch.rs workflow_store Arc &lt; dyn WorkflowStore &gt; iteration_store Arc &lt; dyn IterationStore &gt; attempt_store Arc &lt; dyn AttemptStore &gt; task_store Arc &lt; dyn TaskStore &gt; agent_registry Arc &lt; AgentRegistry &gt; active_attempt_runs Arc &lt; ActiveAttemptRuns &gt; iteration_coordinators Option &lt; Arc &lt; OpenIterationCoordinatorRegistry &gt; &gt; lifecycle_config WorkflowLifecycleConfig runner Arc &lt; dyn AgentRunner &gt; max_concurrent_task_runs usize ">
+</article><article id="item-struct-AttemptResources-134" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptResources pub pub struct AttemptResources crates/eos-workflow/src/attempt/launch.rs workflow_store Arc &lt; dyn WorkflowStore &gt; iteration_store Arc &lt; dyn IterationStore &gt; attempt_store Arc &lt; dyn AttemptStore &gt; agent_registry Arc &lt; AgentRegistry &gt; active_attempt_runs Arc &lt; ActiveAttemptRuns &gt; iteration_coordinators Option &lt; Arc &lt; OpenIterationCoordinatorRegistry &gt; &gt; lifecycle_config WorkflowLifecycleConfig runner Arc &lt; dyn AgentRunner &gt; max_concurrent_task_runs usize ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AttemptResources</h3>
@@ -163,7 +163,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a></code>
   <p class="docstring">Per-attempt dependency bundle.</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>workflow_store</td><td><code>Arc &lt; dyn WorkflowStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_store</td><td><code>Arc &lt; dyn IterationStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>attempt_store</td><td><code>Arc &lt; dyn AttemptStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>agent_registry</td><td><code>Arc &lt; AgentRegistry &gt;</code></td></tr><tr><td>pub(crate)</td><td>active_attempt_runs</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_coordinators</td><td><code>Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>lifecycle_config</td><td><code><a class="symbol-link" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a></code></td></tr><tr><td>pub(crate)</td><td>runner</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-trait-AgentRunner-44">AgentRunner</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>max_concurrent_task_runs</td><td><code>usize</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-172"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-27">new</a> (workflow_store : Arc &lt; dyn WorkflowStore &gt; , iteration_store : Arc &lt; dyn IterationStore &gt; , attempt_store : Arc &lt; dyn AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; , agent_registry : Arc &lt; AgentRegistry &gt; , runner : Arc &lt; dyn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-trait-AgentRunner-44">AgentRunner</a> &gt; ,) -&gt; Self</code><p class="docstring">Create deps with sane workflow defaults.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>workflow_store</td><td><code>Arc &lt; dyn WorkflowStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_store</td><td><code>Arc &lt; dyn IterationStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>attempt_store</td><td><code>Arc &lt; dyn AttemptStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>agent_registry</td><td><code>Arc &lt; AgentRegistry &gt;</code></td></tr><tr><td>pub(crate)</td><td>active_attempt_runs</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>iteration_coordinators</td><td><code>Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>lifecycle_config</td><td><code><a class="symbol-link" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a></code></td></tr><tr><td>pub(crate)</td><td>runner</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-trait-AgentRunner-44">AgentRunner</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>max_concurrent_task_runs</td><td><code>usize</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-170"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-27">new</a> (workflow_store : Arc &lt; dyn WorkflowStore &gt; , iteration_store : Arc &lt; dyn IterationStore &gt; , attempt_store : Arc &lt; dyn AttemptStore &gt; , agent_registry : Arc &lt; AgentRegistry &gt; , runner : Arc &lt; dyn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-trait-AgentRunner-44">AgentRunner</a> &gt; ,) -&gt; Self</code><p class="docstring">Create deps with sane workflow defaults.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create deps with sane workflow defaults.</span>
     #[must_use]
@@ -171,7 +171,6 @@
         workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowStore</span>&gt;,
         iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">IterationStore</span>&gt;,
         attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptStore</span>&gt;,
-        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
         agent_registry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">AgentRegistry</span>&gt;,
         runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-trait-AgentRunner-44">AgentRunner</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
@@ -179,7 +178,6 @@
             workflow_store,
             iteration_store,
             attempt_store,
-            task_store,
             agent_registry,
             runner,
             active_attempt_runs: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>()),
@@ -189,20 +187,20 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-with-active-attempt-runs-196"><td>method</td><td>with_active_attempt_runs</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-active-attempt-runs-196">with_active_attempt_runs</a> (mut self , registry : Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a> &gt;) -&gt; Self</code><p class="docstring">Use a caller-owned active attempt registry.</p><details class="function-source">
+</details></td></tr><tr id="method-with-active-attempt-runs-192"><td>method</td><td>with_active_attempt_runs</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-active-attempt-runs-192">with_active_attempt_runs</a> (mut self , registry : Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a> &gt;) -&gt; Self</code><p class="docstring">Use a caller-owned active attempt registry.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Use a caller-owned active attempt registry.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-active-attempt-runs-196">with_active_attempt_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-active-attempt-runs-192">with_active_attempt_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.active_attempt_runs = registry;
         <span class="rs-self">self</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-with-iteration-coordinators-203"><td>method</td><td>with_iteration_coordinators</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-203">with_iteration_coordinators</a> (mut self , registry : Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a> &gt; ,) -&gt; Self</code><p class="docstring">Use a caller-owned open-iteration coordinator registry.</p><details class="function-source">
+</details></td></tr><tr id="method-with-iteration-coordinators-199"><td>method</td><td>with_iteration_coordinators</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-199">with_iteration_coordinators</a> (mut self , registry : Arc &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a> &gt; ,) -&gt; Self</code><p class="docstring">Use a caller-owned open-iteration coordinator registry.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Use a caller-owned open-iteration coordinator registry.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-203">with_iteration_coordinators</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-199">with_iteration_coordinators</a>(
         <span class="rs-kw">mut</span> <span class="rs-self">self</span>,
         registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
@@ -210,27 +208,27 @@
         <span class="rs-self">self</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-with-lifecycle-config-213"><td>method</td><td>with_lifecycle_config</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-lifecycle-config-213">with_lifecycle_config</a> (mut self , config : <a class="symbol-link" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a>) -&gt; Self</code><p class="docstring">Use caller-supplied lifecycle knobs.</p><details class="function-source">
+</details></td></tr><tr id="method-with-lifecycle-config-209"><td>method</td><td>with_lifecycle_config</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-lifecycle-config-209">with_lifecycle_config</a> (mut self , config : <a class="symbol-link" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a>) -&gt; Self</code><p class="docstring">Use caller-supplied lifecycle knobs.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Use caller-supplied lifecycle knobs.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-lifecycle-config-213">with_lifecycle_config</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, config: <a class="symbol-link rs-type" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-lifecycle-config-209">with_lifecycle_config</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, config: <a class="symbol-link rs-type" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.lifecycle_config = config;
         <span class="rs-self">self</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-with-max-concurrent-task-runs-220"><td>method</td><td>with_max_concurrent_task_runs</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-max-concurrent-task-runs-220">with_max_concurrent_task_runs</a> (mut self , max : usize) -&gt; Self</code><p class="docstring">Use a caller-supplied per-attempt worker-run concurrency cap.</p><details class="function-source">
+</details></td></tr><tr id="method-with-max-concurrent-task-runs-216"><td>method</td><td>with_max_concurrent_task_runs</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-with-max-concurrent-task-runs-216">with_max_concurrent_task_runs</a> (mut self , max : usize) -&gt; Self</code><p class="docstring">Use a caller-supplied per-attempt worker-run concurrency cap.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Use a caller-supplied per-attempt worker-run concurrency cap.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-max-concurrent-task-runs-220">with_max_concurrent_task_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max: usize) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-max-concurrent-task-runs-216">with_max_concurrent_task_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max: usize) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.max_concurrent_task_runs = max;
         <span class="rs-self">self</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-request-id-for-attempt-227"><td>method</td><td>request_id_for_attempt</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a> (&amp; self , attempt : &amp; Attempt) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; RequestId &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-request-id-for-attempt-223"><td>method</td><td>request_id_for_attempt</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a> (&amp; self , attempt : &amp; Attempt) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; RequestId &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">RequestId</span>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">RequestId</span>&gt; {
         <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(&amp;attempt.workflow_id)
@@ -239,7 +237,7 @@
         <span class="rs-type">Ok</span>(workflow.request_id)
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a></code></summary><table><tbody><tr id="method-fmt-160"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-19">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a></code></summary><table><tbody><tr id="method-fmt-158"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-19">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-19">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>&quot;)
@@ -254,16 +252,16 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-workflow/src/attempt/launch.rs:134</p>
-</article><article id="item-struct-AgentLaunchFactory-237" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentLaunchFactory pub pub struct AgentLaunchFactory crates/eos-workflow/src/attempt/launch.rs deps AttemptResources ">
+</article><article id="item-struct-AgentLaunchFactory-233" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentLaunchFactory pub pub struct AgentLaunchFactory crates/eos-workflow/src/attempt/launch.rs deps AttemptResources ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentLaunchFactory</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-237">AgentLaunchFactory</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-233">AgentLaunchFactory</a></code>
   <p class="docstring">Role-parametrized launch factory.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>deps</td><td><code><a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-244"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-27">new</a> (deps : <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>) -&gt; Self</code><p class="docstring">Create a launch factory.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>deps</td><td><code><a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-240"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-27">new</a> (deps : <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>) -&gt; Self</code><p class="docstring">Create a launch factory.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a launch factory.</span>
     #[must_use]
@@ -271,12 +269,12 @@
         <span class="rs-self">Self</span> { deps }
     }
 </code></pre>
-</details></td></tr><tr id="method-for-planner-250"><td>method</td><td>for_planner</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-for-planner-250">for_planner</a> (&amp; self , attempt : &amp; Attempt , task_id : TaskId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-for-planner-246"><td>method</td><td>for_planner</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-for-planner-246">for_planner</a> (&amp; self , attempt : &amp; Attempt , agent_run_id : AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-planner-250">for_planner</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-planner-246">for_planner</a>(
         &amp;<span class="rs-self">self</span>,
         attempt: &amp;<span class="rs-type">Attempt</span>,
-        task_id: <span class="rs-type">TaskId</span>,
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a>&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
@@ -285,13 +283,13 @@
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
         <span class="rs-kw">let</span> agent_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(&quot;planner&quot;)?;
-        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a>(&amp;agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>)?;
-        <span class="rs-kw">let</span> context = <a class="symbol-link rs-fn" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, &amp;task_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a>(&amp;agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>)?;
+        <span class="rs-kw">let</span> context = <a class="symbol-link rs-fn" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, &amp;agent_run_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">let</span> context_xml = <a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#item-fn-render-context-xml-89">render_context_xml</a>(&amp;context);
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> {
             kind: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a>::<span class="rs-type">Planner</span>,
-            task_id,
-            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
+            agent_run_id,
+            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
             coords: <span class="rs-type">WorkflowCoordinates</span> {
                 workflow_id: attempt.workflow_id.clone(),
                 iteration_id: iteration.id,
@@ -310,13 +308,13 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-for-worker-287"><td>method</td><td>for_worker</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-287">for_worker</a> (&amp; self , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec , task_id : TaskId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-for-worker-283"><td>method</td><td>for_worker</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-283">for_worker</a> (&amp; self , attempt : &amp; Attempt , work_item : &amp; WorkItemSpec , agent_run_id : AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-287">for_worker</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-283">for_worker</a>(
         &amp;<span class="rs-self">self</span>,
         attempt: &amp;<span class="rs-type">Attempt</span>,
         work_item: &amp;<span class="rs-type">WorkItemSpec</span>,
-        task_id: <span class="rs-type">TaskId</span>,
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a>&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
@@ -324,15 +322,16 @@
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a>(&amp;work_item.agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Worker</span>)?;
-        <span class="rs-kw">let</span> context = <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-render-worker-agent-context-8">render_worker_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, work_item, &amp;task_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a>(&amp;work_item.agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Worker</span>)?;
+        <span class="rs-kw">let</span> context =
+            <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-render-worker-agent-context-8">render_worker_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, work_item, &amp;agent_run_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">let</span> context_xml = <a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#item-fn-render-context-xml-89">render_context_xml</a>(&amp;context);
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> {
             kind: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a>::<span class="rs-type">Worker</span> {
                 work_item_id: work_item.id.clone(),
             },
-            task_id,
-            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
+            agent_run_id,
+            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
             coords: <span class="rs-type">WorkflowCoordinates</span> {
                 workflow_id: attempt.workflow_id.clone(),
                 iteration_id: iteration.id,
@@ -351,9 +350,9 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-agent-definition-326"><td>method</td><td>agent_definition</td><td><code>fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a> (&amp; self , agent_name : &amp; AgentName , role : WorkflowTaskRole ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; AgentDefinition &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-agent-definition-323"><td>method</td><td>agent_definition</td><td><code>fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a> (&amp; self , agent_name : &amp; AgentName , role : WorkflowTaskRole ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; AgentDefinition &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a>(
         &amp;<span class="rs-self">self</span>,
         agent_name: &amp;<span class="rs-type">AgentName</span>,
         role: <span class="rs-type">WorkflowTaskRole</span>,
@@ -383,7 +382,7 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-workflow/src/attempt/launch.rs:237</p>
+  <p class="source">crates/eos-workflow/src/attempt/launch.rs:233</p>
 </article><article id="item-enum-AgentLaunchKind-51" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentLaunchKind pub pub enum AgentLaunchKind crates/eos-workflow/src/attempt/launch.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
@@ -425,8 +424,8 @@
 
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentType</span>, <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptStore</span>, <span class="rs-type">IterationStore</span>,
-    <span class="rs-type">PlanId</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">WorkItemId</span>, <span class="rs-type">WorkItemSpec</span>, <span class="rs-type">WorkflowCoordinates</span>,
+    <span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentType</span>, <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptStore</span>,
+    <span class="rs-type">IterationStore</span>, <span class="rs-type">PlanId</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">WorkItemId</span>, <span class="rs-type">WorkItemSpec</span>, <span class="rs-type">WorkflowCoordinates</span>,
     <span class="rs-type">WorkflowStore</span>, <span class="rs-type">WorkflowTaskRole</span>,
 };
 
@@ -488,8 +487,8 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> {
     <span class="rs-comment">/// Launch kind.</span>
     <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a>,
-    <span class="rs-comment">/// Opaque task id.</span>
-    <span class="rs-kw">pub</span> task_id: <span class="rs-type">TaskId</span>,
+    <span class="rs-comment">/// Opaque agent-run id.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
     <span class="rs-comment">/// Owning request.</span>
     <span class="rs-kw">pub</span> request_id: <span class="rs-type">RequestId</span>,
     <span class="rs-comment">/// Workflow coordinates.</span>
@@ -520,10 +519,10 @@
         }
     }
 
-    <span class="rs-comment">/// Task id.</span>
+    <span class="rs-comment">/// Agent-run id.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-task-id-100">task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">TaskId</span> {
-        &amp;<span class="rs-self">self</span>.task_id
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-run-id-100">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
+        &amp;<span class="rs-self">self</span>.agent_run_id
     }
 
     <span class="rs-comment">/// Worker work item id, if this launch is a worker.</span>
@@ -563,8 +562,6 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">IterationStore</span>&gt;,
     <span class="rs-comment">/// Attempt store.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptStore</span>&gt;,
-    <span class="rs-comment">/// Task store.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
     <span class="rs-comment">/// Agent registry.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) agent_registry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">AgentRegistry</span>&gt;,
     <span class="rs-comment">/// Active attempt registry.</span>
@@ -598,7 +595,6 @@
         workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowStore</span>&gt;,
         iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">IterationStore</span>&gt;,
         attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptStore</span>&gt;,
-        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
         agent_registry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">AgentRegistry</span>&gt;,
         runner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-trait-AgentRunner-44">AgentRunner</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
@@ -606,7 +602,6 @@
             workflow_store,
             iteration_store,
             attempt_store,
-            task_store,
             agent_registry,
             runner,
             active_attempt_runs: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>()),
@@ -618,14 +613,14 @@
 
     <span class="rs-comment">/// Use a caller-owned active attempt registry.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-active-attempt-runs-196">with_active_attempt_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-active-attempt-runs-192">with_active_attempt_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ActiveAttemptRuns-12">ActiveAttemptRuns</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.active_attempt_runs = registry;
         <span class="rs-self">self</span>
     }
 
     <span class="rs-comment">/// Use a caller-owned open-iteration coordinator registry.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-203">with_iteration_coordinators</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-iteration-coordinators-199">with_iteration_coordinators</a>(
         <span class="rs-kw">mut</span> <span class="rs-self">self</span>,
         registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-OpenIterationCoordinatorRegistry-59">OpenIterationCoordinatorRegistry</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
@@ -635,19 +630,19 @@
 
     <span class="rs-comment">/// Use caller-supplied lifecycle knobs.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-lifecycle-config-213">with_lifecycle_config</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, config: <a class="symbol-link rs-type" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-lifecycle-config-209">with_lifecycle_config</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, config: <a class="symbol-link rs-type" href="eos-workflow--src-config-rs.html#item-struct-WorkflowLifecycleConfig-88">WorkflowLifecycleConfig</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.lifecycle_config = config;
         <span class="rs-self">self</span>
     }
 
     <span class="rs-comment">/// Use a caller-supplied per-attempt worker-run concurrency cap.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-max-concurrent-task-runs-220">with_max_concurrent_task_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max: usize) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-with-max-concurrent-task-runs-216">with_max_concurrent_task_runs</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max: usize) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.max_concurrent_task_runs = max;
         <span class="rs-self">self</span>
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">RequestId</span>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">RequestId</span>&gt; {
         <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(&amp;attempt.workflow_id)
@@ -659,21 +654,21 @@
 
 <span class="rs-comment">/// Role-parametrized launch factory.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-237">AgentLaunchFactory</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-233">AgentLaunchFactory</a> {
     deps: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-237">AgentLaunchFactory</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunchFactory-233">AgentLaunchFactory</a> {
     <span class="rs-comment">/// Create a launch factory.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(deps: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-134">AttemptResources</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { deps }
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-planner-250">for_planner</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-planner-246">for_planner</a>(
         &amp;<span class="rs-self">self</span>,
         attempt: &amp;<span class="rs-type">Attempt</span>,
-        task_id: <span class="rs-type">TaskId</span>,
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a>&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
@@ -682,13 +677,13 @@
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
         <span class="rs-kw">let</span> agent_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-27">new</a>(&quot;planner&quot;)?;
-        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a>(&amp;agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>)?;
-        <span class="rs-kw">let</span> context = <a class="symbol-link rs-fn" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, &amp;task_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a>(&amp;agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>)?;
+        <span class="rs-kw">let</span> context = <a class="symbol-link rs-fn" href="eos-workflow--src-context-planner-context-rs.html#item-fn-render-planner-agent-context-8">render_planner_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, &amp;agent_run_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">let</span> context_xml = <a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#item-fn-render-context-xml-89">render_context_xml</a>(&amp;context);
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> {
             kind: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a>::<span class="rs-type">Planner</span>,
-            task_id,
-            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
+            agent_run_id,
+            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
             coords: <span class="rs-type">WorkflowCoordinates</span> {
                 workflow_id: attempt.workflow_id.clone(),
                 iteration_id: iteration.id,
@@ -707,11 +702,11 @@
         })
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-287">for_worker</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-for-worker-283">for_worker</a>(
         &amp;<span class="rs-self">self</span>,
         attempt: &amp;<span class="rs-type">Attempt</span>,
         work_item: &amp;<span class="rs-type">WorkItemSpec</span>,
-        task_id: <span class="rs-type">TaskId</span>,
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a>&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
@@ -719,15 +714,16 @@
             .<a class="symbol-link rs-fn" href="eos-workflow.html#method-get-48">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#method-as-str-15">as_str</a>()))?;
-        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a>(&amp;work_item.agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Worker</span>)?;
-        <span class="rs-kw">let</span> context = <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-render-worker-agent-context-8">render_worker_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, work_item, &amp;task_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> agent_def = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a>(&amp;work_item.agent_name, <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Worker</span>)?;
+        <span class="rs-kw">let</span> context =
+            <a class="symbol-link rs-fn" href="eos-workflow--src-context-worker-context-rs.html#item-fn-render-worker-agent-context-8">render_worker_agent_context</a>(&amp;<span class="rs-self">self</span>.deps, attempt, work_item, &amp;agent_run_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">let</span> context_xml = <a class="symbol-link rs-fn" href="eos-workflow--src-context-render-rs.html#item-fn-render-context-xml-89">render_context_xml</a>(&amp;context);
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AgentLaunch-63">AgentLaunch</a> {
             kind: <a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-enum-AgentLaunchKind-51">AgentLaunchKind</a>::<span class="rs-type">Worker</span> {
                 work_item_id: work_item.id.clone(),
             },
-            task_id,
-            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-227">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
+            agent_run_id,
+            request_id: <span class="rs-self">self</span>.deps.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-request-id-for-attempt-223">request_id_for_attempt</a>(attempt).<span class="rs-kw">await</span>?,
             coords: <span class="rs-type">WorkflowCoordinates</span> {
                 workflow_id: attempt.workflow_id.clone(),
                 iteration_id: iteration.id,
@@ -746,7 +742,7 @@
         })
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-326">agent_definition</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-agent-definition-323">agent_definition</a>(
         &amp;<span class="rs-self">self</span>,
         agent_name: &amp;<span class="rs-type">AgentName</span>,
         role: <span class="rs-type">WorkflowTaskRole</span>,

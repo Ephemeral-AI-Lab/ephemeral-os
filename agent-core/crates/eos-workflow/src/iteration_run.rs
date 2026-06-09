@@ -291,7 +291,7 @@ pub(crate) async fn returned_attempt_deferred_goal(
         return Ok(None);
     };
     let Some(outcome) = task
-        .task_outcome
+        .submission_outcome
         .and_then(|outcome| outcome.planner_outcome())
     else {
         return Ok(None);

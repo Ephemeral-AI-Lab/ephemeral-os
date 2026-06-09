@@ -1,7 +1,7 @@
 //! Runtime-owned persisted request and agent-run DTOs.
 
+mod agent_run;
 mod request;
-mod task;
 
+pub use agent_run::{AgentRun, ExecutionStatus, RunningRequestAgentRun};
 pub use request::{Request, RequestStatus};
-pub use task::{AgentRun, RunningRequestAgentRun, TaskStatus};

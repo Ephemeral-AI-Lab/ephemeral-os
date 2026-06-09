@@ -24,8 +24,8 @@
 <section class="summary">
   <div><b>20</b><span>modules</span></div>
   <div><b>340</b><span>items</span></div>
-  <div><b>207</b><span>fields</span></div>
-  <div><b>136</b><span>methods</span></div>
+  <div><b>205</b><span>fields</span></div>
+  <div><b>134</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -110,7 +110,7 @@
     <h3>submission_ack_result</h3>
     <span class="visibility">pub(crate :: tools :: submission)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tool--src-tools-submission-support-rs.html#item-fn-submission-ack-result-27">submission_ack_result</a> (ack : SubmissionAck , success : &amp; str , metadata : &amp; JsonObject ,) -&gt; <a class="symbol-link" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a></code>
+  <code class="signature">pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tool--src-tools-submission-support-rs.html#item-fn-submission-ack-result-27">submission_ack_result</a> (ack : SubmissionAck , success : &amp; str , metadata : &amp; JsonObject ,) -&gt; <a class="symbol-link" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -118,10 +118,10 @@
     ack: <span class="rs-type">SubmissionAck</span>,
     success: &amp;str,
     metadata: &amp;<span class="rs-type">JsonObject</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a> {
+) -&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a> {
     <span class="rs-kw">match</span> ack {
-        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Accepted</span> =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-ok-555">ok</a>(success).<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-with-metadata-577">with_metadata</a>(metadata.clone()),
-        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(message) =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(message),
+        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Accepted</span> =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-ok-542">ok</a>(success).<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-with-metadata-564">with_metadata</a>(metadata.clone()),
+        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(message) =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(message),
     }
 }
 </code></pre>
@@ -143,7 +143,7 @@
 <span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a>;
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-submission-support-rs.html#item-struct-OutcomeInput-10">OutcomeInput</a> {
@@ -166,10 +166,10 @@
     ack: <span class="rs-type">SubmissionAck</span>,
     success: &amp;str,
     metadata: &amp;<span class="rs-type">JsonObject</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a> {
+) -&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a> {
     <span class="rs-kw">match</span> ack {
-        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Accepted</span> =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-ok-555">ok</a>(success).<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-with-metadata-577">with_metadata</a>(metadata.clone()),
-        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(message) =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-540">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(message),
+        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Accepted</span> =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-ok-542">ok</a>(success).<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-with-metadata-564">with_metadata</a>(metadata.clone()),
+        <span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(message) =&gt; <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-527">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(message),
     }
 }
 </code></pre>

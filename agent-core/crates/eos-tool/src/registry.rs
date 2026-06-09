@@ -6,7 +6,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_sandbox_port::SandboxTransport;
 use eos_types::{
-    AgentRunApi, AgentRunId, CommandSessionId, RequestStore, SandboxId, StartedWorkflow, TaskStore,
+    AgentRunApi, AgentRunId, CommandSessionId, RequestStore, SandboxId, StartedWorkflow,
     WorkflowApi, WorkflowAttemptSubmissionApi,
 };
 
@@ -867,7 +867,6 @@ pub struct TerminalSubmissionRuntime {
 }
 
 struct SubmissionInner {
-    task_store: Arc<dyn TaskStore>,
     request_store: Arc<dyn RequestStore>,
     attempt: Arc<dyn WorkflowAttemptSubmissionApi>,
 }
@@ -876,21 +875,15 @@ impl TerminalSubmissionRuntime {
     /// Build terminal-submission resources.
     #[must_use]
     pub fn new(
-        task_store: Arc<dyn TaskStore>,
         request_store: Arc<dyn RequestStore>,
         attempt: Arc<dyn WorkflowAttemptSubmissionApi>,
     ) -> Self {
         Self {
             inner: Arc::new(SubmissionInner {
-                task_store,
                 request_store,
                 attempt,
             }),
         }
-    }
-
-    pub(crate) fn task_store(&self) -> Result<Arc<dyn TaskStore>, ToolError> {
-        Ok(self.inner.task_store.clone())
     }
 
     pub(crate) fn request_store(&self) -> Result<Arc<dyn RequestStore>, ToolError> {

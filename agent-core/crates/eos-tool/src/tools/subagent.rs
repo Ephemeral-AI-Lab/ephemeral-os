@@ -20,8 +20,7 @@ mod run_subagent {
     use eos_types::JsonObject;
     use eos_types::Message;
     use eos_types::{
-        AgentName, AgentRunApi, AgentRunError, ParentAgentRunAnchor, SpawnAgentRequest,
-        SpawnAgentTarget,
+        AgentName, AgentRunApi, AgentRunError, AgentRunId, AgentType, SpawnAgentRequest,
     };
     use schemars::{schema_for, JsonSchema};
     use serde::{Deserialize, Serialize};
@@ -140,7 +139,6 @@ mod run_subagent {
                 ));
             }
             let parent_agent_run_id = ctx.require_agent_run_id()?.clone();
-            let parent_task_id = ctx.require_task_id()?.clone();
             let parent_request_id = ctx.require_request_id()?.clone();
             let requested_agent_name = parsed.agent_name.clone();
             let agent_name = match AgentName::new(&parsed.agent_name) {
@@ -151,21 +149,19 @@ mod run_subagent {
                     }))
                 }
             };
+            let agent_run_id = AgentRunId::new_v4();
             let agent_run_id = match self
                 .agent_run_service
                 .spawn_agent(SpawnAgentRequest {
+                    agent_run_id,
                     agent_name: agent_name.clone(),
+                    agent_type: AgentType::Subagent,
+                    request_id: parent_request_id,
+                    parent_agent_run_id: Some(parent_agent_run_id),
                     initial_messages: vec![
                         Message::from_user_text(parsed.prompt.clone()),
                         Message::from_user_text(subagent_launch_guidance()),
                     ],
-                    target: SpawnAgentTarget::Subagent {
-                        parent: ParentAgentRunAnchor {
-                            request_id: parent_request_id,
-                            parent_task_id,
-                            agent_run_id: parent_agent_run_id,
-                        },
-                    },
                     tool_use_id: ctx.tool_use_id.clone(),
                     sandbox_id: ctx.sandbox_id.clone(),
                     workspace_root: ctx.workspace_root.clone(),

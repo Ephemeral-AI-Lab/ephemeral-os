@@ -2,7 +2,7 @@
 
 use eos_types::{
     AgentRun, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, JsonObject,
-    TaskOutcome, TaskStatus,
+    SubmissionOutcome, ExecutionStatus,
 };
 
 use crate::AgentRunError;
@@ -10,18 +10,18 @@ use crate::AgentRunError;
 pub(crate) async fn finish_agent_run(
     store: &dyn AgentRunStore,
     agent_run_id: &AgentRunId,
-    status: TaskStatus,
+    status: ExecutionStatus,
     terminal_payload: Option<&JsonObject>,
     token_count: i64,
     error: Option<&str>,
 ) -> Result<(), AgentRunError> {
-    let task_outcome = terminal_payload.and_then(decode_task_outcome);
+    let submission_outcome = terminal_payload.and_then(decode_submission_outcome);
     if store
         .finish_agent_run(
             agent_run_id,
             status,
             terminal_payload,
-            task_outcome.as_ref(),
+            submission_outcome.as_ref(),
             token_count,
             error,
         )
@@ -100,6 +100,6 @@ fn is_cancelled_payload(payload: &JsonObject) -> bool {
         == Some("cancelled")
 }
 
-fn decode_task_outcome(payload: &JsonObject) -> Option<TaskOutcome> {
+fn decode_submission_outcome(payload: &JsonObject) -> Option<SubmissionOutcome> {
     serde_json::from_value(serde_json::Value::Object(payload.clone())).ok()
 }

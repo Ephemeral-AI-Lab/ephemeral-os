@@ -1,4 +1,4 @@
-//! `SqlRequestTaskStore` — the requests repository.
+//! `SqlRequestStore` — the requests repository.
 
 use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};
@@ -11,20 +11,20 @@ use crate::rows::{enum_to_db, parse_enum, row_to_request, RequestRow};
 
 /// `SQLite` repository for requests. Holds a cheap `SqlitePool` clone.
 #[derive(Debug)]
-pub struct SqlRequestTaskStore {
+pub struct SqlRequestStore {
     pool: SqlitePool,
 }
 
-impl SqlRequestTaskStore {
+impl SqlRequestStore {
     pub(crate) fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 }
 
-impl Sealed for SqlRequestTaskStore {}
+impl Sealed for SqlRequestStore {}
 
 #[async_trait]
-impl RequestStore for SqlRequestTaskStore {
+impl RequestStore for SqlRequestStore {
     async fn create_request(
         &self,
         request_id: &RequestId,

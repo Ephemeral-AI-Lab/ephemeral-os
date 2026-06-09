@@ -17,7 +17,6 @@ pub(crate) async fn read_user_request(
         .map(|request| UserRequestDetail {
             request_id: request.id,
             status: request.status,
-            root_task_id: request.root_task_id,
             sandbox_id: request.sandbox_id,
             prompt: request.request_prompt,
             created_at: request.created_at,
@@ -35,7 +34,6 @@ pub(crate) async fn list_user_requests(
         .map(|request| UserRequestSummary {
             request_id: request.id,
             status: request.status,
-            root_task_id: request.root_task_id,
             sandbox_id: request.sandbox_id,
             created_at: request.created_at,
             finished_at: request.finished_at,
@@ -43,7 +41,7 @@ pub(crate) async fn list_user_requests(
         .collect())
 }
 
-pub(crate) async fn list_user_request_tasks(
+pub(crate) async fn list_user_request_agent_runs(
     service: &AgentCoreService,
     request_id: &RequestId,
 ) -> Result<Vec<AgentRun>, AgentCoreServerError> {
@@ -53,7 +51,7 @@ pub(crate) async fn list_user_request_tasks(
         ));
     }
     Ok(service
-        .task_agent_run_store
-        .list_task_runs_for_request(request_id)
+        .agent_run_store
+        .list_agent_runs_for_request(request_id)
         .await?)
 }

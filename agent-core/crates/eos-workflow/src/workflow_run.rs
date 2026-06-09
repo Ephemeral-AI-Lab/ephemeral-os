@@ -5,7 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_types::{
     AgentRunId, IterationCreationReason, IterationStatus, OpenDelegatedWorkflow,
-    StartWorkflowRequest, StartedWorkflow, TaskId, TaskStatus, TerminalWorkflow, ToolUseId,
+    StartWorkflowRequest, StartedWorkflow, TaskId, ExecutionStatus, TerminalWorkflow, ToolUseId,
     Workflow, WorkflowApi, WorkflowApiError, WorkflowId, WorkflowStatus, WorkflowTerminalStatus,
 };
 
@@ -125,7 +125,7 @@ impl WorkflowRun {
             .get(parent_task_id)
             .await?
             .ok_or_else(|| WorkflowError::not_found("task", parent_task_id.as_str()))?;
-        if task.status != TaskStatus::Running {
+        if task.status != ExecutionStatus::Running {
             return Err(WorkflowError::invariant(format!(
                 "task {:?} is not running; delegated workflow start requires a running parent task",
                 parent_task_id.as_str()

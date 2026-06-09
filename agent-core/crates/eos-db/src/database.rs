@@ -10,7 +10,7 @@ use crate::error::DbError;
 use crate::model_registry::ModelRegistry;
 use crate::pool;
 use crate::repositories::{
-    SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore, SqlWorkflowStore,
+    SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestStore, SqlWorkflowStore,
 };
 use crate::DatabaseConfig;
 
@@ -19,7 +19,7 @@ use crate::DatabaseConfig;
 #[derive(Debug, Clone)]
 pub struct Database {
     pool: SqlitePool,
-    request_tasks: Arc<SqlRequestTaskStore>,
+    requests: Arc<SqlRequestStore>,
     workflows: Arc<SqlWorkflowStore>,
     iterations: Arc<SqlIterationStore>,
     attempts: Arc<SqlAttemptStore>,
@@ -37,7 +37,7 @@ impl Database {
     pub async fn open(config: &DatabaseConfig) -> Result<Self, DbError> {
         let pool = pool::open_pool(config).await?;
         Ok(Self {
-            request_tasks: Arc::new(SqlRequestTaskStore::new(pool.clone())),
+            requests: Arc::new(SqlRequestStore::new(pool.clone())),
             workflows: Arc::new(SqlWorkflowStore::new(pool.clone())),
             iterations: Arc::new(SqlIterationStore::new(pool.clone())),
             attempts: Arc::new(SqlAttemptStore::new(pool.clone())),
@@ -50,7 +50,7 @@ impl Database {
     /// The request store.
     #[must_use]
     pub fn requests(&self) -> Arc<dyn RequestStore> {
-        self.request_tasks.clone()
+        self.requests.clone()
     }
 
     /// The workflow store.

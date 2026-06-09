@@ -10,8 +10,8 @@ use crate::ToolName;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum TerminalTool {
-    /// `submit_root_task_outcome`.
-    RootTask,
+    /// `submit_root_outcome`.
+    Root,
     /// `submit_plan_outcome`.
     Plan,
     /// `submit_worker_outcome`.
@@ -25,7 +25,7 @@ pub enum TerminalTool {
 impl TerminalTool {
     /// Every terminal tool.
     pub const ALL: [TerminalTool; 5] = [
-        TerminalTool::RootTask,
+        TerminalTool::Root,
         TerminalTool::Plan,
         TerminalTool::Worker,
         TerminalTool::Advisor,
@@ -36,7 +36,7 @@ impl TerminalTool {
     #[must_use]
     pub const fn tool_name(self) -> ToolName {
         match self {
-            TerminalTool::RootTask => ToolName::SubmitRootTaskOutcome,
+            TerminalTool::Root => ToolName::SubmitRootOutcome,
             TerminalTool::Plan => ToolName::SubmitPlanOutcome,
             TerminalTool::Worker => ToolName::SubmitWorkerOutcome,
             TerminalTool::Advisor => ToolName::SubmitAdvisorOutcome,
@@ -49,7 +49,7 @@ impl TerminalTool {
     #[must_use]
     pub const fn from_tool_name(name: ToolName) -> Option<TerminalTool> {
         match name {
-            ToolName::SubmitRootTaskOutcome => Some(TerminalTool::RootTask),
+            ToolName::SubmitRootOutcome => Some(TerminalTool::Root),
             ToolName::SubmitPlanOutcome => Some(TerminalTool::Plan),
             ToolName::SubmitWorkerOutcome => Some(TerminalTool::Worker),
             ToolName::SubmitAdvisorOutcome => Some(TerminalTool::Advisor),
@@ -74,8 +74,8 @@ pub struct TerminalDescriptor {
 #[must_use]
 pub const fn descriptor(terminal: TerminalTool) -> TerminalDescriptor {
     match terminal {
-        TerminalTool::RootTask => TerminalDescriptor {
-            name: ToolName::SubmitRootTaskOutcome,
+        TerminalTool::Root => TerminalDescriptor {
+            name: ToolName::SubmitRootOutcome,
             selection_guidance: "Call with status=\"success\" when the user request is complete and verified; call with status=\"failed\" when it cannot be completed. The outcome is the user-facing request result.",
             advisor_review_focus: "Verify the root outcome is complete, factual, and supported by the work done. For failure, confirm the blocker is concrete.",
         },

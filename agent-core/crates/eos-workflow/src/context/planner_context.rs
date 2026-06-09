@@ -8,7 +8,7 @@ use super::{AgentContext, ContextRole, ContextSection};
 pub(crate) async fn render_planner_agent_context(
     deps: &AttemptResources,
     attempt: &Attempt,
-    planner_task_id: &eos_types::TaskId,
+    planner_agent_run_id: &eos_types::AgentRunId,
 ) -> Result<AgentContext> {
     let iteration = deps
         .iteration_store
@@ -58,8 +58,8 @@ pub(crate) async fn render_planner_agent_context(
                     ("iteration_id".to_owned(), iteration.id.as_str().to_owned()),
                     ("attempt_id".to_owned(), attempt.id.as_str().to_owned()),
                     (
-                        "planner_task_id".to_owned(),
-                        planner_task_id.as_str().to_owned(),
+                        "planner_agent_run_id".to_owned(),
+                        planner_agent_run_id.as_str().to_owned(),
                     ),
                 ])
                 .with_children(vec![

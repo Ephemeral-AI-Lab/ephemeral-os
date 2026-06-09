@@ -24,8 +24,8 @@
 <section class="summary">
   <div><b>20</b><span>modules</span></div>
   <div><b>340</b><span>items</span></div>
-  <div><b>207</b><span>fields</span></div>
-  <div><b>136</b><span>methods</span></div>
+  <div><b>205</b><span>fields</span></div>
+  <div><b>134</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -73,7 +73,7 @@
     attempt: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-AttemptSubmissionHandle-137">AttemptSubmissionHandle</a>,
 ) {
     submit_plan_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, attempt.clone());
-    submit_root_task_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, root);
+    submit_root_submission_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, root);
     submit_worker_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, attempt);
     submit_advisor_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config);
     submit_subagent_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config);
@@ -88,19 +88,19 @@
     <h3>register_schema</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
 ) {
-    submit_plan_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_root_task_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_worker_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_advisor_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_subagent_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
+    submit_plan_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_root_submission_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_worker_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_advisor_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_subagent_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
 }
 </code></pre>
 </details>
@@ -118,7 +118,7 @@
 
 <span class="rs-kw">mod</span> submit_advisor_outcome;
 <span class="rs-kw">mod</span> submit_plan_outcome;
-<span class="rs-kw">mod</span> submit_root_task_outcome;
+<span class="rs-kw">mod</span> submit_root_submission_outcome;
 <span class="rs-kw">mod</span> submit_subagent_outcome;
 <span class="rs-kw">mod</span> submit_worker_outcome;
 <span class="rs-kw">mod</span> support;
@@ -130,21 +130,21 @@
     attempt: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-AttemptSubmissionHandle-137">AttemptSubmissionHandle</a>,
 ) {
     submit_plan_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, attempt.clone());
-    submit_root_task_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, root);
+    submit_root_submission_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, root);
     submit_worker_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, attempt);
     submit_advisor_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config);
     submit_subagent_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config);
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
 ) {
-    submit_plan_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_root_task_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_worker_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_advisor_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
-    submit_subagent_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(registry, config);
+    submit_plan_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_root_submission_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_worker_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_advisor_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
+    submit_subagent_outcome::<a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-417">register_schema</a>(registry, config);
 }
 </code></pre>
 </section>

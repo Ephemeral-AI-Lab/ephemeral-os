@@ -18,7 +18,7 @@ use super::{HookDenial, HookOutcome, ToolCallHooks};
 fn cancels_inflight_subagents(tool: ToolName) -> bool {
     matches!(
         tool,
-        ToolName::SubmitRootTaskOutcome
+        ToolName::SubmitRootOutcome
             | ToolName::SubmitPlanOutcome
             | ToolName::SubmitWorkerOutcome
             | ToolName::ExitIsolatedWorkspace

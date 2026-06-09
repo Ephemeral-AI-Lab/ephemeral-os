@@ -24,8 +24,8 @@
 <section class="summary">
   <div><b>20</b><span>modules</span></div>
   <div><b>340</b><span>items</span></div>
-  <div><b>207</b><span>fields</span></div>
-  <div><b>136</b><span>methods</span></div>
+  <div><b>205</b><span>fields</span></div>
+  <div><b>134</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -96,23 +96,23 @@
 #[non_exhaustive]
 <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> {
     <span class="rs-comment">/// The dispatched tool name is not registered.</span>
-    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(&quot;unknown tool: {0}&quot;)]
+    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(&quot;unknown tool: {0}&quot;)]
     <span class="rs-type">UnknownTool</span>(<span class="rs-type">String</span>),
 
     <span class="rs-comment">/// A required execution-context value was absent where the tool requires it.</span>
-    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(&quot;missing required execution context: {0}&quot;)]
+    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(&quot;missing required execution context: {0}&quot;)]
     <span class="rs-type">MissingContext</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
 
     <span class="rs-comment">/// An upstream `Store` operation failed.</span>
-    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(&quot;store error: {0}&quot;)]
+    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(&quot;store error: {0}&quot;)]
     <span class="rs-type">Store</span>(#[from] <span class="rs-type">CoreError</span>),
 
     <span class="rs-comment">/// A sandbox transport / daemon RPC failed at the framework level.</span>
-    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(&quot;sandbox error: {0}&quot;)]
+    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(&quot;sandbox error: {0}&quot;)]
     <span class="rs-type">Sandbox</span>(#[from] <span class="rs-type">SandboxPortError</span>),
 
     <span class="rs-comment">/// An internal invariant broke.</span>
-    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-566">error</a>(&quot;internal tool error: {0}&quot;)]
+    #[<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-553">error</a>(&quot;internal tool error: {0}&quot;)]
     <span class="rs-type">Internal</span>(<span class="rs-type">String</span>),
 }
 

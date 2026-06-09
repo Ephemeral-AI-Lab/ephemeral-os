@@ -19,14 +19,14 @@ pub struct WorkflowCoordinates {
 /// Workflow task role used for agent-run path labels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum WorkflowTaskRole {
+pub enum WorkflowAgentRole {
     /// Planner task.
     Planner,
     /// Worker task.
     Worker,
 }
 
-impl WorkflowTaskRole {
+impl WorkflowAgentRole {
     /// The canonical record/task path label.
     #[must_use]
     pub const fn as_str(self) -> &'static str {

@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>9</b><span>modules</span></div>
   <div><b>20</b><span>items</span></div>
-  <div><b>45</b><span>fields</span></div>
+  <div><b>43</b><span>fields</span></div>
   <div><b>8</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -91,14 +91,16 @@
         )
         .<span class="rs-kw">await</span>?;
 
+    <span class="rs-kw">let</span> root_agent_run_id = <span class="rs-type">AgentRunId</span>::new_v4();
     <span class="rs-kw">let</span> spawn = service
         .agent_run_service
         .spawn_agent(<span class="rs-type">SpawnAgentRequest</span> {
+            agent_run_id: root_agent_run_id,
             agent_name: service.settings.root_agent_name.clone(),
+            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
+            request_id: request_id.clone(),
+            parent_agent_run_id: <span class="rs-type">None</span>,
             initial_messages: vec![<span class="rs-type">Message</span>::from_user_text(input.prompt)],
-            target: <span class="rs-type">SpawnAgentTarget</span>::<span class="rs-type">Root</span> {
-                request_id: request_id.clone(),
-            },
             tool_use_id: <span class="rs-type">None</span>,
             sandbox_id: <span class="rs-type">Some</span>(binding.sandbox_id),
             workspace_root: service.settings.workspace_root.clone(),
@@ -148,7 +150,7 @@
   <pre class="file-source"><code><span class="rs-comment">//! Create user-request orchestration.</span>
 
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">AgentRunApi</span>, <span class="rs-type">Message</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">RequestStatus</span>, <span class="rs-type">SpawnAgentRequest</span>, <span class="rs-type">SpawnAgentTarget</span>,
+    <span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentType</span>, <span class="rs-type">Message</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">RequestStatus</span>, <span class="rs-type">SpawnAgentRequest</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::dto::{<a class="symbol-link rs-type" href="eos-agent-core-server.html#item-struct-CreateUserRequestInput-5">CreateUserRequestInput</a>, <a class="symbol-link rs-type" href="eos-agent-core-server.html#item-struct-CreateUserRequestOutput-14">CreateUserRequestOutput</a>};
@@ -181,14 +183,16 @@
         )
         .<span class="rs-kw">await</span>?;
 
+    <span class="rs-kw">let</span> root_agent_run_id = <span class="rs-type">AgentRunId</span>::new_v4();
     <span class="rs-kw">let</span> spawn = service
         .agent_run_service
         .spawn_agent(<span class="rs-type">SpawnAgentRequest</span> {
+            agent_run_id: root_agent_run_id,
             agent_name: service.settings.root_agent_name.clone(),
+            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
+            request_id: request_id.clone(),
+            parent_agent_run_id: <span class="rs-type">None</span>,
             initial_messages: vec![<span class="rs-type">Message</span>::from_user_text(input.prompt)],
-            target: <span class="rs-type">SpawnAgentTarget</span>::<span class="rs-type">Root</span> {
-                request_id: request_id.clone(),
-            },
             tool_use_id: <span class="rs-type">None</span>,
             sandbox_id: <span class="rs-type">Some</span>(binding.sandbox_id),
             workspace_root: service.settings.workspace_root.clone(),

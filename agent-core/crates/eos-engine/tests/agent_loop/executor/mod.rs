@@ -191,7 +191,7 @@ fn test_start_request() -> StartAgentLoopRequest {
             request_id,
             agent_run_id,
             task_id,
-            task_agent_run_kind: TaskAgentRunKind::Root,
+            agent_run_kind: TaskAgentRunKind::Root,
             record_dir: AgentRunRecordDir::new("requests/test/root-task-test/agent-run-test"),
         },
         initial_messages: vec![AgentLoopMessage::UserMessage(Message::from_user_text(

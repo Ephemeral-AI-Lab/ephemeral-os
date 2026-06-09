@@ -1,19 +1,16 @@
 //! Shared `#[cfg(test)]` fakes and builders: a configurable [`SandboxTransport`],
-//! in-memory `TaskStore`/`RequestStore`, and an [`ExecutionMetadata`] / registry
+//! in-memory `RequestStore`, and an [`ExecutionMetadata`] / registry
 //! constructor used across the crate's unit tests (`test-mock-traits`).
 
 #![allow(clippy::unwrap_used)]
 #![allow(dead_code)]
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
-use eos_types::{AgentRunId, CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
-use eos_types::{
-    Request, RequestStatus, RequestStore, Sealed, Task, TaskOutcome, TaskStatus, TaskStore,
-};
+use eos_types::{AgentRunId, CoreError, JsonObject, RequestId, SandboxId, UtcDateTime};
+use eos_types::{Request, RequestStatus, RequestStore, Sealed};
 
 use crate::ExecutionMetadata;
 
@@ -56,96 +53,6 @@ impl SandboxTransport for FakeTransport {
     }
 }
 
-/// An in-memory `TaskStore`.
-#[derive(Default)]
-pub(crate) struct FakeTaskStore {
-    tasks: Mutex<HashMap<String, Task>>,
-}
-
-impl FakeTaskStore {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
-
-    pub(crate) fn put(&self, task: Task) {
-        self.tasks
-            .lock()
-            .unwrap()
-            .insert(task.id.as_str().to_owned(), task);
-    }
-}
-
-impl Sealed for FakeTaskStore {}
-
-#[async_trait]
-impl TaskStore for FakeTaskStore {
-    async fn insert_task(&self, task: &Task) -> Result<(), CoreError> {
-        let mut tasks = self.tasks.lock().unwrap();
-        if tasks.contains_key(task.id.as_str()) {
-            return Err(CoreError::Store(format!(
-                "task {} already exists",
-                task.id.as_str()
-            )));
-        }
-        tasks.insert(task.id.as_str().to_owned(), task.clone());
-        Ok(())
-    }
-
-    async fn get(&self, id: &TaskId) -> Result<Option<Task>, CoreError> {
-        Ok(self.tasks.lock().unwrap().get(id.as_str()).cloned())
-    }
-
-    async fn set_task_status_if_current(
-        &self,
-        id: &TaskId,
-        expected: TaskStatus,
-        status: TaskStatus,
-        task_outcome: Option<&TaskOutcome>,
-    ) -> Result<Option<Task>, CoreError> {
-        let mut tasks = self.tasks.lock().unwrap();
-        let task = tasks
-            .get_mut(id.as_str())
-            .ok_or_else(|| CoreError::Store("task not found".to_owned()))?;
-        if task.status != expected {
-            return Ok(None);
-        }
-        task.status = status;
-        if let Some(outcome) = task_outcome {
-            task.task_outcome = Some(outcome.clone());
-        }
-        Ok(Some(task.clone()))
-    }
-
-    async fn latch_attempt_tasks_cancelled(&self, ids: &[TaskId]) -> Result<(), CoreError> {
-        let mut tasks = self.tasks.lock().unwrap();
-        for id in ids {
-            if let Some(task) = tasks.get_mut(id.as_str()) {
-                if matches!(task.status, TaskStatus::Pending | TaskStatus::Running) {
-                    task.status = TaskStatus::Cancelled;
-                    task.task_outcome = Some(TaskOutcome::Worker {
-                        is_pass: false,
-                        outcome: "cancelled".to_owned(),
-                    });
-                }
-            }
-        }
-        Ok(())
-    }
-
-    async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError> {
-        let mut tasks: Vec<Task> = self
-            .tasks
-            .lock()
-            .unwrap()
-            .values()
-            .filter(|task| &task.request_id == request_id)
-            .cloned()
-            .collect();
-        tasks.sort_by(|a, b| a.id.as_str().cmp(b.id.as_str()));
-        Ok(tasks)
-    }
-}
-
 /// An in-memory `RequestStore` that records `finish_request` calls.
 #[derive(Default)]
 pub(crate) struct FakeRequestStore {
@@ -171,7 +78,6 @@ fn synthetic_request(id: &RequestId, status: RequestStatus) -> Request {
         cwd: String::new(),
         sandbox_id: None,
         request_prompt: String::new(),
-        root_task_id: None,
         status,
         created_at: now,
         updated_at: now,
@@ -193,14 +99,6 @@ impl RequestStore for FakeRequestStore {
 
     async fn get(&self, id: &RequestId) -> Result<Option<Request>, CoreError> {
         Ok(Some(synthetic_request(id, RequestStatus::Running)))
-    }
-
-    async fn set_root_task_id(
-        &self,
-        id: &RequestId,
-        _root_task_id: &TaskId,
-    ) -> Result<Request, CoreError> {
-        Ok(synthetic_request(id, RequestStatus::Running))
     }
 
     async fn finish_request(
@@ -233,7 +131,6 @@ pub(crate) fn metadata() -> ExecutionMetadata {
         agent_name: "tester".to_owned(),
         agent_run_id: Some(agent_run_id),
         request_id: None,
-        task_id: None,
         attempt_id: None,
         workflow_id: None,
         work_item_id: None,

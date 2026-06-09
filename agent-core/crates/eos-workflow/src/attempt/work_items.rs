@@ -67,7 +67,9 @@ pub(crate) fn execution_nodes(work_items: &[WorkItemSpec]) -> Vec<ExecutionNode>
         .map(|item| ExecutionNode {
             work_item_id: item.id.clone(),
             needs: item.needs.clone(),
-            task_id: None,
+            agent_run_id: None,
+            status: None,
+            outcome: None,
         })
         .collect()
 }
@@ -83,30 +85,25 @@ pub(crate) fn work_item_by_id<'a>(
 }
 
 pub(crate) async fn planner_outcome_for_attempt(
-    deps: &AttemptResources,
+    _deps: &AttemptResources,
     attempt: &Attempt,
 ) -> Result<PlannerOutcome> {
-    let planner_task_id = attempt.planner_task_id().ok_or_else(|| {
+    attempt.planner_agent_run_id().ok_or_else(|| {
         WorkflowError::invariant(format!(
-            "attempt {:?} has no planner task",
+            "attempt {:?} has no planner agent run",
             attempt.id.as_str()
         ))
     })?;
-    let task = deps
-        .task_store
-        .get(planner_task_id)
-        .await?
-        .ok_or_else(|| WorkflowError::not_found("planner task", planner_task_id.as_str()))?;
-    let outcome = task.task_outcome.ok_or_else(|| {
+    let outcome = attempt.execution_tree.planner_outcome.as_ref().ok_or_else(|| {
         WorkflowError::invariant(format!(
-            "planner task {:?} has no planner outcome",
-            planner_task_id.as_str()
+            "attempt {:?} has no planner outcome",
+            attempt.id.as_str()
         ))
     })?;
-    outcome.planner_outcome().ok_or_else(|| {
+    outcome.clone().planner_outcome().ok_or_else(|| {
         WorkflowError::invariant(format!(
-            "planner task {:?} did not record a planner outcome",
-            planner_task_id.as_str()
+            "attempt {:?} did not record a planner outcome",
+            attempt.id.as_str()
         ))
     })
 }
@@ -174,7 +171,7 @@ mod tests {
         assert_eq!(nodes.len(), 2);
         assert_eq!(nodes[1].work_item_id.as_str(), "w2");
         assert_eq!(nodes[1].needs[0].as_str(), "w1");
-        assert!(nodes.iter().all(|node| node.task_id.is_none()));
+        assert!(nodes.iter().all(|node| node.agent_run_id.is_none()));
     }
 
     #[test]

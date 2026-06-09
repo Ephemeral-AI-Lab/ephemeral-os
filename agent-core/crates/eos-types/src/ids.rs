@@ -114,13 +114,6 @@ define_id!(
     mint
 );
 define_id!(
-    /// Identifier for a persisted Task row. Opaque string; the root mint is
-    /// `root-{request_id}` (derived by the owning request service from the
-    /// injected request id, not `new_v4`).
-    TaskId,
-    mint
-);
-define_id!(
     /// Identifier for a delegated Workflow row.
     WorkflowId,
     mint

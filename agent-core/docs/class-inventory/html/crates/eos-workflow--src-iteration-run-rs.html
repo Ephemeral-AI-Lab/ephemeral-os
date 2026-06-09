@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>19</b><span>modules</span></div>
   <div><b>85</b><span>items</span></div>
-  <div><b>73</b><span>fields</span></div>
+  <div><b>72</b><span>fields</span></div>
   <div><b>111</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -384,7 +384,7 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = task
-        .task_outcome
+        .submission_outcome
         .and_then(|outcome| outcome.planner_outcome())
     <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
@@ -696,7 +696,7 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) = task
-        .task_outcome
+        .submission_outcome
         .and_then(|outcome| outcome.planner_outcome())
     <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);

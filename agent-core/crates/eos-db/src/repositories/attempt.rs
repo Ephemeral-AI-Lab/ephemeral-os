@@ -6,8 +6,8 @@ use time::OffsetDateTime;
 
 use eos_types::{
     AgentRunId, Attempt, AttemptClosure, AttemptExecutionTree, AttemptId, AttemptStage,
-    AttemptStore, CoreError, ExecutionNode, IterationId, PlanId, RequestId, Sealed, TaskOutcome,
-    TaskStatus, WorkItemId, WorkflowId,
+    AttemptStore, CoreError, ExecutionNode, IterationId, PlanId, RequestId, Sealed, SubmissionOutcome,
+    ExecutionStatus, WorkItemId, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -100,7 +100,7 @@ impl AttemptStore for SqlAttemptStore {
     async fn record_plan_outcome(
         &self,
         id: &AttemptId,
-        planner_outcome: &TaskOutcome,
+        planner_outcome: &SubmissionOutcome,
         nodes: &[ExecutionNode],
     ) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
@@ -142,7 +142,7 @@ impl AttemptStore for SqlAttemptStore {
             )));
         };
         node.agent_run_id = Some(agent_run_id.clone());
-        node.status = Some(TaskStatus::Running);
+        node.status = Some(ExecutionStatus::Running);
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
             "UPDATE attempts SET execution_tree = ?, updated_at = ? WHERE id = ? RETURNING *",
         )
@@ -159,8 +159,8 @@ impl AttemptStore for SqlAttemptStore {
         &self,
         id: &AttemptId,
         work_item_id: &WorkItemId,
-        status: TaskStatus,
-        outcome: &TaskOutcome,
+        status: ExecutionStatus,
+        outcome: &SubmissionOutcome,
     ) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
         let mut attempt = self.get(id).await?.ok_or_else(|| Self::not_found(id))?;

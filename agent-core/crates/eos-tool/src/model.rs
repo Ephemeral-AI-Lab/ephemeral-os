@@ -132,7 +132,7 @@ mod metadata {
 
     use eos_types::Message;
     use eos_types::{
-        AgentRunId, AttemptId, InvocationId, RequestId, SandboxId, TaskId, ToolUseId, WorkItemId,
+        AgentRunId, AttemptId, InvocationId, RequestId, SandboxId, ToolUseId, WorkItemId,
         WorkflowId,
     };
 
@@ -148,8 +148,6 @@ mod metadata {
         pub agent_run_id: Option<AgentRunId>,
         /// Owning request, when set.
         pub request_id: Option<RequestId>,
-        /// Owning task, when set.
-        pub task_id: Option<TaskId>,
         /// Owning attempt, when set.
         pub attempt_id: Option<AttemptId>,
         /// Owning workflow, when set.
@@ -176,7 +174,6 @@ mod metadata {
                 .field("agent_name", &self.agent_name)
                 .field("agent_run_id", &self.agent_run_id)
                 .field("request_id", &self.request_id)
-                .field("task_id", &self.task_id)
                 .field("attempt_id", &self.attempt_id)
                 .field("workflow_id", &self.workflow_id)
                 .field("work_item_id", &self.work_item_id)
@@ -205,16 +202,6 @@ mod metadata {
             self.sandbox_id
                 .as_ref()
                 .ok_or(ToolError::MissingContext("sandbox_id"))
-        }
-
-        /// Require the owning task id, else a framework fault.
-        ///
-        /// # Errors
-        /// Returns [`ToolError::MissingContext`] when no task id is set.
-        pub fn require_task_id(&self) -> Result<&TaskId, ToolError> {
-            self.task_id
-                .as_ref()
-                .ok_or(ToolError::MissingContext("task_id"))
         }
 
         /// Require the owning request id, else a framework fault.
@@ -315,8 +302,8 @@ mod name {
         CancelWorkflow,
         /// `load_skill_reference` (skills; omitted from `_names.py`).
         LoadSkillReference,
-        /// `submit_root_task_outcome` (submission, terminal).
-        SubmitRootTaskOutcome,
+        /// `submit_root_outcome` (submission, terminal).
+        SubmitRootOutcome,
         /// `submit_plan_outcome` (submission, terminal).
         SubmitPlanOutcome,
         /// `submit_worker_outcome` (submission, terminal).
@@ -347,7 +334,7 @@ mod name {
             ToolName::CheckWorkflowStatus,
             ToolName::CancelWorkflow,
             ToolName::LoadSkillReference,
-            ToolName::SubmitRootTaskOutcome,
+            ToolName::SubmitRootOutcome,
             ToolName::SubmitPlanOutcome,
             ToolName::SubmitWorkerOutcome,
             ToolName::SubmitAdvisorOutcome,
@@ -374,7 +361,7 @@ mod name {
                 ToolName::CheckWorkflowStatus => "check_workflow_status",
                 ToolName::CancelWorkflow => "cancel_workflow",
                 ToolName::LoadSkillReference => "load_skill_reference",
-                ToolName::SubmitRootTaskOutcome => "submit_root_task_outcome",
+                ToolName::SubmitRootOutcome => "submit_root_outcome",
                 ToolName::SubmitPlanOutcome => "submit_plan_outcome",
                 ToolName::SubmitWorkerOutcome => "submit_worker_outcome",
                 ToolName::SubmitAdvisorOutcome => "submit_advisor_outcome",

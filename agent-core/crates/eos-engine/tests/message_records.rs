@@ -10,7 +10,7 @@ use eos_engine::run_output::{
 use eos_types::{
     format_record_dir, AgentRunId, AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget,
     AttemptId, ContentBlock, IterationId, Message, MessageRole, ParentedAgentRunKind, RequestId,
-    TaskAgentRunKind, TaskId, ToolUseId, WorkflowCoordinates, WorkflowId, WorkflowTaskRole,
+    TaskAgentRunKind, TaskId, ToolUseId, WorkflowCoordinates, WorkflowId, WorkflowAgentRole,
 };
 use serde_json::{json, Value};
 
@@ -51,7 +51,7 @@ fn record_target(
         request_id: request_id.clone(),
         agent_run_id: agent_run_id.clone(),
         task_id: task_id.clone(),
-        task_agent_run_kind: kind,
+        agent_run_kind: kind,
         record_dir,
     }
 }
@@ -89,7 +89,7 @@ fn workflow_kind(
     workflow_id: &WorkflowId,
     iteration_id: &IterationId,
     attempt_id: &AttemptId,
-    role: WorkflowTaskRole,
+    role: WorkflowAgentRole,
 ) -> TaskAgentRunKind {
     TaskAgentRunKind::Workflow {
         workflow: WorkflowCoordinates {
@@ -192,7 +192,7 @@ async fn workflow_task_records_use_role_layout_and_payload() {
     let attempt_id: AttemptId = id("att-1");
     let cases = [
         (
-            WorkflowTaskRole::Planner,
+            WorkflowAgentRole::Planner,
             "workflow_planner",
             "planner",
             "planner-task-task-plan",
@@ -200,7 +200,7 @@ async fn workflow_task_records_use_role_layout_and_payload() {
             "run-plan",
         ),
         (
-            WorkflowTaskRole::Worker,
+            WorkflowAgentRole::Worker,
             "workflow_worker",
             "worker",
             "worker-task-task-work",
@@ -538,7 +538,7 @@ async fn unsafe_path_segments_are_rejected() {
             &unsafe_workflow,
             &id("it-safe"),
             &id("att-safe"),
-            WorkflowTaskRole::Planner,
+            WorkflowAgentRole::Planner,
         ),
         None,
     );

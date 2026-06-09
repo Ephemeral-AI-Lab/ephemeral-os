@@ -72,7 +72,6 @@ mod delegate_workflow {
             if parsed.goal.trim().is_empty() {
                 return Ok(ToolResult::error("goal must be nonblank"));
             }
-            let task_id = ctx.require_task_id()?;
             let agent_run_id = ctx.require_agent_run_id()?;
             let service = self.workflow_service.as_ref();
             let sessions = &self.workflow_sessions;
@@ -92,7 +91,6 @@ mod delegate_workflow {
 
             let started = service
                 .start_workflow(StartWorkflowRequest {
-                    parent_task_id: task_id.clone(),
                     agent_run_id: agent_run_id.clone(),
                     tool_use_id: ctx.tool_use_id.clone(),
                     workflow_goal: parsed.goal.clone(),
@@ -113,7 +111,7 @@ mod delegate_workflow {
                     "workflow_id".to_owned(),
                     json!(started.workflow_id.as_str()),
                 ),
-                ("task_id".to_owned(), json!(task_id.as_str())),
+                ("agent_run_id".to_owned(), json!(agent_run_id.as_str())),
             ]
             .into_iter()
             .collect();

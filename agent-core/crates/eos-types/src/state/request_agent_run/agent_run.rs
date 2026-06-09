@@ -4,13 +4,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AgentName, AgentRunId, AgentType, JsonObject, RequestId, TaskOutcome, ToolUseId, UtcDateTime,
+    AgentName, AgentRunId, AgentType, JsonObject, RequestId, SubmissionOutcome, ToolUseId,
+    UtcDateTime,
 };
 
 /// Lifecycle status of a persisted agent run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum TaskStatus {
+pub enum ExecutionStatus {
     /// Created, not yet started.
     Pending,
     /// Currently executing.
@@ -26,8 +27,8 @@ pub enum TaskStatus {
     Cancelled,
 }
 
-impl TaskStatus {
-    /// Whether this is a terminal task status.
+impl ExecutionStatus {
+    /// Whether this is a terminal execution status.
     #[must_use]
     pub const fn is_terminal(self) -> bool {
         matches!(
@@ -47,7 +48,7 @@ pub struct AgentRun {
     /// Runtime agent profile type.
     pub agent_type: AgentType,
     /// Lifecycle status.
-    pub status: TaskStatus,
+    pub status: ExecutionStatus,
     /// Bound agent profile.
     pub agent_name: AgentName,
     /// Exact parent agent run that launched this run.
@@ -61,7 +62,7 @@ pub struct AgentRun {
     pub terminal_payload: Option<JsonObject>,
     /// Typed mirror of the terminal payload, if any.
     #[serde(default)]
-    pub task_outcome: Option<TaskOutcome>,
+    pub submission_outcome: Option<SubmissionOutcome>,
     /// Provider token count.
     pub token_count: i64,
     /// Terminal error summary, if any.
@@ -84,5 +85,5 @@ pub struct RunningRequestAgentRun {
     /// Agent-run execution identity.
     pub agent_run_id: AgentRunId,
     /// Current running status.
-    pub status: TaskStatus,
+    pub status: ExecutionStatus,
 }

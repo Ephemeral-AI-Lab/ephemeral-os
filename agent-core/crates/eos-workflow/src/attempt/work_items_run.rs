@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use eos_types::{
-    Attempt, AttemptFailReason, AttemptStage, ExecutionNode, Task, TaskId, TaskOutcome, TaskRole,
-    TaskStatus, WorkItemId, WorkItemSpec, WorkerOutcomeSubmission,
+    Attempt, AttemptFailReason, AttemptStage, ExecutionNode, Task, TaskId, SubmissionOutcome, TaskRole,
+    ExecutionStatus, WorkItemId, WorkItemSpec, WorkerOutcomeSubmission,
 };
 
 use crate::{Result, WorkflowError};
@@ -43,7 +43,7 @@ impl WorkItemsRun {
             if states.values().any(|state| *state == NodeState::Failed) {
                 return self
                     .attempt_run
-                    .close_attempt_failed(AttemptFailReason::TaskFailed)
+                    .close_attempt_failed(AttemptFailReason::WorkItemFailed)
                     .await;
             }
             if !states.is_empty() && states.values().all(|state| *state == NodeState::Passed) {
@@ -57,14 +57,14 @@ impl WorkItemsRun {
             let capacity = self
                 .attempt_run
                 .deps()
-                .max_concurrent_task_runs
+                .max_concurrent_worker_runs
                 .saturating_sub(running_count);
             let ready = self.ready_unbound_nodes(&attempt, &states);
             if capacity == 0 || ready.is_empty() {
                 if running_count == 0 && self.unbound_nodes_are_blocked(&attempt, &states) {
                     return self
                         .attempt_run
-                        .close_attempt_failed(AttemptFailReason::TaskFailed)
+                        .close_attempt_failed(AttemptFailReason::WorkItemFailed)
                         .await;
                 }
                 return Ok(());
@@ -108,18 +108,18 @@ impl WorkItemsRun {
             .get(&submission.task_id)
             .await?
             .ok_or_else(|| WorkflowError::not_found("worker task", submission.task_id.as_str()))?;
-        if task.role != TaskRole::Worker || task.status != TaskStatus::Running {
+        if task.role != TaskRole::Worker || task.status != ExecutionStatus::Running {
             return Err(WorkflowError::invariant(format!(
                 "worker task {:?} is not running",
                 submission.task_id.as_str()
             )));
         }
         let task_status = if submission.status.is_pass() {
-            TaskStatus::Done
+            ExecutionStatus::Done
         } else {
-            TaskStatus::Failed
+            ExecutionStatus::Failed
         };
-        let task_outcome = TaskOutcome::Worker {
+        let submission_outcome = SubmissionOutcome::Worker {
             is_pass: submission.status.is_pass(),
             outcome: submission.outcome,
         };
@@ -128,9 +128,9 @@ impl WorkItemsRun {
             .task_store
             .set_task_status_if_current(
                 &submission.task_id,
-                TaskStatus::Running,
+                ExecutionStatus::Running,
                 task_status,
-                Some(&task_outcome),
+                Some(&submission_outcome),
             )
             .await?
             .ok_or_else(|| {
@@ -155,9 +155,9 @@ impl WorkItemsRun {
                 request_id: launch.request_id.clone(),
                 role: TaskRole::Worker,
                 instruction: launch.instruction.clone(),
-                status: TaskStatus::Running,
+                status: ExecutionStatus::Running,
                 agent_name: Some(launch.agent_name.as_str().to_owned()),
-                task_outcome: None,
+                submission_outcome: None,
             })
             .await?;
         self.attempt_run
@@ -212,7 +212,7 @@ impl WorkItemsRun {
                 launch.task_id.as_str(),
             ));
         };
-        if matches!(task.status, TaskStatus::Pending | TaskStatus::Running) {
+        if matches!(task.status, ExecutionStatus::Pending | ExecutionStatus::Running) {
             let work_item_id = launch.work_item_id().cloned().ok_or_else(|| {
                 WorkflowError::invariant("worker settlement missing work_item_id")
             })?;
@@ -227,7 +227,7 @@ impl WorkItemsRun {
         task_id: &TaskId,
         work_item_id: &WorkItemId,
     ) -> Result<()> {
-        let task_outcome = TaskOutcome::Worker {
+        let submission_outcome = SubmissionOutcome::Worker {
             is_pass: false,
             outcome: format!(
                 "worker {:?} finished without submit_worker_outcome",
@@ -239,9 +239,9 @@ impl WorkItemsRun {
             .task_store
             .set_task_status_if_current(
                 task_id,
-                TaskStatus::Running,
-                TaskStatus::Failed,
-                Some(&task_outcome),
+                ExecutionStatus::Running,
+                ExecutionStatus::Failed,
+                Some(&submission_outcome),
             )
             .await?;
         Ok(())
@@ -268,16 +268,16 @@ impl WorkItemsRun {
             .await?
             .ok_or_else(|| WorkflowError::not_found("worker task", task_id.as_str()))?;
         match task.status {
-            TaskStatus::Pending | TaskStatus::Running => Ok(NodeState::Running),
-            TaskStatus::Done => match task.task_outcome {
-                Some(TaskOutcome::Worker { is_pass: true, .. }) => Ok(NodeState::Passed),
-                Some(TaskOutcome::Worker { .. }) => Ok(NodeState::Failed),
+            ExecutionStatus::Pending | ExecutionStatus::Running => Ok(NodeState::Running),
+            ExecutionStatus::Done => match task.submission_outcome {
+                Some(SubmissionOutcome::Worker { is_pass: true, .. }) => Ok(NodeState::Passed),
+                Some(SubmissionOutcome::Worker { .. }) => Ok(NodeState::Failed),
                 _ => Err(WorkflowError::invariant(format!(
                     "worker task {:?} is done without worker outcome",
                     task_id.as_str()
                 ))),
             },
-            TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::Cancelled => {
+            ExecutionStatus::Failed | ExecutionStatus::Blocked | ExecutionStatus::Cancelled => {
                 Ok(NodeState::Failed)
             }
         }
