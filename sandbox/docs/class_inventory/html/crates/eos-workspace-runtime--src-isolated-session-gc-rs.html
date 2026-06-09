@@ -227,7 +227,7 @@
         <span class="rs-kw">let</span> result = <span class="rs-self">self</span>
             .runtime
             .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(holder_pid, <span class="rs-self">self</span>.caps.exit_grace_s.max(0.0));
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = result {
             extra.push((&quot;error&quot;, json!(error.to_string())));
         }
@@ -269,7 +269,7 @@
         <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;cgroup_path);
         <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;cgroup_path);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
             extra.push((&quot;error&quot;, json!(error.to_string())));
         }
@@ -287,7 +287,7 @@
         }
         <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;scratch_dir);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
             extra.push((&quot;error&quot;, json!(error.to_string())));
         }
@@ -334,7 +334,7 @@
             <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
             <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;path);
             <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;path);
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
                 extra.push((&quot;error&quot;, json!(error.to_string())));
             }
@@ -356,7 +356,7 @@
             }
             <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
             <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;path);
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
                 extra.push((&quot;error&quot;, json!(error.to_string())));
             }
@@ -463,7 +463,7 @@
         <span class="rs-kw">let</span> result = <span class="rs-self">self</span>
             .runtime
             .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(holder_pid, <span class="rs-self">self</span>.caps.exit_grace_s.max(0.0));
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = result {
             extra.push((&quot;error&quot;, json!(error.to_string())));
         }
@@ -501,7 +501,7 @@
         <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;cgroup_path);
         <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;cgroup_path);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
             extra.push((&quot;error&quot;, json!(error.to_string())));
         }
@@ -517,7 +517,7 @@
         }
         <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;scratch_dir);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
             extra.push((&quot;error&quot;, json!(error.to_string())));
         }
@@ -558,7 +558,7 @@
             <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
             <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;path);
             <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;path);
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
                 extra.push((&quot;error&quot;, json!(error.to_string())));
             }
@@ -578,7 +578,7 @@
             }
             <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
             <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;path);
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
                 extra.push((&quot;error&quot;, json!(error.to_string())));
             }

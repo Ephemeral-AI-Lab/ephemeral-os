@@ -3449,11 +3449,11 @@
       "path": "crates/eos-daemon",
       "stats": {
         "modules": 54,
-        "items": 421,
+        "items": 426,
         "structs": 37,
         "enums": 2,
         "traits": 0,
-        "functions": 351,
+        "functions": 356,
         "impls": 28,
         "fields": 166,
         "methods": 81
@@ -3998,7 +3998,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 50
+              "line": 47
             },
             {
               "kind": "fn",
@@ -4014,7 +4014,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 54
+              "line": 51
             },
             {
               "kind": "fn",
@@ -4030,7 +4030,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 58
+              "line": 55
             },
             {
               "kind": "fn",
@@ -4046,7 +4046,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 70
+              "line": 67
             },
             {
               "kind": "fn",
@@ -4062,7 +4062,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 79
+              "line": 76
             },
             {
               "kind": "fn",
@@ -4078,7 +4078,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 112
+              "line": 109
             },
             {
               "kind": "fn",
@@ -4094,7 +4094,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 154
+              "line": 151
             },
             {
               "kind": "fn",
@@ -4110,7 +4110,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/convert.rs",
               "module": "adapters::overlay::convert",
-              "line": 162
+              "line": 159
             }
           ]
         },
@@ -4118,6 +4118,22 @@
           "path": "crates/eos-daemon/src/adapters/overlay/mod.rs",
           "module": "adapters::overlay",
           "items": [
+            {
+              "kind": "fn",
+              "name": "publish_failed",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn publish_failed (error : impl std :: fmt :: Display) -> EphemeralWorkspaceError",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Wrap any displayable error as an `EphemeralWorkspaceError::PublishFailed`.",
+              "tags": [],
+              "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
+              "module": "adapters::overlay",
+              "line": 33
+            },
             {
               "kind": "struct",
               "name": "DaemonPublisherPort",
@@ -4140,7 +4156,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
               "module": "adapters::overlay",
-              "line": 33
+              "line": 40
             },
             {
               "kind": "impl",
@@ -4155,7 +4171,7 @@
                   "signature": "pub(crate) const fn new (root : & 'a Path) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 38
+                  "line": 45
                 }
               ],
               "impl_target": "DaemonPublisherPort < 'a >",
@@ -4166,7 +4182,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
               "module": "adapters::overlay",
-              "line": 37
+              "line": 44
             },
             {
               "kind": "impl",
@@ -4181,7 +4197,7 @@
                   "signature": "fn publish_upperdir_changes (& self , _root : & WorkspaceRoot , snapshot : & EphemeralSnapshot , changes : & [LayerChange] , _path_kinds : & [PathChange] ,) -> Result < PublishOutcome , EphemeralWorkspaceError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 44
+                  "line": 51
                 }
               ],
               "impl_target": "DaemonPublisherPort < '_ >",
@@ -4193,7 +4209,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
               "module": "adapters::overlay",
-              "line": 43
+              "line": 50
             },
             {
               "kind": "fn",
@@ -4209,7 +4225,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
               "module": "adapters::overlay",
-              "line": 91
+              "line": 84
             },
             {
               "kind": "fn",
@@ -4225,7 +4241,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
               "module": "adapters::overlay",
-              "line": 99
+              "line": 92
             },
             {
               "kind": "fn",
@@ -4241,7 +4257,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/overlay/mod.rs",
               "module": "adapters::overlay",
-              "line": 108
+              "line": 101
             }
           ]
         },
@@ -6729,6 +6745,22 @@
             },
             {
               "kind": "fn",
+              "name": "parse_layer_path",
+              "visibility": "private",
+              "signature": "fn parse_layer_path (raw : & str) -> Result < LayerPath , WorkspaceApiError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Parse a request path into a `LayerPath`, surfacing failures as the daemon\nworkspace API error.",
+              "tags": [],
+              "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
+              "module": "adapters::workspace::file_ports",
+              "line": 33
+            },
+            {
+              "kind": "fn",
               "name": "resolve_layer_path",
               "visibility": "private",
               "signature": "fn resolve_layer_path (binding : & WorkspaceBinding , request_path : & str ,) -> Result < ResolvedWorkspacePath , WorkspaceApiError >",
@@ -6741,7 +6773,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 33
+              "line": 41
             },
             {
               "kind": "struct",
@@ -6766,7 +6798,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 49
+              "line": 57
             },
             {
               "kind": "impl",
@@ -6781,7 +6813,7 @@
                   "signature": "pub(crate) fn new (root : PathBuf) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 56
+                  "line": 64
                 }
               ],
               "impl_target": "EphemeralFilePorts",
@@ -6792,7 +6824,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 55
+              "line": 63
             },
             {
               "kind": "impl",
@@ -6807,14 +6839,14 @@
                   "signature": "fn resolve_path (& self , request_path : & str) -> Result < ResolvedWorkspacePath , WorkspaceApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 62
+                  "line": 70
                 },
                 {
                   "name": "read_bytes",
                   "signature": "fn read_bytes (& self , path : & ResolvedWorkspacePath ,) -> Result < WorkspaceReadBytes , WorkspaceApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 67
+                  "line": 75
                 }
               ],
               "impl_target": "EphemeralFilePorts",
@@ -6826,7 +6858,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 61
+              "line": 69
             },
             {
               "kind": "impl",
@@ -6841,7 +6873,7 @@
                   "signature": "fn commit_or_record (& self , request : WorkspaceMutationRequest ,) -> Result < WorkspaceMutationOutcome , WorkspaceApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 90
+                  "line": 98
                 }
               ],
               "impl_target": "EphemeralFilePorts",
@@ -6853,7 +6885,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 89
+              "line": 97
             },
             {
               "kind": "fn",
@@ -6869,7 +6901,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 131
+              "line": 137
             },
             {
               "kind": "struct",
@@ -6900,7 +6932,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 172
+              "line": 178
             },
             {
               "kind": "impl",
@@ -6915,14 +6947,14 @@
                   "signature": "pub(crate) fn new (handle : crate :: adapters :: workspace_run :: isolated :: CommandHandle) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 181
+                  "line": 187
                 },
                 {
                   "name": "record_read_file",
                   "signature": "pub(crate) fn record_read_file (& self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 188
+                  "line": 194
                 }
               ],
               "impl_target": "IsolatedFilePorts",
@@ -6934,7 +6966,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 179
+              "line": 185
             },
             {
               "kind": "impl",
@@ -6949,14 +6981,14 @@
                   "signature": "fn resolve_path (& self , request_path : & str) -> Result < ResolvedWorkspacePath , WorkspaceApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 195
+                  "line": 201
                 },
                 {
                   "name": "read_bytes",
                   "signature": "fn read_bytes (& self , path : & ResolvedWorkspacePath ,) -> Result < WorkspaceReadBytes , WorkspaceApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 207
+                  "line": 213
                 }
               ],
               "impl_target": "IsolatedFilePorts",
@@ -6969,7 +7001,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 193
+              "line": 199
             },
             {
               "kind": "impl",
@@ -6984,7 +7016,7 @@
                   "signature": "fn commit_or_record (& self , request : WorkspaceMutationRequest ,) -> Result < WorkspaceMutationOutcome , WorkspaceApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 232
+                  "line": 236
                 }
               ],
               "impl_target": "IsolatedFilePorts",
@@ -6997,7 +7029,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 230
+              "line": 234
             },
             {
               "kind": "fn",
@@ -7015,7 +7047,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 270
+              "line": 272
             },
             {
               "kind": "fn",
@@ -7033,7 +7065,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 278
+              "line": 280
             },
             {
               "kind": "fn",
@@ -7051,7 +7083,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 309
+              "line": 311
             },
             {
               "kind": "fn",
@@ -7069,7 +7101,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 322
+              "line": 324
             },
             {
               "kind": "fn",
@@ -7087,7 +7119,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 339
+              "line": 341
             },
             {
               "kind": "fn",
@@ -7105,7 +7137,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 350
+              "line": 352
             },
             {
               "kind": "fn",
@@ -7123,7 +7155,7 @@
               ],
               "file": "crates/eos-daemon/src/adapters/workspace/file_ports.rs",
               "module": "adapters::workspace::file_ports",
-              "line": 358
+              "line": 360
             }
           ]
         },
@@ -9564,6 +9596,22 @@
             },
             {
               "kind": "fn",
+              "name": "emit_layer_stack_completion",
+              "visibility": "private",
+              "signature": "fn emit_layer_stack_completion (request : & Request , event_type : & str , manifest_version : Option < i64 > , total_ms : f64 ,)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Emit a `layer_stack` completion event whose section is fully derived from the\nactive manifest stats. Shared by the workspace-base and commit audits, which\ndiffer only in their event type, manifest-version source, and total timing.",
+              "tags": [],
+              "file": "crates/eos-daemon/src/audit/events.rs",
+              "module": "audit::events",
+              "line": 212
+            },
+            {
+              "kind": "fn",
               "name": "emit_workspace_base_audit",
               "visibility": "private",
               "signature": "fn emit_workspace_base_audit (request : & Request , response : & Value)",
@@ -9576,7 +9624,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 212
+              "line": 237
             },
             {
               "kind": "fn",
@@ -9592,7 +9640,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 241
+              "line": 253
             },
             {
               "kind": "fn",
@@ -9608,7 +9656,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 265
+              "line": 269
             },
             {
               "kind": "fn",
@@ -9624,7 +9672,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 320
+              "line": 324
             },
             {
               "kind": "struct",
@@ -9651,7 +9699,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 324
+              "line": 328
             },
             {
               "kind": "fn",
@@ -9667,7 +9715,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 329
+              "line": 333
             },
             {
               "kind": "fn",
@@ -9683,7 +9731,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 348
+              "line": 352
             },
             {
               "kind": "fn",
@@ -9699,7 +9747,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 382
+              "line": 386
             },
             {
               "kind": "fn",
@@ -9715,7 +9763,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 399
+              "line": 403
             },
             {
               "kind": "fn",
@@ -9731,7 +9779,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 406
+              "line": 410
             },
             {
               "kind": "fn",
@@ -9747,7 +9795,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 425
+              "line": 429
             },
             {
               "kind": "fn",
@@ -9763,7 +9811,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 433
+              "line": 437
             },
             {
               "kind": "fn",
@@ -9779,7 +9827,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 437
+              "line": 441
             },
             {
               "kind": "fn",
@@ -9795,7 +9843,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 467
+              "line": 471
             },
             {
               "kind": "fn",
@@ -9811,7 +9859,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 481
+              "line": 485
             },
             {
               "kind": "fn",
@@ -9827,7 +9875,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 490
+              "line": 494
             },
             {
               "kind": "fn",
@@ -9843,7 +9891,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 498
+              "line": 502
             },
             {
               "kind": "fn",
@@ -9859,7 +9907,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 502
+              "line": 506
             },
             {
               "kind": "fn",
@@ -9875,7 +9923,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 506
+              "line": 510
             },
             {
               "kind": "fn",
@@ -9891,7 +9939,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 511
+              "line": 515
             },
             {
               "kind": "fn",
@@ -9907,7 +9955,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 515
+              "line": 519
             },
             {
               "kind": "fn",
@@ -9923,7 +9971,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 519
+              "line": 523
             },
             {
               "kind": "fn",
@@ -9939,7 +9987,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 523
+              "line": 527
             },
             {
               "kind": "fn",
@@ -9955,7 +10003,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/audit/events.rs",
               "module": "audit::events",
-              "line": 527
+              "line": 531
             }
           ]
         },
@@ -10167,6 +10215,22 @@
             },
             {
               "kind": "fn",
+              "name": "finalize_response",
+              "visibility": "private",
+              "signature": "fn finalize_response (request : & Request , mut response : Value , boot_to_dispatch_s : f64 , dispatch_start : Instant , read_request_s : f64 ,) -> Value",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Attach the dispatch runtime timings to `response` and emit the dispatch\naudit event, then return the finalized response. Computes the dispatch\nelapsed once and shares it between the timings and the audit record.",
+              "tags": [],
+              "file": "crates/eos-daemon/src/dispatch/dispatcher.rs",
+              "module": "dispatch::dispatcher",
+              "line": 223
+            },
+            {
+              "kind": "fn",
               "name": "error_envelope",
               "visibility": "pub(crate)",
               "signature": "pub(crate) fn error_envelope (kind : ErrorKind , message : & str , details : Value) -> Value",
@@ -10181,7 +10245,7 @@
               ],
               "file": "crates/eos-daemon/src/dispatch/dispatcher.rs",
               "module": "dispatch::dispatcher",
-              "line": 250
+              "line": 244
             },
             {
               "kind": "fn",
@@ -10197,7 +10261,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/dispatch/dispatcher.rs",
               "module": "dispatch::dispatcher",
-              "line": 272
+              "line": 266
             },
             {
               "kind": "fn",
@@ -10213,7 +10277,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/dispatch/dispatcher.rs",
               "module": "dispatch::dispatcher",
-              "line": 295
+              "line": 289
             },
             {
               "kind": "fn",
@@ -10229,7 +10293,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/dispatch/dispatcher.rs",
               "module": "dispatch::dispatcher",
-              "line": 299
+              "line": 293
             },
             {
               "kind": "fn",
@@ -10245,7 +10309,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/dispatch/dispatcher.rs",
               "module": "dispatch::dispatcher",
-              "line": 321
+              "line": 315
             }
           ]
         },
@@ -10595,7 +10659,7 @@
               ],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 73
+              "line": 68
             },
             {
               "kind": "fn",
@@ -10614,7 +10678,7 @@
               ],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 100
+              "line": 95
             },
             {
               "kind": "fn",
@@ -10630,7 +10694,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 123
+              "line": 118
             },
             {
               "kind": "fn",
@@ -10646,7 +10710,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 142
+              "line": 137
             },
             {
               "kind": "fn",
@@ -10662,7 +10726,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 154
+              "line": 149
             },
             {
               "kind": "fn",
@@ -10678,7 +10742,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 162
+              "line": 157
             },
             {
               "kind": "fn",
@@ -10694,7 +10758,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/control.rs",
               "module": "ops::control",
-              "line": 170
+              "line": 165
             }
           ]
         },
@@ -11774,6 +11838,22 @@
             },
             {
               "kind": "fn",
+              "name": "trimmed_string",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn trimmed_string (args : & Value , key : & str) -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Read `key` as a trimmed owned string, defaulting to empty when absent or\nnon-string. Unlike [`require_string`], an empty result is not an error.",
+              "tags": [],
+              "file": "crates/eos-daemon/src/runtime/request_args.rs",
+              "module": "runtime::request_args",
+              "line": 21
+            },
+            {
+              "kind": "fn",
               "name": "require_raw_string",
               "visibility": "pub(crate)",
               "signature": "pub(crate) fn require_raw_string (args : & Value , key : & str) -> Result < String , DaemonError >",
@@ -11786,7 +11866,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 21
+              "line": 31
             },
             {
               "kind": "fn",
@@ -11802,7 +11882,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 33
+              "line": 43
             },
             {
               "kind": "fn",
@@ -11818,7 +11898,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 37
+              "line": 47
             }
           ]
         },
@@ -31460,8 +31540,8 @@
             {
               "kind": "struct",
               "name": "CommandSessionProcess",
-              "visibility": "pub",
-              "signature": "pub struct CommandSessionProcess",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommandSessionProcess",
               "fields": [
                 {
                   "name": "pgid",
@@ -31497,8 +31577,8 @@
             {
               "kind": "struct",
               "name": "CommandProcessExit",
-              "visibility": "pub",
-              "signature": "pub struct CommandProcessExit",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommandProcessExit",
               "fields": [
                 {
                   "name": "exit_code",
@@ -31532,21 +31612,21 @@
               "methods": [
                 {
                   "name": "unwaitable",
-                  "signature": "pub fn unwaitable () -> Self",
+                  "signature": "pub(crate) fn unwaitable () -> Self",
                   "kind": "associated-fn",
                   "docs": null,
                   "line": 36
                 },
                 {
                   "name": "from_status",
-                  "signature": "pub fn from_status (status : ExitStatus) -> Self",
+                  "signature": "pub(crate) fn from_status (status : ExitStatus) -> Self",
                   "kind": "constructor",
                   "docs": null,
                   "line": 41
                 },
                 {
                   "name": "exit_code",
-                  "signature": "pub const fn exit_code (self) -> Option < i64 >",
+                  "signature": "pub(crate) const fn exit_code (self) -> Option < i64 >",
                   "kind": "method",
                   "docs": null,
                   "line": 50
@@ -31565,8 +31645,8 @@
             {
               "kind": "enum",
               "name": "ProcessReap",
-              "visibility": "pub",
-              "signature": "pub enum ProcessReap",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) enum ProcessReap",
               "fields": [],
               "variants": [
                 {
@@ -31602,8 +31682,8 @@
             {
               "kind": "enum",
               "name": "KillReason",
-              "visibility": "pub",
-              "signature": "pub enum KillReason",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) enum KillReason",
               "fields": [],
               "variants": [
                 {
@@ -31633,8 +31713,8 @@
             {
               "kind": "struct",
               "name": "CommandCompletionStatus",
-              "visibility": "pub",
-              "signature": "pub struct CommandCompletionStatus",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommandCompletionStatus",
               "fields": [
                 {
                   "name": "status",
@@ -31672,21 +31752,21 @@
               "methods": [
                 {
                   "name": "from_process_and_runner",
-                  "signature": "pub fn from_process_and_runner (process_exit : CommandProcessExit , runner : Option < & CommandRunnerResult > , kill : Option < KillReason > ,) -> Self",
+                  "signature": "pub(crate) fn from_process_and_runner (process_exit : CommandProcessExit , runner : Option < & CommandRunnerResult > , kill : Option < KillReason > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
                   "line": 81
                 },
                 {
                   "name": "status",
-                  "signature": "pub fn status (& self) -> & str",
+                  "signature": "pub(crate) fn status (& self) -> & str",
                   "kind": "method",
                   "docs": null,
                   "line": 109
                 },
                 {
                   "name": "exit_code",
-                  "signature": "pub const fn exit_code (& self) -> i64",
+                  "signature": "pub(crate) const fn exit_code (& self) -> i64",
                   "kind": "method",
                   "docs": null,
                   "line": 114
@@ -31705,8 +31785,8 @@
             {
               "kind": "struct",
               "name": "CommandRunnerResult",
-              "visibility": "pub",
-              "signature": "pub struct CommandRunnerResult",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommandRunnerResult",
               "fields": [
                 {
                   "name": "exit_code",
@@ -31748,35 +31828,35 @@
               "methods": [
                 {
                   "name": "read_from_path",
-                  "signature": "pub fn read_from_path (path : & Path) -> Option < Self >",
+                  "signature": "pub(crate) fn read_from_path (path : & Path) -> Option < Self >",
                   "kind": "associated-fn",
                   "docs": null,
                   "line": 128
                 },
                 {
                   "name": "from_value",
-                  "signature": "pub fn from_value (value : Value) -> Option < Self >",
+                  "signature": "pub(crate) fn from_value (value : Value) -> Option < Self >",
                   "kind": "constructor",
                   "docs": null,
                   "line": 135
                 },
                 {
                   "name": "exit_code",
-                  "signature": "pub const fn exit_code (& self) -> i64",
+                  "signature": "pub(crate) const fn exit_code (& self) -> i64",
                   "kind": "method",
                   "docs": null,
                   "line": 155
                 },
                 {
                   "name": "status",
-                  "signature": "pub fn status (& self) -> Option < & str >",
+                  "signature": "pub(crate) fn status (& self) -> Option < & str >",
                   "kind": "method",
                   "docs": null,
                   "line": 160
                 },
                 {
                   "name": "value",
-                  "signature": "pub const fn value (& self) -> & Value",
+                  "signature": "pub(crate) const fn value (& self) -> & Value",
                   "kind": "method",
                   "docs": null,
                   "line": 165
@@ -31802,35 +31882,35 @@
               "methods": [
                 {
                   "name": "inactive",
-                  "signature": "pub fn inactive (writer : File) -> Self",
+                  "signature": "pub(crate) fn inactive (writer : File) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
                   "line": 172
                 },
                 {
                   "name": "write_stdin",
-                  "signature": "pub fn write_stdin (& self , bytes : & [u8]) -> io :: Result < () >",
+                  "signature": "pub(crate) fn write_stdin (& self , bytes : & [u8]) -> io :: Result < () >",
                   "kind": "method",
                   "docs": "Push `bytes` to the command's stdin without blocking unbounded. The master\nis non-blocking; when the consumer stops draining, `write` returns\n`WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`\nbefore returning a structured backpressure error. Cancel/terminate is a\nseparate (`killpg`) path, so the session stays controllable throughout.",
                   "line": 182
                 },
                 {
                   "name": "terminate",
-                  "signature": "pub fn terminate (& self)",
+                  "signature": "pub(crate) fn terminate (& self)",
                   "kind": "method",
                   "docs": null,
                   "line": 220
                 },
                 {
                   "name": "try_reap",
-                  "signature": "pub fn try_reap (& self) -> ProcessReap",
+                  "signature": "pub(crate) fn try_reap (& self) -> ProcessReap",
                   "kind": "method",
                   "docs": null,
                   "line": 226
                 },
                 {
                   "name": "wait_for_reader_done",
-                  "signature": "pub fn wait_for_reader_done (& self , timeout : Duration)",
+                  "signature": "pub(crate) fn wait_for_reader_done (& self , timeout : Duration)",
                   "kind": "method",
                   "docs": null,
                   "line": 245
@@ -31849,8 +31929,8 @@
             {
               "kind": "fn",
               "name": "spawn_current_exe_ns_runner",
-              "visibility": "pub",
-              "signature": "pub fn spawn_current_exe_ns_runner (request_path : & Path , run_request : & Value , output_path : & Path , transcript_path : PathBuf , transcript_timestamp_timezone : & str ,) -> io :: Result < CommandSessionProcess >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn spawn_current_exe_ns_runner (request_path : & Path , run_request : & Value , output_path : & Path , transcript_path : PathBuf , transcript_timestamp_timezone : & str ,) -> io :: Result < CommandSessionProcess >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -32402,37 +32482,37 @@
             {
               "kind": "struct",
               "name": "ReapedCommand",
-              "visibility": "pub",
-              "signature": "pub struct ReapedCommand",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct ReapedCommand",
               "fields": [
                 {
                   "name": "status",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "String"
                 },
                 {
                   "name": "exit_code",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "i64"
                 },
                 {
                   "name": "runner_result",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "Option < Value >"
                 },
                 {
                   "name": "stdout",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "String"
                 },
                 {
                   "name": "elapsed_s",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "f64"
                 },
                 {
                   "name": "kill",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "Option < KillReason >"
                 }
               ],
@@ -32448,13 +32528,13 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 25
+              "line": 29
             },
             {
               "kind": "struct",
               "name": "CommandSession",
-              "visibility": "pub",
-              "signature": "pub struct CommandSession",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommandSession",
               "fields": [
                 {
                   "name": "id",
@@ -32525,32 +32605,32 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 44
+              "line": 48
             },
             {
               "kind": "struct",
               "name": "CommandSessionSpec",
-              "visibility": "pub",
-              "signature": "pub struct CommandSessionSpec",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommandSessionSpec",
               "fields": [
                 {
                   "name": "id",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "String"
                 },
                 {
                   "name": "caller_id",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "String"
                 },
                 {
                   "name": "command",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "String"
                 },
                 {
                   "name": "timeout_seconds",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "Option < f64 >"
                 }
               ],
@@ -32562,37 +32642,37 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 73
+              "line": 77
             },
             {
               "kind": "struct",
               "name": "RunningCommandSessionParts",
-              "visibility": "pub",
-              "signature": "pub struct RunningCommandSessionParts",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct RunningCommandSessionParts",
               "fields": [
                 {
                   "name": "process",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "CommandSessionProcess"
                 },
                 {
                   "name": "output_path",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "PathBuf"
                 },
                 {
                   "name": "final_path",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "PathBuf"
                 },
                 {
                   "name": "transcript_path",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "PathBuf"
                 },
                 {
                   "name": "output_drain_grace_ms",
-                  "visibility": "pub",
+                  "visibility": "pub(crate)",
                   "ty": "u64"
                 }
               ],
@@ -32606,7 +32686,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 80
+              "line": 84
             },
             {
               "kind": "impl",
@@ -32618,143 +32698,143 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (spec : CommandSessionSpec) -> Self",
+                  "signature": "pub(crate) fn new (spec : CommandSessionSpec) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 90
+                  "line": 94
                 },
                 {
                   "name": "new_running",
-                  "signature": "pub fn new_running (spec : CommandSessionSpec , parts : RunningCommandSessionParts) -> Self",
+                  "signature": "pub(crate) fn new_running (spec : CommandSessionSpec , parts : RunningCommandSessionParts) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 96
+                  "line": 100
                 },
                 {
                   "name": "new_scaffold",
                   "signature": "fn new_scaffold (spec : CommandSessionSpec) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 102
+                  "line": 106
                 },
                 {
                   "name": "new_with_process",
                   "signature": "fn new_with_process (spec : CommandSessionSpec , running : RunningCommandSessionParts) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 129
+                  "line": 133
                 },
                 {
                   "name": "id",
-                  "signature": "pub fn id (& self) -> & str",
+                  "signature": "pub(crate) fn id (& self) -> & str",
                   "kind": "method",
                   "docs": null,
-                  "line": 147
+                  "line": 151
                 },
                 {
                   "name": "caller_id",
-                  "signature": "pub fn caller_id (& self) -> & str",
+                  "signature": "pub(crate) fn caller_id (& self) -> & str",
                   "kind": "method",
                   "docs": null,
-                  "line": 152
+                  "line": 156
                 },
                 {
                   "name": "command",
-                  "signature": "pub fn command (& self) -> & str",
+                  "signature": "pub(crate) fn command (& self) -> & str",
                   "kind": "method",
                   "docs": null,
-                  "line": 157
+                  "line": 161
                 },
                 {
                   "name": "write_process_stdin",
-                  "signature": "pub fn write_process_stdin (& self , chars : & str) -> Result < () , CommandSessionError >",
+                  "signature": "pub(crate) fn write_process_stdin (& self , chars : & str) -> Result < () , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 162
+                  "line": 166
                 },
                 {
                   "name": "cancel_process",
-                  "signature": "pub fn cancel_process (& self)",
+                  "signature": "pub(crate) fn cancel_process (& self)",
                   "kind": "method",
                   "docs": "Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run\nteardown): record the reason and kill the process group. A cancel always\nwins over a later timeout mark.",
-                  "line": 168
+                  "line": 172
                 },
                 {
                   "name": "time_out_process",
-                  "signature": "pub fn time_out_process (& self)",
+                  "signature": "pub(crate) fn time_out_process (& self)",
                   "kind": "method",
                   "docs": "Kill a session that exceeded its deadline (the reaper backstop). Records\n`TimedOut` only if no kill reason is set yet, so a prior user cancel keeps\nits `Cancelled` label; either way the process group is killed.",
-                  "line": 177
+                  "line": 181
                 },
                 {
                   "name": "read_recent_output",
-                  "signature": "pub fn read_recent_output (& self , last_n_lines : usize) -> String",
+                  "signature": "pub(crate) fn read_recent_output (& self , last_n_lines : usize) -> String",
                   "kind": "method",
                   "docs": null,
-                  "line": 191
+                  "line": 195
                 },
                 {
                   "name": "read_output_since",
-                  "signature": "pub fn read_output_since (& self , start_offset : u64) -> String",
+                  "signature": "pub(crate) fn read_output_since (& self , start_offset : u64) -> String",
                   "kind": "method",
                   "docs": null,
-                  "line": 204
+                  "line": 201
                 },
                 {
                   "name": "transcript_len",
-                  "signature": "pub fn transcript_len (& self) -> u64",
+                  "signature": "pub(crate) fn transcript_len (& self) -> u64",
                   "kind": "method",
                   "docs": null,
-                  "line": 210
+                  "line": 207
                 },
                 {
                   "name": "started_at",
-                  "signature": "pub const fn started_at (& self) -> Instant",
+                  "signature": "pub(crate) const fn started_at (& self) -> Instant",
                   "kind": "method",
                   "docs": null,
-                  "line": 216
+                  "line": 213
                 },
                 {
                   "name": "is_expired",
-                  "signature": "pub fn is_expired (& self , now : Instant) -> bool",
+                  "signature": "pub(crate) fn is_expired (& self , now : Instant) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 222
+                  "line": 219
                 },
                 {
                   "name": "is_past_deadline",
-                  "signature": "pub fn is_past_deadline (& self , now : Instant , max_session_s : u64) -> bool",
+                  "signature": "pub(crate) fn is_past_deadline (& self , now : Instant , max_session_s : u64) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 229
+                  "line": 226
                 },
                 {
                   "name": "reap",
-                  "signature": "pub fn reap (& self) -> Option < ReapedCommand >",
+                  "signature": "pub(crate) fn reap (& self) -> Option < ReapedCommand >",
                   "kind": "method",
                   "docs": "Reap the child if it has exited, returning the raw command result. Returns\n`None` while the process is still running or has already been reaped. This\nonly reaps the substrate — it does not publish or discard; the owning run\ndecides that from `ReapedCommand::kill`.",
-                  "line": 238
+                  "line": 235
                 },
                 {
                   "name": "persist_final",
-                  "signature": "pub fn persist_final (& self , response : & CommandResponse)",
+                  "signature": "pub(crate) fn persist_final (& self , response : & CommandResponse)",
                   "kind": "method",
                   "docs": "Persist the run's final response to `final_path` for crash recovery and\nremove the transcript. Best-effort: `final_path` is only a crash-recovery\nconvenience, so a write failure does not undo the already-decided\npublish/discard or fail the operation.",
-                  "line": 271
+                  "line": 268
                 },
                 {
                   "name": "remove_transcript_file",
                   "signature": "fn remove_transcript_file (& self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 281
+                  "line": 278
                 },
                 {
                   "name": "final_stdout",
                   "signature": "fn final_stdout (& self) -> String",
                   "kind": "method",
                   "docs": null,
-                  "line": 289
+                  "line": 286
                 }
               ],
               "impl_target": "CommandSession",
@@ -32765,7 +32845,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 89
+              "line": 93
             },
             {
               "kind": "fn",
@@ -32783,7 +32863,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 295
+              "line": 292
             },
             {
               "kind": "fn",
@@ -32801,7 +32881,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 303
+              "line": 300
             },
             {
               "kind": "impl",
@@ -32816,21 +32896,21 @@
                   "signature": "fn try_finalize (& self) -> Option < ReapedCommand >",
                   "kind": "method",
                   "docs": null,
-                  "line": 320
+                  "line": 317
                 },
                 {
                   "name": "transcript_len",
                   "signature": "fn transcript_len (& self) -> u64",
                   "kind": "method",
                   "docs": null,
-                  "line": 324
+                  "line": 321
                 },
                 {
                   "name": "read_output_since",
                   "signature": "fn read_output_since (& self , start_offset : u64) -> String",
                   "kind": "method",
                   "docs": null,
-                  "line": 328
+                  "line": 325
                 }
               ],
               "impl_target": "CommandSession",
@@ -32843,7 +32923,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 318
+              "line": 315
             },
             {
               "kind": "fn",
@@ -32859,7 +32939,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 333
+              "line": 330
             },
             {
               "kind": "fn",
@@ -32877,7 +32957,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 341
+              "line": 338
             },
             {
               "kind": "fn",
@@ -32895,7 +32975,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/command_session/session.rs",
               "module": "command_session::session",
-              "line": 357
+              "line": 354
             }
           ]
         },
@@ -37898,7 +37978,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 44
+              "line": 47
             },
             {
               "kind": "struct",
@@ -37930,7 +38010,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 61
+              "line": 64
             },
             {
               "kind": "impl",
@@ -37945,133 +38025,133 @@
                   "signature": "pub fn new (config : CommandSessionConfig , ports : Arc < dyn WorkspaceRunHostPorts >) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 68
+                  "line": 71
                 },
                 {
                   "name": "start",
                   "signature": "pub fn start (& self , request : StartCommandSession , target : StartTarget ,) -> Result < CommandResponse , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 77
+                  "line": 80
                 },
                 {
                   "name": "start_ephemeral",
                   "signature": "fn start_ephemeral (& self , spec : CommandSessionSpec , prepare_request : eos_workspace_contract :: PrepareCommandRequest , root : PathBuf , workspace_root : PathBuf , scratch_root : PathBuf , yield_time_ms : u64 ,) -> Result < CommandResponse , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 115
+                  "line": 118
                 },
                 {
                   "name": "start_isolated",
                   "signature": "fn start_isolated (& self , spec : CommandSessionSpec , prepare_request : eos_workspace_contract :: PrepareCommandRequest , handle : Box < CommandHandle > , yield_time_ms : u64 ,) -> Result < CommandResponse , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 172
+                  "line": 175
                 },
                 {
                   "name": "spawn_session",
                   "signature": "fn spawn_session (& self , spec : CommandSessionSpec , prepared : eos_workspace_contract :: PreparedCommandWorkspace ,) -> Result < CommandSession , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 199
+                  "line": 202
                 },
                 {
                   "name": "register_and_wait",
                   "signature": "fn register_and_wait (& self , session : CommandSession , yield_time_ms : u64 , make_run : impl FnOnce (CommandSession) -> WorkspaceRun ,) -> CommandResponse",
                   "kind": "method",
                   "docs": null,
-                  "line": 223
+                  "line": 226
                 },
                 {
                   "name": "write_stdin",
                   "signature": "pub fn write_stdin (& self , request : WriteStdin) -> Result < CommandResponse , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 238
+                  "line": 241
                 },
                 {
                   "name": "read_progress",
                   "signature": "pub fn read_progress (& self , request : ReadCommandProgress ,) -> Result < CommandResponse , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 273
+                  "line": 276
                 },
                 {
                   "name": "cancel",
                   "signature": "pub fn cancel (& self , request : CancelCommandSession ,) -> Result < CommandResponse , CommandSessionError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 300
+                  "line": 303
                 },
                 {
                   "name": "count_by_caller",
                   "signature": "pub fn count_by_caller (& self , caller_id : Option < & str >) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 323
+                  "line": 326
                 },
                 {
                   "name": "collect_completed",
                   "signature": "pub fn collect_completed (& self , request : & CollectCompleted) -> CollectCompletedResponse",
                   "kind": "method",
                   "docs": null,
-                  "line": 328
+                  "line": 331
                 },
                 {
                   "name": "push_completed",
                   "signature": "pub fn push_completed (& self , completion : CommandSessionCompletion)",
                   "kind": "method",
                   "docs": null,
-                  "line": 333
+                  "line": 336
                 },
                 {
                   "name": "cleanup_caller",
                   "signature": "pub fn cleanup_caller (& self , caller_id : & str , grace_s : Option < f64 >) -> usize",
                   "kind": "method",
                   "docs": "Cancel and discard every command session owned by `caller_id` (the\nper-caller workspace-run teardown). Cancelled sessions discard their\noverlay and push no completion (the caller initiated the cancel).",
-                  "line": 337
+                  "line": 340
                 },
                 {
                   "name": "cancel_all",
                   "signature": "pub fn cancel_all (& self , grace_s : Option < f64 >) -> usize",
                   "kind": "method",
                   "docs": "Cancel and discard every live command session in the sandbox (the\nwhole-sandbox sweep backstop). Cancelled sessions discard and push no\ncompletion.",
-                  "line": 349
+                  "line": 352
                 },
                 {
                   "name": "cancel_and_drain",
                   "signature": "fn cancel_and_drain (& self , runs : Vec < Arc < WorkspaceRun > > , grace_s : Option < f64 >) -> usize",
                   "kind": "method",
                   "docs": "Cancel every run, then reap+discard within `grace`, finalizing any\nstragglers. Returns the number of runs that were live at entry.",
-                  "line": 357
+                  "line": 360
                 },
                 {
                   "name": "force_discard",
                   "signature": "fn force_discard (& self , run : & Arc < WorkspaceRun >)",
                   "kind": "method",
                   "docs": "Reap-independent teardown for a run the cancel grace could not reap.\nReleases an ephemeral run's overlay lease + dirs (best-effort: a still-live\nprocess may leave its dirs for the orphan reaper, but the lease is freed);\nan isolated session only needs its registry entry dropped, since the\nnamespace + lease are torn down by `exit_isolated`.",
-                  "line": 399
+                  "line": 402
                 },
                 {
                   "name": "sweep_expired",
                   "signature": "pub fn sweep_expired (& self , now : Instant)",
                   "kind": "method",
                   "docs": "Periodic reaper: enforce the per-session timeout backstop and finalize any\nsession whose child has exited without a live poller, parking the\ncompletion for the heartbeat.\n\nA past-deadline session is killed as a **timeout** (not a user cancel), so\nits completion is still parked — a fire-and-forget session that hits its\ntimeout must reach the heartbeat, or its agent-core background session is\nstuck Running forever. Only a caller-initiated cancel parks nothing.",
-                  "line": 418
+                  "line": 421
                 },
                 {
                   "name": "finish_reaped",
                   "signature": "fn finish_reaped (& self , run : Arc < WorkspaceRun > , reaped : ReapedCommand , publish_completion : bool ,) -> CommandResponse",
                   "kind": "method",
                   "docs": "Turn a reaped command into its final response: the run publishes (normal\ncompletion) or discards (cancel) via the workspace lifecycle helpers, then\npersists the final response. Routing cancel to the discard branch is the\nstructural guarantee that a cancelled command never reaches the OCC merge.",
-                  "line": 441
+                  "line": 444
                 },
                 {
                   "name": "finalize_run",
                   "signature": "fn finalize_run (& self , run : Arc < WorkspaceRun > , request : FinalizeCommandRequest , cancelled : bool , publish_completion : bool ,) -> CommandResponse",
                   "kind": "method",
                   "docs": null,
-                  "line": 465
+                  "line": 468
                 }
               ],
               "impl_target": "WorkspaceRunManager",
@@ -38082,7 +38162,7 @@
               ],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 67
+              "line": 70
             },
             {
               "kind": "fn",
@@ -38098,7 +38178,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 502
+              "line": 505
             },
             {
               "kind": "fn",
@@ -38114,7 +38194,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 531
+              "line": 534
             },
             {
               "kind": "fn",
@@ -38130,7 +38210,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 561
+              "line": 564
             },
             {
               "kind": "fn",
@@ -38146,7 +38226,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 566
+              "line": 569
             },
             {
               "kind": "fn",
@@ -38162,7 +38242,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 573
+              "line": 576
             },
             {
               "kind": "fn",
@@ -38178,7 +38258,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 577
+              "line": 580
             },
             {
               "kind": "fn",
@@ -38194,7 +38274,7 @@
               "tags": [],
               "file": "crates/eos-workspace-runtime/src/run/manager.rs",
               "module": "run::manager",
-              "line": 581
+              "line": 584
             }
           ]
         },

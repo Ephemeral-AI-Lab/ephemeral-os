@@ -40,7 +40,7 @@ use eos_workspace_contract::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 
-use super::command_handle::CommandHandle;
+use super::isolated_command_handle::IsolatedCommandHandle;
 use super::ports::WorkspaceRunHostPorts;
 use super::registry::{EphemeralRun, IsolatedRun, WorkspaceRun, WorkspaceRunRegistry};
 
@@ -55,9 +55,9 @@ pub enum StartTarget {
         scratch_root: PathBuf,
     },
     Isolated {
-        // Boxed: `CommandHandle` is far larger than the ephemeral variant, and
-        // this enum is only a short-lived dispatch value.
-        handle: Box<CommandHandle>,
+        // Boxed: `IsolatedCommandHandle` is far larger than the ephemeral variant,
+        // and this enum is only a short-lived dispatch value.
+        handle: Box<IsolatedCommandHandle>,
     },
 }
 
@@ -176,7 +176,7 @@ impl WorkspaceRunManager {
         &self,
         spec: CommandSessionSpec,
         prepare_request: eos_workspace_contract::PrepareCommandRequest,
-        handle: Box<CommandHandle>,
+        handle: Box<IsolatedCommandHandle>,
         yield_time_ms: u64,
     ) -> Result<CommandResponse, CommandSessionError> {
         let context = IsolatedCommandPrepareContext {

@@ -5,9 +5,10 @@ use crate::isolated::audit::AuditSink;
 use crate::isolated::error::IsolatedError;
 use serde_json::{json, Value};
 
-use super::support::{
-    close_handle_fds, directory_file_bytes, maybe_inject_phase, monotonic_seconds,
-    mountinfo_reference_count, next_handle_id,
+use super::fault_injection::maybe_inject_phase;
+use super::resources::{
+    close_handle_fds, directory_file_bytes, monotonic_seconds, mountinfo_reference_count,
+    next_handle_id,
 };
 use super::{
     CallerId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,

@@ -3,8 +3,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use eos_types::{
-    IterationCreationReason, IterationOutcome, IterationStatus, IterationStore, Workflow,
-    WorkflowId, WorkflowOutcome,
+    AgentRunId, IterationCreationReason, IterationOutcome, IterationStatus, IterationStore,
+    ToolUseId, Workflow, WorkflowId, WorkflowOutcome,
 };
 
 use crate::attempt::AttemptResources;
@@ -58,12 +58,20 @@ impl WorkflowLifecycle {
         &self,
         request_id: &eos_types::RequestId,
         parent_task_id: &eos_types::TaskId,
+        launched_by_agent_run_id: &AgentRunId,
+        tool_use_id: Option<&ToolUseId>,
         workflow_goal: &str,
     ) -> Result<Workflow> {
         Ok(self
             .deps
             .workflow_store
-            .insert(request_id, parent_task_id, workflow_goal)
+            .insert(
+                request_id,
+                parent_task_id,
+                launched_by_agent_run_id,
+                tool_use_id,
+                workflow_goal,
+            )
             .await?)
     }
 
@@ -293,6 +301,8 @@ mod tests {
             .create_workflow(
                 &eos_types::RequestId::new_v4(),
                 &"parent".parse().unwrap(),
+                &eos_types::AgentRunId::new_v4(),
+                None,
                 "delegated goal",
             )
             .await
@@ -347,6 +357,8 @@ mod tests {
             .create_workflow(
                 &eos_types::RequestId::new_v4(),
                 &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
                 "delegated goal",
             )
             .await

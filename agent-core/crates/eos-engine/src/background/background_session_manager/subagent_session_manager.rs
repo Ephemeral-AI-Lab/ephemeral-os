@@ -399,7 +399,7 @@ pub(super) fn completion_from_agent_run(
     run: &AgentRun,
 ) -> Option<(BackgroundSessionStatus, ToolResult, i64)> {
     run.finished_at?;
-    if let Some(terminal) = &run.terminal_tool_result {
+    if let Some(terminal) = &run.terminal_payload {
         let result = tool_result_from_payload(terminal);
         let exit_code = i64::from(result.is_error);
         return Some((BackgroundSessionStatus::Completed, result, exit_code));
@@ -500,14 +500,12 @@ mod tests {
         )
     }
 
-    fn finished_run(terminal_tool_result: Option<JsonObject>, error: Option<&str>) -> AgentRun {
+    fn finished_run(terminal_payload: Option<JsonObject>, error: Option<&str>) -> AgentRun {
         AgentRun {
             id: "run-sub-finished".parse().expect("agent run id"),
             task_id: None,
-            initial_messages: None,
             agent_name: "subagent".to_owned(),
-            message_history: None,
-            terminal_tool_result,
+            terminal_payload,
             token_count: 0,
             error: error.map(str::to_owned),
             created_at: UtcDateTime::now(),

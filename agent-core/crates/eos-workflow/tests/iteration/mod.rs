@@ -27,7 +27,12 @@ async fn retry_and_continue() {
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
     let started = WorkflowStarter::new(deps)
-        .start("delegated goal", &parent.id)
+        .start(
+            "delegated goal",
+            &parent.id,
+            &eos_types::AgentRunId::new_v4(),
+            None,
+        )
         .await
         .unwrap();
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Failed).await;
@@ -60,7 +65,12 @@ async fn deferred_goal_starts_next_iteration() {
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
     let started = WorkflowStarter::new(deps)
-        .start("delegated goal", &parent.id)
+        .start(
+            "delegated goal",
+            &parent.id,
+            &eos_types::AgentRunId::new_v4(),
+            None,
+        )
         .await
         .unwrap();
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;

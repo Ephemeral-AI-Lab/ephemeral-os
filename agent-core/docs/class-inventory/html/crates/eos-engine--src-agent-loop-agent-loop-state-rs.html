@@ -75,7 +75,7 @@
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
         <span class="rs-kw">let</span> tool_registry =
             tool_registry_factory.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-build-tool-registry-78">build_tool_registry</a>(<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopToolRegistryBuildInput-56">AgentLoopToolRegistryBuildInput</a> {
-                agent_run_id: request.agent_run_id.clone(),
+                agent_run_id: request.record_target.agent_run_id.clone(),
                 agent_run_api,
                 background: run_services.background.clone(),
             })?;
@@ -85,7 +85,7 @@
             .map(|tool| tool.name.clone())
             .collect();
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
-            agent_run_id: request.agent_run_id,
+            agent_run_id: request.record_target.agent_run_id,
             conversation_messages: request.initial_messages,
             model_key: request.model_key,
             max_completion_tokens: request.max_completion_tokens,
@@ -402,7 +402,7 @@
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
         <span class="rs-kw">let</span> tool_registry =
             tool_registry_factory.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-build-tool-registry-78">build_tool_registry</a>(<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopToolRegistryBuildInput-56">AgentLoopToolRegistryBuildInput</a> {
-                agent_run_id: request.agent_run_id.clone(),
+                agent_run_id: request.record_target.agent_run_id.clone(),
                 agent_run_api,
                 background: run_services.background.clone(),
             })?;
@@ -412,7 +412,7 @@
             .map(|tool| tool.name.clone())
             .collect();
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
-            agent_run_id: request.agent_run_id,
+            agent_run_id: request.record_target.agent_run_id,
             conversation_messages: request.initial_messages,
             model_key: request.model_key,
             max_completion_tokens: request.max_completion_tokens,

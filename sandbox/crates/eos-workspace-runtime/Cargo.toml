@@ -30,10 +30,6 @@ name = "command_session_output"
 path = "tests/command_session/output.rs"
 
 [[test]]
-name = "isolated_network_netfilter"
-path = "tests/isolated/network_netfilter.rs"
-
-[[test]]
 name = "isolated_session"
 path = "tests/isolated/session.rs"
 

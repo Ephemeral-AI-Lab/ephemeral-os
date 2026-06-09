@@ -48,7 +48,7 @@ async fn state_reader_exposes_live_request_task_and_run_stores() {
     let run_id: AgentRunId = "run-reader".parse().unwrap();
     reader
         .agent_runs()
-        .create_run(&run_id, Some(&task.id), "root", None)
+        .create_run(&run_id, Some(&task.id), "root")
         .await
         .unwrap();
 
@@ -66,6 +66,92 @@ async fn state_reader_exposes_live_request_task_and_run_stores() {
     assert_eq!(tasks[0].id, task.id);
     let run = reader.agent_runs().get_for_task(&task.id).await.unwrap();
     assert_eq!(run.unwrap().id, run_id);
+}
+
+#[tokio::test]
+async fn state_reader_materializes_request_execution_tree() {
+    let (state, _dir) = build_test_state(None, vec![root_agent()]).await;
+    let reader = state.state_reader();
+    let request_id: RequestId = "req-tree".parse().unwrap();
+    reader
+        .requests()
+        .create_request(&request_id, "/w", None, "tree prompt")
+        .await
+        .unwrap();
+
+    let agent_name = AgentName::new("root").unwrap();
+    let root = reader
+        .task_agent_runs()
+        .create_root_task_agent_run(
+            &request_id,
+            &"root-tree-task".parse().unwrap(),
+            &"root-tree-run".parse().unwrap(),
+            &agent_name,
+        )
+        .await
+        .unwrap();
+    let workflow = state
+        .db
+        .workflow_store
+        .insert(
+            &request_id,
+            &root.task_id,
+            &root.agent_run_id,
+            None,
+            "delegate tree",
+        )
+        .await
+        .unwrap();
+    let parent = ParentAgentRunAnchor {
+        request_id: request_id.clone(),
+        parent_task_id: root.task_id.clone(),
+        agent_run_id: root.agent_run_id.clone(),
+    };
+    let sub_tool: ToolUseId = "tool-sub-tree".parse().unwrap();
+    let advisor_tool: ToolUseId = "tool-advisor-tree".parse().unwrap();
+    let subagent = reader
+        .task_agent_runs()
+        .create_parented_task_agent_run(
+            &"sub-tree-run".parse().unwrap(),
+            &parent,
+            ParentedAgentRunKind::Subagent,
+            Some(&sub_tool),
+            &agent_name,
+        )
+        .await
+        .unwrap();
+    let advisor = reader
+        .task_agent_runs()
+        .create_parented_task_agent_run(
+            &"advisor-tree-run".parse().unwrap(),
+            &parent,
+            ParentedAgentRunKind::Advisor,
+            Some(&advisor_tool),
+            &agent_name,
+        )
+        .await
+        .unwrap();
+
+    let tree = reader
+        .request_execution_tree(&request_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(tree.request.id, request_id);
+    assert_eq!(tree.root.task_run.task_id, root.task_id);
+    assert_eq!(tree.root.task_run.agent_run_id, root.agent_run_id);
+    assert_eq!(tree.root.workflow_ids, vec![workflow.id]);
+    assert_eq!(tree.root.subagents.len(), 1);
+    assert_eq!(tree.root.subagents[0].agent_run_id, subagent.agent_run_id);
+    assert_eq!(tree.root.advisors.len(), 1);
+    assert_eq!(tree.root.advisors[0].agent_run_id, advisor.agent_run_id);
+
+    let missing: RequestId = "req-tree-missing".parse().unwrap();
+    assert!(reader
+        .request_execution_tree(&missing)
+        .await
+        .unwrap()
+        .is_none());
 }
 
 #[tokio::test]

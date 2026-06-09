@@ -35,7 +35,12 @@ async fn reducer_is_exit_gate() {
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
     let started = WorkflowStarter::new(deps)
-        .start("delegated goal", &parent.id)
+        .start(
+            "delegated goal",
+            &parent.id,
+            &eos_types::AgentRunId::new_v4(),
+            None,
+        )
         .await
         .unwrap();
     let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
@@ -85,7 +90,12 @@ async fn failed_reducer_closes_attempt_failed() {
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
     let started = WorkflowStarter::new(deps)
-        .start("delegated goal", &parent.id)
+        .start(
+            "delegated goal",
+            &parent.id,
+            &eos_types::AgentRunId::new_v4(),
+            None,
+        )
         .await
         .unwrap();
     let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
@@ -142,7 +152,12 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
     let started = WorkflowStarter::new(deps)
-        .start("delegated goal", &parent.id)
+        .start(
+            "delegated goal",
+            &parent.id,
+            &eos_types::AgentRunId::new_v4(),
+            None,
+        )
         .await
         .unwrap();
     let adapter = AttemptSubmissionAdapter::new(registry);
@@ -156,12 +171,12 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
         reducers,
     };
 
-    // D6: a generator bound to a non-generator profile ("reducer") is rejected.
+    // D6: a generator bound to a non-agent profile is rejected.
     let ack = adapter
         .apply_plan(plan(
             vec![PlanTask {
                 id: node("g1"),
-                agent_name: "reducer".to_owned(),
+                agent_name: "helper-subagent".to_owned(),
                 needs: Vec::new(),
             }],
             vec![PlanReducer {
@@ -173,7 +188,7 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
         .await
         .unwrap();
     assert!(
-        matches!(ack, SubmissionAck::Rejected(ref m) if m.contains("expected generator")),
+        matches!(ack, SubmissionAck::Rejected(ref m) if m.contains("expected agent")),
         "D6 role gate: {ack:?}"
     );
 
@@ -238,7 +253,12 @@ async fn record_plan_rejects_late_agent_without_orphan_rows() {
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
     let started = WorkflowStarter::new(deps)
-        .start("delegated goal", &parent.id)
+        .start(
+            "delegated goal",
+            &parent.id,
+            &eos_types::AgentRunId::new_v4(),
+            None,
+        )
         .await
         .unwrap();
     let adapter = AttemptSubmissionAdapter::new(registry);

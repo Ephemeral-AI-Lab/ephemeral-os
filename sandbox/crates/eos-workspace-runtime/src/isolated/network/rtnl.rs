@@ -5,7 +5,7 @@ use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, 
 
 use crate::isolated::error::IsolatedError;
 
-use super::{BRIDGE_NAME, BRIDGE_PREFIX_LEN};
+use super::{network_error_at, BRIDGE_NAME, BRIDGE_PREFIX_LEN};
 
 pub(super) fn run_netlink<T, F, Fut>(operation: F) -> Result<T, IsolatedError>
 where
@@ -180,10 +180,6 @@ fn ignore_unsupported(
 fn is_error_text(error: &rtnetlink::Error, needles: &[&str]) -> bool {
     let text = error.to_string().to_ascii_lowercase();
     needles.iter().any(|needle| text.contains(needle))
-}
-
-fn network_error_at(step: impl Into<String>, error: impl std::fmt::Display) -> IsolatedError {
-    IsolatedError::NetworkUnavailable(format!("{}: {error}", step.into()))
 }
 
 const fn gateway_addr() -> Ipv4Addr {

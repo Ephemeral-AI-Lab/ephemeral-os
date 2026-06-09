@@ -301,6 +301,13 @@ pub(crate) fn agent_registry() -> AgentRegistry {
     ] {
         builder.add(agent_def(name, role, terminals));
     }
+    let mut subagent = agent_def(
+        "helper-subagent",
+        TaskRole::Generator,
+        vec!["submit_generator_outcome"],
+    );
+    subagent.agent_type = AgentType::Subagent;
+    builder.add(subagent);
     builder.build()
 }
 

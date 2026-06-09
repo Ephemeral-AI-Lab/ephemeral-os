@@ -6,8 +6,8 @@ use std::sync::{Arc, RwLock};
 use async_trait::async_trait;
 use eos_tool::{IsolatedWorkspaceModeControl, ToolError};
 use eos_types::{
-    AgentRunError, AgentRunId, AttemptId, IterationId, RequestId, SandboxId, SpawnAgentRequest,
-    TaskId, WorkflowId,
+    AgentRunError, AgentRunId, AttemptId, CreatedTaskAgentRun, IterationId, RequestId, SandboxId,
+    SpawnAgentRequest, TaskId, WorkflowId,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -32,13 +32,16 @@ impl RuntimeAgentStateService {
     pub(crate) fn record_spawn_request(
         &self,
         request: &SpawnAgentRequest,
-        agent_run_id: &AgentRunId,
+        created_run: &CreatedTaskAgentRun,
     ) -> Result<(), AgentRunError> {
         let mut states = self
             .inner
             .write()
             .map_err(|_| AgentRunError::Internal("runtime agent state lock poisoned".to_owned()))?;
-        states.insert(agent_run_id.clone(), RuntimeAgentState::from(request));
+        states.insert(
+            created_run.agent_run_id.clone(),
+            RuntimeAgentState::from_spawn(request, created_run),
+        );
         Ok(())
     }
 
@@ -85,13 +88,13 @@ impl IsolatedWorkspaceModeControl for RuntimeAgentStateService {
     }
 }
 
-impl From<&SpawnAgentRequest> for RuntimeAgentState {
-    fn from(request: &SpawnAgentRequest) -> Self {
+impl RuntimeAgentState {
+    fn from_spawn(request: &SpawnAgentRequest, created_run: &CreatedTaskAgentRun) -> Self {
         let workflow = request.target.workflow();
         Self {
             agent_name: request.agent_name.as_str().to_owned(),
             request_id: Some(request.target.request_id().clone()),
-            task_id: request.target.current_task_id().cloned(),
+            task_id: Some(created_run.task_id.clone()),
             workflow_id: workflow.map(|coords| coords.workflow_id.clone()),
             iteration_id: workflow.map(|coords| coords.iteration_id.clone()),
             attempt_id: workflow.map(|coords| coords.attempt_id.clone()),

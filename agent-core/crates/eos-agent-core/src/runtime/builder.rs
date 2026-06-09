@@ -351,6 +351,7 @@ impl AgentCoreRuntimeBuilder {
                 iteration_store: database.iterations(),
                 attempt_store: database.attempts(),
                 agent_run_store: database.agent_runs(),
+                task_agent_run_store: database.task_agent_runs(),
             },
             agent_core: AgentCoreRegistryService {
                 agent_registry,

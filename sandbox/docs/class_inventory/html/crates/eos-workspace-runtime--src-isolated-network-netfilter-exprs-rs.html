@@ -347,7 +347,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-161">nft_ipv4_guard_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(
         &amp;<span class="rs-kw">mut</span> data,
@@ -401,7 +401,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-189">nft_payload_expr</a>(base: u32, offset: u32, len: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_BASE</span>, base);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_OFFSET</span>, offset);
@@ -423,7 +423,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-198">nft_meta_expr</a>(key: u32) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_KEY</span>, key);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-expr-240">nft_expr</a>(&quot;meta&quot;, &amp;data)
@@ -443,7 +443,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-205">nft_bitwise_mask_expr</a>(mask: [u8; 4]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_LEN</span>, <span class="rs-type">IPV4_ADDR_LEN</span>);
@@ -466,7 +466,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-215">nft_cmp_expr</a>(op: u32, value: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_OP</span>, op);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-198">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_DATA</span>, value);
@@ -487,17 +487,17 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-223">nft_drop_expr</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> verdict = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> verdict = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(
         &amp;<span class="rs-kw">mut</span> verdict,
         <span class="rs-type">NFTA_VERDICT_CODE</span>,
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-281">libc_c_int_to_u32</a>(libc::<span class="rs-type">NF_DROP</span>, &quot;<span class="rs-type">NF_DROP</span>&quot;)?,
     );
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data_value = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data_value = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data_value, <span class="rs-type">NFTA_DATA_VERDICT</span>, &amp;verdict);
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DREG</span>, <span class="rs-type">NFT_REG_VERDICT</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DATA</span>, &amp;data_value);
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-expr-240">nft_expr</a>(&quot;immediate&quot;, &amp;data))
@@ -517,7 +517,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-expr-240">nft_expr</a>(name: &amp;str, data: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_NAME</span>, name);
     <span class="rs-kw">if</span> !data.is_empty() {
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_DATA</span>, data);
@@ -539,7 +539,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-gateway-addr-249">gateway_addr</a>() -&gt; <span class="rs-type">Ipv4Addr</span> {
-    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, 1)
+    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, 1)
 }
 </code></pre>
 </details>
@@ -556,7 +556,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-bridge-network-253">bridge_network</a>() -&gt; (<span class="rs-type">Ipv4Addr</span>, u8) {
-    (<span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, 0), <span class="rs-type">BRIDGE_PREFIX_LEN</span>)
+    (<span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, 0), <span class="rs-type">BRIDGE_PREFIX_LEN</span>)
 }
 </code></pre>
 </details>
@@ -731,7 +731,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-161">nft_ipv4_guard_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(
         &amp;<span class="rs-kw">mut</span> data,
@@ -759,7 +759,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-189">nft_payload_expr</a>(base: u32, offset: u32, len: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_BASE</span>, base);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_OFFSET</span>, offset);
@@ -768,14 +768,14 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-198">nft_meta_expr</a>(key: u32) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_KEY</span>, key);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-expr-240">nft_expr</a>(&quot;meta&quot;, &amp;data)
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-205">nft_bitwise_mask_expr</a>(mask: [u8; 4]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_LEN</span>, <span class="rs-type">IPV4_ADDR_LEN</span>);
@@ -785,7 +785,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-215">nft_cmp_expr</a>(op: u32, value: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_OP</span>, op);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-198">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_DATA</span>, value);
@@ -793,24 +793,24 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-223">nft_drop_expr</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> verdict = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> verdict = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(
         &amp;<span class="rs-kw">mut</span> verdict,
         <span class="rs-type">NFTA_VERDICT_CODE</span>,
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-281">libc_c_int_to_u32</a>(libc::<span class="rs-type">NF_DROP</span>, &quot;<span class="rs-type">NF_DROP</span>&quot;)?,
     );
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data_value = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data_value = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data_value, <span class="rs-type">NFTA_DATA_VERDICT</span>, &amp;verdict);
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DREG</span>, <span class="rs-type">NFT_REG_VERDICT</span>);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DATA</span>, &amp;data_value);
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-expr-240">nft_expr</a>(&quot;immediate&quot;, &amp;data))
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-nft-expr-240">nft_expr</a>(name: &amp;str, data: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_NAME</span>, name);
     <span class="rs-kw">if</span> !data.is_empty() {
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_DATA</span>, data);
@@ -819,11 +819,11 @@
 }
 
 <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-gateway-addr-249">gateway_addr</a>() -&gt; <span class="rs-type">Ipv4Addr</span> {
-    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, 1)
+    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, 1)
 }
 
 <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-bridge-network-253">bridge_network</a>() -&gt; (<span class="rs-type">Ipv4Addr</span>, u8) {
-    (<span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, 0), <span class="rs-type">BRIDGE_PREFIX_LEN</span>)
+    (<span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, 0), <span class="rs-type">BRIDGE_PREFIX_LEN</span>)
 }
 
 <span class="rs-kw">const</span> <span class="rs-type">NFT_REG_VERDICT</span>: u32 = 0;

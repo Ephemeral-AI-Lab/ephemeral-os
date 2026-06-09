@@ -106,9 +106,9 @@
   </div>
   <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>timezone</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampTimezone-9">TranscriptTimestampTimezone</a></code></td></tr><tr><td>private</td><td>at_line_start</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-49"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a> (timezone : &amp; str) -&gt; Result &lt; Self , String &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>timezone</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampTimezone-9">TranscriptTimestampTimezone</a></code></td></tr><tr><td>private</td><td>at_line_start</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-49"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a> (timezone : &amp; str) -&gt; Result &lt; Self , String &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(timezone: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">String</span>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(timezone: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">String</span>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             timezone: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampTimezone-9">TranscriptTimestampTimezone</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-transcript-rs.html#method-parse-15">parse</a>(timezone)?,
             at_line_start: <span class="rs-kw">true</span>,
@@ -208,7 +208,7 @@
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = <span class="rs-type">File</span>::open(path).ok()?;
     file.seek(<span class="rs-type">SeekFrom</span>::<span class="rs-type">Start</span>(offset)).ok()?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     file.read_to_end(&amp;<span class="rs-kw">mut</span> bytes).ok()?;
     <span class="rs-type">Some</span>(<span class="rs-type">String</span>::from_utf8_lossy(&amp;bytes).into_owned())
 }
@@ -324,7 +324,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(timezone: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(timezone: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">String</span>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             timezone: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampTimezone-9">TranscriptTimestampTimezone</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-transcript-rs.html#method-parse-15">parse</a>(timezone)?,
             at_line_start: <span class="rs-kw">true</span>,
@@ -369,7 +369,7 @@
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = <span class="rs-type">File</span>::open(path).ok()?;
     file.seek(<span class="rs-type">SeekFrom</span>::<span class="rs-type">Start</span>(offset)).ok()?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     file.read_to_end(&amp;<span class="rs-kw">mut</span> bytes).ok()?;
     <span class="rs-type">Some</span>(<span class="rs-type">String</span>::from_utf8_lossy(&amp;bytes).into_owned())
 }

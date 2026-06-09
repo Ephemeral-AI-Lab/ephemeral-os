@@ -70,7 +70,7 @@
         &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
         handle: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phase_start = <span class="rs-type">Instant</span>::now();
         handle.holder_pid = <span class="rs-self">self</span>
             .runtime
@@ -150,7 +150,7 @@
         handle: &amp;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
         grace_s: f64,
     ) -&gt; (<span class="rs-type">Value</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;) {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> holder_kill_error = <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
             <span class="rs-self">self</span>.runtime
@@ -298,7 +298,7 @@
             upperdir,
             workdir,
             layer_paths: snapshot.layer_paths.clone(),
-            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
             holder_pid: 0,
             readiness_fd: -1,
             control_fd: -1,
@@ -356,7 +356,7 @@
                 &quot;eos_workspace_root is required&quot;.to_owned(),
             ));
         }
-        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(workspace_root).is_absolute() {
+        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(workspace_root).is_absolute() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(format!(
                 &quot;eos_workspace_root must be absolute: {workspace_root}&quot;
             )));
@@ -509,7 +509,7 @@
         &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
         handle: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phase_start = <span class="rs-type">Instant</span>::now();
         handle.holder_pid = <span class="rs-self">self</span>
             .runtime
@@ -585,7 +585,7 @@
         handle: &amp;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
         grace_s: f64,
     ) -&gt; (<span class="rs-type">Value</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;) {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> holder_kill_error = <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
             <span class="rs-self">self</span>.runtime
@@ -731,7 +731,7 @@
             upperdir,
             workdir,
             layer_paths: snapshot.layer_paths.clone(),
-            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
             holder_pid: 0,
             readiness_fd: -1,
             control_fd: -1,
@@ -787,7 +787,7 @@
                 &quot;eos_workspace_root is required&quot;.to_owned(),
             ));
         }
-        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(workspace_root).is_absolute() {
+        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(workspace_root).is_absolute() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(format!(
                 &quot;eos_workspace_root must be absolute: {workspace_root}&quot;
             )));

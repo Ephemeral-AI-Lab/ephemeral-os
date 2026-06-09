@@ -1,7 +1,7 @@
 //! Resource caps and lifecycle config.
 
 /// Persisted-handles schema tag.
-pub const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
+pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
 
 /// Per-workspace handle / veth name prefix.
 ///

@@ -305,7 +305,6 @@ mod ask_advisor {
             let advisor_run_id = match agent_run_service
                 .spawn_agent(SpawnAgentRequest {
                     agent_name: AgentName::new("advisor").expect("advisor agent name is valid"),
-                    agent_run_id: None,
                     initial_messages: build_advisor_messages(
                         ctx,
                         &parsed.tool_name,
@@ -318,10 +317,10 @@ mod ask_advisor {
                             agent_run_id: parent_agent_run_id,
                         },
                     },
+                    tool_use_id: ctx.tool_use_id.clone(),
                     sandbox_id: ctx.sandbox_id.clone(),
                     workspace_root: ctx.workspace_root.clone(),
                     is_isolated_workspace_mode: false,
-                    persist: true,
                 })
                 .await
             {

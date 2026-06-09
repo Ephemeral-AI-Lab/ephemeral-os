@@ -36,12 +36,13 @@ pub use agent_loop::{
 };
 pub use config::ConfigError;
 pub use contracts::{
-    AgentCoreCancellationApi, AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus,
-    AgentState, CancelError, OutstandingWorkflow, ParentAgentRunAnchor, ParentedAgentRunKind,
-    PlanReducer, PlanTask, PlannerPlan, SpawnAgentRequest, SpawnAgentTarget, StartWorkflowRequest,
-    StartedWorkflow, SubmissionAck, TaskAgentRunKind, TerminalWorkflow, WorkflowApi,
-    WorkflowApiError, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowTaskRole,
-    WorkflowTerminalStatus,
+    format_record_dir, AgentCoreCancellationApi, AgentRunApi, AgentRunError, AgentRunOutcome,
+    AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget, AgentRunRuntimeSnapshot,
+    AgentRunStatus, CancelError, CreatedTaskAgentRun, OutstandingWorkflow, ParentAgentRunAnchor,
+    ParentedAgentRunKind, PlanReducer, PlanTask, PlannerPlan, SpawnAgentRequest, SpawnAgentTarget,
+    StartWorkflowRequest, StartedWorkflow, SubmissionAck, TaskAgentRunKind, TaskExecutionIndex,
+    TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowAttemptSubmissionApi,
+    WorkflowCoordinates, WorkflowTaskRole, WorkflowTerminalStatus,
 };
 pub use error::CoreError;
 pub use frontmatter::parse_markdown_frontmatter;
@@ -57,13 +58,13 @@ pub use state::{
     AttemptClosure, AttemptFailReason, AttemptStage, AttemptState, AttemptStatus,
     BackgroundSessionCounts, DeferredGoal, ExecutionRole, ExecutionTaskOutcome,
     GeneratorSubmission, Iteration, IterationCreationReason, IterationOutcome, IterationStatus,
-    MaterializedPlan, ModelRegistration, Page, PageResult, PlanDisposition, PlanNodeId,
-    PlannerFailReason, PlannerFailureSubmission, PlannerSubmission, ReducerSubmission, Request,
-    RequestListFilter, RequestStatus, Task, TaskOutcomeStatus, TaskRole, TaskStatus, Workflow,
-    WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
+    MaterializedPlan, ModelRegistration, Page, PageResult, ParentedRun, PlanDisposition,
+    PlanNodeId, PlannerFailReason, PlannerFailureSubmission, PlannerSubmission, ReducerSubmission,
+    Request, RequestListFilter, RequestStatus, Task, TaskOutcomeStatus, TaskRole, TaskRun,
+    TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
 };
 pub use stores::{
-    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
-    TaskStore, WorkflowStore,
+    parented_task_id, AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore,
+    Sealed, StoreError, TaskAgentRunStore, TaskStore, WorkflowStore,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

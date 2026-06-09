@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use eos_types::AgentRunId;
+use eos_types::{
+    format_record_dir, AgentRunId, AgentRunRecordIndex, ParentedAgentRunKind, TaskAgentRunKind,
+    WorkflowCoordinates, WorkflowTaskRole as SharedWorkflowTaskRole,
+};
 
 use super::error::{MessageRecordError, Result};
 use super::kind::{AgentRunRecordKind, AgentRunRecordStart};
@@ -14,135 +17,80 @@ pub(crate) async fn resolve_agent_run(root: &Path, agent_run_id: &AgentRunId) ->
 }
 
 pub(crate) fn node_dir(root: &Path, input: &AgentRunRecordStart<'_>) -> Result<PathBuf> {
-    let request_root = request_root(root, input.request_id.as_str())?;
-    let agent_run_segment = safe_prefixed_segment("agent-run", input.agent_run_id.as_str())?;
-    match &input.kind {
-        AgentRunRecordKind::Root => {
-            let task_id = required_task_id(input)?;
-            Ok(request_root
-                .join(safe_prefixed_segment("root-task", task_id)?)
-                .join(agent_run_segment))
-        }
+    validate_start_segments(input)?;
+    let task_id = input
+        .task_id
+        .cloned()
+        .ok_or_else(|| MessageRecordError::unsafe_segment("task_id", ""))?;
+    let kind = match input.kind {
+        AgentRunRecordKind::Root => TaskAgentRunKind::Root,
         AgentRunRecordKind::WorkflowTask {
             workflow_id,
             iteration_id,
             attempt_id,
             role,
-        } => {
-            let task_id = required_task_id(input)?;
-            let workflow_parent =
-                find_root_agent_dir(&request_root)?.unwrap_or_else(|| request_root.clone());
-            Ok(workflow_parent
-                .join("workflows")
-                .join(safe_prefixed_segment("workflow", workflow_id.as_str())?)
-                .join(safe_prefixed_segment("iteration", iteration_id.as_str())?)
-                .join(safe_prefixed_segment("attempt", attempt_id.as_str())?)
-                .join(safe_prefixed_segment(role.task_segment_prefix(), task_id)?)
-                .join(agent_run_segment))
-        }
+        } => TaskAgentRunKind::Workflow {
+            workflow: WorkflowCoordinates {
+                workflow_id: workflow_id.clone(),
+                iteration_id: iteration_id.clone(),
+                attempt_id: attempt_id.clone(),
+            },
+            role: shared_workflow_role(*role),
+        },
         AgentRunRecordKind::Subagent {
             parent_agent_run_id,
-        } => Ok(parent_or_request_dir(&request_root, parent_agent_run_id)?
-            .join("subagents")
-            .join(safe_prefixed_segment(
-                "subagent-run",
-                input.agent_run_id.as_str(),
-            )?)),
+        } => TaskAgentRunKind::Parented {
+            parent_agent_run_id: parent_agent_run_id.clone(),
+            kind: ParentedAgentRunKind::Subagent,
+        },
         AgentRunRecordKind::Advisor {
             parent_agent_run_id,
-        } => Ok(parent_or_request_dir(&request_root, parent_agent_run_id)?
-            .join("advisors")
-            .join(safe_prefixed_segment(
-                "advisor-run",
-                input.agent_run_id.as_str(),
-            )?)),
+        } => TaskAgentRunKind::Parented {
+            parent_agent_run_id: parent_agent_run_id.clone(),
+            kind: ParentedAgentRunKind::Advisor,
+        },
+    };
+    let record_dir = format_record_dir(&AgentRunRecordIndex {
+        request_id: input.request_id.clone(),
+        agent_run_id: input.agent_run_id.clone(),
+        task_id,
+        kind,
+    });
+    let mut node = root.to_path_buf();
+    for segment in record_dir.as_str().split('/') {
+        node.push(safe_segment("record_dir", segment)?);
     }
+    Ok(node)
 }
 
-pub(crate) fn parent_announcement(
-    root: &Path,
-    input: &AgentRunRecordStart<'_>,
-    node_dir: &Path,
-) -> Result<Option<(PathBuf, String)>> {
-    let request_root = request_root(root, input.request_id.as_str())?;
-    let parent = match &input.kind {
+fn validate_start_segments(input: &AgentRunRecordStart<'_>) -> Result<()> {
+    safe_segment("request_id", input.request_id.as_str())?;
+    safe_segment("agent-run", input.agent_run_id.as_str())?;
+    if let Some(task_id) = input.task_id {
+        safe_segment("task_id", task_id.as_str())?;
+    }
+    match input.kind {
+        AgentRunRecordKind::WorkflowTask {
+            workflow_id,
+            iteration_id,
+            attempt_id,
+            ..
+        } => {
+            safe_segment("workflow", workflow_id.as_str())?;
+            safe_segment("iteration", iteration_id.as_str())?;
+            safe_segment("attempt", attempt_id.as_str())?;
+        }
         AgentRunRecordKind::Subagent {
             parent_agent_run_id,
         }
         | AgentRunRecordKind::Advisor {
             parent_agent_run_id,
-        } => find_agent_run_dir_in(&request_root, parent_agent_run_id)?,
-        AgentRunRecordKind::WorkflowTask { .. } => find_root_agent_dir(&request_root)?,
-        AgentRunRecordKind::Root => None,
-    };
-    let Some(parent) = parent else {
-        return Ok(None);
-    };
-    let relative = node_dir
-        .strip_prefix(&parent)
-        .ok()
-        .map(path_to_slash_string)
-        .unwrap_or_else(|| path_to_slash_string(node_dir));
-    Ok(Some((parent, relative)))
-}
-
-fn request_root(root: &Path, request_id: &str) -> Result<PathBuf> {
-    Ok(root
-        .join("requests")
-        .join(safe_segment("request_id", request_id)?))
-}
-
-fn required_task_id<'a>(input: &AgentRunRecordStart<'a>) -> Result<&'a str> {
-    input
-        .task_id
-        .map(eos_types::TaskId::as_str)
-        .ok_or_else(|| MessageRecordError::unsafe_segment("task_id", ""))
-}
-
-fn parent_or_request_dir(request_root: &Path, parent_agent_run_id: &AgentRunId) -> Result<PathBuf> {
-    Ok(
-        find_agent_run_dir_in(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
-            request_root
-                .join("parents-missing")
-                .join(parent_agent_run_id.as_str())
-        }),
-    )
-}
-
-fn find_root_agent_dir(request_root: &Path) -> Result<Option<PathBuf>> {
-    let Ok(entries) = std::fs::read_dir(request_root) else {
-        return Ok(None);
-    };
-    for entry in entries {
-        let entry = entry?;
-        if !entry.file_type()?.is_dir() {
-            continue;
+        } => {
+            safe_segment("agent_run_id", parent_agent_run_id.as_str())?;
         }
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else {
-            continue;
-        };
-        if !name.starts_with("root-task-") {
-            continue;
-        }
-        let Ok(agent_dirs) = std::fs::read_dir(entry.path()) else {
-            continue;
-        };
-        for agent_entry in agent_dirs {
-            let agent_entry = agent_entry?;
-            if !agent_entry.file_type()?.is_dir() {
-                continue;
-            }
-            if agent_entry
-                .file_name()
-                .to_str()
-                .is_some_and(|value| value.starts_with("agent-run-"))
-            {
-                return Ok(Some(agent_entry.path()));
-            }
-        }
+        AgentRunRecordKind::Root => {}
     }
-    Ok(None)
+    Ok(())
 }
 
 fn find_agent_run_dir_in(root: &Path, agent_run_id: &AgentRunId) -> Result<Option<PathBuf>> {
@@ -183,6 +131,14 @@ fn safe_prefixed_segment(prefix: &'static str, id: &str) -> Result<String> {
     Ok(format!("{prefix}-{}", safe_segment(prefix, id)?))
 }
 
+fn shared_workflow_role(role: super::kind::WorkflowTaskRole) -> SharedWorkflowTaskRole {
+    match role {
+        super::kind::WorkflowTaskRole::Planner => SharedWorkflowTaskRole::Planner,
+        super::kind::WorkflowTaskRole::Generator => SharedWorkflowTaskRole::Generator,
+        super::kind::WorkflowTaskRole::Reducer => SharedWorkflowTaskRole::Reducer,
+    }
+}
+
 fn safe_segment<'a>(field: &'static str, value: &'a str) -> Result<&'a str> {
     if value.is_empty()
         || value == "."
@@ -194,11 +150,4 @@ fn safe_segment<'a>(field: &'static str, value: &'a str) -> Result<&'a str> {
         return Err(MessageRecordError::unsafe_segment(field, value));
     }
     Ok(value)
-}
-
-fn path_to_slash_string(path: &Path) -> String {
-    path.components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
 }

@@ -174,7 +174,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-mod-rs.html#item-fn-add-nft-table-in-family-91">add_nft_table_in_family</a>(family: u8, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_TABLE_NAME</span>, name);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_TABLE_FLAGS</span>, 0);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-send-nft-command-9">send_nft_command</a>(
@@ -238,11 +238,11 @@
     hook: u32,
     priority: i32,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> hook_attrs, <span class="rs-type">NFTA_HOOK_HOOKNUM</span>, hook);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-i32-attr-194">append_be_i32_attr</a>(&amp;<span class="rs-kw">mut</span> hook_attrs, <span class="rs-type">NFTA_HOOK_PRIORITY</span>, priority);
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_CHAIN_TABLE</span>, table);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_CHAIN_NAME</span>, name);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_CHAIN_TYPE</span>, chain_type);
@@ -298,12 +298,12 @@
     chain: &amp;str,
     expressions: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression_list = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression_list = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <span class="rs-kw">for</span> expression <span class="rs-kw">in</span> expressions {
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> expression_list, <span class="rs-type">NFTA_LIST_ELEM</span>, &amp;expression);
     }
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_RULE_TABLE</span>, table);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_RULE_CHAIN</span>, chain);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_RULE_EXPRESSIONS</span>, &amp;expression_list);
@@ -419,7 +419,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-mod-rs.html#item-fn-add-nft-table-in-family-91">add_nft_table_in_family</a>(family: u8, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_TABLE_NAME</span>, name);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_TABLE_FLAGS</span>, 0);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-send-nft-command-9">send_nft_command</a>(
@@ -457,11 +457,11 @@
     hook: u32,
     priority: i32,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-190">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> hook_attrs, <span class="rs-type">NFTA_HOOK_HOOKNUM</span>, hook);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-be-i32-attr-194">append_be_i32_attr</a>(&amp;<span class="rs-kw">mut</span> hook_attrs, <span class="rs-type">NFTA_HOOK_PRIORITY</span>, priority);
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_CHAIN_TABLE</span>, table);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_CHAIN_NAME</span>, name);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_CHAIN_TYPE</span>, chain_type);
@@ -491,12 +491,12 @@
     chain: &amp;str,
     expressions: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression_list = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression_list = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <span class="rs-kw">for</span> expression <span class="rs-kw">in</span> expressions {
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> expression_list, <span class="rs-type">NFTA_LIST_ELEM</span>, &amp;expression);
     }
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attrs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_RULE_TABLE</span>, table);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-184">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_RULE_CHAIN</span>, chain);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> attrs, <span class="rs-type">NFTA_RULE_EXPRESSIONS</span>, &amp;expression_list);

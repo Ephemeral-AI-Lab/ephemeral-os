@@ -77,11 +77,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a></code>
   <p class="docstring">Pure IPv4 `/32` allocator over `10.244.0.2 - 10.244.0.254`.<br>Lowest-IP-first O(N) scan; N &lt;= 253. No Linux deps.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>allocated</td><td><code>Vec &lt; Ipv4Addr &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-94"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a> () -&gt; Self</code><p class="docstring">Build an empty pool spanning the bridge CIDR's allocatable range.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>allocated</td><td><code>Vec &lt; Ipv4Addr &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-94"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a> () -&gt; Self</code><p class="docstring">Build an empty pool spanning the bridge CIDR's allocatable range.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Build an empty pool spanning the bridge CIDR's allocatable range.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-caps-rs.html#method-default-60">default</a>()
     }
 </code></pre>
@@ -116,7 +116,7 @@
     <span class="rs-comment">/// exhausted.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#method-allocate-24">allocate</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Ipv4Addr</span>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
         <span class="rs-kw">for</span> host <span class="rs-kw">in</span> <span class="rs-type">POOL_FIRST_HOST</span>..=<span class="rs-type">POOL_LAST_HOST</span> {
-            <span class="rs-kw">let</span> ip = <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, host);
+            <span class="rs-kw">let</span> ip = <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, host);
             <span class="rs-kw">if</span> !<span class="rs-self">self</span>.allocated.contains(&amp;ip) {
                 <span class="rs-self">self</span>.allocated.push(ip);
                 <span class="rs-self">self</span>.allocated.sort_unstable();
@@ -147,14 +147,14 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a></code>
   <p class="docstring">Owns the `eos-shared0` bridge + static nft rules + per-workspace veth wiring.<br>The Rust implementation shells out to `ip`/`nft`; the Rust port replaces<br>the bridge/veth path with `rtnetlink` link/address operations and the static<br>NAT/filter path with `NETLINK_NETFILTER` messages — NO `ip`/`nft` binaries.</p>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>rfc1918_egress</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a></code></td></tr><tr><td>private</td><td>pool</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a></code></td></tr><tr><td>private</td><td>initialized</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-158"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a> (rfc1918_egress : <a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a>) -&gt; Self</code><p class="docstring">Construct an uninitialized network with the given egress policy.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>rfc1918_egress</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a></code></td></tr><tr><td>private</td><td>pool</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a></code></td></tr><tr><td>private</td><td>initialized</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-158"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a> (rfc1918_egress : <a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a>) -&gt; Self</code><p class="docstring">Construct an uninitialized network with the given egress policy.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct an uninitialized network with the given egress policy.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(rfc1918_egress: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(rfc1918_egress: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             rfc1918_egress,
-            pool: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            pool: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
             initialized: <span class="rs-kw">false</span>,
         }
     }
@@ -460,7 +460,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a> {
     <span class="rs-comment">/// Build an empty pool spanning the bridge CIDR's allocatable range.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-caps-rs.html#method-default-60">default</a>()
     }
 
@@ -491,7 +491,7 @@
     <span class="rs-comment">/// exhausted.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#method-allocate-24">allocate</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Ipv4Addr</span>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
         <span class="rs-kw">for</span> host <span class="rs-kw">in</span> <span class="rs-type">POOL_FIRST_HOST</span>..=<span class="rs-type">POOL_LAST_HOST</span> {
-            <span class="rs-kw">let</span> ip = <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, host);
+            <span class="rs-kw">let</span> ip = <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, host);
             <span class="rs-kw">if</span> !<span class="rs-self">self</span>.allocated.contains(&amp;ip) {
                 <span class="rs-self">self</span>.allocated.push(ip);
                 <span class="rs-self">self</span>.allocated.sort_unstable();
@@ -524,10 +524,10 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a> {
     <span class="rs-comment">/// Construct an uninitialized network with the given egress policy.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(rfc1918_egress: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(rfc1918_egress: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-enum-Rfc1918Egress-18">Rfc1918Egress</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             rfc1918_egress,
-            pool: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            pool: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-BridgeAddressPool-85">BridgeAddressPool</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
             initialized: <span class="rs-kw">false</span>,
         }
     }

@@ -68,12 +68,12 @@
 <span class="rs-kw">mod</span> runner;
 <span class="rs-kw">mod</span> signal;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> pty::open_pty_pair;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> runner::{
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> pty::open_pty_pair;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> runner::{
     spawn_current_exe_ns_runner, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>,
     <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>,
 };
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> signal::terminate_process_group;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> signal::terminate_process_group;
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

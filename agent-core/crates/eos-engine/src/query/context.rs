@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_llm_client::LlmRequest;
-use eos_types::AgentState;
+use eos_types::AgentRunRuntimeSnapshot;
 use futures::Stream;
 
 use crate::{EngineError, StartAgentLoopRequest, StreamEvent};
@@ -14,8 +14,11 @@ use crate::{EngineError, StartAgentLoopRequest, StreamEvent};
 pub type EngineStream = Pin<Box<dyn Stream<Item = Result<StreamEvent, EngineError>> + Send>>;
 
 /// Per-loop provider stream source factory.
-pub type ProviderStreamSourceFactory =
-    Arc<dyn Fn(&StartAgentLoopRequest, &AgentState) -> Arc<dyn ProviderStreamSource> + Send + Sync>;
+pub type ProviderStreamSourceFactory = Arc<
+    dyn Fn(&StartAgentLoopRequest, &AgentRunRuntimeSnapshot) -> Arc<dyn ProviderStreamSource>
+        + Send
+        + Sync,
+>;
 
 /// Per-run stream-event sink.
 pub type EngineEventSink = Arc<dyn Fn(&StreamEvent) + Send + Sync>;

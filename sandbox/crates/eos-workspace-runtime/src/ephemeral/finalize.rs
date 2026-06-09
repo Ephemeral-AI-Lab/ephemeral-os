@@ -3,7 +3,7 @@ use std::time::Instant;
 use crate::ephemeral::capture::{capture_for_publish, CapturedUpperdir};
 use crate::ephemeral::error::EphemeralWorkspaceError;
 use crate::ephemeral::ports::WorkspacePublisherPort;
-use crate::ephemeral::timings::EphemeralTimings;
+use crate::ephemeral::timings::PublishTiming;
 use crate::ephemeral::types::{EphemeralWorkspace, PublishOutcome};
 
 /// Request to finalize a publishable ephemeral workspace.
@@ -17,7 +17,7 @@ pub struct FinalizeRequest {
 pub struct FinalizeOutcome {
     pub capture: CapturedUpperdir,
     pub publish: PublishOutcome,
-    pub timings: EphemeralTimings,
+    pub timings: PublishTiming,
 }
 
 /// Capture upperdir changes and publish them through the injected publisher.
@@ -41,7 +41,7 @@ where
         &capture.path_kinds,
     )?;
 
-    let timings = EphemeralTimings {
+    let timings = PublishTiming {
         publish_s: Some(publish_start.elapsed().as_secs_f64()),
     };
 

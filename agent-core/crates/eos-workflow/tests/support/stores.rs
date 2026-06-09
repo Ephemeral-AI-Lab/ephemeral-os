@@ -8,10 +8,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    Attempt, AttemptBudget, AttemptClosure, AttemptId, AttemptState, CoreError, DeferredGoal,
-    ExecutionTaskOutcome, Iteration, IterationCreationReason, IterationId, IterationStatus,
-    JsonObject, MaterializedPlan, RequestId, Task, TaskId, TaskStatus, Workflow, WorkflowId,
-    WorkflowStatus,
+    AgentRunId, Attempt, AttemptBudget, AttemptClosure, AttemptId, AttemptState, CoreError,
+    DeferredGoal, ExecutionTaskOutcome, Iteration, IterationCreationReason, IterationId,
+    IterationStatus, JsonObject, MaterializedPlan, RequestId, Task, TaskId, TaskStatus, ToolUseId,
+    Workflow, WorkflowId, WorkflowStatus,
 };
 use parking_lot::Mutex;
 
@@ -77,9 +77,16 @@ impl MemoryStores {
     // wrappers keep test bodies readable and do not touch `task_writes`).
 
     pub(crate) async fn seed_workflow(&self, goal: &str) -> Workflow {
-        eos_types::WorkflowStore::insert(self, &RequestId::new_v4(), &tid("root"), goal)
-            .await
-            .unwrap()
+        eos_types::WorkflowStore::insert(
+            self,
+            &RequestId::new_v4(),
+            &tid("root"),
+            &AgentRunId::new_v4(),
+            None,
+            goal,
+        )
+        .await
+        .unwrap()
     }
 
     pub(crate) async fn seed_iteration(
@@ -134,6 +141,8 @@ impl eos_types::WorkflowStore for MemoryStores {
         &self,
         request_id: &RequestId,
         parent_task_id: &TaskId,
+        launched_by_agent_run_id: &AgentRunId,
+        tool_use_id: Option<&ToolUseId>,
         workflow_goal: &str,
     ) -> std::result::Result<Workflow, CoreError> {
         let now = eos_types::UtcDateTime::now();
@@ -144,6 +153,8 @@ impl eos_types::WorkflowStore for MemoryStores {
             status: WorkflowStatus::Open,
             iteration_ids: Vec::new(),
             parent_task_id: parent_task_id.clone(),
+            launched_by_agent_run_id: launched_by_agent_run_id.clone(),
+            tool_use_id: tool_use_id.cloned(),
             outcomes: None,
             created_at: now,
             updated_at: now,
@@ -202,6 +213,21 @@ impl eos_types::WorkflowStore for MemoryStores {
             .lock()
             .values()
             .filter(|workflow| &workflow.parent_task_id == parent_task_id)
+            .cloned()
+            .collect();
+        workflows.sort_by_key(|workflow| workflow.created_at);
+        Ok(workflows)
+    }
+
+    async fn list_for_launching_agent_run(
+        &self,
+        launched_by_agent_run_id: &AgentRunId,
+    ) -> std::result::Result<Vec<Workflow>, CoreError> {
+        let mut workflows: Vec<Workflow> = self
+            .workflows
+            .lock()
+            .values()
+            .filter(|workflow| &workflow.launched_by_agent_run_id == launched_by_agent_run_id)
             .cloned()
             .collect();
         workflows.sort_by_key(|workflow| workflow.created_at);

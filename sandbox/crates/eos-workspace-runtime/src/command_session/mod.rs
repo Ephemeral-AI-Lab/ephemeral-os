@@ -8,11 +8,11 @@
 //! which composes this substrate with the overlay/namespace workspace crates.
 
 mod error;
-pub mod output;
 mod request;
 mod response;
 #[cfg(any(target_os = "linux", test))]
 pub(crate) mod session;
+pub mod tail;
 #[cfg(target_os = "linux")]
 mod transcript;
 #[cfg(any(target_os = "linux", test))]
@@ -23,8 +23,8 @@ pub(crate) mod process;
 
 pub use eos_config::configs::command_session::CommandSessionConfig;
 pub use error::CommandSessionError;
-pub use output::tail_lines;
 pub use request::{
     CancelCommandSession, CollectCompleted, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 pub use response::{CollectCompletedResponse, CommandResponse, CommandSessionCompletion};
+pub use tail::tail_lines;

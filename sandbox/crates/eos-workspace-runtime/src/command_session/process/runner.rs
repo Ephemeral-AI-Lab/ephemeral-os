@@ -169,6 +169,7 @@ impl CommandRunnerResult {
 }
 
 impl CommandSessionProcess {
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn inactive(writer: File) -> Self {
         Self {

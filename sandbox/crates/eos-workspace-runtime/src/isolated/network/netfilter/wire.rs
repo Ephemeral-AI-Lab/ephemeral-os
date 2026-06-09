@@ -3,6 +3,7 @@ use netlink_sys::{Socket as NlSocket, SocketAddr as NlSocketAddr};
 use std::net::Ipv4Addr;
 
 use crate::isolated::error::IsolatedError;
+use crate::isolated::network::network_error_at;
 
 use super::exprs::NFTA_DATA_VALUE;
 
@@ -315,10 +316,6 @@ const fn align4(length: usize) -> usize {
 
 fn network_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::NetworkUnavailable(error.to_string())
-}
-
-fn network_error_at(step: impl Into<String>, error: impl std::fmt::Display) -> IsolatedError {
-    IsolatedError::NetworkUnavailable(format!("{}: {error}", step.into()))
 }
 
 fn network_error_with_context(step: &str, error: IsolatedError) -> IsolatedError {

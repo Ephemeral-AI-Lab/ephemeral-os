@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use eos_types::{AttemptClosure, AttemptFailReason, AttemptId, TaskId, TaskStatus, WorkflowStatus};
+use eos_types::{
+    AgentRunId, AttemptClosure, AttemptFailReason, AttemptId, TaskId, TaskStatus, ToolUseId,
+    WorkflowStatus,
+};
 
 use crate::attempt::{AttemptOrchestratorRegistry, AttemptResources};
 use crate::lifecycle::WorkflowLifecycle;
@@ -52,13 +55,19 @@ impl WorkflowStarter {
     /// # Errors
     /// Returns [`WorkflowError`] when the parent is not a running task or row
     /// creation/start fails.
-    pub async fn start(&self, prompt: &str, parent_task_id: &TaskId) -> Result<StartedWorkflow> {
+    pub async fn start(
+        &self,
+        prompt: &str,
+        parent_task_id: &TaskId,
+        launched_by_agent_run_id: &AgentRunId,
+        tool_use_id: Option<&ToolUseId>,
+    ) -> Result<StartedWorkflow> {
         let prompt = prompt.trim();
         if prompt.is_empty() {
             return Err(WorkflowError::BlankPrompt);
         }
         let parent = self
-            .assert_parent_running_and_no_open_child(parent_task_id)
+            .assert_parent_running_and_no_open_child(parent_task_id, launched_by_agent_run_id)
             .await?;
         let request_id = parent.request_id.clone();
         let parent_attempt_id = parent.attempt_id.clone();
@@ -67,7 +76,13 @@ impl WorkflowStarter {
         })?;
         let lifecycle = WorkflowLifecycle::new(self.deps.clone(), iteration_coordinators);
         let workflow = lifecycle
-            .create_workflow(&request_id, parent_task_id, prompt)
+            .create_workflow(
+                &request_id,
+                parent_task_id,
+                launched_by_agent_run_id,
+                tool_use_id,
+                prompt,
+            )
             .await?;
         let (iteration, coordinator) = lifecycle
             .create_iteration_with_coordinator(&workflow.id)
@@ -92,6 +107,7 @@ impl WorkflowStarter {
     async fn assert_parent_running_and_no_open_child(
         &self,
         parent_task_id: &TaskId,
+        launched_by_agent_run_id: &AgentRunId,
     ) -> Result<eos_types::Task> {
         let task = self
             .deps
@@ -108,7 +124,7 @@ impl WorkflowStarter {
         let open = self
             .deps
             .workflow_store
-            .list_for_parent_task(parent_task_id)
+            .list_for_launching_agent_run(launched_by_agent_run_id)
             .await?
             .into_iter()
             .find(eos_types::Workflow::is_open);
@@ -194,9 +210,10 @@ mod tests {
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let before = stores.task(&parent.id).unwrap();
+        let launch_run_id = eos_types::AgentRunId::new_v4();
 
         let started = WorkflowStarter::new(deps)
-            .start(" delegated goal ", &parent.id)
+            .start(" delegated goal ", &parent.id, &launch_run_id, None)
             .await
             .unwrap();
 
@@ -232,14 +249,23 @@ mod tests {
         // Blank prompt.
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
+        let launch_run_id = eos_types::AgentRunId::new_v4();
         assert!(matches!(
-            starter.start("   ", &parent.id).await.unwrap_err(),
+            starter
+                .start("   ", &parent.id, &launch_run_id, None)
+                .await
+                .unwrap_err(),
             WorkflowError::BlankPrompt
         ));
 
         // Missing parent task.
         let err = starter
-            .start("goal", &"ghost".parse().unwrap())
+            .start(
+                "goal",
+                &"ghost".parse().unwrap(),
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap_err();
         assert!(
@@ -250,15 +276,24 @@ mod tests {
         // Non-running parent.
         let done = root_task("done", TaskStatus::Done);
         stores.seed_task(done.clone());
-        let err = starter.start("goal", &done.id).await.unwrap_err();
+        let err = starter
+            .start("goal", &done.id, &eos_types::AgentRunId::new_v4(), None)
+            .await
+            .unwrap_err();
         assert!(
             matches!(err, WorkflowError::Invariant(ref m) if m.contains("is not running")),
             "{err:?}"
         );
 
         // Parent that already has an open delegated child workflow.
-        starter.start("first goal", &parent.id).await.unwrap();
-        let err = starter.start("second goal", &parent.id).await.unwrap_err();
+        starter
+            .start("first goal", &parent.id, &launch_run_id, None)
+            .await
+            .unwrap();
+        let err = starter
+            .start("second goal", &parent.id, &launch_run_id, None)
+            .await
+            .unwrap_err();
         assert!(
             matches!(err, WorkflowError::Invariant(ref m) if m.contains("open delegated workflow")),
             "{err:?}"
@@ -280,7 +315,12 @@ mod tests {
         stores.seed_task(parent.clone());
 
         let err = WorkflowStarter::new(deps)
-            .start("delegated goal", &parent.id)
+            .start(
+                "delegated goal",
+                &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap_err();
         assert!(

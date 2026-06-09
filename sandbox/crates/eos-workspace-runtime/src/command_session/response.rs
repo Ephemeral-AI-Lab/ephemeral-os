@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 
 use eos_workspace_contract::{WorkspaceCommandOutcome, WorkspaceMode};
 
-use super::output::tail_lines;
+use super::tail::tail_lines;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommandResponse {

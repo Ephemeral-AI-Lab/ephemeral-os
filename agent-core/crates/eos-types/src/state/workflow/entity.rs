@@ -6,7 +6,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{IterationId, RequestId, TaskId, UtcDateTime, WorkflowId};
+use crate::{AgentRunId, IterationId, RequestId, TaskId, ToolUseId, UtcDateTime, WorkflowId};
 
 /// Lifecycle status of a [`Workflow`] (Rust `WorkflowStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -64,6 +64,11 @@ pub struct Workflow {
     pub iteration_ids: Vec<IterationId>,
     /// The launching task; durable back-link, never mutated at close.
     pub parent_task_id: TaskId,
+    /// Agent run that launched this workflow.
+    pub launched_by_agent_run_id: AgentRunId,
+    /// Tool use that launched this workflow, if available.
+    #[serde(default)]
+    pub tool_use_id: Option<ToolUseId>,
     /// Serialized final projection (a `json.dumps` list); `None` while open.
     pub outcomes: Option<String>,
     /// Creation timestamp.

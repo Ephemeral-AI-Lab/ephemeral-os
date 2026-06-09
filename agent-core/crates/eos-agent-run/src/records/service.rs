@@ -60,24 +60,6 @@ impl AgentMessageRecords {
         payload.insert("messages_end_byte".to_owned(), json!(range.end_byte));
         handle.append_event("messages_initialized", payload).await?;
 
-        if let Some((parent_dir, child_path)) =
-            layout::parent_announcement(&self.root, &input, &node_dir)?
-        {
-            let parent = AgentRunRecordHandle::from_node_dir(parent_dir);
-            let mut payload = JsonObject::new();
-            payload.insert("type".to_owned(), json!(input.kind.node_type()));
-            payload.insert(
-                "agent_run_id".to_owned(),
-                json!(input.agent_run_id.as_str()),
-            );
-            payload.insert("path".to_owned(), json!(child_path));
-            if let Some(task_id) = input.task_id {
-                payload.insert("task_id".to_owned(), json!(task_id.as_str()));
-            }
-            input.kind.extend_payload(&mut payload);
-            parent.append_event("child_created", payload).await?;
-        }
-
         Ok(handle)
     }
 

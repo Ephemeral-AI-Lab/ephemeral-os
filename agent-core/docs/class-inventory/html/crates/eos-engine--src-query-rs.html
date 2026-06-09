@@ -64,14 +64,16 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-engine/src/query.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Provider request/message helpers and event-source seams.</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Provider request/message helpers and provider-stream seams.</span>
 
 <span class="rs-kw">mod</span> context;
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> provider_messages;
 <span class="rs-kw">mod</span> provider_source;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> context::{<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EngineStream-13">EngineStream</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventSourceFactory-16">EventSourceFactory</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> provider_source::<a class="symbol-link rs-type" href="eos-engine--src-query-provider-source-rs.html#item-struct-ProviderEventSource-13">ProviderEventSource</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> context::{
+    <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EngineEventSink-20">EngineEventSink</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EngineStream-13">EngineStream</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-ProviderStreamSource-23">ProviderStreamSource</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-ProviderStreamSourceFactory-16">ProviderStreamSourceFactory</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> provider_source::<a class="symbol-link rs-type" href="eos-engine--src-query-provider-source-rs.html#item-struct-LlmProviderStreamSource-13">LlmProviderStreamSource</a>;
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

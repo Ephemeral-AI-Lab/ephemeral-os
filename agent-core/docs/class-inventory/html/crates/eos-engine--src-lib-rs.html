@@ -65,7 +65,7 @@
     <p class="path">crates/eos-engine/src/lib.rs</p>
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! `eos-engine` — one agent query loop, tool dispatch, background</span>
-<span class="rs-comment">//! session accounting, notifications, prompt reports, and the event-source seam.</span>
+<span class="rs-comment">//! session accounting, notifications, prompt reports, and the provider-stream seam.</span>
 #![forbid(unsafe_code)]
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> agent_loop;
@@ -77,25 +77,26 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> tool_call;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_loop::{
-    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentExecutionMetadataService-43">AgentExecutionMetadataService</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-119">AgentLoopBackgroundDependencies</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopHookDependencies-85">AgentLoopHookDependencies</a>,
-    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopToolRegistryBuildInput-56">AgentLoopToolRegistryBuildInput</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-76">AgentLoopToolRegistryFactory</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ExecutionMetadataBuildInput-30">ExecutionMetadataBuildInput</a>,
-    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-struct-TokioAgentLoopLauncher-60">TokioAgentLoopLauncher</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopToolRegistryBuildInput-56">AgentLoopToolRegistryBuildInput</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-76">AgentLoopToolRegistryFactory</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-BackgroundSessionInputs-118">BackgroundSessionInputs</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ExecutionMetadataBuildInput-30">ExecutionMetadataBuildInput</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-struct-TokioAgentLoopLauncher-60">TokioAgentLoopLauncher</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-85">ToolCallHookStores</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-ToolExecutionMetadataReader-43">ToolExecutionMetadataReader</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> background::{
+    <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-rs.html#item-struct-BackgroundManagers-157">BackgroundManagers</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-rs.html#item-struct-BackgroundSessionTeardown-301">BackgroundSessionTeardown</a>,
 };
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">AgentLoopCancellation</span>, <span class="rs-type">AgentLoopCancellationHandle</span>, <span class="rs-type">AgentLoopLauncher</span>, <span class="rs-type">AgentLoopMessage</span>,
     <span class="rs-type">AgentLoopOutcome</span>, <span class="rs-type">AgentLoopOutcomeFuture</span>, <span class="rs-type">AgentLoopOutcomeKind</span>, <span class="rs-type">StartAgentLoopRequest</span>,
     <span class="rs-type">StartedAgentLoop</span>,
 };
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> background::{
-    <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-rs.html#item-struct-BackgroundManagers-157">BackgroundManagers</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>,
-    <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-rs.html#item-struct-BackgroundSessionTeardown-301">BackgroundSessionTeardown</a>,
-};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> notifications::{
     make_default_notification_rules, <a class="symbol-link rs-type" href="eos-engine--src-notifications-rs.html#item-struct-EngineNotificationQueue-130">EngineNotificationQueue</a>, <a class="symbol-link rs-type" href="eos-engine--src-notifications-rs.html#item-trait-NotificationRule-39">NotificationRule</a>,
     <a class="symbol-link rs-type" href="eos-engine--src-notifications-rs.html#item-struct-NotificationRuleContext-56">NotificationRuleContext</a>,
 };
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> query::{
-    <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EngineStream-13">EngineStream</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventSourceFactory-16">EventSourceFactory</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-provider-source-rs.html#item-struct-ProviderEventSource-13">ProviderEventSource</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EngineEventSink-20">EngineEventSink</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EngineStream-13">EngineStream</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-provider-source-rs.html#item-struct-LlmProviderStreamSource-13">LlmProviderStreamSource</a>, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-ProviderStreamSource-23">ProviderStreamSource</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-ProviderStreamSourceFactory-16">ProviderStreamSourceFactory</a>,
 };
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> support::<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> telemetry::{stamp_identity, <a class="symbol-link rs-type" href="eos-engine--src-telemetry-events-rs.html#item-struct-AssistantMessageComplete-8">AssistantMessageComplete</a>, <a class="symbol-link rs-type" href="eos-engine--src-telemetry-prompt-report-rs.html#item-struct-PromptReportRecorder-18">PromptReportRecorder</a>, <a class="symbol-link rs-type" href="eos-engine--src-telemetry-events-rs.html#item-enum-StreamEvent-19">StreamEvent</a>};

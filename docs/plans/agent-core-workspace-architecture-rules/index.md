@@ -119,7 +119,7 @@ Folder bans are exact-name checks. They do not ban owner-specific names such as
 
 ```text
 agent-core/crates/
-├── eos-agent-core/       # external facade + hidden request runtime
+├── eos-agent-core/       # request entry + hidden runtime composition root
 ├── eos-agent-run/        # agent-run lifecycle: spawn/wait/poll/cancel/finalize
 ├── eos-engine/           # execution loop, turns, events, records, background accounting
 ├── eos-tool/             # tool model, registry, hooks, concrete tools, skills
@@ -151,7 +151,7 @@ Retired or folded crates:
 
 ```mermaid
 flowchart LR
-    External["external project / backend-server"] --> AgentCore["eos-agent-core"]
+    External["external project / backend-server"] --> AgentCore["eos-agent-core entry"]
     AgentCore --> AgentRun["eos-agent-run services"]
     AgentCore --> Workflow["eos-workflow services"]
     AgentCore --> Tool["eos-tool registry + concrete tools"]
@@ -175,8 +175,7 @@ flowchart LR
 
 Rules behind the graph:
 
-- `eos-agent-core` is the external-project facade and owns hidden request
-  runtime wiring.
+- `eos-agent-core` owns request entry and hidden runtime composition wiring.
 - `eos-agent-run` owns lifecycle rows and final outcome handoff.
 - `eos-engine` owns the loop, turns, event emission, record writing, and
   midflight printing.
@@ -192,7 +191,7 @@ Rules behind the graph:
   agent profiles in `eos-agent-core`, workflow config in `eos-workflow`, DB
   config in `eos-db`. The pure frontmatter parser lives in `eos-types`; the
   file-merge loader lives in `eos-agent-core/runtime/config.rs`.
-- `eos-types` owns passive contracts only: trait ports, typed DTOs, store
+- `eos-types` owns passive contracts only: trait contracts, typed DTOs, store
   traits, neutral LLM DTOs, agent DTOs, and pure parsers. `AgentType` is the
   only profile launch axis (`agent`, `subagent`, `advisor`); there is no
   `AgentRole`, and a run's workflow role is the `TaskRole` on its lineage row.
@@ -327,7 +326,7 @@ agent-core/
 | 3 | `phase-03-eos-tool_SPEC.md` | `eos-tool` consolidation and service surface | Tool |
 | 3B | `phase-03b-execution-lineage-materialization_SPEC.md` | request/task/workflow/agent-run lineage, DB store contract, message-record materialization | Store/materialization |
 | 4 | `phase-04-eos-engine-agent-run_SPEC.md` | engine execution and run lifecycle split over established lineage | Engine/run |
-| 5 | `phase-05-agent-core-workflow-types_SPEC.md` | external facade runtime, workflow, types cleanup | Agent-core/workflow |
+| 5 | `phase-05-agent-core-workflow-types_SPEC.md` | request-entry runtime, workflow, types cleanup | Agent-core/workflow |
 | 6 | `phase-06-verification-module-budget_SPEC.md` | inventory reduction, tests, clippy, final cleanup | Verification |
 
 ## Progress Tracker
@@ -342,9 +341,9 @@ verification command or evidence used for that phase.
 | 1. Workspace guardrails | Implemented | `cargo test -p workspace-guard` enforces staged naming, layout, DAG, public-surface, and budget rules |
 | 2. Crate map and DAG | Implemented | final 10-crate agent-core map is active; `eos-runtime` folded into `eos-agent-core`; verified with `CARGO_TARGET_DIR=/tmp/eos-agent-core-check-runtime-fold cargo check --workspace --all-targets`, `cargo test -p eos-agent-core --all-targets`, and `cargo test -p workspace-guard` |
 | 3. `eos-tool` | Implemented | `eos-tool-ports` is gone; tool modules collapsed; hook execution is engine-owned |
-| 3B. Execution lineage/materialization | Not started | DB lineage supports task/run/workflow/message-record materialization |
+| 3B. Execution lineage/materialization | Implemented (bridge-compatible v1) | normalized `task_runs`/`parented_runs`, workflow launch lineage, request-rooted record dirs, and bounded execution-tree reader are active; verified with `cargo test -p eos-db`, `cargo test -p eos-agent-run`, `cargo test -p eos-workflow`, and `cargo test -p eos-agent-core` |
 | 4. `eos-engine` and `eos-agent-run` | Not started | engine is execution-only; run lifecycle is isolated over established lineage |
-| 5. Agent core/workflow/types | Not started | `eos-agent-core` owns hidden runtime wiring |
+| 5. Agent core/workflow/types | Not started | `eos-agent-core` owns request entry and hidden runtime wiring |
 | 6. Verification and budget | Not started | module count is 150-170 and full checks pass |
 
 ## Global Acceptance Criteria
@@ -376,7 +375,7 @@ verification command or evidence used for that phase.
   Tracker update, and no phase is considered complete until this shared tracker
   records the phase result.
 - `eos-workflow` depends on `eos-types` and `eos-tool`, not `eos-agent-run`.
-- `eos-agent-core` owns external facade plus hidden request runtime wiring.
+- `eos-agent-core` owns request entry plus hidden request runtime wiring.
 - `eos-llm-client` uses `client` and `providers`, not `services`.
 - `eos-types` has no runtime, I/O, provider, DB, or service logic, and holds the
   cross-crate contract floor.

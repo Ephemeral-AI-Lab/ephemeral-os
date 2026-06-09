@@ -20,7 +20,9 @@ pub struct CapturedUpperdir {
 /// # Errors
 ///
 /// Returns [`EphemeralWorkspaceError`] when overlay capture fails.
-pub fn capture_for_publish(upperdir: &Path) -> Result<CapturedUpperdir, EphemeralWorkspaceError> {
+pub(crate) fn capture_for_publish(
+    upperdir: &Path,
+) -> Result<CapturedUpperdir, EphemeralWorkspaceError> {
     let start = std::time::Instant::now();
     let changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| {
         EphemeralWorkspaceError::CaptureFailed {

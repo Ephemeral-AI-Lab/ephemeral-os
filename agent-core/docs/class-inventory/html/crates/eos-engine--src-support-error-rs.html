@@ -65,7 +65,7 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a></code>
   <p class="docstring">A framework error raised by the engine loop or one of its owned helpers.</p>
   <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Provider</td><td><code>0: ProviderError</code></td></tr><tr><td>Tool</td><td><code>0: ToolError</code></td></tr><tr><td>Core</td><td><code>0: CoreError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>Json</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>UnknownTool</td><td><code>0: String</code></td></tr><tr><td>MissingEventSource</td><td><code></code></td></tr><tr><td>Internal</td><td><code>0: String</code></td></tr></tbody></table>
+  <h4>Variants</h4><table><tbody><tr><td>Provider</td><td><code>0: ProviderError</code></td></tr><tr><td>Tool</td><td><code>0: ToolError</code></td></tr><tr><td>Core</td><td><code>0: CoreError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>Json</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>UnknownTool</td><td><code>0: String</code></td></tr><tr><td>MissingProviderStreamSource</td><td><code></code></td></tr><tr><td>Internal</td><td><code>0: String</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-engine/src/support/error.rs:7</p>
 </article></div>
@@ -110,9 +110,9 @@
     #[error(&quot;unknown tool: {0}&quot;)]
     <span class="rs-type">UnknownTool</span>(<span class="rs-type">String</span>),
 
-    <span class="rs-comment">/// Query loop was run without an event source.</span>
-    #[error(&quot;query context has no event source&quot;)]
-    <span class="rs-type">MissingEventSource</span>,
+    <span class="rs-comment">/// Query loop was run without a provider stream source.</span>
+    #[error(&quot;query context has no provider stream source&quot;)]
+    <span class="rs-type">MissingProviderStreamSource</span>,
 
     <span class="rs-comment">/// Engine invariant broke.</span>
     #[error(&quot;internal engine error: {0}&quot;)]

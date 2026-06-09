@@ -33,32 +33,32 @@ use netfilter::install_static_rules;
 use rtnl::{ensure_bridge, ignore_not_found, install_veth_pair, link_index, run_netlink};
 
 /// Shared bridge interface name.
-pub const BRIDGE_NAME: &str = "eos-shared0";
+pub(crate) const BRIDGE_NAME: &str = "eos-shared0";
 /// Shared bridge CIDR.
-pub const BRIDGE_CIDR: &str = "10.244.0.0/24";
+pub(crate) const BRIDGE_CIDR: &str = "10.244.0.0/24";
 /// Bridge gateway address.
 pub const GATEWAY: &str = "10.244.0.1";
 /// nftables NAT table name.
-pub const NFT_NAT_TABLE: &str = "eos_iws_nat";
+pub(crate) const NFT_NAT_TABLE: &str = "eos_iws_nat";
 /// nftables filter table name.
-pub const NFT_FILTER_TABLE: &str = "eos_iws_filter";
+pub(crate) const NFT_FILTER_TABLE: &str = "eos_iws_filter";
 /// Cloud IMDS address dropped on the forward chain.
-pub const IMDS_ADDR: &str = "169.254.169.254";
+pub(crate) const IMDS_ADDR: &str = "169.254.169.254";
 /// RFC1918 private networks (for the opt-in deny rule).
-pub const RFC1918_NETS: [&str; 3] = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
+pub(crate) const RFC1918_NETS: [&str; 3] = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
 /// Per-workspace veth name prefix — the SAME literal as [`HANDLE_PREFIX`].
-pub const VETH_PREFIX: &str = HANDLE_PREFIX;
+pub(crate) const VETH_PREFIX: &str = HANDLE_PREFIX;
 
 /// Bridge CIDR prefix length (matches `BRIDGE_CIDR`).
 pub const BRIDGE_PREFIX_LEN: u8 = 24;
 /// First allocatable host octet (skips `.0` network + `.1` gateway).
-pub const POOL_FIRST_HOST: u8 = 2;
+pub(crate) const POOL_FIRST_HOST: u8 = 2;
 /// Last allocatable host octet (skips `.255` broadcast).
-pub const POOL_LAST_HOST: u8 = 254;
+pub(crate) const POOL_LAST_HOST: u8 = 254;
 
 /// One veth `/32` allocation for a workspace.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct VethAllocation {
+pub(crate) struct VethAllocation {
     /// Host-side veth name (attached to the bridge).
     pub host_name: String,
     /// Namespace-side veth name (moved into the holder netns).
@@ -72,7 +72,7 @@ pub struct VethAllocation {
 /// Linux `IFNAMSIZ` caps names at 15 chars: `eos-iws-` (8) + 6 handle chars +
 /// suffix (1) = 15 exactly. Host ends in `h`, peer ends in `n`.
 #[must_use]
-pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
+pub(crate) fn veth_names(workspace_handle_id: &str) -> (String, String) {
     // Rust `_veth_names` takes the FIRST 6 chars (`workspace_handle_id[:6]`);
     // reproduce that exactly so the interface naming is parity-equal.
     let short: String = workspace_handle_id.chars().take(6).collect();
@@ -86,7 +86,7 @@ pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
 ///
 /// Lowest-IP-first O(N) scan; N <= 253. No Linux deps.
 #[derive(Debug, Clone, Default)]
-pub struct BridgeAddressPool {
+pub(crate) struct BridgeAddressPool {
     allocated: Vec<Ipv4Addr>,
 }
 
@@ -148,7 +148,7 @@ impl BridgeAddressPool {
 /// the bridge/veth path with `rtnetlink` link/address operations and the static
 /// NAT/filter path with `NETLINK_NETFILTER` messages — NO `ip`/`nft` binaries.
 #[derive(Debug)]
-pub struct IsolatedNetwork {
+pub(crate) struct IsolatedNetwork {
     rfc1918_egress: Rfc1918Egress,
     pool: BridgeAddressPool,
     initialized: bool,
@@ -286,6 +286,16 @@ impl IsolatedNetwork {
 fn test_harness_enabled() -> bool {
     std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
         .is_ok_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+}
+
+/// Wrap a netlink/netfilter failure as [`IsolatedError::NetworkUnavailable`],
+/// prefixing the failing step. Shared by the rtnetlink and nft wire paths.
+#[cfg(target_os = "linux")]
+pub(crate) fn network_error_at(
+    step: impl Into<String>,
+    error: impl std::fmt::Display,
+) -> IsolatedError {
+    IsolatedError::NetworkUnavailable(format!("{}: {error}", step.into()))
 }
 
 fn is_pool_ip(ip: Ipv4Addr) -> bool {

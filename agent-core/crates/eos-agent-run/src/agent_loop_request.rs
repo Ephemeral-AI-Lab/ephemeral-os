@@ -1,8 +1,8 @@
 //! Runner-owned conversion from agent definitions to loop requests.
 
 use eos_types::{
-    AgentDefinition, AgentLoopMessage, AgentRunId, Message, MessageRole, SpawnAgentRequest,
-    StartAgentLoopRequest, DEFAULT_MAX_TOKENS,
+    AgentDefinition, AgentLoopMessage, AgentRunRecordTarget, Message, MessageRole,
+    SpawnAgentRequest, StartAgentLoopRequest, DEFAULT_MAX_TOKENS,
 };
 
 /// Build the thin engine loop request for one resolved agent.
@@ -10,10 +10,10 @@ use eos_types::{
 pub fn build_start_agent_loop_request(
     agent: &AgentDefinition,
     request: SpawnAgentRequest,
-    agent_run_id: AgentRunId,
+    record_target: AgentRunRecordTarget,
 ) -> StartAgentLoopRequest {
     StartAgentLoopRequest {
-        agent_run_id,
+        record_target,
         initial_messages: initial_loop_messages(agent, request.initial_messages),
         model_key: agent.model.clone().unwrap_or_default(),
         max_completion_tokens: DEFAULT_MAX_TOKENS,

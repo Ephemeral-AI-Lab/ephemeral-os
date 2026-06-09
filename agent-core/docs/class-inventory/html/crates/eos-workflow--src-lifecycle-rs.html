@@ -80,39 +80,47 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-create-workflow-56"><td>method</td><td>create_workflow</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a> (&amp; self , request_id : &amp; eos_types :: RequestId , parent_task_id : &amp; eos_types :: TaskId , workflow_goal : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Workflow &gt;</code><p class="docstring">Insert a workflow row.</p><details class="function-source">
+</details></td></tr><tr id="method-create-workflow-56"><td>method</td><td>create_workflow</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a> (&amp; self , request_id : &amp; eos_types :: RequestId , parent_task_id : &amp; eos_types :: TaskId , launched_by_agent_run_id : &amp; AgentRunId , tool_use_id : Option &lt; &amp; ToolUseId &gt; , workflow_goal : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Workflow &gt;</code><p class="docstring">Insert a workflow row.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Insert a workflow row.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;eos_types::<span class="rs-type">RequestId</span>,
         parent_task_id: &amp;eos_types::<span class="rs-type">TaskId</span>,
+        launched_by_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        tool_use_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ToolUseId</span>&gt;,
         workflow_goal: &amp;str,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
             .deps
             .workflow_store
-            .insert(request_id, parent_task_id, workflow_goal)
+            .insert(
+                request_id,
+                parent_task_id,
+                launched_by_agent_run_id,
+                tool_use_id,
+                workflow_goal,
+            )
             .<span class="rs-kw">await</span>?)
     }
 </code></pre>
-</details></td></tr><tr id="method-create-iteration-with-coordinator-70"><td>method</td><td>create_iteration_with_coordinator</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a> &lt; &#x27;a &gt; (&amp; &#x27;a self , workflow_id : &amp; &#x27;a WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-type-IterationCoordinatorFuture-18">IterationCoordinatorFuture</a> &lt; &#x27;a &gt;</code><p class="docstring">Create the next iteration and register its coordinator.</p><details class="function-source">
+</details></td></tr><tr id="method-create-iteration-with-coordinator-78"><td>method</td><td>create_iteration_with_coordinator</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a> &lt; &#x27;a &gt; (&amp; &#x27;a self , workflow_id : &amp; &#x27;a WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-type-IterationCoordinatorFuture-18">IterationCoordinatorFuture</a> &lt; &#x27;a &gt;</code><p class="docstring">Create the next iteration and register its coordinator.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create the next iteration and register its coordinator.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> create_iteration_with_coordinator&lt;&#x27;a&gt;(
         &amp;&#x27;a <span class="rs-self">self</span>,
         workflow_id: &amp;&#x27;a <span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-lifecycle-rs.html#item-type-IterationCoordinatorFuture-18">IterationCoordinatorFuture</a>&lt;&#x27;a&gt; {
-        <span class="rs-type">Box</span>::pin(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-78">create_iteration_with_coordinator_inner</a>(workflow_id))
+        <span class="rs-type">Box</span>::pin(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-86">create_iteration_with_coordinator_inner</a>(workflow_id))
     }
 </code></pre>
-</details></td></tr><tr id="method-create-iteration-with-coordinator-inner-78"><td>method</td><td>create_iteration_with_coordinator_inner</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-78">create_iteration_with_coordinator_inner</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; (eos_types :: Iteration , Arc &lt; <a class="symbol-link" href="eos-workflow--src-iteration-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a> &gt;) &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-create-iteration-with-coordinator-inner-86"><td>method</td><td>create_iteration_with_coordinator_inner</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-86">create_iteration_with_coordinator_inner</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; (eos_types :: Iteration , Arc &lt; <a class="symbol-link" href="eos-workflow--src-iteration-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a> &gt;) &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-78">create_iteration_with_coordinator_inner</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-86">create_iteration_with_coordinator_inner</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(eos_types::<span class="rs-type">Iteration</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a>&gt;)&gt; {
-        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !workflow.is_open() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;workflow {:?} is not open&quot;,
@@ -183,7 +191,7 @@
         <span class="rs-kw">let</span> lifecycle = <span class="rs-self">self</span>.clone();
         <span class="rs-kw">let</span> callback: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-type-IterationClosedCallback-24">IterationClosedCallback</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-kw">move</span> |closed: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>| {
             <span class="rs-kw">let</span> lifecycle = lifecycle.clone();
-            <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> { lifecycle.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a>(closed).<span class="rs-kw">await</span> })
+            <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> { lifecycle.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a>(closed).<span class="rs-kw">await</span> })
         });
         <span class="rs-kw">let</span> coordinator =
             <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(iteration.id.clone(), <span class="rs-self">self</span>.deps.clone(), callback);
@@ -191,10 +199,10 @@
         <span class="rs-type">Ok</span>((iteration, coordinator))
     }
 </code></pre>
-</details></td></tr><tr id="method-handle-iteration-closed-161"><td>method</td><td>handle_iteration_closed</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a> (&amp; self , closed : <a class="symbol-link" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">React to a closed iteration.</p><details class="function-source">
+</details></td></tr><tr id="method-handle-iteration-closed-169"><td>method</td><td>handle_iteration_closed</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a> (&amp; self , closed : <a class="symbol-link" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">React to a closed iteration.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// React to a closed iteration.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a>(&amp;<span class="rs-self">self</span>, closed: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a>(&amp;<span class="rs-self">self</span>, closed: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
             .iteration_store
@@ -207,26 +215,26 @@
 
         <span class="rs-kw">match</span> closed.outcome {
             <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Continue</span> { .. } =&gt; {
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-189">start_iteration_with_deferred_goal</a>(&amp;iteration.workflow_id)
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-197">start_iteration_with_deferred_goal</a>(&amp;iteration.workflow_id)
                     .<span class="rs-kw">await</span>
             }
             <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Complete</span> =&gt; <span class="rs-self">self</span>
-                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
+                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
                 .<span class="rs-kw">await</span>
                 .map(|_| ()),
             <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Failed</span> | <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Cancelled</span> { .. } =&gt; <span class="rs-self">self</span>
-                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
+                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
                 .<span class="rs-kw">await</span>
                 .map(|_| ()),
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-start-iteration-with-deferred-goal-189"><td>method</td><td>start_iteration_with_deferred_goal</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-189">start_iteration_with_deferred_goal</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Start the deferred-goal continuation iteration, compensating on a<br>first-attempt start failure (parity with Rust `_start_deferred_iteration`).</p><details class="function-source">
+</details></td></tr><tr id="method-start-iteration-with-deferred-goal-197"><td>method</td><td>start_iteration_with_deferred_goal</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-197">start_iteration_with_deferred_goal</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Start the deferred-goal continuation iteration, compensating on a<br>first-attempt start failure (parity with Rust `_start_deferred_iteration`).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Start the deferred-goal continuation iteration, compensating on a</span>
     <span class="rs-comment">/// first-attempt start failure (parity with Rust `_start_deferred_iteration`).</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-189">start_iteration_with_deferred_goal</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> (next, coordinator) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(workflow_id).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-197">start_iteration_with_deferred_goal</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+        <span class="rs-kw">let</span> (next, coordinator) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a>(workflow_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = coordinator.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-rs.html#method-create-and-start-first-attempt-116">create_and_start_first_attempt</a>().<span class="rs-kw">await</span> {
             <span class="rs-comment">// Continuation could not start: cancel the new iteration, release its</span>
             <span class="rs-comment">// coordinator, and fail the workflow. The original error is swallowed</span>
@@ -249,21 +257,21 @@
                     <span class="rs-type">None</span>,
                 )
                 .<span class="rs-kw">await</span>?;
-            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
                 .<span class="rs-kw">await</span>?;
         }
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-close-workflow-221"><td>method</td><td>close_workflow</td><td><code>pub async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId , outcome : WorkflowOutcome ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Workflow &gt;</code><p class="docstring">Close a workflow without mutating the parent task.</p><details class="function-source">
+</details></td></tr><tr id="method-close-workflow-229"><td>method</td><td>close_workflow</td><td><code>pub async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId , outcome : WorkflowOutcome ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Workflow &gt;</code><p class="docstring">Close a workflow without mutating the parent task.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Close a workflow without mutating the parent task.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
         outcome: <span class="rs-type">WorkflowOutcome</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
-        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !workflow.is_open() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;workflow {:?} is not open&quot;,
@@ -271,7 +279,7 @@
             )));
         }
         <span class="rs-kw">let</span> outcomes =
-            <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-257">workflow_outcomes_json</a>(<span class="rs-self">self</span>.deps.iteration_store.as_ref(), &amp;workflow).<span class="rs-kw">await</span>?;
+            <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-265">workflow_outcomes_json</a>(<span class="rs-self">self</span>.deps.iteration_store.as_ref(), &amp;workflow).<span class="rs-kw">await</span>?;
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
             .deps
             .workflow_store
@@ -284,9 +292,9 @@
             .<span class="rs-kw">await</span>?)
     }
 </code></pre>
-</details></td></tr><tr id="method-require-workflow-248"><td>method</td><td>require_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Workflow &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-require-workflow-256"><td>method</td><td>require_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Workflow &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
         <span class="rs-self">self</span>.deps
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id)
@@ -315,17 +323,17 @@
   <div class="tags"></div>
 
   <p class="source">crates/eos-workflow/src/lifecycle.rs:18</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-outcomes-json-257" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_outcomes_json private async fn workflow_outcomes_json (iteration_store : &amp; dyn IterationStore , workflow : &amp; Workflow ,) -&gt; Result &lt; String &gt; crates/eos-workflow/src/lifecycle.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-outcomes-json-265" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_outcomes_json private async fn workflow_outcomes_json (iteration_store : &amp; dyn IterationStore , workflow : &amp; Workflow ,) -&gt; Result &lt; String &gt; crates/eos-workflow/src/lifecycle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_outcomes_json</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-257">workflow_outcomes_json</a> (iteration_store : &amp; dyn IterationStore , workflow : &amp; Workflow ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String &gt;</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-265">workflow_outcomes_json</a> (iteration_store : &amp; dyn IterationStore , workflow : &amp; Workflow ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String &gt;</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-257">workflow_outcomes_json</a>(
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-265">workflow_outcomes_json</a>(
     iteration_store: &amp;<span class="rs-kw">dyn</span> <span class="rs-type">IterationStore</span>,
     workflow: &amp;<span class="rs-type">Workflow</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>&gt; {
@@ -341,19 +349,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/lifecycle.rs:257</p>
-</article><article id="item-fn-close-does-not-touch-parent-284" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn close_does_not_touch_parent private async fn close_does_not_touch_parent () crates/eos-workflow/src/lifecycle.rs  ">
+  <p class="source">crates/eos-workflow/src/lifecycle.rs:265</p>
+</article><article id="item-fn-close-does-not-touch-parent-292" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn close_does_not_touch_parent private async fn close_does_not_touch_parent () crates/eos-workflow/src/lifecycle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>close_does_not_touch_parent</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-fn-close-does-not-touch-parent-284">close_does_not_touch_parent</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-fn-close-does-not-touch-parent-292">close_does_not_touch_parent</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-close-does-not-touch-parent-284">close_does_not_touch_parent</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-close-does-not-touch-parent-292">close_does_not_touch_parent</a>() {
         <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner);
@@ -364,13 +372,15 @@
             .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(
                 &amp;eos_types::<span class="rs-type">RequestId</span>::new_v4(),
                 &amp;&quot;parent&quot;.parse().unwrap(),
+                &amp;eos_types::<span class="rs-type">AgentRunId</span>::new_v4(),
+                <span class="rs-type">None</span>,
                 &quot;delegated goal&quot;,
             )
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// One open iteration, no attempt -&gt; close has no task work to do.</span>
         lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(&amp;workflow.id)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a>(&amp;workflow.id)
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// Prime the counter through the counted path so the zero *delta* below is</span>
@@ -385,7 +395,7 @@
         <span class="rs-kw">let</span> writes_before = stores.task_write_count();
         assert!(writes_before &gt; 0, &quot;counter must observe writes&quot;);
         <span class="rs-kw">let</span> closed = lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(&amp;workflow.id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(&amp;workflow.id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
             .<span class="rs-kw">await</span>
             .unwrap();
 
@@ -397,19 +407,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/lifecycle.rs:284</p>
-</article><article id="item-fn-continuation-start-failure-compensates-333" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn continuation_start_failure_compensates private async fn continuation_start_failure_compensates () crates/eos-workflow/src/lifecycle.rs  ">
+  <p class="source">crates/eos-workflow/src/lifecycle.rs:292</p>
+</article><article id="item-fn-continuation-start-failure-compensates-343" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn continuation_start_failure_compensates private async fn continuation_start_failure_compensates () crates/eos-workflow/src/lifecycle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>continuation_start_failure_compensates</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-fn-continuation-start-failure-compensates-333">continuation_start_failure_compensates</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-lifecycle-rs.html#item-fn-continuation-start-failure-compensates-343">continuation_start_failure_compensates</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-continuation-start-failure-compensates-333">continuation_start_failure_compensates</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-continuation-start-failure-compensates-343">continuation_start_failure_compensates</a>() {
         <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner);
@@ -425,13 +435,15 @@
             .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(
                 &amp;eos_types::<span class="rs-type">RequestId</span>::new_v4(),
                 &amp;parent.id,
+                &amp;eos_types::<span class="rs-type">AgentRunId</span>::new_v4(),
+                <span class="rs-type">None</span>,
                 &quot;delegated goal&quot;,
             )
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// Iteration 1 + its coordinator (the predecessor of the continuation).</span>
         <span class="rs-kw">let</span> (iter1, _coordinator1) = lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(&amp;workflow.id)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a>(&amp;workflow.id)
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// Mark iter1 SUCCEEDED with a deferred goal so the continuation fires.</span>
@@ -456,7 +468,7 @@
         <span class="rs-comment">// Route the close: the continuation's planner launch fails, the saga</span>
         <span class="rs-comment">// runs, and the original error is swallowed (Ok).</span>
         lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a>(<a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a> {
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a>(<a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a> {
                 iteration_id: iter1.id.clone(),
                 outcome: <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Continue</span> {
                     deferred_goal: <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(&quot;<span class="rs-kw">continue</span>&quot;).unwrap(),
@@ -505,7 +517,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/lifecycle.rs:333</p>
+  <p class="source">crates/eos-workflow/src/lifecycle.rs:343</p>
 </article></div>
 </section></div>
 </main>
@@ -519,8 +531,8 @@
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">IterationCreationReason</span>, <span class="rs-type">IterationOutcome</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">IterationStore</span>, <span class="rs-type">Workflow</span>,
-    <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowOutcome</span>,
+    <span class="rs-type">AgentRunId</span>, <span class="rs-type">IterationCreationReason</span>, <span class="rs-type">IterationOutcome</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">IterationStore</span>,
+    <span class="rs-type">ToolUseId</span>, <span class="rs-type">Workflow</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowOutcome</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::<a class="symbol-link rs-type" href="eos-workflow--src-attempt-launch-rs.html#item-struct-AttemptResources-222">AttemptResources</a>;
@@ -574,12 +586,20 @@
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;eos_types::<span class="rs-type">RequestId</span>,
         parent_task_id: &amp;eos_types::<span class="rs-type">TaskId</span>,
+        launched_by_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        tool_use_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ToolUseId</span>&gt;,
         workflow_goal: &amp;str,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
             .deps
             .workflow_store
-            .insert(request_id, parent_task_id, workflow_goal)
+            .insert(
+                request_id,
+                parent_task_id,
+                launched_by_agent_run_id,
+                tool_use_id,
+                workflow_goal,
+            )
             .<span class="rs-kw">await</span>?)
     }
 
@@ -588,14 +608,14 @@
         &amp;&#x27;a <span class="rs-self">self</span>,
         workflow_id: &amp;&#x27;a <span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-lifecycle-rs.html#item-type-IterationCoordinatorFuture-18">IterationCoordinatorFuture</a>&lt;&#x27;a&gt; {
-        <span class="rs-type">Box</span>::pin(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-78">create_iteration_with_coordinator_inner</a>(workflow_id))
+        <span class="rs-type">Box</span>::pin(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-86">create_iteration_with_coordinator_inner</a>(workflow_id))
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-78">create_iteration_with_coordinator_inner</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-inner-86">create_iteration_with_coordinator_inner</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(eos_types::<span class="rs-type">Iteration</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a>&gt;)&gt; {
-        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !workflow.is_open() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;workflow {:?} is not open&quot;,
@@ -666,7 +686,7 @@
         <span class="rs-kw">let</span> lifecycle = <span class="rs-self">self</span>.clone();
         <span class="rs-kw">let</span> callback: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-type-IterationClosedCallback-24">IterationClosedCallback</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-kw">move</span> |closed: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>| {
             <span class="rs-kw">let</span> lifecycle = lifecycle.clone();
-            <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> { lifecycle.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a>(closed).<span class="rs-kw">await</span> })
+            <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> { lifecycle.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a>(closed).<span class="rs-kw">await</span> })
         });
         <span class="rs-kw">let</span> coordinator =
             <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(iteration.id.clone(), <span class="rs-self">self</span>.deps.clone(), callback);
@@ -675,7 +695,7 @@
     }
 
     <span class="rs-comment">/// React to a closed iteration.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a>(&amp;<span class="rs-self">self</span>, closed: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a>(&amp;<span class="rs-self">self</span>, closed: <a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
             .iteration_store
@@ -688,15 +708,15 @@
 
         <span class="rs-kw">match</span> closed.outcome {
             <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Continue</span> { .. } =&gt; {
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-189">start_iteration_with_deferred_goal</a>(&amp;iteration.workflow_id)
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-197">start_iteration_with_deferred_goal</a>(&amp;iteration.workflow_id)
                     .<span class="rs-kw">await</span>
             }
             <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Complete</span> =&gt; <span class="rs-self">self</span>
-                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
+                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
                 .<span class="rs-kw">await</span>
                 .map(|_| ()),
             <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Failed</span> | <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Cancelled</span> { .. } =&gt; <span class="rs-self">self</span>
-                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
+                .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(&amp;iteration.workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
                 .<span class="rs-kw">await</span>
                 .map(|_| ()),
         }
@@ -704,8 +724,8 @@
 
     <span class="rs-comment">/// Start the deferred-goal continuation iteration, compensating on a</span>
     <span class="rs-comment">/// first-attempt start failure (parity with Rust `_start_deferred_iteration`).</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-189">start_iteration_with_deferred_goal</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> (next, coordinator) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(workflow_id).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-start-iteration-with-deferred-goal-197">start_iteration_with_deferred_goal</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+        <span class="rs-kw">let</span> (next, coordinator) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a>(workflow_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = coordinator.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-rs.html#method-create-and-start-first-attempt-116">create_and_start_first_attempt</a>().<span class="rs-kw">await</span> {
             <span class="rs-comment">// Continuation could not start: cancel the new iteration, release its</span>
             <span class="rs-comment">// coordinator, and fail the workflow. The original error is swallowed</span>
@@ -728,19 +748,19 @@
                     <span class="rs-type">None</span>,
                 )
                 .<span class="rs-kw">await</span>?;
-            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(workflow_id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Failed</span>)
                 .<span class="rs-kw">await</span>?;
         }
         <span class="rs-type">Ok</span>(())
     }
 
     <span class="rs-comment">/// Close a workflow without mutating the parent task.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
         outcome: <span class="rs-type">WorkflowOutcome</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
-        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a>(workflow_id).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !workflow.is_open() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;workflow {:?} is not open&quot;,
@@ -748,7 +768,7 @@
             )));
         }
         <span class="rs-kw">let</span> outcomes =
-            <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-257">workflow_outcomes_json</a>(<span class="rs-self">self</span>.deps.iteration_store.as_ref(), &amp;workflow).<span class="rs-kw">await</span>?;
+            <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-265">workflow_outcomes_json</a>(<span class="rs-self">self</span>.deps.iteration_store.as_ref(), &amp;workflow).<span class="rs-kw">await</span>?;
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
             .deps
             .workflow_store
@@ -761,7 +781,7 @@
             .<span class="rs-kw">await</span>?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-248">require_workflow</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-require-workflow-256">require_workflow</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Workflow</span>&gt; {
         <span class="rs-self">self</span>.deps
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id)
@@ -770,7 +790,7 @@
     }
 }
 
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-257">workflow_outcomes_json</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-workflow-outcomes-json-265">workflow_outcomes_json</a>(
     iteration_store: &amp;<span class="rs-kw">dyn</span> <span class="rs-type">IterationStore</span>,
     workflow: &amp;<span class="rs-type">Workflow</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>&gt; {
@@ -798,7 +818,7 @@
     <span class="rs-comment">// status + outcomes and performs ZERO TaskStore writes (the parent task is</span>
     <span class="rs-comment">// never mutated at close).</span>
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-close-does-not-touch-parent-284">close_does_not_touch_parent</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-close-does-not-touch-parent-292">close_does_not_touch_parent</a>() {
         <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner);
@@ -809,13 +829,15 @@
             .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(
                 &amp;eos_types::<span class="rs-type">RequestId</span>::new_v4(),
                 &amp;&quot;parent&quot;.parse().unwrap(),
+                &amp;eos_types::<span class="rs-type">AgentRunId</span>::new_v4(),
+                <span class="rs-type">None</span>,
                 &quot;delegated goal&quot;,
             )
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// One open iteration, no attempt -&gt; close has no task work to do.</span>
         lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(&amp;workflow.id)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a>(&amp;workflow.id)
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// Prime the counter through the counted path so the zero *delta* below is</span>
@@ -830,7 +852,7 @@
         <span class="rs-kw">let</span> writes_before = stores.task_write_count();
         assert!(writes_before &gt; 0, &quot;counter must observe writes&quot;);
         <span class="rs-kw">let</span> closed = lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-221">close_workflow</a>(&amp;workflow.id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-close-workflow-229">close_workflow</a>(&amp;workflow.id, <span class="rs-type">WorkflowOutcome</span>::<span class="rs-type">Succeeded</span>)
             .<span class="rs-kw">await</span>
             .unwrap();
 
@@ -847,7 +869,7 @@
     <span class="rs-comment">// mutates the parent. The error is swallowed (Ok), matching Rust's</span>
     <span class="rs-comment">// `except`. The deferred-path analogue of starter::compensation_rolls_back.</span>
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-continuation-start-failure-compensates-333">continuation_start_failure_compensates</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#item-fn-continuation-start-failure-compensates-343">continuation_start_failure_compensates</a>() {
         <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-config-rs.html#method-default-22">default</a>());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner);
@@ -863,13 +885,15 @@
             .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(
                 &amp;eos_types::<span class="rs-type">RequestId</span>::new_v4(),
                 &amp;parent.id,
+                &amp;eos_types::<span class="rs-type">AgentRunId</span>::new_v4(),
+                <span class="rs-type">None</span>,
                 &quot;delegated goal&quot;,
             )
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// Iteration 1 + its coordinator (the predecessor of the continuation).</span>
         <span class="rs-kw">let</span> (iter1, _coordinator1) = lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(&amp;workflow.id)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-78">create_iteration_with_coordinator</a>(&amp;workflow.id)
             .<span class="rs-kw">await</span>
             .unwrap();
         <span class="rs-comment">// Mark iter1 SUCCEEDED with a deferred goal so the continuation fires.</span>
@@ -894,7 +918,7 @@
         <span class="rs-comment">// Route the close: the continuation's planner launch fails, the saga</span>
         <span class="rs-comment">// runs, and the original error is swallowed (Ok).</span>
         lifecycle
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-161">handle_iteration_closed</a>(<a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a> {
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-handle-iteration-closed-169">handle_iteration_closed</a>(<a class="symbol-link rs-type" href="eos-workflow--src-iteration-rs.html#item-struct-IterationClosed-15">IterationClosed</a> {
                 iteration_id: iter1.id.clone(),
                 outcome: <span class="rs-type">IterationOutcome</span>::<span class="rs-type">Continue</span> {
                     deferred_goal: <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(&quot;<span class="rs-kw">continue</span>&quot;).unwrap(),

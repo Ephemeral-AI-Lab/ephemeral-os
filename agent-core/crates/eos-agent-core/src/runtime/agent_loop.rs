@@ -14,12 +14,12 @@ use eos_tool::{
     build_default_registry, CallerScope, ExecutionMetadata, TerminalSubmissionRuntime,
     ToolRegistry, ToolRuntime,
 };
-use eos_types::{AgentState, WorkflowApi, WorkflowAttemptSubmissionApi};
+use eos_types::{AgentRunRuntimeSnapshot, WorkflowApi, WorkflowAttemptSubmissionApi};
 
 use super::plugins::register_plugin_tools;
 use super::AgentCoreRuntime;
 
-/// Build a production agent-loop launcher from concrete runtime ports.
+/// Build a production agent-loop launcher from concrete runtime contracts.
 pub(crate) fn build_agent_loop_launcher(
     services: &AgentCoreRuntime,
     attempt_submission: Arc<dyn WorkflowAttemptSubmissionApi>,
@@ -131,7 +131,7 @@ impl RuntimeToolExecutionMetadataReader {
     async fn load_agent_state(
         &self,
         agent_run_id: &eos_types::AgentRunId,
-    ) -> Result<AgentState, EngineError> {
+    ) -> Result<AgentRunRuntimeSnapshot, EngineError> {
         let runtime_state = self.services.agent_state.get(agent_run_id);
         let run = self
             .services
@@ -186,7 +186,7 @@ impl RuntimeToolExecutionMetadataReader {
             .map(|state| state.workspace_root.as_str())
             .filter(|workspace_root| !workspace_root.trim().is_empty());
 
-        Ok(AgentState {
+        Ok(AgentRunRuntimeSnapshot {
             agent_run_id: agent_run_id.clone(),
             agent_name,
             request_id,
@@ -239,7 +239,7 @@ impl ToolExecutionMetadataReader for RuntimeToolExecutionMetadataReader {
     async fn agent_state(
         &self,
         agent_run_id: &eos_types::AgentRunId,
-    ) -> Result<AgentState, EngineError> {
+    ) -> Result<AgentRunRuntimeSnapshot, EngineError> {
         self.load_agent_state(agent_run_id).await
     }
 

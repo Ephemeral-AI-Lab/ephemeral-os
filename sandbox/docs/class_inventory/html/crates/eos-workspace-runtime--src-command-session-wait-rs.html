@@ -75,17 +75,17 @@
   </div>
   <code class="signature">pub trait <a class="symbol-link" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a>&lt; T &gt;</code>
   <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr id="method-try-finalize-7"><td>required</td><td>try_finalize</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-320">try_finalize</a> (&amp; self) -&gt; Option &lt; T &gt;</code><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-try-finalize-7"><td>required</td><td>try_finalize</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-317">try_finalize</a> (&amp; self) -&gt; Option &lt; T &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-320">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-317">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-transcript-len-8"><td>required</td><td>transcript_len</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-210">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
+</details></td></tr><tr id="method-transcript-len-8"><td>required</td><td>transcript_len</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-207">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-210">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-207">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64;
 </code></pre>
-</details></td></tr><tr id="method-read-output-since-9"><td>required</td><td>read_output_since</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
+</details></td></tr><tr id="method-read-output-since-9"><td>required</td><td>read_output_since</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span>;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span>;
 </code></pre>
 </details></td></tr></tbody></table>
 
@@ -112,19 +112,19 @@
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_millis(yield_time_ms);
     <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> last_off, <span class="rs-kw">mut</span> last_change) = (start_offset, <span class="rs-type">Instant</span>::now());
     loop {
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(result) = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-320">try_finalize</a>() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(result) = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-317">try_finalize</a>() {
             <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Completed</span>(result);
         }
-        <span class="rs-kw">let</span> off = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-210">transcript_len</a>();
+        <span class="rs-kw">let</span> off = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-207">transcript_len</a>();
         <span class="rs-kw">if</span> off != last_off {
             last_off = off;
             last_change = <span class="rs-type">Instant</span>::now();
         }
         <span class="rs-kw">if</span> off &gt; start_offset &amp;&amp; last_change.elapsed() &gt;= <span class="rs-type">Duration</span>::from_millis(config.quiet_ms) {
-            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a>(start_offset));
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a>(start_offset));
         }
         <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
-            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a>(start_offset));
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a>(start_offset));
         }
         thread::sleep(<span class="rs-type">Duration</span>::from_millis(5));
     }
@@ -147,9 +147,9 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::command_session::<span class="rs-type">CommandSessionConfig</span>;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a>&lt;<span class="rs-type">T</span>&gt; {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-320">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;;
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-210">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64;
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span>;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-317">try_finalize</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-207">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span>;
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
@@ -170,19 +170,19 @@
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_millis(yield_time_ms);
     <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> last_off, <span class="rs-kw">mut</span> last_change) = (start_offset, <span class="rs-type">Instant</span>::now());
     loop {
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(result) = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-320">try_finalize</a>() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(result) = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-try-finalize-317">try_finalize</a>() {
             <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Completed</span>(result);
         }
-        <span class="rs-kw">let</span> off = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-210">transcript_len</a>();
+        <span class="rs-kw">let</span> off = session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-transcript-len-207">transcript_len</a>();
         <span class="rs-kw">if</span> off != last_off {
             last_off = off;
             last_change = <span class="rs-type">Instant</span>::now();
         }
         <span class="rs-kw">if</span> off &gt; start_offset &amp;&amp; last_change.elapsed() &gt;= <span class="rs-type">Duration</span>::from_millis(config.quiet_ms) {
-            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a>(start_offset));
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a>(start_offset));
         }
         <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
-            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-204">read_output_since</a>(start_offset));
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>::<span class="rs-type">Running</span>(session.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-read-output-since-201">read_output_since</a>(start_offset));
         }
         thread::sleep(<span class="rs-type">Duration</span>::from_millis(5));
     }

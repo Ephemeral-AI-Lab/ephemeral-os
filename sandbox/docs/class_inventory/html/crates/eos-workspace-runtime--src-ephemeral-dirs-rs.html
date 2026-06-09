@@ -65,10 +65,10 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a></code>
   <p class="docstring">Allocates fresh writable directories for one operation.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>writable_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-19"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a> (writable_root : PathBuf) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>writable_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-19"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a> (writable_root : PathBuf) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(writable_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(writable_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { writable_root }
     }
 </code></pre>
@@ -90,7 +90,7 @@
         <span class="rs-kw">let</span> run_dir = <span class="rs-self">self</span>
             .writable_root
             .join(kind)
-            .join(format!(&quot;{}-{invocation}&quot;, std::process::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-147">id</a>()));
+            .join(format!(&quot;{}-{invocation}&quot;, std::process::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-151">id</a>()));
         <span class="rs-kw">let</span> upperdir = run_dir.join(&quot;upper&quot;);
         <span class="rs-kw">let</span> workdir = run_dir.join(&quot;work&quot;);
         <span class="rs-kw">let</span> output_path = run_dir.join(&quot;output.json&quot;);
@@ -128,10 +128,10 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-RunDirCleanup-12">RunDirCleanup</a></code>
   <p class="docstring">Best-effort cleanup guard for an allocated run directory.</p>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-68"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a> (path : PathBuf) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-68"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a> (path : PathBuf) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(path: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(path: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { path: <span class="rs-type">Some</span>(path) }
     }
 </code></pre>
@@ -204,7 +204,7 @@
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(writable_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(writable_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { writable_root }
     }
 
@@ -224,7 +224,7 @@
         <span class="rs-kw">let</span> run_dir = <span class="rs-self">self</span>
             .writable_root
             .join(kind)
-            .join(format!(&quot;{}-{invocation}&quot;, std::process::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-147">id</a>()));
+            .join(format!(&quot;{}-{invocation}&quot;, std::process::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-151">id</a>()));
         <span class="rs-kw">let</span> upperdir = run_dir.join(&quot;upper&quot;);
         <span class="rs-kw">let</span> workdir = run_dir.join(&quot;work&quot;);
         <span class="rs-kw">let</span> output_path = run_dir.join(&quot;output.json&quot;);
@@ -253,7 +253,7 @@
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-RunDirCleanup-12">RunDirCleanup</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(path: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(path: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { path: <span class="rs-type">Some</span>(path) }
     }
 }

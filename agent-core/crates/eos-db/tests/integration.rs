@@ -3,10 +3,12 @@
 
 use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_types::{
-    AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus, DeferredGoal,
-    ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus, JsonObject,
-    MaterializedPlan, Page, PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task,
-    TaskId, TaskRole, TaskStatus, UtcDateTime, WorkflowStatus,
+    AgentName, AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus,
+    DeferredGoal, ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus,
+    JsonObject, MaterializedPlan, Page, ParentAgentRunAnchor, ParentedAgentRunKind,
+    PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task, TaskAgentRunKind, TaskId,
+    TaskRole, TaskStatus, ToolUseId, UtcDateTime, WorkflowCoordinates, WorkflowStatus,
+    WorkflowTaskRole,
 };
 use sqlx::Row;
 
@@ -57,6 +59,18 @@ fn rid(s: &str) -> RequestId {
 
 fn tid(s: &str) -> TaskId {
     s.parse().expect("task id")
+}
+
+fn arid(s: &str) -> eos_types::AgentRunId {
+    s.parse().expect("agent run id")
+}
+
+fn tool_use_id(s: &str) -> ToolUseId {
+    s.parse().expect("tool use id")
+}
+
+fn agent_name(s: &str) -> AgentName {
+    AgentName::new(s).expect("agent name")
 }
 
 fn sample_task(id: &str, request_id: &RequestId, instruction: &str) -> Task {
@@ -165,7 +179,7 @@ async fn workflow_roundtrip_goal_mapping() {
 
     let parent = tid("parent-1");
     let wf = workflows
-        .insert(&id, &parent, "build the parser")
+        .insert(&id, &parent, &arid("launch-1"), None, "build the parser")
         .await
         .expect("insert");
     assert_eq!(wf.workflow_goal, "build the parser");
@@ -213,7 +227,10 @@ async fn iteration_roundtrip() {
         .create_request(&id, "/w", None, "p")
         .await
         .expect("create");
-    let wf = workflows.insert(&id, &tid("p3"), "goal").await.expect("wf");
+    let wf = workflows
+        .insert(&id, &tid("p3"), &arid("launch-p3"), None, "goal")
+        .await
+        .expect("wf");
 
     let it = iterations
         .insert(
@@ -289,7 +306,10 @@ async fn attempt_roundtrip() {
         .create_request(&id, "/w", None, "p")
         .await
         .expect("create");
-    let wf = workflows.insert(&id, &tid("p4"), "goal").await.expect("wf");
+    let wf = workflows
+        .insert(&id, &tid("p4"), &arid("launch-p4"), None, "goal")
+        .await
+        .expect("wf");
     let it = iterations
         .insert(
             &wf.id,
@@ -372,27 +392,21 @@ async fn agent_run_roundtrip() {
         .expect("task");
 
     let run_id: eos_types::AgentRunId = "run-1".parse().expect("run id");
-    let initial = vec![json_obj(&[("role", serde_json::json!("user"))])];
     let created = agent_runs
-        .create_run(&run_id, Some(&tid("t-5")), "coder", Some(&initial))
+        .create_run(&run_id, Some(&tid("t-5")), "coder")
         .await
         .expect("create run");
     assert_eq!(created.agent_name, "coder");
-    assert_eq!(created.initial_messages, Some(initial));
-    // Null-preserving: history/terminal stay None until finish.
-    assert!(created.message_history.is_none());
-    assert!(created.terminal_tool_result.is_none());
+    assert!(created.terminal_payload.is_none());
     assert_eq!(created.token_count, 0);
 
-    let history = vec![json_obj(&[("role", serde_json::json!("assistant"))])];
     let ttr = json_obj(&[("ok", serde_json::json!(true))]);
     let finished = agent_runs
-        .finish_run(&run_id, Some(&history), Some(&ttr), 42, None)
+        .finish_run(&run_id, Some(&ttr), 42, None)
         .await
         .expect("finish")
         .expect("some");
-    assert_eq!(finished.message_history, Some(history));
-    assert_eq!(finished.terminal_tool_result, Some(ttr));
+    assert_eq!(finished.terminal_payload, Some(ttr));
     assert_eq!(finished.token_count, 42);
     assert!(finished.finished_at.is_some());
 
@@ -401,11 +415,173 @@ async fn agent_run_roundtrip() {
         .create_run(
             &"run-2".parse::<eos_types::AgentRunId>().expect("id"),
             Some(&tid("t-5")),
-            "coder",
-            None
+            "coder"
         )
         .await
         .is_err());
+}
+
+#[tokio::test]
+async fn task_agent_run_lineage_materializes_record_indexes() {
+    let (_dir, db) = open_temp().await;
+    let request_id = rid("req-lineage");
+    db.requests()
+        .create_request(&request_id, "/w", None, "p")
+        .await
+        .expect("request");
+
+    let root_task = tid("root-lineage");
+    let root_run = arid("run-root-lineage");
+    let created_root = db
+        .task_agent_runs()
+        .create_root_task_agent_run(&request_id, &root_task, &root_run, &agent_name("root"))
+        .await
+        .expect("root");
+    assert_eq!(created_root.task_id, root_task);
+    assert_eq!(
+        created_root.record_target.record_dir.as_str(),
+        "requests/req-lineage/root-task-root-lineage/agent-run-run-root-lineage"
+    );
+    assert_eq!(
+        db.requests()
+            .get(&request_id)
+            .await
+            .expect("get request")
+            .expect("request")
+            .root_task_id,
+        Some(root_task.clone())
+    );
+    let root_payload = json_obj(&[("result", serde_json::json!("root done"))]);
+    let finished_root = db
+        .task_agent_runs()
+        .finish_task_run(&root_run, TaskStatus::Done, Some(&root_payload), 7, None)
+        .await
+        .expect("finish root")
+        .expect("root run");
+    assert_eq!(finished_root.status, TaskStatus::Done);
+    assert_eq!(finished_root.terminal_payload, Some(root_payload));
+    assert_eq!(finished_root.token_count, 7);
+
+    let workflow_tool_use_id = tool_use_id("tool-workflow");
+    let workflow = db
+        .workflows()
+        .insert(
+            &request_id,
+            &root_task,
+            &root_run,
+            Some(&workflow_tool_use_id),
+            "delegated goal",
+        )
+        .await
+        .expect("workflow");
+    assert_eq!(workflow.launched_by_agent_run_id, root_run.clone());
+    assert_eq!(workflow.tool_use_id, Some(workflow_tool_use_id));
+    assert_eq!(
+        db.workflows()
+            .list_for_launching_agent_run(&root_run)
+            .await
+            .expect("by launch")
+            .len(),
+        1
+    );
+
+    let workflow_coords = WorkflowCoordinates {
+        workflow_id: workflow.id.clone(),
+        iteration_id: "iter-lineage".parse().expect("iteration id"),
+        attempt_id: "attempt-lineage".parse().expect("attempt id"),
+    };
+    let planner_task = tid("planner-lineage");
+    let planner_run = arid("run-planner-lineage");
+    db.task_agent_runs()
+        .create_workflow_task_agent_run(
+            &request_id,
+            &planner_task,
+            &planner_run,
+            &workflow_coords,
+            WorkflowTaskRole::Planner,
+            &agent_name("planner"),
+        )
+        .await
+        .expect("planner");
+    let planner_index = db
+        .task_agent_runs()
+        .record_index_for_agent_run(&planner_run)
+        .await
+        .expect("planner index")
+        .expect("planner index");
+    assert_eq!(
+        planner_index.kind,
+        TaskAgentRunKind::Workflow {
+            workflow: workflow_coords,
+            role: WorkflowTaskRole::Planner,
+        }
+    );
+
+    let subagent_run = arid("run-sub-lineage");
+    let advisor_run = arid("run-advisor-lineage");
+    let parent = ParentAgentRunAnchor {
+        request_id: request_id.clone(),
+        parent_task_id: root_task.clone(),
+        agent_run_id: root_run.clone(),
+    };
+    db.task_agent_runs()
+        .create_parented_task_agent_run(
+            &subagent_run,
+            &parent,
+            ParentedAgentRunKind::Subagent,
+            Some(&tool_use_id("tool-sub")),
+            &agent_name("worker"),
+        )
+        .await
+        .expect("subagent");
+    db.task_agent_runs()
+        .create_parented_task_agent_run(
+            &advisor_run,
+            &parent,
+            ParentedAgentRunKind::Advisor,
+            Some(&tool_use_id("tool-advisor")),
+            &agent_name("advisor"),
+        )
+        .await
+        .expect("advisor");
+    let advisor_payload = json_obj(&[("feedback", serde_json::json!("ship"))]);
+    let finished_advisor = db
+        .task_agent_runs()
+        .finish_parented_run(
+            &advisor_run,
+            TaskStatus::Done,
+            Some(&advisor_payload),
+            3,
+            None,
+        )
+        .await
+        .expect("finish advisor")
+        .expect("advisor run");
+    assert_eq!(finished_advisor.status, TaskStatus::Done);
+    assert_eq!(finished_advisor.terminal_payload, Some(advisor_payload));
+    assert!(matches!(
+        db.task_agent_runs()
+            .record_index_for_agent_run(&subagent_run)
+            .await
+            .expect("subagent index")
+            .expect("subagent index")
+            .kind,
+        TaskAgentRunKind::Parented {
+            kind: ParentedAgentRunKind::Subagent,
+            ..
+        }
+    ));
+
+    let index = db
+        .task_agent_runs()
+        .task_execution_index(&root_task)
+        .await
+        .expect("flat index")
+        .expect("flat index");
+    assert_eq!(index.agent_run_id, root_run);
+    assert_eq!(index.workflow_ids, vec![workflow.id]);
+    assert_eq!(index.subagent_ids, vec![subagent_run]);
+    assert_eq!(index.advisor_ids, vec![advisor_run]);
 }
 
 // AC-eos-db-05: migrations build the full schema with final column names + FKs on.
@@ -416,6 +592,8 @@ async fn migrations_create_schema() {
         "requests",
         "tasks",
         "workflows",
+        "task_runs",
+        "parented_runs",
         "iterations",
         "attempts",
         "agent_runs",
@@ -435,6 +613,9 @@ async fn migrations_create_schema() {
     for sql in [
         "SELECT instruction FROM tasks LIMIT 0",
         "SELECT request_id FROM tasks LIMIT 0",
+        "SELECT launched_by_agent_run_id FROM workflows LIMIT 0",
+        "SELECT agent_run_id FROM task_runs LIMIT 0",
+        "SELECT parent_agent_run_id FROM parented_runs LIMIT 0",
         "SELECT outcomes FROM iterations LIMIT 0",
     ] {
         sqlx::query(sql).fetch_optional(db.pool()).await.expect(sql);
@@ -486,6 +667,8 @@ async fn migrations_create_schema() {
             col("id", "TEXT", None, 1),
             col("request_id", "TEXT", None, 0),
             col("parent_task_id", "TEXT", None, 0),
+            col("launched_by_agent_run_id", "TEXT", None, 0),
+            col("tool_use_id", "TEXT", None, 0),
             col("goal", "TEXT", None, 0),
             col("status", "TEXT", None, 0),
             col("iteration_ids", "TEXT", Some("'[]'"), 0),
@@ -493,6 +676,46 @@ async fn migrations_create_schema() {
             col("created_at", "TEXT", None, 0),
             col("updated_at", "TEXT", None, 0),
             col("closed_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "task_runs").await,
+        vec![
+            col("task_id", "TEXT", None, 1),
+            col("agent_run_id", "TEXT", None, 0),
+            col("request_id", "TEXT", None, 0),
+            col("role", "TEXT", None, 0),
+            col("status", "TEXT", None, 0),
+            col("workflow_id", "TEXT", None, 0),
+            col("iteration_id", "TEXT", None, 0),
+            col("attempt_id", "TEXT", None, 0),
+            col("agent_name", "TEXT", None, 0),
+            col("terminal_payload", "TEXT", None, 0),
+            col("token_count", "INTEGER", Some("0"), 0),
+            col("error", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+            col("finished_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "parented_runs").await,
+        vec![
+            col("task_id", "TEXT", None, 1),
+            col("agent_run_id", "TEXT", None, 0),
+            col("request_id", "TEXT", None, 0),
+            col("status", "TEXT", None, 0),
+            col("parent_agent_run_id", "TEXT", None, 0),
+            col("parent_task_id", "TEXT", None, 0),
+            col("kind", "TEXT", None, 0),
+            col("tool_use_id", "TEXT", None, 0),
+            col("agent_name", "TEXT", None, 0),
+            col("terminal_payload", "TEXT", None, 0),
+            col("token_count", "INTEGER", Some("0"), 0),
+            col("error", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+            col("finished_at", "TEXT", None, 0),
         ]
     );
     assert_eq!(
@@ -538,10 +761,8 @@ async fn migrations_create_schema() {
         vec![
             col("id", "TEXT", None, 1),
             col("task_id", "TEXT", None, 0),
-            col("initial_messages", "TEXT", None, 0),
             col("agent_name", "TEXT", None, 0),
-            col("message_history", "TEXT", None, 0),
-            col("terminal_tool_result", "TEXT", None, 0),
+            col("terminal_payload", "TEXT", None, 0),
             col("token_count", "INTEGER", Some("0"), 0),
             col("error", "TEXT", None, 0),
             col("created_at", "TEXT", None, 0),
@@ -579,7 +800,7 @@ async fn composition_root_and_cascade() {
         .expect("task");
     let wf = db
         .workflows()
-        .insert(&id, &tid("p8"), "goal")
+        .insert(&id, &tid("p8"), &arid("launch-p8"), None, "goal")
         .await
         .expect("wf");
 
@@ -695,7 +916,7 @@ async fn read_side_list_apis() {
     // get_for_task returns the bound run, and None when a task has no run.
     let run_id: eos_types::AgentRunId = "run-a1".parse().expect("run id");
     agent_runs
-        .create_run(&run_id, Some(&tid("t-a1")), "coder", None)
+        .create_run(&run_id, Some(&tid("t-a1")), "coder")
         .await
         .expect("run");
     let got = agent_runs
@@ -827,7 +1048,6 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
                 .parse::<eos_types::AgentRunId>()
                 .expect("run id"),
             None,
-            None,
             0,
             None,
         )
@@ -852,7 +1072,7 @@ async fn attempt_passed_closure_roundtrips_through_store() {
         .await
         .expect("create");
     let wf = workflows
-        .insert(&id, &tid("p-pass"), "goal")
+        .insert(&id, &tid("p-pass"), &arid("launch-pass"), None, "goal")
         .await
         .expect("wf");
     let it = iterations

@@ -77,34 +77,23 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> output;
 <span class="rs-kw">mod</span> request;
 <span class="rs-kw">mod</span> response;
-<span class="rs-kw">mod</span> session;
+#[cfg(any(target_os = &quot;linux&quot;, test))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> session;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">mod</span> transcript;
 #[cfg(any(target_os = &quot;linux&quot;, test))]
-<span class="rs-kw">mod</span> wait;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> wait;
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> process;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> process;
 
-<span class="rs-kw">mod</span> config {
-    <span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_config::configs::command_session::*;
-}
-
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> config::<span class="rs-type">CommandSessionConfig</span>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_config::configs::command_session::<span class="rs-type">CommandSessionConfig</span>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-workspace-runtime.html#item-enum-CommandSessionError-3">CommandSessionError</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> output::tail_lines;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> request::{
     <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-request-rs.html#item-struct-CancelCommandSession-38">CancelCommandSession</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-request-rs.html#item-struct-CollectCompleted-43">CollectCompleted</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-request-rs.html#item-struct-ReadCommandProgress-32">ReadCommandProgress</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-request-rs.html#item-struct-StartCommandSession-3">StartCommandSession</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-request-rs.html#item-struct-WriteStdin-25">WriteStdin</a>,
 };
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> response::{<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CollectCompletedResponse-168">CollectCompletedResponse</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> session::{<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-session-rs.html#item-struct-CommandSession-44">CommandSession</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-session-rs.html#item-struct-CommandSessionSpec-73">CommandSessionSpec</a>};
-
-#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> process::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>;
-#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> session::{<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-session-rs.html#item-struct-ReapedCommand-25">ReapedCommand</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-session-rs.html#item-struct-RunningCommandSessionParts-80">RunningCommandSessionParts</a>};
-#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> wait::{wait_for_yield, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-wait-rs.html#item-enum-WaitOutcome-12">WaitOutcome</a>};
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

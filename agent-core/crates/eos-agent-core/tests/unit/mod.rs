@@ -15,8 +15,9 @@ use eos_llm_client::{
 };
 use eos_tool::{Hook, ToolName};
 use eos_types::{
-    AgentDefinition, AgentRegistry, AgentRunId, AgentType, Page, RequestId, RequestListFilter,
-    RequestStatus, Task, TaskRole, TaskStatus, WorkflowStatus,
+    AgentDefinition, AgentName, AgentRegistry, AgentRunId, AgentType, Page, ParentAgentRunAnchor,
+    ParentedAgentRunKind, RequestId, RequestListFilter, RequestStatus, Task, TaskRole, TaskStatus,
+    ToolUseId, WorkflowStatus,
 };
 use eos_workflow::WorkflowConfig;
 use serde_json::json;

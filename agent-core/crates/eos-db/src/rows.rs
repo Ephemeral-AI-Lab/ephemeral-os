@@ -57,6 +57,8 @@ pub(crate) struct WorkflowRow {
     pub id: String,
     pub request_id: String,
     pub parent_task_id: String,
+    pub launched_by_agent_run_id: String,
+    pub tool_use_id: Option<String>,
     pub goal: String,
     pub status: String,
     pub iteration_ids: String,
@@ -106,10 +108,8 @@ pub(crate) struct AttemptRow {
 pub(crate) struct AgentRunRow {
     pub id: String,
     pub task_id: Option<String>,
-    pub initial_messages: Option<String>,
     pub agent_name: String,
-    pub message_history: Option<String>,
-    pub terminal_tool_result: Option<String>,
+    pub terminal_payload: Option<String>,
     pub token_count: i64,
     pub error: Option<String>,
     pub created_at: OffsetDateTime,
@@ -118,7 +118,7 @@ pub(crate) struct AgentRunRow {
 
 // ---- parse helpers --------------------------------------------------------
 
-fn parse_id<T>(field: &'static str, raw: &str) -> Result<T, DbError>
+pub(crate) fn parse_id<T>(field: &'static str, raw: &str) -> Result<T, DbError>
 where
     T: std::str::FromStr<Err = CoreError>,
 {
@@ -290,6 +290,11 @@ pub(crate) fn row_to_workflow(r: WorkflowRow) -> Result<Workflow, DbError> {
         status: parse_enum("workflows.status", &r.status)?,
         iteration_ids: json_col::decode_default(Some(&r.iteration_ids))?,
         parent_task_id: parse_id("workflows.parent_task_id", &r.parent_task_id)?,
+        launched_by_agent_run_id: parse_id(
+            "workflows.launched_by_agent_run_id",
+            &r.launched_by_agent_run_id,
+        )?,
+        tool_use_id: opt_id("workflows.tool_use_id", r.tool_use_id.as_deref())?,
         outcomes: r.outcomes, // raw projection string, not decoded
         created_at: UtcDateTime::from_offset(r.created_at),
         updated_at: UtcDateTime::from_offset(r.updated_at),
@@ -487,10 +492,8 @@ pub(crate) fn row_to_agent_run(r: AgentRunRow) -> Result<AgentRun, DbError> {
             .as_deref()
             .map(|task_id| parse_id("agent_runs.task_id", task_id))
             .transpose()?,
-        initial_messages: json_col::decode_opt(r.initial_messages.as_deref())?,
         agent_name: r.agent_name,
-        message_history: json_col::decode_opt(r.message_history.as_deref())?,
-        terminal_tool_result: json_col::decode_opt(r.terminal_tool_result.as_deref())?,
+        terminal_payload: json_col::decode_opt(r.terminal_payload.as_deref())?,
         token_count: r.token_count,
         error: r.error,
         created_at: UtcDateTime::from_offset(r.created_at),

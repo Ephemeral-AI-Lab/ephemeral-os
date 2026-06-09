@@ -126,15 +126,13 @@ pub fn make_task(id: &TaskId, request_id: &RequestId) -> Task {
 }
 
 /// A synthetic agent run for `task_id` with the given transcript message blocks.
-pub fn make_agent_run(task_id: &TaskId, messages: Vec<JsonObject>) -> AgentRun {
+pub fn make_agent_run(task_id: &TaskId, _messages: Vec<JsonObject>) -> AgentRun {
     let now = UtcDateTime::now();
     AgentRun {
         id: AgentRunId::new_v4(),
         task_id: Some(task_id.clone()),
-        initial_messages: None,
         agent_name: "planner".to_owned(),
-        message_history: Some(messages),
-        terminal_tool_result: None,
+        terminal_payload: None,
         token_count: 42,
         error: None,
         created_at: now,
@@ -345,7 +343,6 @@ impl eos_types::AgentRunStore for FakeAgentRunStore {
         _agent_run_id: &AgentRunId,
         _task_id: Option<&TaskId>,
         _agent_name: &str,
-        _initial_messages: Option<&[JsonObject]>,
     ) -> Result<AgentRun, eos_types::CoreError> {
         unimplemented!("not used by api tests")
     }
@@ -353,8 +350,7 @@ impl eos_types::AgentRunStore for FakeAgentRunStore {
     async fn finish_run(
         &self,
         _agent_run_id: &AgentRunId,
-        _message_history: Option<&[JsonObject]>,
-        _terminal_tool_result: Option<&JsonObject>,
+        _terminal_payload: Option<&JsonObject>,
         _token_count: i64,
         _error: Option<&str>,
     ) -> Result<Option<AgentRun>, eos_types::CoreError> {

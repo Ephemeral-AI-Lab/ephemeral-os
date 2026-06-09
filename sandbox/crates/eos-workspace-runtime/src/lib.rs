@@ -9,7 +9,7 @@ pub mod ephemeral;
 pub mod isolated;
 pub mod run;
 
-pub use run::{CommandHandle, WorkspaceRunHostPorts};
+pub use run::{IsolatedCommandHandle, WorkspaceRunHostPorts};
 
 #[cfg(target_os = "linux")]
 pub use run::{StartTarget, WorkspaceRunManager};

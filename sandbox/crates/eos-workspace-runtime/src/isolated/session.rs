@@ -18,24 +18,25 @@ use crate::isolated::error::IsolatedError;
 use crate::isolated::network::IsolatedNetwork;
 use serde_json::{json, Value};
 
-use self::support::monotonic_seconds;
+use self::resources::monotonic_seconds;
 
 /// Canonical scratch root for isolated workspace manager state and private dirs.
-pub const DEFAULT_ISOLATED_SCRATCH_ROOT: &str = "/eos/scratch/isolated";
+pub(crate) const DEFAULT_ISOLATED_SCRATCH_ROOT: &str = "/eos/scratch/isolated";
 
 mod capacity;
+mod fault_injection;
 mod gc;
+mod handle;
 mod lifecycle;
 mod persistence;
 mod ports;
-mod support;
+mod resources;
 #[cfg(test)]
 #[path = "../../tests/isolated/session_unit.rs"]
 mod tests;
-mod types;
 
+pub use handle::{CallerId, SnapshotLease, WorkspaceHandle, WorkspaceHandleId};
 pub use ports::{LayerStackSnapshotPort, NamespaceRuntimePort};
-pub use types::{CallerId, SnapshotLease, WorkspaceHandle, WorkspaceHandleId};
 
 /// Owns the isolated-workspace lifecycle, namespace runtime, capacity, TTL, GC.
 ///
@@ -118,7 +119,7 @@ where
                 step: format!("scratch_root: {err}"),
             }
         })?;
-        self.reap_startup_orphans()?;
+        self.reap_persisted_orphans()?;
         Ok(())
     }
 

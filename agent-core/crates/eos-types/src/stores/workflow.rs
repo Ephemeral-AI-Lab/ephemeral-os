@@ -3,9 +3,9 @@
 use async_trait::async_trait;
 
 use crate::{
-    Attempt, AttemptBudget, AttemptClosure, AttemptId, CoreError, DeferredGoal, Iteration,
-    IterationCreationReason, IterationId, IterationStatus, MaterializedPlan, RequestId, TaskId,
-    UtcDateTime, Workflow, WorkflowId, WorkflowStatus,
+    AgentRunId, Attempt, AttemptBudget, AttemptClosure, AttemptId, CoreError, DeferredGoal,
+    Iteration, IterationCreationReason, IterationId, IterationStatus, MaterializedPlan, RequestId,
+    TaskId, ToolUseId, UtcDateTime, Workflow, WorkflowId, WorkflowStatus,
 };
 
 use super::Sealed;
@@ -18,6 +18,8 @@ pub trait WorkflowStore: Sealed + Send + Sync {
         &self,
         request_id: &RequestId,
         parent_task_id: &TaskId,
+        launched_by_agent_run_id: &AgentRunId,
+        tool_use_id: Option<&ToolUseId>,
         workflow_goal: &str,
     ) -> Result<Workflow, CoreError>;
 
@@ -44,6 +46,12 @@ pub trait WorkflowStore: Sealed + Send + Sync {
     async fn list_for_parent_task(
         &self,
         parent_task_id: &TaskId,
+    ) -> Result<Vec<Workflow>, CoreError>;
+
+    /// All workflows launched by one agent run, ordered by creation.
+    async fn list_for_launching_agent_run(
+        &self,
+        launched_by_agent_run_id: &AgentRunId,
     ) -> Result<Vec<Workflow>, CoreError>;
 }
 

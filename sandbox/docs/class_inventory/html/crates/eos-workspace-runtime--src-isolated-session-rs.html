@@ -65,11 +65,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>&lt; S , R , A &gt;</code>
   <p class="docstring">Owns the isolated-workspace lifecycle, namespace runtime, capacity, TTL, GC.<br>Generic over the injected snapshot/lease + namespace ports and audit sink so<br>`eos-daemon` wires the kernel-backed implementations and tests inject<br>doubles. Holds the per-caller / per-handle maps and the shared network state.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>caps</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a></code></td></tr><tr><td>private</td><td>layer_stack</td><td><code>S</code></td></tr><tr><td>private</td><td>runtime</td><td><code>R</code></td></tr><tr><td>private</td><td>audit</td><td><code>A</code></td></tr><tr><td>private</td><td>network</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a></code></td></tr><tr><td>private</td><td>scratch_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>handles</td><td><code>HashMap &lt; WorkspaceHandleId , <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> &gt;</code></td></tr><tr><td>private</td><td>by_caller</td><td><code>HashMap &lt; CallerId , WorkspaceHandleId &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-67"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a> (caps : <a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a> , layer_stack : S , runtime : R , audit : A) -&gt; Self</code><p class="docstring">Construct a session with injected ports, caps, and audit sink.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>caps</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a></code></td></tr><tr><td>private</td><td>layer_stack</td><td><code>S</code></td></tr><tr><td>private</td><td>runtime</td><td><code>R</code></td></tr><tr><td>private</td><td>audit</td><td><code>A</code></td></tr><tr><td>private</td><td>network</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a></code></td></tr><tr><td>private</td><td>scratch_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>handles</td><td><code>HashMap &lt; WorkspaceHandleId , <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> &gt;</code></td></tr><tr><td>private</td><td>by_caller</td><td><code>HashMap &lt; CallerId , WorkspaceHandleId &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-67"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a> (caps : <a class="symbol-link" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a> , layer_stack : S , runtime : R , audit : A) -&gt; Self</code><p class="docstring">Construct a session with injected ports, caps, and audit sink.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct a session with injected ports, caps, and audit sink.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(caps: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a>, layer_stack: <span class="rs-type">S</span>, runtime: <span class="rs-type">R</span>, audit: <span class="rs-type">A</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(caps: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a>, layer_stack: <span class="rs-type">S</span>, runtime: <span class="rs-type">R</span>, audit: <span class="rs-type">A</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-rs.html#method-with-scratch-root-79">with_scratch_root</a>(
             caps,
             layer_stack,
@@ -94,7 +94,7 @@
         audit: <span class="rs-type">A</span>,
         scratch_root: <span class="rs-type">PathBuf</span>,
     ) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-kw">let</span> network = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(caps.rfc1918_egress);
+        <span class="rs-kw">let</span> network = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(caps.rfc1918_egress);
         <span class="rs-self">Self</span> {
             caps,
             layer_stack,
@@ -102,8 +102,8 @@
             audit,
             network,
             scratch_root,
-            handles: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
-            by_caller: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            handles: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
+            by_caller: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
         }
     }
 </code></pre>
@@ -262,7 +262,7 @@
 {
     <span class="rs-comment">/// Construct a session with injected ports, caps, and audit sink.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(caps: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a>, layer_stack: <span class="rs-type">S</span>, runtime: <span class="rs-type">R</span>, audit: <span class="rs-type">A</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(caps: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-caps-rs.html#item-struct-ResourceCaps-31">ResourceCaps</a>, layer_stack: <span class="rs-type">S</span>, runtime: <span class="rs-type">R</span>, audit: <span class="rs-type">A</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-rs.html#method-with-scratch-root-79">with_scratch_root</a>(
             caps,
             layer_stack,
@@ -285,7 +285,7 @@
         audit: <span class="rs-type">A</span>,
         scratch_root: <span class="rs-type">PathBuf</span>,
     ) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-kw">let</span> network = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(caps.rfc1918_egress);
+        <span class="rs-kw">let</span> network = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-IsolatedNetwork-145">IsolatedNetwork</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(caps.rfc1918_egress);
         <span class="rs-self">Self</span> {
             caps,
             layer_stack,
@@ -293,8 +293,8 @@
             audit,
             network,
             scratch_root,
-            handles: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
-            by_caller: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            handles: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
+            by_caller: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
         }
     }
 

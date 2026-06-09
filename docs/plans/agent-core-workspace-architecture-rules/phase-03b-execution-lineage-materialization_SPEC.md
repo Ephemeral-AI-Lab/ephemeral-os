@@ -1,6 +1,6 @@
 # Phase 03B - Execution Lineage and Materialization Spec
 
-Status: Draft (revised post-review 2026-06-09)
+Status: Implemented for bridge-compatible v1 (end-state cleanups tracked)
 Date: 2026-06-09
 Owner: eos-db / eos-agent-run / eos-workflow / eos-engine / eos-agent-core
 
@@ -19,6 +19,11 @@ Owner: eos-db / eos-agent-run / eos-workflow / eos-engine / eos-agent-core
 > `TaskExecutionNode.index`, row replay snapshots, and overlapping terminal
 > result projections) and derivable parent-id pairs labeled as denormalized
 > indexes.
+> Cross-phase cleanup with Phase 02/03: `SpawnAgentRequest.agent_run_id` and
+> `persist` are removed; `AgentState` is renamed/narrowed to
+> `AgentRunRuntimeSnapshot`; legacy `AgentRun` replay/terminal row fields are
+> removed/collapsed. The remaining spawn bridge is root/workflow own `task_id`
+> input, which disappears when row creation fully owns those ids.
 
 ## Phase Order
 
@@ -438,7 +443,6 @@ pub struct ParentAgentRunAnchor {
 }
 
 pub struct SpawnAgentRequest {
-    pub agent_run_id: Option<AgentRunId>,
     pub agent_name: AgentName,
     pub target: SpawnAgentTarget,
     pub initial_messages: Vec<Message>, // for generator/reducer, already composed from dependency outcomes
@@ -459,7 +463,10 @@ row-creation operations have not landed yet. End-state rule: a run **never**
 names its own `task_id` on input; the own `task_id` is row-creation output,
 returned by `CreatedTaskAgentRun` while the public spawn API keeps returning
 `AgentRunId`. At that point the only parent task id crossing into `spawn_agent`
-is `ParentAgentRunAnchor.parent_task_id`.
+is `ParentAgentRunAnchor.parent_task_id`. The current code may also accept an
+optional caller-provided `agent_run_id`; that is bridge-only. The target
+row-creation path mints the run id and returns it through the public
+`AgentRunId` handle.
 Dependency edges (`needs`) are not a spawn input; `eos-workflow` resolves
 dependency context into `initial_messages` before the call. `tool_use_id` stays
 on `SpawnAgentRequest` as a row-creation fact for workflow/parented launches
@@ -479,6 +486,8 @@ Rules:
 | `spawn_agent` may load parent request/workflow/attempt rows only to validate invariants | validation is allowed; workflow lifecycle decisions are not |
 | `Subagent` / `Advisor` calls `create_parented_task_agent_run` for a `parented_run` with its **own** row-created `task_id` | subagent/advisor runs are task-backed but parent-launched, not workflow-schedulable |
 | `CreatedTaskAgentRun.task_id` is present for every target | every run is task-backed; record resolution does not re-derive task ids after row creation |
+| `SpawnAgentRequest` has no caller-supplied `agent_run_id` or `persist` flag in the target contract | id minting and persistence policy are lifecycle-owned |
+| compatibility `agent_runs.task_id` is populated only for root/workflow rows that still reference legacy `tasks(id)` | parented run task ids live in `parented_runs.task_id`; copying them into the legacy FK breaks advisor/subagent spawn |
 | end-state `SpawnAgentTarget` has no `Existing { task_id }`; the current bridge carries root/workflow task ids only until row creation moves into `eos-agent-run` | every spawn should eventually own its own row creation; the run should not name its own task id |
 | `ParentAgentRunAnchor.agent_run_id` is the parent source of truth; `request_id` and `parent_task_id` are validated/denormalized parent indexes | parented rows stay queryable by request and parent task without making those fields the lineage source of truth |
 | generator/reducer `needs` are not a spawn input | dependency edges are plan/context data resolved into `initial_messages` by `eos-workflow` before the call |
@@ -723,7 +732,7 @@ that formatter — never in `eos-engine` and never inline in `eos-db` SQL.
 | no filesystem scan resolves ANY path — parent, workflow-root, or read-side | the legacy `find_*_dir` / `resolve_agent_run` scans are all replaced by lineage |
 | records do not reconstruct hierarchy from ad hoc callsite strings | `eos-engine` records consume `AgentRunRecordTarget` |
 | `parents-missing/` is not part of the normal production path | parent lineage is a durable row that exists before the child row is admitted |
-| there is no task-less `requests/<id>/agent-run-<id>/` layout | every top-level run is a root `task_run`; the generic `Agent` record kind is removed |
+| there is no task-less `requests/<id>/agent-run-<id>/` layout | every top-level run is a root `task_run`; the generic `Agent` record-layout variant is removed |
 
 `parents-missing/` is removed. Because `parented_runs.parent_agent_run_id` is a
 durable column written when the parented row is created, the enclosing path is resolved from
@@ -952,7 +961,9 @@ contract in this spec are identical across both branches.
 3. Extend `MaterializedPlan` to persist planned generator/reducer spawn inputs
    keyed by `plan_node_id` without inserting `task_runs` rows.
 4. Keep `spawn_agent` as `SpawnAgentTarget` input and `AgentRunId` output; keep
-   task id exposure inside row creation and record-target resolution.
+   task id exposure inside row creation and record-target resolution. The
+   bridge-only `SpawnAgentRequest.agent_run_id` and `persist` fields are already
+   removed from the public contract.
 5. Update request intake to call `spawn_agent(Root)` so the root
    `task_run` and `Request.root_task_id` are persisted before the root run.
 6. Update `eos-agent-run` task-agent-run row creation to call
@@ -973,7 +984,7 @@ contract in this spec are identical across both branches.
    `parented_runs` rows with `kind` derived from the target variant.
 11. Move record-target resolution to an `eos-db` record-index query plus the pure
    `eos-types::format_record_dir` formatter, and remove the `parents-missing/`
-   filesystem-scan path and the generic `Agent` record kind / task-less agent
+   filesystem-scan path and the generic `Agent` record-layout variant / task-less agent
    layout.
 12. Add the `TaskExecutionIndex` query in `eos-db` and the request/task execution
    tree reader in `eos-agent-core`.
@@ -984,18 +995,19 @@ contract in this spec are identical across both branches.
 
 | Item | Status |
 | --- | --- |
-| Keep the committed task/run merge and contingency note | Not started |
-| Add passive spawn-target, parent anchor, `TaskAgentRunKind`, record-index, record-target, and `ParentedAgentRunKind` DTOs in `eos-types` | In progress — current bridge code has `SpawnAgentTarget`, `ParentAgentRunAnchor`, `WorkflowCoordinates`, `TaskAgentRunKind`, and `ParentedAgentRunKind`; record-index and record-target DTOs remain pending until row creation owns task ids |
-| Add `task_runs` and `parented_runs` tables and the `workflows` launch columns | Not started |
-| Store planned generator/reducer spawn input on the materialized plan | Not started |
-| Update `spawn_agent` to take `SpawnAgentTarget` and keep task ids row-owned | In progress — input now uses `SpawnAgentTarget`; return is `AgentRunId`, and task ids remain internal to row creation/record resolution |
+| Keep the committed task/run merge and contingency note | Done |
+| Add passive spawn-target, parent anchor, `TaskAgentRunKind`, record-index, record-target, and `ParentedAgentRunKind` DTOs in `eos-types` | Done — `SpawnAgentTarget`, `ParentAgentRunAnchor`, `WorkflowCoordinates`, `TaskAgentRunKind`, `AgentRunRecordIndex`, `AgentRunRecordTarget`, `AgentRunRecordDir`, `CreatedTaskAgentRun`, `TaskExecutionIndex`, and `ParentedAgentRunKind` are in `eos-types`. |
+| Add `task_runs` and `parented_runs` tables and the `workflows` launch columns | Done — `0001_initial.sql` creates the normalized lineage tables and workflow launch columns. |
+| Store planned generator/reducer spawn input on the materialized plan | Bridge retained — existing workflow code still materializes legacy task rows for planned generator/reducer inputs; end-state removal of that bridge remains tracked. |
+| Update `spawn_agent` to take `SpawnAgentTarget` and keep task ids row-owned | In progress — input uses `SpawnAgentTarget`, return is `AgentRunId`, and parented run task ids are row-created; root/workflow targets still carry bridge task ids until their row creation fully moves behind `eos-agent-run`. |
+| Remove bridge-only spawn request fields and legacy run-row replay fields | Done — `SpawnAgentRequest.agent_run_id`, `persist`, row `initial_messages`, row `message_history`, and `terminal_tool_result` are removed/collapsed. |
 | Update root request flow to call `spawn_agent(Root)` | Done for the current bridge |
 | Update workflow launch and role-run creation flow to use `SpawnAgentTarget` | Done for the current bridge |
-| Update subagent/advisor parent-owned run creation flow with `ParentAgentRunAnchor` | Done for the current bridge |
-| Resolve `AgentRunRecordTarget` from lineage and remove `parents-missing/` | Not started |
-| Add `TaskExecutionIndex` query and the execution-tree reader | Not started |
-| Add focused store and materialization tests | Not started |
-| Update `index.md` Progress Tracker with Phase 03B result and exit artifact | Not started |
+| Update subagent/advisor parent-owned run creation flow with `ParentAgentRunAnchor` | Done — parented runs create `parented_runs` rows with row-derived task ids. |
+| Resolve `AgentRunRecordTarget` from lineage and remove `parents-missing/` | Done — row creation returns `CreatedTaskAgentRun.record_target` from `AgentRunRecordIndex` + `format_record_dir`; engine startup receives the resolved target. |
+| Add `TaskExecutionIndex` query and the execution-tree reader | Done for bounded v1 — `TaskAgentRunStore::task_execution_index` and `StateReader::request_execution_tree` materialize direct child surfaces. |
+| Add focused store and materialization tests | Done for current surface — db integration tests cover lineage/store indexes; agent-core unit tests cover request execution tree materialization. |
+| Update `index.md` Progress Tracker with Phase 03B result and exit artifact | Done — shared index records the bridge-compatible v1 exit artifact and verification commands. |
 
 ## Acceptance Criteria
 
@@ -1016,6 +1028,8 @@ remain the Phase 03B exit contract.
   `ParentAgentRunAnchor`.
 - `spawn_agent` returns `AgentRunId`; the row-creation path returns a
   `CreatedTaskAgentRun` with `agent_run_id`, `task_id`, and record target.
+- `SpawnAgentRequest` has no `agent_run_id` field and no `persist` flag in the
+  target public contract.
 - `CreatedTaskAgentRun.task_id` is present for root/planner/generator/reducer
   runs and for subagent/advisor parented runs.
 - `TaskRun`, `ParentedRun`, and `SpawnAgentTarget` do not contain instruction
@@ -1054,12 +1068,12 @@ remain the Phase 03B exit contract.
   finalization handles.
 - `messages.jsonl` and `events.jsonl` are created from the request-rooted
   lineage layout above.
-- Normal production tests do not create or rely on `parents-missing/`; the
-  enclosing path is derived from `parented_runs.parent_agent_run_id`.
-- The materialized read model returns
-  request -> root task run -> workflows -> iterations -> attempts ->
-  planner/generator/reducer runs (planned or spawned), plus subagents and
-  advisors, with deep workflow nesting hydrated on demand.
+- Normal production tests do not create or rely on `parents-missing/`; v1
+  parented paths are request-rooted, with folder choice derived from
+  `parented_runs.kind`.
+- The bounded v1 materialized read model returns request -> root task run, with
+  direct `workflow_ids`, subagents, and advisors. Deep workflow nesting remains
+  deferred until a consumer needs the recursive walk.
 - The execution-tree reader does not grow wrapper nodes or child arrays for workflow,
   iteration, attempt, subagent, or advisor ownership.
 - `cargo test -p eos-db` passes for lineage and materialization tests.

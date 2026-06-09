@@ -41,6 +41,8 @@ CREATE TABLE workflows (
     id             TEXT PRIMARY KEY,
     request_id     TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
     parent_task_id TEXT NOT NULL,
+    launched_by_agent_run_id TEXT NOT NULL,
+    tool_use_id    TEXT,
     goal           TEXT NOT NULL,
     status         TEXT NOT NULL,
     iteration_ids  TEXT NOT NULL DEFAULT '[]',
@@ -51,6 +53,52 @@ CREATE TABLE workflows (
 );
 CREATE INDEX ix_workflows_request_id ON workflows(request_id);
 CREATE INDEX ix_workflows_parent_task_id ON workflows(parent_task_id);
+CREATE INDEX ix_workflows_launched_by_agent_run_id ON workflows(launched_by_agent_run_id);
+
+CREATE TABLE task_runs (
+    task_id          TEXT PRIMARY KEY,
+    agent_run_id     TEXT NOT NULL UNIQUE,
+    request_id        TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+    role              TEXT NOT NULL,
+    status            TEXT NOT NULL,
+    workflow_id       TEXT,
+    iteration_id      TEXT,
+    attempt_id        TEXT,
+    agent_name        TEXT NOT NULL,
+    terminal_payload  TEXT,
+    token_count       INTEGER NOT NULL DEFAULT 0,
+    error             TEXT,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL,
+    finished_at       TEXT,
+    CHECK (
+        (role = 'root' AND workflow_id IS NULL AND iteration_id IS NULL AND attempt_id IS NULL)
+        OR
+        (role IN ('planner', 'generator', 'reducer') AND workflow_id IS NOT NULL AND iteration_id IS NOT NULL AND attempt_id IS NOT NULL)
+    )
+);
+CREATE INDEX ix_task_runs_request_id ON task_runs(request_id);
+CREATE INDEX ix_task_runs_workflow_coordinate ON task_runs(workflow_id, iteration_id, attempt_id);
+
+CREATE TABLE parented_runs (
+    task_id              TEXT PRIMARY KEY,
+    agent_run_id         TEXT NOT NULL UNIQUE,
+    request_id           TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+    status               TEXT NOT NULL,
+    parent_agent_run_id  TEXT NOT NULL,
+    parent_task_id       TEXT NOT NULL,
+    kind                 TEXT NOT NULL CHECK (kind IN ('subagent', 'advisor')),
+    tool_use_id          TEXT,
+    agent_name           TEXT NOT NULL,
+    terminal_payload     TEXT,
+    token_count          INTEGER NOT NULL DEFAULT 0,
+    error                TEXT,
+    created_at           TEXT NOT NULL,
+    updated_at           TEXT NOT NULL,
+    finished_at          TEXT
+);
+CREATE INDEX ix_parented_runs_parent ON parented_runs(parent_agent_run_id, parent_task_id);
+CREATE INDEX ix_parented_runs_request_id ON parented_runs(request_id);
 
 CREATE TABLE iterations (
     id              TEXT PRIMARY KEY,
@@ -94,10 +142,8 @@ CREATE INDEX ix_attempts_workflow_id ON attempts(workflow_id);
 CREATE TABLE agent_runs (
     id                   TEXT PRIMARY KEY,
     task_id              TEXT UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
-    initial_messages     TEXT,
     agent_name           TEXT NOT NULL,
-    message_history      TEXT,
-    terminal_tool_result TEXT,
+    terminal_payload     TEXT,
     token_count          INTEGER NOT NULL DEFAULT 0,
     error                TEXT,
     created_at           TEXT NOT NULL,

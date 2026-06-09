@@ -94,6 +94,7 @@ mod delegate_workflow {
                 .start_workflow(StartWorkflowRequest {
                     parent_task_id: task_id.clone(),
                     agent_run_id: agent_run_id.clone(),
+                    tool_use_id: ctx.tool_use_id.clone(),
                     workflow_goal: parsed.goal.clone(),
                 })
                 .await?;

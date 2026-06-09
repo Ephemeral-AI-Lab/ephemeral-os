@@ -6,8 +6,9 @@ use async_trait::async_trait;
 use eos_types::{
     AgentDefinition, AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeFuture,
     AgentLoopOutcomeKind, AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi,
-    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, AgentType, Message,
-    ParentedAgentRunKind, SpawnAgentRequest, TaskAgentRunKind,
+    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunRecordTarget, AgentRunStatus,
+    AgentRunStore, AgentType, CreatedTaskAgentRun, Message, ParentedAgentRunKind,
+    SpawnAgentRequest, SpawnAgentTarget, TaskAgentRunKind, TaskAgentRunStore, TaskId, TaskStatus,
 };
 
 use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRuns};
@@ -19,8 +20,9 @@ use crate::agent_run_persistence::{
 use crate::agent_run_records::to_agent_run_record_kind;
 use crate::records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
 
-type RuntimeStateRecorder =
-    Arc<dyn Fn(&SpawnAgentRequest, &AgentRunId) -> Result<(), AgentRunError> + Send + Sync>;
+type RuntimeStateRecorder = Arc<
+    dyn Fn(&SpawnAgentRequest, &CreatedTaskAgentRun) -> Result<(), AgentRunError> + Send + Sync,
+>;
 type RuntimeStateRemover = Arc<dyn Fn(&AgentRunId) + Send + Sync>;
 
 /// Agent-run lifecycle service.
@@ -29,6 +31,7 @@ pub struct AgentRunService {
     agent_registry: Arc<AgentRegistry>,
     agent_loop_launcher: Arc<dyn AgentLoopLauncher>,
     agent_run_store: Arc<dyn AgentRunStore>,
+    task_agent_run_store: Arc<dyn TaskAgentRunStore>,
     message_records: Option<AgentMessageRecords>,
     active_agent_runs: ActiveAgentRuns,
     runtime_state_recorder: Option<RuntimeStateRecorder>,
@@ -42,18 +45,20 @@ impl std::fmt::Debug for AgentRunService {
 }
 
 impl AgentRunService {
-    /// Build a runner service from contract ports.
+    /// Build a runner service from injected trait contracts.
     #[must_use]
     pub fn new(
         agent_registry: Arc<AgentRegistry>,
         agent_loop_launcher: Arc<dyn AgentLoopLauncher>,
         agent_run_store: Arc<dyn AgentRunStore>,
+        task_agent_run_store: Arc<dyn TaskAgentRunStore>,
         message_records: Option<AgentMessageRecords>,
     ) -> Self {
         Self {
             agent_registry,
             agent_loop_launcher,
             agent_run_store,
+            task_agent_run_store,
             message_records,
             active_agent_runs: ActiveAgentRuns::new(),
             runtime_state_recorder: None,
@@ -72,7 +77,7 @@ impl AgentRunService {
         remove: Remove,
     ) -> Self
     where
-        Record: Fn(&SpawnAgentRequest, &AgentRunId) -> Result<(), AgentRunError>
+        Record: Fn(&SpawnAgentRequest, &CreatedTaskAgentRun) -> Result<(), AgentRunError>
             + Send
             + Sync
             + 'static,
@@ -87,18 +92,17 @@ impl AgentRunService {
         &self,
         request: &SpawnAgentRequest,
         agent_def: &AgentDefinition,
-        agent_run_id: &AgentRunId,
+        record_target: &AgentRunRecordTarget,
     ) -> Result<Option<ActiveAgentRunRecord>, AgentRunError> {
         let Some(message_records) = &self.message_records else {
             return Ok(None);
         };
-        let request_id = request.target.request_id();
         let kind = to_agent_run_record_kind(&request.target.task_agent_run_kind());
         let handle = message_records
             .start_agent_run(AgentRunRecordStart {
-                request_id,
-                task_id: request.target.current_task_id(),
-                agent_run_id,
+                request_id: &record_target.request_id,
+                task_id: Some(&record_target.task_id),
+                agent_run_id: &record_target.agent_run_id,
                 agent_name: agent_def.name.as_str(),
                 kind: &kind,
                 system_prompt: agent_def.system_prompt.as_deref().unwrap_or_default(),
@@ -165,7 +169,16 @@ impl AgentRunService {
             error,
         )
         .await;
-        match finish {
+        let finish_lineage = self
+            .finish_task_agent_run(
+                &agent_run_id,
+                task_status_for_agent_status(agent_outcome.status),
+                agent_outcome.submission_payload.as_ref(),
+                agent_outcome.token_count.unwrap_or_default(),
+                error,
+            )
+            .await;
+        match finish.and(finish_lineage) {
             Ok(()) => agent_outcome,
             Err(err) => AgentRunOutcome {
                 agent_run_id,
@@ -193,6 +206,9 @@ impl AgentRunService {
             Some(&error),
         )
         .await;
+        let _ignored = self
+            .finish_task_agent_run(&agent_run_id, TaskStatus::Failed, None, 0, Some(&error))
+            .await;
         AgentRunOutcome {
             agent_run_id,
             status: AgentRunStatus::Failed,
@@ -202,11 +218,116 @@ impl AgentRunService {
             error: Some(error),
         }
     }
+
+    async fn create_task_agent_run(
+        &self,
+        request: &SpawnAgentRequest,
+        agent_run_id: &AgentRunId,
+        agent_name: &DefinitionAgentName,
+    ) -> Result<CreatedTaskAgentRun, AgentRunError> {
+        match &request.target {
+            SpawnAgentTarget::Root {
+                request_id,
+                task_id,
+            } => {
+                self.task_agent_run_store
+                    .create_root_task_agent_run(request_id, task_id, agent_run_id, agent_name)
+                    .await
+            }
+            SpawnAgentTarget::Workflow {
+                request_id,
+                task_id,
+                workflow,
+                role,
+            } => {
+                self.task_agent_run_store
+                    .create_workflow_task_agent_run(
+                        request_id,
+                        task_id,
+                        agent_run_id,
+                        workflow,
+                        *role,
+                        agent_name,
+                    )
+                    .await
+            }
+            SpawnAgentTarget::Subagent { parent } => {
+                self.task_agent_run_store
+                    .create_parented_task_agent_run(
+                        agent_run_id,
+                        parent,
+                        ParentedAgentRunKind::Subagent,
+                        request.tool_use_id.as_ref(),
+                        agent_name,
+                    )
+                    .await
+            }
+            SpawnAgentTarget::Advisor { parent } => {
+                self.task_agent_run_store
+                    .create_parented_task_agent_run(
+                        agent_run_id,
+                        parent,
+                        ParentedAgentRunKind::Advisor,
+                        request.tool_use_id.as_ref(),
+                        agent_name,
+                    )
+                    .await
+            }
+        }
+        .map_err(|err| AgentRunError::Internal(err.to_string()))
+    }
+
+    async fn finish_task_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        status: TaskStatus,
+        terminal_payload: Option<&eos_types::JsonObject>,
+        token_count: i64,
+        error: Option<&str>,
+    ) -> Result<(), AgentRunError> {
+        let Some(index) = self
+            .task_agent_run_store
+            .record_index_for_agent_run(agent_run_id)
+            .await
+            .map_err(|err| AgentRunError::Internal(err.to_string()))?
+        else {
+            return Err(AgentRunError::Internal(format!(
+                "task-agent-run row not found for {}",
+                agent_run_id.as_str()
+            )));
+        };
+        let updated = match index.kind {
+            TaskAgentRunKind::Root | TaskAgentRunKind::Workflow { .. } => self
+                .task_agent_run_store
+                .finish_task_run(agent_run_id, status, terminal_payload, token_count, error)
+                .await
+                .map(|row| row.is_some()),
+            TaskAgentRunKind::Parented { .. } => self
+                .task_agent_run_store
+                .finish_parented_run(agent_run_id, status, terminal_payload, token_count, error)
+                .await
+                .map(|row| row.is_some()),
+        }
+        .map_err(|err| AgentRunError::Internal(err.to_string()))?;
+        if updated {
+            Ok(())
+        } else {
+            Err(AgentRunError::Internal(format!(
+                "task-agent-run row not updated for {}",
+                agent_run_id.as_str()
+            )))
+        }
+    }
 }
 
 #[async_trait]
 impl AgentRunApi for AgentRunService {
     async fn spawn_agent(&self, request: SpawnAgentRequest) -> Result<AgentRunId, AgentRunError> {
+        if request.initial_messages.is_empty() {
+            return Err(AgentRunError::Internal(
+                "agent launch requires at least one initial message".to_owned(),
+            ));
+        }
         let requested_agent_name = request.agent_name.as_str().to_owned();
         let agent_name = DefinitionAgentName::new(request.agent_name.as_str())
             .map_err(|_| AgentRunError::AgentNotRegistered(requested_agent_name.clone()))?;
@@ -223,26 +344,26 @@ impl AgentRunApi for AgentRunService {
         }
 
         let agent_def = (**agent_def).clone();
-        let agent_run_id = request
-            .agent_run_id
-            .clone()
-            .unwrap_or_else(AgentRunId::new_v4);
+        let agent_run_id = AgentRunId::new_v4();
+        let created_run = self
+            .create_task_agent_run(&request, &agent_run_id, &agent_name)
+            .await?;
         let persistence_requested = create_agent_run_if_requested(
             &*self.agent_run_store,
-            request.persist,
-            request.target.current_task_id(),
+            true,
+            legacy_task_row_id_for_agent_run(&request.target),
             &agent_run_id,
             agent_def.name.as_str(),
         )
         .await?;
+        let record_target = created_run.record_target.clone();
         let message_record = self
-            .start_message_record(&request, &agent_def, &agent_run_id)
+            .start_message_record(&request, &agent_def, &record_target)
             .await?;
         if let Some(record_runtime_state) = &self.runtime_state_recorder {
-            record_runtime_state(&request, &agent_run_id)?;
+            record_runtime_state(&request, &created_run)?;
         }
-        let start_request =
-            build_start_agent_loop_request(&agent_def, request, agent_run_id.clone());
+        let start_request = build_start_agent_loop_request(&agent_def, request, record_target);
         let agent_run_api: Arc<dyn AgentRunApi> = Arc::new(self.clone());
         let started = self
             .agent_loop_launcher
@@ -312,6 +433,15 @@ impl AgentRunApi for AgentRunService {
             completion.cancel(reason);
         }
         finish_agent_run_cancelled(&*self.agent_run_store, agent_run_id, reason).await?;
+        let payload = cancelled_task_payload(reason);
+        self.finish_task_agent_run(
+            agent_run_id,
+            TaskStatus::Cancelled,
+            Some(&payload),
+            0,
+            Some(reason),
+        )
+        .await?;
         let outcome = AgentRunOutcome {
             agent_run_id: agent_run_id.clone(),
             status: AgentRunStatus::Cancelled,
@@ -398,6 +528,15 @@ fn agent_run_outcome_from_loop(
     }
 }
 
+fn legacy_task_row_id_for_agent_run(target: &SpawnAgentTarget) -> Option<&TaskId> {
+    match target {
+        SpawnAgentTarget::Root { task_id, .. } | SpawnAgentTarget::Workflow { task_id, .. } => {
+            Some(task_id)
+        }
+        SpawnAgentTarget::Subagent { .. } | SpawnAgentTarget::Advisor { .. } => None,
+    }
+}
+
 fn loop_messages_to_llm_messages(messages: Vec<AgentLoopMessage>) -> Vec<Message> {
     messages
         .into_iter()
@@ -409,6 +548,21 @@ fn loop_messages_to_llm_messages(messages: Vec<AgentLoopMessage>) -> Vec<Message
         .collect()
 }
 
+const fn task_status_for_agent_status(status: AgentRunStatus) -> TaskStatus {
+    match status {
+        AgentRunStatus::Completed => TaskStatus::Done,
+        AgentRunStatus::Failed => TaskStatus::Failed,
+        AgentRunStatus::Cancelled => TaskStatus::Cancelled,
+    }
+}
+
+fn cancelled_task_payload(reason: &str) -> eos_types::JsonObject {
+    let mut payload = eos_types::JsonObject::new();
+    payload.insert("fail_reason".to_owned(), serde_json::json!("cancelled"));
+    payload.insert("reason".to_owned(), serde_json::json!(reason));
+    payload
+}
+
 const fn agent_type_value(agent_type: AgentType) -> &'static str {
     match agent_type {
         AgentType::Agent => "agent",
@@ -417,8 +571,8 @@ const fn agent_type_value(agent_type: AgentType) -> &'static str {
     }
 }
 
-const fn expected_agent_type(task_agent_run_kind: &TaskAgentRunKind) -> AgentType {
-    match task_agent_run_kind {
+const fn expected_agent_type(run_kind: &TaskAgentRunKind) -> AgentType {
+    match run_kind {
         TaskAgentRunKind::Root | TaskAgentRunKind::Workflow { .. } => AgentType::Agent,
         TaskAgentRunKind::Parented {
             kind: ParentedAgentRunKind::Subagent,

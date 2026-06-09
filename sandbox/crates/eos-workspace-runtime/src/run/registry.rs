@@ -13,7 +13,7 @@ use crate::command_session::{
 };
 use crate::ephemeral::EphemeralWorkspace;
 
-use super::command_handle::CommandHandle;
+use super::isolated_command_handle::IsolatedCommandHandle;
 
 /// One ephemeral workspace run: exactly **one** command session paired with the
 /// fresh overlay it owns (snapshot lease + run dirs). The run owns the overlay
@@ -25,13 +25,13 @@ pub(crate) struct EphemeralRun {
 }
 
 /// One command session running inside a caller's isolated workspace. It carries
-/// the per-session [`CommandHandle`] (namespace fds, scratch dirs, lease/manifest
+/// the per-session [`IsolatedCommandHandle`] (namespace fds, scratch dirs, lease/manifest
 /// coordinates) needed to finalize the session for AUDIT (never published); the
 /// namespace + lease themselves are owned by the isolated-session subsystem and
 /// torn down on `exit`.
 pub(crate) struct IsolatedRun {
     pub(crate) session: CommandSession,
-    pub(crate) handle: CommandHandle,
+    pub(crate) handle: IsolatedCommandHandle,
 }
 
 /// A single workspace run: an ephemeral overlay run or one session of the
@@ -62,7 +62,7 @@ impl WorkspaceRun {
 struct CallerRuns(HashMap<String, Arc<WorkspaceRun>>);
 
 impl CallerRuns {
-    fn sessions(&self) -> Vec<Arc<WorkspaceRun>> {
+    fn runs(&self) -> Vec<Arc<WorkspaceRun>> {
         self.0.values().cloned().collect()
     }
 
@@ -173,7 +173,7 @@ impl WorkspaceRunRegistry {
     pub(crate) fn live(&self) -> Vec<Arc<WorkspaceRun>> {
         lock(&self.runs)
             .values()
-            .flat_map(CallerRuns::sessions)
+            .flat_map(CallerRuns::runs)
             .collect()
     }
 
@@ -182,7 +182,7 @@ impl WorkspaceRunRegistry {
     pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<WorkspaceRun>> {
         lock(&self.runs)
             .get(caller_id)
-            .map(CallerRuns::sessions)
+            .map(CallerRuns::runs)
             .unwrap_or_default()
     }
 

@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::contracts::AgentRunApi;
-use crate::ids::AgentRunId;
+use crate::contracts::AgentRunRecordTarget;
 use crate::json::JsonObject;
 use crate::llm::Message;
 
@@ -19,8 +19,8 @@ pub type AgentLoopCancellationHandle = Arc<dyn AgentLoopCancellation>;
 /// Thin request to start one agent loop.
 #[derive(Debug, Clone)]
 pub struct StartAgentLoopRequest {
-    /// Agent-run id.
-    pub agent_run_id: AgentRunId,
+    /// Resolved record target and durable run anchors.
+    pub record_target: AgentRunRecordTarget,
     /// Runner-prepared initial messages.
     pub initial_messages: Vec<AgentLoopMessage>,
     /// Resolved model key.

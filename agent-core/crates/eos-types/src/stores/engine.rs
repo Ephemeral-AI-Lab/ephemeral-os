@@ -1,4 +1,4 @@
-//! Engine-facing agent-run persistence ports.
+//! Engine-facing agent-run persistence contracts.
 
 use async_trait::async_trait;
 
@@ -15,15 +15,13 @@ pub trait AgentRunStore: Sealed + Send + Sync {
         agent_run_id: &AgentRunId,
         task_id: Option<&TaskId>,
         agent_name: &str,
-        initial_messages: Option<&[JsonObject]>,
     ) -> Result<AgentRun, CoreError>;
 
     /// Write the finish-time fields. `Ok(None)` means the run does not exist.
     async fn finish_run(
         &self,
         agent_run_id: &AgentRunId,
-        message_history: Option<&[JsonObject]>,
-        terminal_tool_result: Option<&JsonObject>,
+        terminal_payload: Option<&JsonObject>,
         token_count: i64,
         error: Option<&str>,
     ) -> Result<Option<AgentRun>, CoreError>;

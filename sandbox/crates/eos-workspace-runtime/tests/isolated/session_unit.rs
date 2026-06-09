@@ -8,7 +8,7 @@ use super::capacity::{
     check_host_capacity_against_budget, host_capacity_budget_bytes_from_memavailable_kib,
     parse_memavailable_kib, required_host_capacity_bytes,
 };
-use super::support::next_handle_id;
+use super::resources::next_handle_id;
 use super::{
     CallerId, IsolatedError, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort,
     SnapshotLease, WorkspaceHandle,

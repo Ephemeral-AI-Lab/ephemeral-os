@@ -16,7 +16,7 @@ where
     R: NamespaceRuntimePort,
     A: AuditSink,
 {
-    pub(super) fn reap_startup_orphans(&mut self) -> Result<(), IsolatedError> {
+    pub(super) fn reap_persisted_orphans(&mut self) -> Result<(), IsolatedError> {
         let rows = self.read_persisted_handle_rows();
         self.handles.clear();
         self.by_caller.clear();

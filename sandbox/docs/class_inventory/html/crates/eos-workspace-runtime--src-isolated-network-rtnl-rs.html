@@ -107,7 +107,7 @@
             &quot;create shared bridge&quot;,
             handle
                 .link()
-                .add(<span class="rs-type">LinkBridge</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">BRIDGE_NAME</span>).up().build())
+                .add(<span class="rs-type">LinkBridge</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(<span class="rs-type">BRIDGE_NAME</span>).up().build())
                 .execute()
                 .<span class="rs-kw">await</span>,
         )?;
@@ -157,7 +157,7 @@
             &quot;create veth pair&quot;,
             handle
                 .link()
-                .add(<span class="rs-type">LinkVeth</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(host_name, ns_name).build())
+                .add(<span class="rs-type">LinkVeth</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(host_name, ns_name).build())
                 .execute()
                 .<span class="rs-kw">await</span>,
         )?;
@@ -195,7 +195,7 @@
         handle
             .link()
             .set_port(
-                <span class="rs-type">LinkBridgePort</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(host_index)
+                <span class="rs-type">LinkBridgePort</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(host_index)
                     .isolated(<span class="rs-kw">true</span>)
                     .mcast_flood(<span class="rs-kw">false</span>)
                     .build(),
@@ -376,7 +376,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-gateway-addr-249">gateway_addr</a>() -&gt; <span class="rs-type">Ipv4Addr</span> {
-    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, 1)
+    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, 1)
 }
 </code></pre>
 </details>
@@ -427,7 +427,7 @@
             &quot;create shared bridge&quot;,
             handle
                 .link()
-                .add(<span class="rs-type">LinkBridge</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">BRIDGE_NAME</span>).up().build())
+                .add(<span class="rs-type">LinkBridge</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(<span class="rs-type">BRIDGE_NAME</span>).up().build())
                 .execute()
                 .<span class="rs-kw">await</span>,
         )?;
@@ -464,7 +464,7 @@
             &quot;create veth pair&quot;,
             handle
                 .link()
-                .add(<span class="rs-type">LinkVeth</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(host_name, ns_name).build())
+                .add(<span class="rs-type">LinkVeth</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(host_name, ns_name).build())
                 .execute()
                 .<span class="rs-kw">await</span>,
         )?;
@@ -502,7 +502,7 @@
         handle
             .link()
             .set_port(
-                <span class="rs-type">LinkBridgePort</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(host_index)
+                <span class="rs-type">LinkBridgePort</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(host_index)
                     .isolated(<span class="rs-kw">true</span>)
                     .mcast_flood(<span class="rs-kw">false</span>)
                     .build(),
@@ -579,7 +579,7 @@
 }
 
 <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html#item-fn-gateway-addr-249">gateway_addr</a>() -&gt; <span class="rs-type">Ipv4Addr</span> {
-    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(10, 244, 0, 1)
+    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(10, 244, 0, 1)
 }
 </code></pre>
 </section>

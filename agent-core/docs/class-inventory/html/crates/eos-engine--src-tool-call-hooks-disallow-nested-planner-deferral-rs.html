@@ -76,10 +76,10 @@
     ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
     hooks: &amp;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-ToolCallHooks-63">ToolCallHooks</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-18">HookOutcome</a>, <span class="rs-type">ToolError</span>&gt; {
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-deferred-goal-319">deferred_goal</a>(raw_input).is_none() {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-deferred-goal-316">deferred_goal</a>(raw_input).is_none() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-18">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-28">pass</a>());
     }
-    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(depth) = hooks.<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-workflow-depth-for-call-90">workflow_depth_for_call</a>(ctx).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(depth) = hooks.<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-workflow-depth-for-call-87">workflow_depth_for_call</a>(ctx).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-18">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-28">pass</a>());
     };
     <span class="rs-kw">if</span> depth &gt; max_depth {
@@ -131,10 +131,10 @@
     ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
     hooks: &amp;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-ToolCallHooks-63">ToolCallHooks</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-18">HookOutcome</a>, <span class="rs-type">ToolError</span>&gt; {
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-deferred-goal-319">deferred_goal</a>(raw_input).is_none() {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-deferred-goal-316">deferred_goal</a>(raw_input).is_none() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-18">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-28">pass</a>());
     }
-    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(depth) = hooks.<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-workflow-depth-for-call-90">workflow_depth_for_call</a>(ctx).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(depth) = hooks.<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-workflow-depth-for-call-87">workflow_depth_for_call</a>(ctx).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-18">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-28">pass</a>());
     };
     <span class="rs-kw">if</span> depth &gt; max_depth {

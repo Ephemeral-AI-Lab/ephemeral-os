@@ -65,12 +65,12 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-service-rs.html#item-struct-WorkflowService-18">WorkflowService</a></code>
   <p class="docstring">Workflow lifecycle service over delegated workflow state.</p>
   <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>starter</td><td><code><a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a></code></td></tr><tr><td>private</td><td>workflow_store</td><td><code>Arc &lt; dyn eos_types :: WorkflowStore &gt;</code></td></tr><tr><td>private</td><td>iteration_store</td><td><code>Arc &lt; dyn eos_types :: IterationStore &gt;</code></td></tr><tr><td>private</td><td>attempt_store</td><td><code>Arc &lt; dyn eos_types :: AttemptStore &gt;</code></td></tr><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>cancel_port</td><td><code>Arc &lt; dyn AgentCoreCancellationApi &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-38"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a> (starter : <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a> , workflow_store : Arc &lt; dyn eos_types :: WorkflowStore &gt; , iteration_store : Arc &lt; dyn eos_types :: IterationStore &gt; , attempt_store : Arc &lt; dyn eos_types :: AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; , cancel_port : Arc &lt; dyn AgentCoreCancellationApi &gt; ,) -&gt; Self</code><p class="docstring">Create a workflow service over the delegated workflow stores.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>starter</td><td><code><a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-27">WorkflowStarter</a></code></td></tr><tr><td>private</td><td>workflow_store</td><td><code>Arc &lt; dyn eos_types :: WorkflowStore &gt;</code></td></tr><tr><td>private</td><td>iteration_store</td><td><code>Arc &lt; dyn eos_types :: IterationStore &gt;</code></td></tr><tr><td>private</td><td>attempt_store</td><td><code>Arc &lt; dyn eos_types :: AttemptStore &gt;</code></td></tr><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>cancel_port</td><td><code>Arc &lt; dyn AgentCoreCancellationApi &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-38"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a> (starter : <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-27">WorkflowStarter</a> , workflow_store : Arc &lt; dyn eos_types :: WorkflowStore &gt; , iteration_store : Arc &lt; dyn eos_types :: IterationStore &gt; , attempt_store : Arc &lt; dyn eos_types :: AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; , cancel_port : Arc &lt; dyn AgentCoreCancellationApi &gt; ,) -&gt; Self</code><p class="docstring">Create a workflow service over the delegated workflow stores.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a workflow service over the delegated workflow stores.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(
-        starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>,
+        starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-27">WorkflowStarter</a>,
         workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">WorkflowStore</span>&gt;,
         iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">IterationStore</span>&gt;,
         attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">AttemptStore</span>&gt;,
@@ -87,9 +87,9 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-workflow-status-text-159"><td>method</td><td>workflow_status_text</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-workflow-status-text-159">workflow_status_text</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-workflow-status-text-164"><td>method</td><td>workflow_status_text</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-workflow-status-text-164">workflow_status_text</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-159">workflow_status_text</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-164">workflow_status_text</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} was not found.&quot;));
         };
@@ -104,9 +104,9 @@
         <span class="rs-type">Ok</span>(text)
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-workflow-inner-174"><td>method</td><td>cancel_workflow_inner</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-174">cancel_workflow_inner</a> (&amp; self , workflow_id : &amp; WorkflowId , reason : &amp; str ,) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-workflow-inner-179"><td>method</td><td>cancel_workflow_inner</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-179">cancel_workflow_inner</a> (&amp; self , workflow_id : &amp; WorkflowId , reason : &amp; str ,) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-174">cancel_workflow_inner</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-179">cancel_workflow_inner</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
         reason: &amp;str,
@@ -120,17 +120,17 @@
                 workflow.status
             ));
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-192">cancel_workflow_state</a>(&amp;workflow, reason).<span class="rs-kw">await</span>?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-197">cancel_workflow_state</a>(&amp;workflow, reason).<span class="rs-kw">await</span>?;
         <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} cancelled: {reason}&quot;))
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-workflow-state-192"><td>method</td><td>cancel_workflow_state</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-192">cancel_workflow_state</a> (&amp; self , workflow : &amp; eos_types :: Workflow , reason : &amp; str ,) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Decompose workflow cancellation through `cancel_iteration` -&gt; `cancel_attempt`<br>-&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*<br>attempts (the idempotency guards), so a re-entrant cancel (a child workflow<br>cancelled while tearing down a parent) terminates.</p><details class="function-source">
+</details></td></tr><tr id="method-cancel-workflow-state-197"><td>method</td><td>cancel_workflow_state</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-197">cancel_workflow_state</a> (&amp; self , workflow : &amp; eos_types :: Workflow , reason : &amp; str ,) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Decompose workflow cancellation through `cancel_iteration` -&gt; `cancel_attempt`<br>-&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*<br>attempts (the idempotency guards), so a re-entrant cancel (a child workflow<br>cancelled while tearing down a parent) terminates.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Decompose workflow cancellation through `cancel_iteration` -&gt; `cancel_attempt`</span>
     <span class="rs-comment">/// -&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*</span>
     <span class="rs-comment">/// attempts (the idempotency guards), so a re-entrant cancel (a child workflow</span>
     <span class="rs-comment">/// cancelled while tearing down a parent) terminates.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-192">cancel_workflow_state</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-197">cancel_workflow_state</a>(
         &amp;<span class="rs-self">self</span>,
         workflow: &amp;eos_types::<span class="rs-type">Workflow</span>,
         reason: &amp;str,
@@ -150,7 +150,7 @@
                 <span class="rs-kw">if</span> attempt.is_closed() {
                     <span class="rs-kw">continue</span>;
                 }
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-238">cancel_attempt</a>(&amp;attempt, reason, now).<span class="rs-kw">await</span>?;
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-243">cancel_attempt</a>(&amp;attempt, reason, now).<span class="rs-kw">await</span>?;
             }
             <span class="rs-self">self</span>.iteration_store
                 .set_status(
@@ -172,13 +172,13 @@
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-attempt-238"><td>method</td><td>cancel_attempt</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-attempt-238">cancel_attempt</a> (&amp; self , attempt : &amp; eos_types :: Attempt , reason : &amp; str , now : eos_types :: UtcDateTime ,) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Cancel one attempt (spec §12.4): latch every planner/generator/reducer task<br>row to `Cancelled` *before* any teardown (closing the scheduler gap), then<br>recurse `cancel_task` per task to tear down any live agent run, then close<br>the attempt as `Cancelled`.</p><details class="function-source">
+</details></td></tr><tr id="method-cancel-attempt-243"><td>method</td><td>cancel_attempt</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-attempt-243">cancel_attempt</a> (&amp; self , attempt : &amp; eos_types :: Attempt , reason : &amp; str , now : eos_types :: UtcDateTime ,) -&gt; crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Cancel one attempt (spec §12.4): latch every planner/generator/reducer task<br>row to `Cancelled` *before* any teardown (closing the scheduler gap), then<br>recurse `cancel_task` per task to tear down any live agent run, then close<br>the attempt as `Cancelled`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel one attempt (spec §12.4): latch every planner/generator/reducer task</span>
     <span class="rs-comment">/// row to `Cancelled` *before* any teardown (closing the scheduler gap), then</span>
     <span class="rs-comment">/// recurse `cancel_task` per task to tear down any live agent run, then close</span>
     <span class="rs-comment">/// the attempt as `Cancelled`.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-238">cancel_attempt</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-243">cancel_attempt</a>(
         &amp;<span class="rs-self">self</span>,
         attempt: &amp;eos_types::<span class="rs-type">Attempt</span>,
         reason: &amp;str,
@@ -189,7 +189,7 @@
         <span class="rs-comment">// covers rows that exist at latch time, so the planner must be prevented</span>
         <span class="rs-comment">// from creating fresh launchable rows after the latch.</span>
         <span class="rs-self">self</span>.starter
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a>()
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-46">orchestrator_registry</a>()
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-abort-planner-74">abort_planner</a>(&amp;attempt.id);
         <span class="rs-kw">let</span> tasks: <span class="rs-type">Vec</span>&lt;eos_types::<span class="rs-type">TaskId</span>&gt; = attempt
             .<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>()
@@ -230,49 +230,54 @@
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-service-rs.html#item-struct-WorkflowService-18">WorkflowService</a>&quot;).finish_non_exhaustive()
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl WorkflowApi for <a class="symbol-link" href="eos-workflow--src-service-rs.html#item-struct-WorkflowService-18">WorkflowService</a></code></summary><table><tbody><tr id="method-start-workflow-61"><td>method</td><td>start_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-start-workflow-61">start_workflow</a> (&amp; self , request : StartWorkflowRequest ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl WorkflowApi for <a class="symbol-link" href="eos-workflow--src-service-rs.html#item-struct-WorkflowService-18">WorkflowService</a></code></summary><table><tbody><tr id="method-start-workflow-61"><td>method</td><td>start_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-start-workflow-61">start_workflow</a> (&amp; self , request : StartWorkflowRequest ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-12">StartedWorkflow</a> , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-start-workflow-61">start_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">StartWorkflowRequest</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>, <span class="rs-type">WorkflowApiError</span>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-12">StartedWorkflow</a>, <span class="rs-type">WorkflowApiError</span>&gt; {
         <span class="rs-kw">let</span> started = <span class="rs-self">self</span>
             .starter
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&amp;request.workflow_goal, &amp;request.parent_task_id)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(
+                &amp;request.workflow_goal,
+                &amp;request.parent_task_id,
+                &amp;request.agent_run_id,
+                request.tool_use_id.as_ref(),
+            )
             .<span class="rs-kw">await</span>
             .map_err(workflow_api_error)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-12">StartedWorkflow</a> {
             workflow_id: started.workflow_id,
             workflow_goal: request.workflow_goal,
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-check-workflow-status-76"><td>method</td><td>check_workflow_status</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-check-workflow-status-76">check_workflow_status</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-check-workflow-status-81"><td>method</td><td>check_workflow_status</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-check-workflow-status-81">check_workflow_status</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-check-workflow-status-76">check_workflow_status</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-check-workflow-status-81">check_workflow_status</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-159">workflow_status_text</a>(workflow_id)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-164">workflow_status_text</a>(workflow_id)
             .<span class="rs-kw">await</span>
             .map_err(workflow_api_error)
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-workflow-85"><td>method</td><td>cancel_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-workflow-85">cancel_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-workflow-90"><td>method</td><td>cancel_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-cancel-workflow-90">cancel_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-85">cancel_workflow</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-90">cancel_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
         reason: &amp;str,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-174">cancel_workflow_inner</a>(workflow_id, reason)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-179">cancel_workflow_inner</a>(workflow_id, reason)
             .<span class="rs-kw">await</span>
             .map_err(workflow_api_error)
     }
 </code></pre>
-</details></td></tr><tr id="method-poll-terminal-workflow-95"><td>method</td><td>poll_terminal_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-poll-terminal-workflow-95">poll_terminal_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Option &lt; TerminalWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-poll-terminal-workflow-100"><td>method</td><td>poll_terminal_workflow</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-poll-terminal-workflow-100">poll_terminal_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Option &lt; TerminalWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-poll-terminal-workflow-95">poll_terminal_workflow</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-poll-terminal-workflow-100">poll_terminal_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">TerminalWorkflow</span>&gt;, <span class="rs-type">WorkflowApiError</span>&gt; {
@@ -291,16 +296,16 @@
         }))
     }
 </code></pre>
-</details></td></tr><tr id="method-find-outstanding-workflows-114"><td>method</td><td>find_outstanding_workflows</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-find-outstanding-workflows-114">find_outstanding_workflows</a> (&amp; self , parent_task_id : &amp; TaskId , _agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; OutstandingWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-find-outstanding-workflows-119"><td>method</td><td>find_outstanding_workflows</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-find-outstanding-workflows-119">find_outstanding_workflows</a> (&amp; self , _parent_task_id : &amp; TaskId , agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; OutstandingWorkflow &gt; , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-find-outstanding-workflows-114">find_outstanding_workflows</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-find-outstanding-workflows-119">find_outstanding_workflows</a>(
         &amp;<span class="rs-self">self</span>,
-        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
-        _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        _parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">OutstandingWorkflow</span>&gt;, <span class="rs-type">WorkflowApiError</span>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
             .workflow_store
-            .list_for_parent_task(parent_task_id)
+            .list_for_launching_agent_run(agent_run_id)
             .<span class="rs-kw">await</span>?
             .into_iter()
             .filter(eos_types::<span class="rs-type">Workflow</span>::is_open)
@@ -311,9 +316,9 @@
             .collect())
     }
 </code></pre>
-</details></td></tr><tr id="method-workflow-depth-132"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-workflow-depth-132">workflow_depth</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; u32 , WorkflowApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-workflow-depth-137"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#method-workflow-depth-137">workflow_depth</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; u32 , WorkflowApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-depth-132">workflow_depth</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-depth-137">workflow_depth</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
         <span class="rs-comment">// Walk delegation ancestry via each workflow's parent task's owning</span>
         <span class="rs-comment">// workflow (`task.workflow_id`), counting hops; 1 = top-level. The `seen`</span>
         <span class="rs-comment">// guard stops a malformed cycle from looping forever (Rust parity).</span>
@@ -341,17 +346,17 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-workflow/src/service.rs:18</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-api-error-289" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_api_error private fn workflow_api_error (err : WorkflowError) -&gt; WorkflowApiError crates/eos-workflow/src/service.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-api-error-294" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_api_error private fn workflow_api_error (err : WorkflowError) -&gt; WorkflowApiError crates/eos-workflow/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_api_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#item-fn-workflow-api-error-289">workflow_api_error</a> (err : <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; WorkflowApiError</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-service-rs.html#item-fn-workflow-api-error-294">workflow_api_error</a> (err : <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; WorkflowApiError</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#item-fn-workflow-api-error-289">workflow_api_error</a>(err: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; <span class="rs-type">WorkflowApiError</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#item-fn-workflow-api-error-294">workflow_api_error</a>(err: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; <span class="rs-type">WorkflowApiError</span> {
     <span class="rs-kw">match</span> err {
         <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Store</span>(err) =&gt; <span class="rs-type">WorkflowApiError</span>::<span class="rs-type">Store</span>(err),
         other =&gt; <span class="rs-type">WorkflowApiError</span>::<span class="rs-type">Internal</span>(other.to_string()),
@@ -360,7 +365,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/service.rs:289</p>
+  <p class="source">crates/eos-workflow/src/service.rs:294</p>
 </article></div>
 </section></div>
 </main>
@@ -380,16 +385,16 @@
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">AgentCoreCancellationApi</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AttemptClosure</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">OutstandingWorkflow</span>,
-    <span class="rs-type">StartWorkflowRequest</span>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">TerminalWorkflow</span>, <span class="rs-type">WorkflowApi</span>,
+    <span class="rs-type">StartWorkflowRequest</span>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-12">StartedWorkflow</a>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">TerminalWorkflow</span>, <span class="rs-type">WorkflowApi</span>,
     <span class="rs-type">WorkflowApiError</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowStatus</span>, <span class="rs-type">WorkflowTerminalStatus</span>,
 };
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-27">WorkflowStarter</a>};
 
 <span class="rs-comment">/// Workflow lifecycle service over delegated workflow state.</span>
 #[derive(<span class="rs-type">Clone</span>)]
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-service-rs.html#item-struct-WorkflowService-18">WorkflowService</a> {
-    starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>,
+    starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-27">WorkflowStarter</a>,
     workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">WorkflowStore</span>&gt;,
     iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">IterationStore</span>&gt;,
     attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">AttemptStore</span>&gt;,
@@ -409,7 +414,7 @@
     <span class="rs-comment">/// Create a workflow service over the delegated workflow stores.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-launch-rs.html#method-new-263">new</a>(
-        starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>,
+        starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-27">WorkflowStarter</a>,
         workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">WorkflowStore</span>&gt;,
         iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">IterationStore</span>&gt;,
         attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">AttemptStore</span>&gt;,
@@ -432,38 +437,43 @@
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-start-workflow-61">start_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">StartWorkflowRequest</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>, <span class="rs-type">WorkflowApiError</span>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-12">StartedWorkflow</a>, <span class="rs-type">WorkflowApiError</span>&gt; {
         <span class="rs-kw">let</span> started = <span class="rs-self">self</span>
             .starter
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&amp;request.workflow_goal, &amp;request.parent_task_id)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(
+                &amp;request.workflow_goal,
+                &amp;request.parent_task_id,
+                &amp;request.agent_run_id,
+                request.tool_use_id.as_ref(),
+            )
             .<span class="rs-kw">await</span>
             .map_err(workflow_api_error)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-12">StartedWorkflow</a> {
             workflow_id: started.workflow_id,
             workflow_goal: request.workflow_goal,
         })
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-check-workflow-status-76">check_workflow_status</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-check-workflow-status-81">check_workflow_status</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-159">workflow_status_text</a>(workflow_id)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-164">workflow_status_text</a>(workflow_id)
             .<span class="rs-kw">await</span>
             .map_err(workflow_api_error)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-85">cancel_workflow</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-90">cancel_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
         reason: &amp;str,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">WorkflowApiError</span>&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-174">cancel_workflow_inner</a>(workflow_id, reason)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-179">cancel_workflow_inner</a>(workflow_id, reason)
             .<span class="rs-kw">await</span>
             .map_err(workflow_api_error)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-poll-terminal-workflow-95">poll_terminal_workflow</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-poll-terminal-workflow-100">poll_terminal_workflow</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">TerminalWorkflow</span>&gt;, <span class="rs-type">WorkflowApiError</span>&gt; {
@@ -482,14 +492,14 @@
         }))
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-find-outstanding-workflows-114">find_outstanding_workflows</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-find-outstanding-workflows-119">find_outstanding_workflows</a>(
         &amp;<span class="rs-self">self</span>,
-        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
-        _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        _parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">OutstandingWorkflow</span>&gt;, <span class="rs-type">WorkflowApiError</span>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
             .workflow_store
-            .list_for_parent_task(parent_task_id)
+            .list_for_launching_agent_run(agent_run_id)
             .<span class="rs-kw">await</span>?
             .into_iter()
             .filter(eos_types::<span class="rs-type">Workflow</span>::is_open)
@@ -500,7 +510,7 @@
             .collect())
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-depth-132">workflow_depth</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-depth-137">workflow_depth</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;u32, <span class="rs-type">WorkflowApiError</span>&gt; {
         <span class="rs-comment">// Walk delegation ancestry via each workflow's parent task's owning</span>
         <span class="rs-comment">// workflow (`task.workflow_id`), counting hops; 1 = top-level. The `seen`</span>
         <span class="rs-comment">// guard stops a malformed cycle from looping forever (Rust parity).</span>
@@ -527,7 +537,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-service-rs.html#item-struct-WorkflowService-18">WorkflowService</a> {
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-159">workflow_status_text</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-workflow-status-text-164">workflow_status_text</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} was not found.&quot;));
         };
@@ -542,7 +552,7 @@
         <span class="rs-type">Ok</span>(text)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-174">cancel_workflow_inner</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-inner-179">cancel_workflow_inner</a>(
         &amp;<span class="rs-self">self</span>,
         workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
         reason: &amp;str,
@@ -556,7 +566,7 @@
                 workflow.status
             ));
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-192">cancel_workflow_state</a>(&amp;workflow, reason).<span class="rs-kw">await</span>?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-197">cancel_workflow_state</a>(&amp;workflow, reason).<span class="rs-kw">await</span>?;
         <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} cancelled: {reason}&quot;))
     }
 
@@ -564,7 +574,7 @@
     <span class="rs-comment">/// -&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*</span>
     <span class="rs-comment">/// attempts (the idempotency guards), so a re-entrant cancel (a child workflow</span>
     <span class="rs-comment">/// cancelled while tearing down a parent) terminates.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-192">cancel_workflow_state</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-workflow-state-197">cancel_workflow_state</a>(
         &amp;<span class="rs-self">self</span>,
         workflow: &amp;eos_types::<span class="rs-type">Workflow</span>,
         reason: &amp;str,
@@ -584,7 +594,7 @@
                 <span class="rs-kw">if</span> attempt.is_closed() {
                     <span class="rs-kw">continue</span>;
                 }
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-238">cancel_attempt</a>(&amp;attempt, reason, now).<span class="rs-kw">await</span>?;
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-243">cancel_attempt</a>(&amp;attempt, reason, now).<span class="rs-kw">await</span>?;
             }
             <span class="rs-self">self</span>.iteration_store
                 .set_status(
@@ -610,7 +620,7 @@
     <span class="rs-comment">/// row to `Cancelled` *before* any teardown (closing the scheduler gap), then</span>
     <span class="rs-comment">/// recurse `cancel_task` per task to tear down any live agent run, then close</span>
     <span class="rs-comment">/// the attempt as `Cancelled`.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-238">cancel_attempt</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#method-cancel-attempt-243">cancel_attempt</a>(
         &amp;<span class="rs-self">self</span>,
         attempt: &amp;eos_types::<span class="rs-type">Attempt</span>,
         reason: &amp;str,
@@ -621,7 +631,7 @@
         <span class="rs-comment">// covers rows that exist at latch time, so the planner must be prevented</span>
         <span class="rs-comment">// from creating fresh launchable rows after the latch.</span>
         <span class="rs-self">self</span>.starter
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a>()
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-46">orchestrator_registry</a>()
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-abort-planner-74">abort_planner</a>(&amp;attempt.id);
         <span class="rs-kw">let</span> tasks: <span class="rs-type">Vec</span>&lt;eos_types::<span class="rs-type">TaskId</span>&gt; = attempt
             .<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>()
@@ -657,7 +667,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#item-fn-workflow-api-error-289">workflow_api_error</a>(err: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; <span class="rs-type">WorkflowApiError</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-service-rs.html#item-fn-workflow-api-error-294">workflow_api_error</a>(err: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; <span class="rs-type">WorkflowApiError</span> {
     <span class="rs-kw">match</span> err {
         <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Store</span>(err) =&gt; <span class="rs-type">WorkflowApiError</span>::<span class="rs-type">Store</span>(err),
         other =&gt; <span class="rs-type">WorkflowApiError</span>::<span class="rs-type">Internal</span>(other.to_string()),

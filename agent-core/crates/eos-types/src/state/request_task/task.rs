@@ -6,7 +6,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{AttemptId, IterationId, JsonObject, RequestId, TaskId, WorkflowId};
+use crate::{
+    AgentName, AgentRunId, AttemptId, IterationId, JsonObject, ParentedAgentRunKind, RequestId,
+    TaskId, ToolUseId, UtcDateTime, WorkflowId,
+};
 
 use crate::ExecutionTaskOutcome;
 
@@ -112,4 +115,84 @@ pub struct Task {
     /// Flattened terminal tool result, if a terminal has stamped one.
     #[serde(default)]
     pub terminal_tool_result: Option<JsonObject>,
+}
+
+/// Merged persisted task-agent-run row.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct TaskRun {
+    /// Schedulable task identity.
+    pub task_id: TaskId,
+    /// Agent-run execution and record identity.
+    pub agent_run_id: AgentRunId,
+    /// Owning request.
+    pub request_id: RequestId,
+    /// Workflow role for this task-agent-run.
+    pub role: TaskRole,
+    /// Lifecycle status.
+    pub status: TaskStatus,
+    /// Owning workflow for planner/generator/reducer rows.
+    #[serde(default)]
+    pub workflow_id: Option<WorkflowId>,
+    /// Owning iteration for planner/generator/reducer rows.
+    #[serde(default)]
+    pub iteration_id: Option<IterationId>,
+    /// Owning attempt for planner/generator/reducer rows.
+    #[serde(default)]
+    pub attempt_id: Option<AttemptId>,
+    /// Bound agent profile.
+    pub agent_name: AgentName,
+    /// Terminal payload projection, if any.
+    #[serde(default)]
+    pub terminal_payload: Option<JsonObject>,
+    /// Provider token count.
+    pub token_count: i64,
+    /// Terminal error summary, if any.
+    #[serde(default)]
+    pub error: Option<String>,
+    /// Creation timestamp.
+    pub created_at: UtcDateTime,
+    /// Last-update timestamp.
+    pub updated_at: UtcDateTime,
+    /// Finish timestamp, if terminal.
+    #[serde(default)]
+    pub finished_at: Option<UtcDateTime>,
+}
+
+/// Parent-launched task-backed subagent/advisor run row.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ParentedRun {
+    /// Own task identity.
+    pub task_id: TaskId,
+    /// Agent-run execution and record identity.
+    pub agent_run_id: AgentRunId,
+    /// Owning request.
+    pub request_id: RequestId,
+    /// Lifecycle status.
+    pub status: TaskStatus,
+    /// Exact parent agent run that launched this run.
+    pub parent_agent_run_id: AgentRunId,
+    /// Denormalized parent task grouping index.
+    pub parent_task_id: TaskId,
+    /// Parent-launched run kind.
+    pub kind: ParentedAgentRunKind,
+    /// Model tool-use id that launched this run, if available.
+    #[serde(default)]
+    pub tool_use_id: Option<ToolUseId>,
+    /// Bound agent profile.
+    pub agent_name: AgentName,
+    /// Terminal payload projection, if any.
+    #[serde(default)]
+    pub terminal_payload: Option<JsonObject>,
+    /// Provider token count.
+    pub token_count: i64,
+    /// Terminal error summary, if any.
+    #[serde(default)]
+    pub error: Option<String>,
+    /// Creation timestamp.
+    pub created_at: UtcDateTime,
+    /// Last-update timestamp.
+    pub updated_at: UtcDateTime,
+    /// Finish timestamp, if terminal.
+    #[serde(default)]
+    pub finished_at: Option<UtcDateTime>,
 }

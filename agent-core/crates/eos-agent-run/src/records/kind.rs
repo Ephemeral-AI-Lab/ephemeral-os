@@ -115,12 +115,4 @@ impl WorkflowTaskRole {
             Self::Reducer => "workflow_reducer",
         }
     }
-
-    pub(crate) fn task_segment_prefix(self) -> &'static str {
-        match self {
-            Self::Planner => "planner-task",
-            Self::Generator => "generator-task",
-            Self::Reducer => "reducer-task",
-        }
-    }
 }

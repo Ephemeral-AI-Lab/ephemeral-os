@@ -5,14 +5,16 @@ use std::sync::Arc;
 use sqlx::SqlitePool;
 
 use eos_types::{
-    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
+    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskAgentRunStore,
+    TaskStore, WorkflowStore,
 };
 
 use crate::error::DbError;
 use crate::model_registry::ModelRegistry;
 use crate::pool;
 use crate::repositories::{
-    SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore, SqlWorkflowStore,
+    SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore,
+    SqlTaskAgentRunStore, SqlWorkflowStore,
 };
 use crate::DatabaseConfig;
 
@@ -26,6 +28,7 @@ pub struct Database {
     iterations: Arc<SqlIterationStore>,
     attempts: Arc<SqlAttemptStore>,
     agent_runs: Arc<SqlAgentRunStore>,
+    task_agent_runs: Arc<SqlTaskAgentRunStore>,
     models: Arc<ModelRegistry>,
 }
 
@@ -44,6 +47,7 @@ impl Database {
             iterations: Arc::new(SqlIterationStore::new(pool.clone())),
             attempts: Arc::new(SqlAttemptStore::new(pool.clone())),
             agent_runs: Arc::new(SqlAgentRunStore::new(pool.clone())),
+            task_agent_runs: Arc::new(SqlTaskAgentRunStore::new(pool.clone())),
             models: Arc::new(ModelRegistry::new(pool.clone())),
             pool,
         })
@@ -83,6 +87,12 @@ impl Database {
     #[must_use]
     pub fn agent_runs(&self) -> Arc<dyn AgentRunStore> {
         self.agent_runs.clone()
+    }
+
+    /// The task-agent-run lineage store.
+    #[must_use]
+    pub fn task_agent_runs(&self) -> Arc<dyn TaskAgentRunStore> {
+        self.task_agent_runs.clone()
     }
 
     /// The model store (trait surface).

@@ -13,8 +13,8 @@ use anyhow::{Context, Result};
 use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
 use eos_types::{
-    AgentCoreCancellationApi, AgentName, AgentName as SpawnAgentName, AgentRunApi, AgentRunId,
-    JsonObject, RequestId, SpawnAgentRequest, SpawnAgentTarget, TaskId, WorkflowApi,
+    AgentCoreCancellationApi, AgentName, AgentName as SpawnAgentName, AgentRunApi, JsonObject,
+    RequestId, SpawnAgentRequest, SpawnAgentTarget, TaskId, WorkflowApi,
     WorkflowAttemptSubmissionApi,
 };
 use eos_types::{RequestStatus, Task, TaskRole, TaskStatus};
@@ -214,13 +214,15 @@ pub async fn run_request(
                     services.agent_core.agent_registry.clone(),
                     loop_launcher,
                     services.db.agent_run_store.clone(),
+                    services.db.task_agent_run_store.clone(),
                     services.message_records.message_records.clone(),
                 )
                 .with_runtime_state_hooks(
                     {
                         let agent_state = services.agent_state.clone();
-                        move |request, agent_run_id| {
-                            agent_state.record_spawn_request(request, agent_run_id)
+                        move |request: &eos_types::SpawnAgentRequest,
+                              created_run: &eos_types::CreatedTaskAgentRun| {
+                            agent_state.record_spawn_request(request, created_run)
                         }
                     },
                     {
@@ -235,16 +237,15 @@ pub async fn run_request(
                 .spawn_agent(SpawnAgentRequest {
                     agent_name: SpawnAgentName::new(root_name.as_str())
                         .expect("root agent name is valid"),
-                    agent_run_id: Some(AgentRunId::new_v4()),
                     initial_messages: vec![Message::from_user_text(prompt.clone())],
                     target: SpawnAgentTarget::Root {
                         request_id: request_id.clone(),
                         task_id: root_task_id.clone(),
                     },
+                    tool_use_id: None,
                     sandbox_id: Some(binding.sandbox_id.clone()),
                     workspace_root: workspace_root.clone(),
                     is_isolated_workspace_mode: false,
-                    persist: true,
                 })
                 .await
             {

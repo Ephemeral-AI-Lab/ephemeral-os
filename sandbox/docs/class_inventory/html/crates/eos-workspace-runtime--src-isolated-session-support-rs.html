@@ -137,7 +137,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-support-rs.html#item-fn-next-handle-id-66">next_handle_id</a>() -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(1);
+    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(1);
     <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
         .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
         .map_or(0, |duration| duration.as_nanos());
@@ -159,7 +159,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>() -&gt; f64 {
-    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
 }
 </code></pre>
@@ -339,7 +339,7 @@
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-support-rs.html#item-fn-next-handle-id-66">next_handle_id</a>() -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(1);
+    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(1);
     <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
         .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
         .map_or(0, |duration| duration.as_nanos());
@@ -348,7 +348,7 @@
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>() -&gt; f64 {
-    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
 }
 

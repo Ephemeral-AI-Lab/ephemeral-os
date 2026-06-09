@@ -64,7 +64,12 @@ impl WorkflowApi for WorkflowService {
     ) -> Result<StartedWorkflow, WorkflowApiError> {
         let started = self
             .starter
-            .start(&request.workflow_goal, &request.parent_task_id)
+            .start(
+                &request.workflow_goal,
+                &request.parent_task_id,
+                &request.agent_run_id,
+                request.tool_use_id.as_ref(),
+            )
             .await
             .map_err(workflow_api_error)?;
         Ok(StartedWorkflow {
@@ -113,12 +118,12 @@ impl WorkflowApi for WorkflowService {
 
     async fn find_outstanding_workflows(
         &self,
-        parent_task_id: &TaskId,
-        _agent_run_id: &AgentRunId,
+        _parent_task_id: &TaskId,
+        agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
         Ok(self
             .workflow_store
-            .list_for_parent_task(parent_task_id)
+            .list_for_launching_agent_run(agent_run_id)
             .await?
             .into_iter()
             .filter(eos_types::Workflow::is_open)

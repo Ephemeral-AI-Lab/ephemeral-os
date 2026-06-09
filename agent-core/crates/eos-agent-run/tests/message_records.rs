@@ -182,7 +182,7 @@ async fn workflow_task_records_use_role_layout_and_payload() {
             relative,
             format!(
                 concat!(
-                    "requests/req-workflow/root-task-task-root/agent-run-run-root/",
+                    "requests/req-workflow/",
                     "workflows/workflow-wf-1/iteration-it-1/attempt-att-1/",
                     "{}/agent-run-{}"
                 ),
@@ -202,19 +202,9 @@ async fn workflow_task_records_use_role_layout_and_payload() {
     }
 
     let root_events = records.read_events(&root_run_id, 2).await.unwrap();
-    let child_paths: Vec<_> = root_events
+    assert!(root_events
         .iter()
-        .filter(|event| event.kind == "child_created")
-        .map(|event| event.payload["path"].clone())
-        .collect();
-    assert_eq!(
-        Value::Array(child_paths),
-        json!([
-            "workflows/workflow-wf-1/iteration-it-1/attempt-att-1/planner-task-task-plan/agent-run-run-plan",
-            "workflows/workflow-wf-1/iteration-it-1/attempt-att-1/generator-task-task-gen/agent-run-run-gen",
-            "workflows/workflow-wf-1/iteration-it-1/attempt-att-1/reducer-task-task-reduce/agent-run-run-reduce"
-        ])
-    );
+        .all(|event| event.kind != "child_created"));
 }
 
 #[tokio::test]
@@ -447,7 +437,7 @@ async fn read_messages_and_events_honor_tail_offsets() {
 }
 
 #[tokio::test]
-async fn child_created_waits_until_child_files_exist() {
+async fn subagent_records_use_request_rooted_layout_without_parent_scan() {
     let dir = tempfile::tempdir().unwrap();
     let records = AgentMessageRecords::new(dir.path());
     let (request_id, task_id, parent_id) = ids();
@@ -464,10 +454,11 @@ async fn child_created_waits_until_child_files_exist() {
         .await
         .unwrap();
     let child_id: AgentRunId = "child-run".parse().unwrap();
+    let child_task_id: TaskId = "child-task".parse().unwrap();
     let child = records
         .start_agent_run(AgentRunRecordStart {
             request_id: &request_id,
-            task_id: None,
+            task_id: Some(&child_task_id),
             agent_run_id: &child_id,
             agent_name: "subagent",
             kind: &AgentRunRecordKind::Subagent {
@@ -480,16 +471,14 @@ async fn child_created_waits_until_child_files_exist() {
         .unwrap();
 
     assert!(child.node_dir().join("messages.jsonl").exists());
-    let parent_events = records.read_events(&parent_id, 0).await.unwrap();
-    let child_event = parent_events
-        .iter()
-        .find(|event| event.kind == "child_created")
-        .expect("child_created");
-    assert_eq!(child_event.payload["agent_run_id"], json!("child-run"));
     assert_eq!(
-        child_event.payload["path"],
-        json!("subagents/subagent-run-child-run")
+        slash(child.node_dir().strip_prefix(dir.path()).unwrap()),
+        "requests/req-1/subagents/subagent-run-child-run"
     );
+    let parent_events = records.read_events(&parent_id, 0).await.unwrap();
+    assert!(parent_events
+        .iter()
+        .all(|event| event.kind != "child_created"));
 }
 
 #[tokio::test]
@@ -500,10 +489,11 @@ async fn advisor_child_created_records_parent_payload_and_path() {
     start_root(&records, &request_id, &task_id, &parent_id).await;
 
     let advisor_id: AgentRunId = id("advisor-child");
+    let advisor_task_id: TaskId = id("advisor-task");
     records
         .start_agent_run(AgentRunRecordStart {
             request_id: &request_id,
-            task_id: None,
+            task_id: Some(&advisor_task_id),
             agent_run_id: &advisor_id,
             agent_name: "advisor",
             kind: &AgentRunRecordKind::Advisor {
@@ -516,35 +506,28 @@ async fn advisor_child_created_records_parent_payload_and_path() {
         .unwrap();
 
     let parent_events = records.read_events(&parent_id, 2).await.unwrap();
-    assert_eq!(parent_events.len(), 1);
-    assert_eq!(parent_events[0].kind, "child_created");
-    assert_eq!(parent_events[0].payload["type"], json!("advisor"));
-    assert_eq!(
-        parent_events[0].payload["agent_run_id"],
-        json!("advisor-child")
-    );
-    assert_eq!(
-        parent_events[0].payload["parent_agent_run_id"],
-        json!("run-1")
-    );
-    assert_eq!(
-        parent_events[0].payload["path"],
-        json!("advisors/advisor-run-advisor-child")
-    );
+    assert!(parent_events.is_empty());
+    assert!(records
+        .read_events(&advisor_id, 0)
+        .await
+        .unwrap()
+        .iter()
+        .any(|event| event.payload["parent_agent_run_id"] == json!("run-1")));
 }
 
 #[tokio::test]
-async fn missing_parent_children_use_stable_layouts() {
+async fn parented_runs_do_not_use_parents_missing_layouts() {
     let dir = tempfile::tempdir().unwrap();
     let records = AgentMessageRecords::new(dir.path());
     let request_id: RequestId = id("req-layout");
 
     let missing_parent: AgentRunId = id("missing-parent");
     let orphan_id: AgentRunId = id("orphan-subagent");
+    let orphan_task_id: TaskId = id("orphan-task");
     let orphan = records
         .start_agent_run(AgentRunRecordStart {
             request_id: &request_id,
-            task_id: None,
+            task_id: Some(&orphan_task_id),
             agent_run_id: &orphan_id,
             agent_name: "subagent",
             kind: &AgentRunRecordKind::Subagent {
@@ -557,7 +540,7 @@ async fn missing_parent_children_use_stable_layouts() {
         .unwrap();
     assert_eq!(
         slash(orphan.node_dir().strip_prefix(dir.path()).unwrap()),
-        "requests/req-layout/parents-missing/missing-parent/subagents/subagent-run-orphan-subagent"
+        "requests/req-layout/subagents/subagent-run-orphan-subagent"
     );
     assert!(records.read_events(&orphan_id, 0).await.unwrap().len() >= 2);
 }
@@ -581,10 +564,11 @@ async fn subagent_and_advisor_records_resolve_by_agent_run_id() {
         .unwrap();
 
     let subagent_id: AgentRunId = "subagent-1".parse().unwrap();
+    let subagent_task_id: TaskId = "subagent-task-1".parse().unwrap();
     records
         .start_agent_run(AgentRunRecordStart {
             request_id: &request_id,
-            task_id: None,
+            task_id: Some(&subagent_task_id),
             agent_run_id: &subagent_id,
             agent_name: "subagent",
             kind: &AgentRunRecordKind::Subagent {
@@ -603,10 +587,11 @@ async fn subagent_and_advisor_records_resolve_by_agent_run_id() {
         .is_empty());
 
     let advisor_id: AgentRunId = "advisor-1".parse().unwrap();
+    let advisor_task_id: TaskId = "advisor-task-1".parse().unwrap();
     records
         .start_agent_run(AgentRunRecordStart {
             request_id: &request_id,
-            task_id: None,
+            task_id: Some(&advisor_task_id),
             agent_run_id: &advisor_id,
             agent_name: "advisor",
             kind: &AgentRunRecordKind::Advisor {
@@ -675,7 +660,7 @@ async fn unsafe_path_segments_and_missing_task_ids_are_rejected() {
                 initial_messages: &[],
             })
             .await,
-        "root-task",
+        "task_id",
         "../task",
     );
 
@@ -743,7 +728,7 @@ async fn unsafe_path_segments_and_missing_task_ids_are_rejected() {
         records
             .start_agent_run(AgentRunRecordStart {
                 request_id: &request_id,
-                task_id: None,
+                task_id: Some(&task_id),
                 agent_run_id: &agent_run_id,
                 agent_name: "subagent",
                 kind: &subagent,

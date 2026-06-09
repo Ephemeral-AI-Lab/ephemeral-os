@@ -77,12 +77,7 @@ pub async fn transcript(
         Some(run) => {
             let messages = match state.message_records.read_messages(&run.id, 0).await {
                 Ok(bytes) => parse_jsonl_messages(&bytes.bytes)?,
-                Err(MessageRecordError::NotFound(_)) => run
-                    .message_history
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(serde_json::Value::Object)
-                    .collect(),
+                Err(MessageRecordError::NotFound(_)) => Vec::new(),
                 Err(err) => return Err(ApiError::from(err)),
             };
             (Some(run.id), messages)

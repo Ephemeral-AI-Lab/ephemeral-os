@@ -15,7 +15,7 @@ pub struct TreeResourceStats {
 /// duration captured during finalize; the daemon reads it as a fallback for the
 /// OCC commit timing when the publisher does not report one.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct EphemeralTimings {
+pub struct PublishTiming {
     pub publish_s: Option<f64>,
 }
 

@@ -69,7 +69,7 @@
   <pre><code>#[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-output-rs.html#item-fn-tail-lines-1">tail_lines</a>(text: &amp;str, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">if</span> text.is_empty() || last_n_lines == 0 {
-        <span class="rs-kw">return</span> <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">return</span> <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line_starts = vec![0_usize];
     <span class="rs-kw">for</span> (idx, byte) <span class="rs-kw">in</span> text.bytes().enumerate() {
@@ -98,7 +98,7 @@
   <pre class="file-source"><code>#[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-output-rs.html#item-fn-tail-lines-1">tail_lines</a>(text: &amp;str, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">if</span> text.is_empty() || last_n_lines == 0 {
-        <span class="rs-kw">return</span> <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">return</span> <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line_starts = vec![0_usize];
     <span class="rs-kw">for</span> (idx, byte) <span class="rs-kw">in</span> text.bytes().enumerate() {

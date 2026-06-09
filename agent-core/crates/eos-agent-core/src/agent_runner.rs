@@ -20,8 +20,8 @@ use async_trait::async_trait;
 use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
 use eos_types::{
-    AgentName as SpawnAgentName, AgentRunApi, AgentRunId, SpawnAgentRequest, SpawnAgentTarget,
-    TaskRole, WorkflowApi, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowTaskRole,
+    AgentName as SpawnAgentName, AgentRunApi, SpawnAgentRequest, SpawnAgentTarget, TaskRole,
+    WorkflowApi, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowTaskRole,
 };
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
@@ -69,7 +69,6 @@ impl RuntimeAgentRunner {
 #[async_trait]
 impl AgentRunner for RuntimeAgentRunner {
     async fn run(&self, launch: AgentLaunch) -> WorkflowResult<AgentRunReport> {
-        let agent_run_id = AgentRunId::new_v4();
         let mut prompt = launch.context().to_owned();
         if let Some(guidance) = launch.task_guidance() {
             prompt.push_str("\n\n");
@@ -96,13 +95,15 @@ impl AgentRunner for RuntimeAgentRunner {
                 self.services.agent_core.agent_registry.clone(),
                 loop_launcher,
                 self.services.db.agent_run_store.clone(),
+                self.services.db.task_agent_run_store.clone(),
                 self.services.message_records.message_records.clone(),
             )
             .with_runtime_state_hooks(
                 {
                     let agent_state = self.services.agent_state.clone();
-                    move |request, agent_run_id| {
-                        agent_state.record_spawn_request(request, agent_run_id)
+                    move |request: &eos_types::SpawnAgentRequest,
+                          created_run: &eos_types::CreatedTaskAgentRun| {
+                        agent_state.record_spawn_request(request, created_run)
                     }
                 },
                 {
@@ -115,7 +116,6 @@ impl AgentRunner for RuntimeAgentRunner {
             .spawn_agent(SpawnAgentRequest {
                 agent_name: SpawnAgentName::new(launch.agent_def().name.as_str())
                     .expect("loaded agent name is valid"),
-                agent_run_id: Some(agent_run_id),
                 initial_messages: vec![Message::from_user_text(prompt)],
                 target: SpawnAgentTarget::Workflow {
                     request_id: launch.request_id().clone(),
@@ -127,10 +127,10 @@ impl AgentRunner for RuntimeAgentRunner {
                     },
                     role: workflow_task_agent_run_role(launch.role()),
                 },
+                tool_use_id: None,
                 sandbox_id: None,
                 workspace_root: self.workspace_root.clone(),
                 is_isolated_workspace_mode: false,
-                persist: true,
             })
             .await
         {

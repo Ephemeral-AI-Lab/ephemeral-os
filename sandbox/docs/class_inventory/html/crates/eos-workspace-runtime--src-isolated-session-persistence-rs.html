@@ -136,15 +136,15 @@
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>()) <span class="rs-kw">else</span> {
-            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         };
         <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(payload) = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;raw) <span class="rs-kw">else</span> {
-            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         };
         <span class="rs-kw">if</span> payload.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;schema_version&quot;).and_then(<span class="rs-type">Value</span>::as_u64)
             != <span class="rs-type">Some</span>(u64::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(<span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>))
         {
-            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         }
         payload
             .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;handles&quot;)
@@ -243,15 +243,15 @@
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>()) <span class="rs-kw">else</span> {
-            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         };
         <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(payload) = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;raw) <span class="rs-kw">else</span> {
-            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         };
         <span class="rs-kw">if</span> payload.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;schema_version&quot;).and_then(<span class="rs-type">Value</span>::as_u64)
             != <span class="rs-type">Some</span>(u64::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(<span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>))
         {
-            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
         }
         payload
             .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;handles&quot;)

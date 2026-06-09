@@ -64,10 +64,10 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-testkit/src/lib.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Shared agent-core test doubles (the `EventSource` / Layer-A layer).</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Shared agent-core test doubles (the `ProviderStreamSource` / Layer-A layer).</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! The single home for the doubles per-crate mock tests substitute at the LLM</span>
-<span class="rs-comment">//! and daemon-RPC edges: the scripted [`EventSource`](eos_engine::EventSource)</span>
+<span class="rs-comment">//! and daemon-RPC edges: the scripted [`ProviderStreamSource`](eos_engine::ProviderStreamSource)</span>
 <span class="rs-comment">//! ([`ScriptedSource`] — the only definition in the workspace, `TESTING_SPEC` AC3),</span>
 <span class="rs-comment">//! the fake [`SandboxTransport`](eos_sandbox_port::SandboxTransport)</span>
 <span class="rs-comment">//! ([`FakeTransport`]), agent-definition builders, the `run_until` stream</span>

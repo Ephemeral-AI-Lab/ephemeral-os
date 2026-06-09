@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use eos_types::{
-    AgentRunStore, AttemptStore, IterationStore, RequestStore, TaskStore, WorkflowStore,
+    AgentRunStore, AttemptStore, IterationStore, RequestStore, TaskAgentRunStore, TaskStore,
+    WorkflowStore,
 };
 
 /// Runtime access to persisted request/task/workflow state.
@@ -15,6 +16,7 @@ pub(crate) struct DbStoreService {
     pub(crate) iteration_store: Arc<dyn IterationStore>,
     pub(crate) attempt_store: Arc<dyn AttemptStore>,
     pub(crate) agent_run_store: Arc<dyn AgentRunStore>,
+    pub(crate) task_agent_run_store: Arc<dyn TaskAgentRunStore>,
 }
 
 impl std::fmt::Debug for DbStoreService {

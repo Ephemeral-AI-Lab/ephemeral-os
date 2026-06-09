@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>14</b><span>modules</span></div>
-  <div><b>71</b><span>items</span></div>
+  <div><b>74</b><span>items</span></div>
   <div><b>56</b><span>fields</span></div>
   <div><b>39</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">records</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run--src-records-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-records-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-run--src-records-rs.html"><span>records.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">records</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run--src-records-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-records-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-run--src-records-rs.html"><span>records.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="records::service crates/eos-agent-run/src/records/service.rs AgentMessageRecords impl AgentMessageRecords">
   <div class="module-head">
     <div>
@@ -90,7 +90,7 @@
 
         <span class="rs-kw">let</span> handle = <a class="symbol-link rs-type" href="eos-agent-run--src-records-handle-rs.html#item-struct-AgentRunRecordHandle-12">AgentRunRecordHandle</a>::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-from-node-dir-79">from_node_dir</a>(node_dir.clone());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-agent-run.html#method-new-37">new</a>();
-        payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>()));
+        payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>()));
         payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(
             &quot;agent_run_id&quot;.to_owned(),
             json!(input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()),
@@ -100,7 +100,7 @@
             payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;task_id&quot;.to_owned(), json!(task_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()));
         }
         payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;request_id&quot;.to_owned(), json!(input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()));
-        input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
+        input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
         handle.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-append-event-71">append_event</a>(&quot;node_started&quot;, payload).<span class="rs-kw">await</span>?;
 
         <span class="rs-kw">let</span> range = handle
@@ -113,11 +113,11 @@
         handle.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-append-event-71">append_event</a>(&quot;messages_initialized&quot;, payload).<span class="rs-kw">await</span>?;
 
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>((parent_dir, child_path)) =
-            layout::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-63">parent_announcement</a>(&amp;<span class="rs-self">self</span>.root, &amp;input, &amp;node_dir)?
+            layout::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-62">parent_announcement</a>(&amp;<span class="rs-self">self</span>.root, &amp;input, &amp;node_dir)?
         {
             <span class="rs-kw">let</span> parent = <a class="symbol-link rs-type" href="eos-agent-run--src-records-handle-rs.html#item-struct-AgentRunRecordHandle-12">AgentRunRecordHandle</a>::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-from-node-dir-79">from_node_dir</a>(parent_dir);
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-agent-run.html#method-new-37">new</a>();
-            payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>()));
+            payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>()));
             payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(
                 &quot;agent_run_id&quot;.to_owned(),
                 json!(input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()),
@@ -126,7 +126,7 @@
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task_id) = input.task_id {
                 payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;task_id&quot;.to_owned(), json!(task_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()));
             }
-            input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
+            input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
             parent.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-append-event-71">append_event</a>(&quot;child_created&quot;, payload).<span class="rs-kw">await</span>?;
         }
 
@@ -216,7 +216,7 @@
 
         <span class="rs-kw">let</span> handle = <a class="symbol-link rs-type" href="eos-agent-run--src-records-handle-rs.html#item-struct-AgentRunRecordHandle-12">AgentRunRecordHandle</a>::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-from-node-dir-79">from_node_dir</a>(node_dir.clone());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-agent-run.html#method-new-37">new</a>();
-        payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>()));
+        payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>()));
         payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(
             &quot;agent_run_id&quot;.to_owned(),
             json!(input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()),
@@ -226,7 +226,7 @@
             payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;task_id&quot;.to_owned(), json!(task_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()));
         }
         payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;request_id&quot;.to_owned(), json!(input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()));
-        input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
+        input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
         handle.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-append-event-71">append_event</a>(&quot;node_started&quot;, payload).<span class="rs-kw">await</span>?;
 
         <span class="rs-kw">let</span> range = handle
@@ -239,11 +239,11 @@
         handle.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-append-event-71">append_event</a>(&quot;messages_initialized&quot;, payload).<span class="rs-kw">await</span>?;
 
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>((parent_dir, child_path)) =
-            layout::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-63">parent_announcement</a>(&amp;<span class="rs-self">self</span>.root, &amp;input, &amp;node_dir)?
+            layout::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-62">parent_announcement</a>(&amp;<span class="rs-self">self</span>.root, &amp;input, &amp;node_dir)?
         {
             <span class="rs-kw">let</span> parent = <a class="symbol-link rs-type" href="eos-agent-run--src-records-handle-rs.html#item-struct-AgentRunRecordHandle-12">AgentRunRecordHandle</a>::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-from-node-dir-79">from_node_dir</a>(parent_dir);
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-agent-run.html#method-new-37">new</a>();
-            payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>()));
+            payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;<span class="rs-kw">type</span>&quot;.to_owned(), json!(input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>()));
             payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(
                 &quot;agent_run_id&quot;.to_owned(),
                 json!(input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()),
@@ -252,7 +252,7 @@
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task_id) = input.task_id {
                 payload.<a class="symbol-link rs-fn" href="eos-agent-run.html#method-insert-52">insert</a>(&quot;task_id&quot;.to_owned(), json!(task_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()));
             }
-            input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
+            input.kind.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a>(&amp;<span class="rs-kw">mut</span> payload);
             parent.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-append-event-71">append_event</a>(&quot;child_created&quot;, payload).<span class="rs-kw">await</span>?;
         }
 

@@ -17,7 +17,7 @@ Revision 2026-06-09: conformed the target file tree to the Phase 00 locked
 **background** `run_subagent` in `tools/subagent.rs`; the two must not share a
 file. The markdown tool-config loader folds into `registry.rs` and
 isolated-workspace tools fold into `tools/sandbox.rs`. Mandated the `ToolRuntime`
-runtime simplifications (no `Option`/`MissingPort` defensive layer; typed ports
+runtime simplifications (no `Option`/`MissingPort` defensive layer; typed handles
 instead of closure callbacks) and corrected two over-stated equivalence claims.
 The `ask_advisor.rs` split needs Phase-0 reconciliation against the locked tree;
 the previously proposed `config.rs` and `tools/submission/` splits are recorded
@@ -34,9 +34,10 @@ module tree is unchanged.
 Revision 2026-06-09 (naming convention pass): replaced internal `*Port` names
 with behavior-specific `*Api` / `*Control` names, renamed the terminal-submission
 dependency aggregate to `TerminalSubmissionRuntime`, and renamed the transitional
-spawn record-layout enum to `TaskAgentRunKind`. Phase 03 keeps this as a
-behavior-preserving rename; Phase 03B owns the deeper move where `eos-agent-run`
-materializes `TaskAgentRunKind` and returns a pre-resolved `AgentRunRecordTarget`.
+spawn classification to `SpawnAgentTarget` / `ParentAgentRunAnchor`. Phase 03
+keeps this as a behavior-preserving target-shape handoff; Phase 03B owns the
+deeper move where `eos-agent-run` materializes `TaskAgentRunKind` internally and
+passes a pre-resolved `AgentRunRecordTarget` to the engine.
 
 Revision 2026-06-09 (hook execution ownership): removed the previously implied
 hook-resource bundle from `ToolRuntime` / `RegisteredTool`. `eos-tool` owns only
@@ -45,6 +46,19 @@ tool-call hook runner and its fields: the run-local `BackgroundManagers` aggrega
 for background-session counts/cancellation, plus engine/store ancestry helpers
 for nested workflow depth. No `HookServices`, `HookRuntime`, `HookHandles`, or other
 hook execution resource type is exported by `eos-tool`.
+
+Revision 2026-06-09 (Phase 02/03B consistency): `eos-tool` does not add launch
+classification DTOs of its own and does not pass record-layout facts to the
+engine. It builds `SpawnAgentRequest` with a closed `SpawnAgentTarget`; subagent
+and advisor launches carry `ParentAgentRunAnchor`, while `tool_use_id` stays a
+request-level durable launch fact. `TaskAgentRunKind` is derived in
+`eos-agent-run`, not stamped by tool code.
+
+Revision 2026-06-09 (spawn input cleanup): `eos-tool` no longer supplies
+`agent_run_id` or `persist` on `SpawnAgentRequest`. The tool layer supplies only
+the launch intent (`SpawnAgentTarget`), prompt input (`initial_messages`), parent
+anchor for parent-launched runs, and request/runtime facts such as `tool_use_id`,
+sandbox, and workspace root.
 
 ## Scope
 
@@ -214,14 +228,15 @@ to the crate that owns its behavior or to an owner-neutral contract module.
 | `SubagentSessionStatus` | removed; stale public DTO with no live consumer |
 
 The agent-launch contracts (`AgentType`, `AgentName`, `AgentRunApi`,
-`SpawnAgentRequest`, `TaskAgentRunKind`, `TaskRole`) are **not**
+`SpawnAgentRequest`, `SpawnAgentTarget`, `ParentAgentRunAnchor`) are **not**
 `eos-tool-ports` items; they arrive from `eos-types` via the Phase 02 contract
 floor that retired the `eos-agent-ports` crate. `tools/subagent.rs` consumes
 them to build spawn requests. Under the current behavior-preserving Phase 03
-code, the request still carries a `task_agent_run_kind: TaskAgentRunKind` value
-for record layout; the Phase 03B target moves that materialization into
-`eos-agent-run` and passes only a pre-resolved `AgentRunRecordTarget` into the
-engine. `eos-tool` adds no launch-class types of its own, performs no
+target, the request carries a closed `SpawnAgentTarget` (`Subagent` / `Advisor`
+with `ParentAgentRunAnchor`) plus request-level launch facts such as
+`tool_use_id`; the Phase 03B target keeps `TaskAgentRunKind` materialization
+inside `eos-agent-run` and passes only a pre-resolved `AgentRunRecordTarget` into
+the engine. `eos-tool` adds no launch-class types of its own, performs no
 `AgentType` validation, and references the `AgentType` launch axis only — it does
 not consume the `AgentRole` behavioral axis, which Phase 02 retires. (`TaskRole`
 is the lineage-row workflow role from Phase 00, not a profile axis.)
@@ -323,12 +338,11 @@ immediately.
 and re-maps the result, with a hardcoded `advisor` agent name, advisor messages,
 a forced non-isolated workspace, and `is_terminal = false`, and touches the
 `background` manager not at all. They share the `AgentRunApi` launch API, not a
-behavior; `ToolRuntime` carries one `launcher` field. In the current
-behavior-preserving Phase 03 code, each tool still sets `TaskAgentRunKind`
-(`Subagent` vs `Advisor`) on `SpawnAgentRequest`; Phase 03B moves that row-kind
-materialization behind `eos-agent-run`'s spawn operation. `eos-tool` owns no
-launch-class policy: it never matches on `AgentType`, it only names the spawn
-shape it asks for. `ask_advisor` needs no session field because it blocks;
+behavior; `ToolRuntime` carries one `launcher` field. Each tool names the closed
+spawn shape it asks for (`SpawnAgentTarget::Subagent` vs
+`SpawnAgentTarget::Advisor`); `eos-agent-run` derives `TaskAgentRunKind` behind
+its spawn operation. `eos-tool` owns no launch-class policy: it never matches on
+`AgentType`. `ask_advisor` needs no session field because it blocks;
 `run_subagent` reaches `background` because it is a tracked background run — the
 asymmetry is a capability difference, not a per-tool service.
 
@@ -338,7 +352,7 @@ two-store `TerminalSubmissionRuntime` resource (task/request stores with a
 compare-and-set commit); `submit_planner_outcome`, `submit_generator_outcome`,
 and `submit_reducer_outcome` call distinct `WorkflowAttemptSubmissionApi` methods; and
 `submit_subagent_result` and `submit_advisor_feedback` are service-less
-metadata-only terminals with no port call. They share only the file-private
+metadata-only terminals with no lifecycle API call. They share only the file-private
 helpers, not a single dispatch axis.
 
 ### Mandated runtime simplifications
@@ -362,7 +376,7 @@ helpers, not a single dispatch axis.
    `BoxServiceFuture` machinery in the current `services.rs`. `count` /
    `cancel_all` are **not** on the tool-facing trait: engine-side hook execution
    reads the aggregate directly. `WorkflowApi` and `AgentRunApi` stay the
-   `eos-types`-owned `dyn` ports they already are.
+   `eos-types`-owned injected API contracts they already are.
 
 Each `ToolRuntime` field is an injected handle used by concrete tool executors.
 Its **trait is defined in `eos-tool`** (or, for `WorkflowApi`/`AgentRunApi`, in
@@ -379,10 +393,9 @@ This keeps the graph acyclic:
   `eos-engine`. `eos-engine` consumes `dyn WorkflowApi` and `dyn AgentRunApi`
   from `eos-types` and has no crate edge to the concrete `eos-workflow` or
   `eos-agent-run` crates. Building either impl would require such an edge:
-  `eos-agent-run -> eos-engine` already exists (Phase 00 locked DAG), so an
-  `eos-engine -> eos-agent-run` edge would close a cycle, and `eos-workflow` is
-  simply unreachable from the engine. Only `eos-agent-core`, which depends on
-  every domain crate, may build them.
+  `eos-engine -> eos-agent-run` violates the Phase 02 target DAG, and
+  `eos-workflow` is simply unreachable from the engine. Only `eos-agent-core`,
+  which depends on every domain crate, may build them.
 - Concrete tools and engine hooks invoke these handles only through the
   `eos-tool`-defined trait in `ToolRuntime`; they never gain a crate dependency
   on `eos-workflow` or `eos-agent-run`.
@@ -446,7 +459,7 @@ files that sit near or over the repo's 800-1000 LOC review-smell line:
   file does not reduce to scaffolding.
 
 The mandated runtime simplifications (no `Option`/`MissingPort` layer, typed
-ports) shrink `registry.rs` relative to today's services, and moving the inline
+handles) shrink `registry.rs` relative to today's services, and moving the inline
 executor tests to `tests/submission/` keeps the source files smaller than the
 combined source-plus-test footprint. These two files remain the accepted cost of
 matching the lock. If Phase 0 is ever reopened, the documented relief valve is
@@ -481,7 +494,7 @@ Implementation verification (2026-06-09):
 
 - `cargo test -p eos-tool`
 - `cargo check -p eos-engine --all-targets`
-- `cargo check -p eos-runtime --all-targets`
+- `cargo check -p eos-agent-core --all-targets`
 - `find crates/eos-tool/src -maxdepth 3 -type f | sort | wc -l` = `14`
 
 ## Acceptance Criteria
@@ -543,11 +556,11 @@ Implementation verification (2026-06-09):
   different run lifecycles (detached background vs spawned-and-awaited), not
   "only in task-agent-run kind".
 - `eos-tool` consumes `AgentType`, `AgentName`, `AgentRunApi`,
-  `SpawnAgentRequest`, and the current transitional `TaskAgentRunKind` from
+  `SpawnAgentRequest`, `SpawnAgentTarget`, and `ParentAgentRunAnchor` from
   `eos-types`; it performs no `AgentType` validation (that stays in
   `eos-agent-run`) and references the `AgentType` launch axis only, never the
-  retired `AgentRole` axis. Phase 03B replaces tool-side record-layout facts with
-  `eos-agent-run` materializing `TaskAgentRunKind` and passing
+  retired `AgentRole` axis. Phase 03B keeps tool-side record-layout facts out of
+  the contract: `eos-agent-run` derives `TaskAgentRunKind` and passes
   `AgentRunRecordTarget` to the engine.
 - `eos-engine` imports tool framework contracts from `eos-tool`.
 - `eos-tool` has no dependency on `eos-engine`.
@@ -556,9 +569,7 @@ Implementation verification (2026-06-09):
   `eos-tool` solely to avoid dependency-DAG decisions.
 - `cargo test -p eos-tool` passes.
 - `cargo check -p eos-engine --all-targets` and
-  `cargo check -p eos-runtime --all-targets` pass after import updates; replace
-  the second command with `cargo check -p eos-agent-core --all-targets` only
-  after the Phase 02 runtime facade fold lands.
+  `cargo check -p eos-agent-core --all-targets` pass after import updates.
 - `eos-tool` final module count is 14: the Phase 00 locked 13-module tree
   (`lib`, `error`, `model`, `registry`, `hooks`, `tools`, plus the seven flat
   `tools/` family files) plus the deliberate `tools/ask_advisor.rs` family. No

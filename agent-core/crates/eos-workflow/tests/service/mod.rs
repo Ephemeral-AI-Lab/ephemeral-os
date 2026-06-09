@@ -78,6 +78,7 @@ async fn cancel_workflow_cancels_child_state_without_touching_parent() {
         .start_workflow(StartWorkflowRequest {
             parent_task_id: parent.id.clone(),
             agent_run_id,
+            tool_use_id: None,
             workflow_goal: "delegated goal".to_owned(),
         })
         .await

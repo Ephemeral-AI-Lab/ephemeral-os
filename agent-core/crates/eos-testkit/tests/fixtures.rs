@@ -7,7 +7,10 @@ use eos_sandbox_port::{DaemonOp, SandboxTransport};
 use eos_testkit::{
     factory_by_agent, run_until, text_turn, tool_use_turn, FakeTransport, ScriptedSource,
 };
-use eos_types::{AgentRunId, AgentState, JsonObject, SandboxId};
+use eos_types::{
+    AgentRunId, AgentRunRecordDir, AgentRunRecordTarget, AgentRunRuntimeSnapshot, JsonObject,
+    RequestId, SandboxId, TaskId,
+};
 use futures::StreamExt;
 use serde_json::json;
 
@@ -30,8 +33,18 @@ fn request_with_tool(tool_name: &str) -> LlmRequest {
 }
 
 fn start_request() -> StartAgentLoopRequest {
+    let agent_run_id = AgentRunId::new_v4();
+    let request_id = RequestId::new_v4();
+    let task_id = TaskId::new_v4();
     StartAgentLoopRequest {
-        agent_run_id: AgentRunId::new_v4(),
+        record_target: AgentRunRecordTarget {
+            request_id,
+            agent_run_id,
+            task_id,
+            record_dir: AgentRunRecordDir::new(
+                "requests/test-request/root-task-test-task/agent-run-test-run",
+            ),
+        },
         initial_messages: Vec::new(),
         model_key: "test-model".to_owned(),
         max_completion_tokens: 1,
@@ -39,8 +52,8 @@ fn start_request() -> StartAgentLoopRequest {
     }
 }
 
-fn agent_state(agent_name: &str) -> AgentState {
-    AgentState {
+fn agent_state(agent_name: &str) -> AgentRunRuntimeSnapshot {
+    AgentRunRuntimeSnapshot {
         agent_run_id: AgentRunId::new_v4(),
         agent_name: agent_name.to_owned(),
         request_id: None,

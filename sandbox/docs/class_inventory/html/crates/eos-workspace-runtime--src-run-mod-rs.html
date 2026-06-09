@@ -83,13 +83,14 @@
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">mod</span> manager;
 <span class="rs-kw">mod</span> ports;
+#[cfg(any(target_os = &quot;linux&quot;, test))]
 <span class="rs-kw">mod</span> registry;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> command_handle::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-run-command-handle-rs.html#item-struct-CommandHandle-4">CommandHandle</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> ports::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-run-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a>;
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> manager::{<a class="symbol-link rs-type" href="eos-workspace-runtime--src-run-manager-rs.html#item-enum-StartTarget-44">StartTarget</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-run-manager-rs.html#item-struct-WorkspaceRunManager-61">WorkspaceRunManager</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> manager::{<a class="symbol-link rs-type" href="eos-workspace-runtime--src-run-manager-rs.html#item-enum-StartTarget-47">StartTarget</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-run-manager-rs.html#item-struct-WorkspaceRunManager-64">WorkspaceRunManager</a>};
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

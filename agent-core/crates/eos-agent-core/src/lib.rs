@@ -1,4 +1,4 @@
-//! `eos-agent-core` — the facade and runtime composition root of agent-core.
+//! `eos-agent-core` — the request entry and runtime composition root of agent-core.
 //!
 //! This crate owns the typed dependency graph ([`AgentCoreRuntime`]) that constructs
 //! every concrete store (from `eos-db`) and every concrete seam implementation
@@ -12,7 +12,7 @@
 //! request handle. It provisions one sandbox binding per request and wires the
 //! per-request delegated-workflow runtime
 //! ([`AttemptResources`](eos_workflow::AttemptResources) + the `AgentRunner` adapter + the
-//! downstream-state ports).
+//! downstream-state contracts).
 //!
 //! What this crate must **not** do: define any domain/store/seam trait (those
 //! are owned upstream), implement query-loop / tool-dispatch / workflow
@@ -44,7 +44,7 @@ pub use runtime::audit::{
 };
 pub use runtime::{
     AgentCoreRuntime, AgentCoreRuntimeBuilder, EngineEventSink, ProviderStreamSourceFactory,
-    RuntimeConfig, StateReader,
+    RequestExecutionTree, RuntimeConfig, StateReader, TaskExecutionNode,
 };
 
 // Re-export the sandbox binding value object owned by the sandbox port; this

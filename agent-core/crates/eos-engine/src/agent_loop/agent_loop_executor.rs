@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use eos_llm_client::{ContentBlock, LlmRequest, Message, UsageSnapshot};
 use eos_tool::{RegisteredTool, ToolName, ToolResult};
-use eos_types::{AgentRunApi, AgentRunId, AgentState, JsonObject, ToolUseId};
+use eos_types::{AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, JsonObject, ToolUseId};
 use futures::StreamExt;
 
 use super::{
@@ -70,7 +70,7 @@ impl AgentLoopExecutor {
     ) -> AgentLoopOutcome {
         let event_identity = match self
             .metadata_service
-            .agent_state(&request.agent_run_id)
+            .agent_state(&request.record_target.agent_run_id)
             .await
         {
             Ok(identity) => identity,
@@ -85,7 +85,7 @@ impl AgentLoopExecutor {
             }
         };
         let provider_stream_source = self.resolve_provider_stream_source(&request, &event_identity);
-        let run_services = self.build_run_services(&request.agent_run_id);
+        let run_services = self.build_run_services(&request.record_target.agent_run_id);
         let mut state = match AgentLoopState::from_request(
             request,
             &*self.tool_registry_factory,
@@ -159,7 +159,7 @@ impl AgentLoopExecutor {
     async fn execute_assistant_turn(
         &self,
         provider_stream_source: &Arc<dyn ProviderStreamSource>,
-        event_identity: &AgentState,
+        event_identity: &AgentRunRuntimeSnapshot,
         state: &mut AgentLoopState,
     ) -> Result<AssistantTurnResult, EngineError> {
         let request = build_loop_provider_request(state);
@@ -359,7 +359,7 @@ impl AgentLoopExecutor {
     fn resolve_provider_stream_source(
         &self,
         request: &StartAgentLoopRequest,
-        agent_state: &AgentState,
+        agent_state: &AgentRunRuntimeSnapshot,
     ) -> Arc<dyn ProviderStreamSource> {
         match &self.provider_stream_source {
             AgentLoopProviderStream::Static(source) => Arc::clone(source),
@@ -367,7 +367,11 @@ impl AgentLoopExecutor {
         }
     }
 
-    async fn drain_notifications(&self, state: &mut AgentLoopState, event_identity: &AgentState) {
+    async fn drain_notifications(
+        &self,
+        state: &mut AgentLoopState,
+        event_identity: &AgentRunRuntimeSnapshot,
+    ) {
         for notification in state.drain_notifications().await {
             self.emit_event(&StreamEvent::SystemNotification {
                 agent_name: event_identity.agent_name.clone(),

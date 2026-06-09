@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>14</b><span>modules</span></div>
-  <div><b>71</b><span>items</span></div>
+  <div><b>74</b><span>items</span></div>
   <div><b>56</b><span>fields</span></div>
   <div><b>39</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">records</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run--src-records-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link active" href="eos-agent-run--src-records-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-run--src-records-rs.html"><span>records.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">records</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run--src-records-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link active" href="eos-agent-run--src-records-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-run--src-records-rs.html"><span>records.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="records::kind crates/eos-agent-run/src/records/kind.rs AgentRunRecordStart AgentRunRecordKind impl AgentRunRecordKind WorkflowTaskRole impl WorkflowTaskRole">
   <div class="module-head">
     <div>
@@ -76,22 +76,21 @@
   </div>
   <code class="signature">pub enum <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a></code>
   <p class="docstring">Agent-run message-record node type and location facts.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Root</td><td><code></code></td></tr><tr><td>WorkflowTask</td><td><code>workflow_id: WorkflowId, iteration_id: IterationId, attempt_id: AttemptId, role: <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-95">WorkflowTaskRole</a></code></td></tr><tr><td>Subagent</td><td><code>parent_agent_run_id: AgentRunId</code></td></tr><tr><td>Advisor</td><td><code>parent_agent_run_id: AgentRunId</code></td></tr><tr><td>Agent</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-node-type-56"><td>method</td><td>node_type</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Root</td><td><code></code></td></tr><tr><td>WorkflowTask</td><td><code>workflow_id: WorkflowId, iteration_id: IterationId, attempt_id: AttemptId, role: <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-91">WorkflowTaskRole</a></code></td></tr><tr><td>Subagent</td><td><code>parent_agent_run_id: AgentRunId</code></td></tr><tr><td>Advisor</td><td><code>parent_agent_run_id: AgentRunId</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-node-type-53"><td>method</td><td>node_type</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Root</span> =&gt; &quot;root_agent&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">WorkflowTask</span> { role, .. } =&gt; role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>(),
+            <span class="rs-self">Self</span>::<span class="rs-type">WorkflowTask</span> { role, .. } =&gt; role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>(),
             <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> { .. } =&gt; &quot;subagent&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Advisor</span> { .. } =&gt; &quot;advisor&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Agent</span> =&gt; &quot;agent&quot;,
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-extend-payload-66"><td>method</td><td>extend_payload</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a> (&amp; self , payload : &amp; mut JsonObject)</code><details class="function-source">
+</details></td></tr><tr id="method-extend-payload-62"><td>method</td><td>extend_payload</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a> (&amp; self , payload : &amp; mut JsonObject)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a>(&amp;<span class="rs-self">self</span>, payload: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a>(&amp;<span class="rs-self">self</span>, payload: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">WorkflowTask</span> {
                 workflow_id,
@@ -115,23 +114,23 @@
                     json!(parent_agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()),
                 );
             }
-            <span class="rs-self">Self</span>::<span class="rs-type">Root</span> | <span class="rs-self">Self</span>::<span class="rs-type">Agent</span> =&gt; {}
+            <span class="rs-self">Self</span>::<span class="rs-type">Root</span> =&gt; {}
         }
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-agent-run/src/records/kind.rs:24</p>
-</article><article id="item-enum-WorkflowTaskRole-95" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum WorkflowTaskRole pub pub enum WorkflowTaskRole crates/eos-agent-run/src/records/kind.rs  ">
+</article><article id="item-enum-WorkflowTaskRole-91" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum WorkflowTaskRole pub pub enum WorkflowTaskRole crates/eos-agent-run/src/records/kind.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>WorkflowTaskRole</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-95">WorkflowTaskRole</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-91">WorkflowTaskRole</a></code>
   <p class="docstring">Workflow task role used for message-record path labels.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Planner</td><td><code></code></td></tr><tr><td>Generator</td><td><code></code></td></tr><tr><td>Reducer</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-108"><td>method</td><td>as_str</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Planner</td><td><code></code></td></tr><tr><td>Generator</td><td><code></code></td></tr><tr><td>Reducer</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-103"><td>method</td><td>as_str</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
@@ -141,9 +140,9 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-node-type-116"><td>method</td><td>node_type</td><td><code>fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+</details></td></tr><tr id="method-node-type-111"><td>method</td><td>node_type</td><td><code>fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;workflow_planner&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Generator</span> =&gt; &quot;workflow_generator&quot;,
@@ -151,9 +150,9 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-task-segment-prefix-124"><td>method</td><td>task_segment_prefix</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-124">task_segment_prefix</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+</details></td></tr><tr id="method-task-segment-prefix-119"><td>method</td><td>task_segment_prefix</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-119">task_segment_prefix</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-124">task_segment_prefix</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-119">task_segment_prefix</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;planner-task&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Generator</span> =&gt; &quot;generator-task&quot;,
@@ -163,7 +162,7 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-agent-run/src/records/kind.rs:95</p>
+  <p class="source">crates/eos-agent-run/src/records/kind.rs:91</p>
 </article></div>
 </section></div>
 </main>
@@ -197,7 +196,6 @@
 
 <span class="rs-comment">/// Agent-run message-record node type and location facts.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-#[non_exhaustive]
 <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a> {
     <span class="rs-comment">/// Root request agent.</span>
     <span class="rs-type">Root</span>,
@@ -210,7 +208,7 @@
         <span class="rs-comment">/// Owning attempt id.</span>
         attempt_id: <span class="rs-type">AttemptId</span>,
         <span class="rs-comment">/// Workflow task role.</span>
-        role: <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-95">WorkflowTaskRole</a>,
+        role: <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-91">WorkflowTaskRole</a>,
     },
     <span class="rs-comment">/// Background subagent run under a parent agent.</span>
     <span class="rs-type">Subagent</span> {
@@ -222,22 +220,19 @@
         <span class="rs-comment">/// Parent agent-run id.</span>
         parent_agent_run_id: <span class="rs-type">AgentRunId</span>,
     },
-    <span class="rs-comment">/// Generic agent run when no narrower layout is known.</span>
-    <span class="rs-type">Agent</span>,
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Root</span> =&gt; &quot;root_agent&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">WorkflowTask</span> { role, .. } =&gt; role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>(),
+            <span class="rs-self">Self</span>::<span class="rs-type">WorkflowTask</span> { role, .. } =&gt; role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>(),
             <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> { .. } =&gt; &quot;subagent&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Advisor</span> { .. } =&gt; &quot;advisor&quot;,
-            <span class="rs-self">Self</span>::<span class="rs-type">Agent</span> =&gt; &quot;agent&quot;,
         }
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-66">extend_payload</a>(&amp;<span class="rs-self">self</span>, payload: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-extend-payload-62">extend_payload</a>(&amp;<span class="rs-self">self</span>, payload: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">WorkflowTask</span> {
                 workflow_id,
@@ -261,15 +256,14 @@
                     json!(parent_agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>()),
                 );
             }
-            <span class="rs-self">Self</span>::<span class="rs-type">Root</span> | <span class="rs-self">Self</span>::<span class="rs-type">Agent</span> =&gt; {}
+            <span class="rs-self">Self</span>::<span class="rs-type">Root</span> =&gt; {}
         }
     }
 }
 
 <span class="rs-comment">/// Workflow task role used for message-record path labels.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-#[non_exhaustive]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-95">WorkflowTaskRole</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-91">WorkflowTaskRole</a> {
     <span class="rs-comment">/// Planner task.</span>
     <span class="rs-type">Planner</span>,
     <span class="rs-comment">/// Generator task.</span>
@@ -278,7 +272,7 @@
     <span class="rs-type">Reducer</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-95">WorkflowTaskRole</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-WorkflowTaskRole-91">WorkflowTaskRole</a> {
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;planner&quot;,
@@ -287,7 +281,7 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-56">node_type</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-node-type-53">node_type</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;workflow_planner&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Generator</span> =&gt; &quot;workflow_generator&quot;,
@@ -295,7 +289,7 @@
         }
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-124">task_segment_prefix</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-119">task_segment_prefix</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Planner</span> =&gt; &quot;planner-task&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Generator</span> =&gt; &quot;generator-task&quot;,

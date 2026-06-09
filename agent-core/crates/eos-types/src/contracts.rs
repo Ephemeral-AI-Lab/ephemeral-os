@@ -6,6 +6,8 @@
 //! depending on each other's concrete implementations.
 
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use std::collections::BTreeMap;
 
@@ -20,8 +22,6 @@ use crate::{
 pub struct SpawnAgentRequest {
     /// Agent profile name to launch.
     pub agent_name: AgentName,
-    /// Optional caller-provided run id; one is minted when absent.
-    pub agent_run_id: Option<AgentRunId>,
     /// Initial transcript.
     pub initial_messages: Vec<Message>,
     /// Closed spawn target and lineage facts.
@@ -35,13 +35,11 @@ pub struct SpawnAgentRequest {
     pub workspace_root: String,
     /// Whether the caller is in isolated-workspace mode.
     pub is_isolated_workspace_mode: bool,
-    /// Whether to persist the run row.
-    pub persist: bool,
 }
 
-/// Current runtime metadata facts for one agent run.
+/// Runtime-only metadata snapshot for one agent run.
 #[derive(Debug, Clone)]
-pub struct AgentState {
+pub struct AgentRunRuntimeSnapshot {
     /// Agent-run id.
     pub agent_run_id: AgentRunId,
     /// Bound agent profile name.
@@ -65,7 +63,7 @@ pub struct AgentState {
 }
 
 /// Workflow coordinates used by workflow task-agent-runs.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowCoordinates {
     /// Owning workflow id.
     pub workflow_id: WorkflowId,
@@ -76,7 +74,8 @@ pub struct WorkflowCoordinates {
 }
 
 /// Parent-launched task-agent-run kind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum ParentedAgentRunKind {
     /// Background subagent run.
     Subagent,
@@ -85,7 +84,7 @@ pub enum ParentedAgentRunKind {
 }
 
 /// Parent run anchor for a parent-launched agent run.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ParentAgentRunAnchor {
     /// Owning request id.
     pub request_id: RequestId,
@@ -96,7 +95,7 @@ pub struct ParentAgentRunAnchor {
 }
 
 /// Closed spawn target for agent-run creation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SpawnAgentTarget {
     /// Root request agent.
     Root {
@@ -138,15 +137,6 @@ impl SpawnAgentTarget {
         }
     }
 
-    /// Current run task id when the transitional caller still supplies one.
-    #[must_use]
-    pub const fn current_task_id(&self) -> Option<&TaskId> {
-        match self {
-            Self::Root { task_id, .. } | Self::Workflow { task_id, .. } => Some(task_id),
-            Self::Subagent { .. } | Self::Advisor { .. } => None,
-        }
-    }
-
     /// Workflow coordinates for workflow task-agent-runs.
     #[must_use]
     pub const fn workflow(&self) -> Option<&WorkflowCoordinates> {
@@ -178,7 +168,7 @@ impl SpawnAgentTarget {
 }
 
 /// Closed task-agent-run layout choice used to derive the current record path.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TaskAgentRunKind {
     /// Root request agent.
     Root,
@@ -199,7 +189,8 @@ pub enum TaskAgentRunKind {
 }
 
 /// Workflow task role used for task-agent-run path labels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum WorkflowTaskRole {
     /// Planner task.
     Planner,
@@ -571,6 +562,8 @@ pub struct StartWorkflowRequest {
     pub parent_task_id: TaskId,
     /// Agent run that owns the launch.
     pub agent_run_id: AgentRunId,
+    /// Tool use that requested the workflow, if available.
+    pub tool_use_id: Option<ToolUseId>,
     /// Delegated workflow goal.
     pub workflow_goal: String,
 }
@@ -655,7 +648,7 @@ pub trait WorkflowApi: Send + Sync {
         workflow_id: &WorkflowId,
     ) -> Result<Option<TerminalWorkflow>, WorkflowApiError>;
 
-    /// All workflows this parent task still has outstanding for `agent_run_id`.
+    /// All workflows this launching agent run still has outstanding.
     async fn find_outstanding_workflows(
         &self,
         parent_task_id: &TaskId,

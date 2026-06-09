@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
 use eos_tool::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
 use eos_types::{
-    AgentRunApi, AgentRunId, AgentRunStore, AgentState, JsonObject, Message, TaskStore, ToolUseId,
-    WorkflowApi, WorkflowStore,
+    AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, AgentRunStore, JsonObject, Message,
+    TaskStore, ToolUseId, WorkflowApi, WorkflowStore,
 };
 use serde_json::json;
 
@@ -44,7 +44,10 @@ pub struct ExecutionMetadataBuildInput {
 #[async_trait]
 pub trait ToolExecutionMetadataReader: Send + Sync {
     /// Load the current runtime snapshot for one agent run.
-    async fn agent_state(&self, agent_run_id: &AgentRunId) -> Result<AgentState, EngineError>;
+    async fn agent_state(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<AgentRunRuntimeSnapshot, EngineError>;
 
     /// Render per-tool-call execution metadata from the current agent state.
     async fn build_execution_metadata(

@@ -373,7 +373,12 @@ mod tests {
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps)
-            .start("delegated goal", &parent.id)
+            .start(
+                "delegated goal",
+                &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap();
         let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
@@ -418,7 +423,12 @@ mod tests {
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps)
-            .start("delegated goal", &parent.id)
+            .start(
+                "delegated goal",
+                &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap();
         runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
@@ -458,7 +468,12 @@ mod tests {
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps)
-            .start("delegated goal", &parent.id)
+            .start(
+                "delegated goal",
+                &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap();
         runner.push(ScriptedSubmission::NoSubmission(
@@ -497,7 +512,12 @@ mod tests {
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps)
-            .start("delegated goal", &parent.id)
+            .start(
+                "delegated goal",
+                &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap();
         wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
@@ -542,7 +562,12 @@ mod tests {
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps.clone())
-            .start("delegated goal", &parent.id)
+            .start(
+                "delegated goal",
+                &parent.id,
+                &eos_types::AgentRunId::new_v4(),
+                None,
+            )
             .await
             .unwrap();
         let local_id = node("missing-profile");

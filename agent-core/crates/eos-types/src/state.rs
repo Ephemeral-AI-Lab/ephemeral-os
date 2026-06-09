@@ -9,7 +9,7 @@ pub mod workflow;
 pub use engine::AgentRun;
 pub use model_registry::ModelRegistration;
 pub use request_task::{Page, PageResult, Request, RequestListFilter, RequestStatus};
-pub use request_task::{Task, TaskRole, TaskStatus, TASK_AGENT_ROLES};
+pub use request_task::{ParentedRun, Task, TaskRole, TaskRun, TaskStatus, TASK_AGENT_ROLES};
 pub use tools::{
     BackgroundSessionCounts, GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission,
     PlannerSubmission, ReducerSubmission,

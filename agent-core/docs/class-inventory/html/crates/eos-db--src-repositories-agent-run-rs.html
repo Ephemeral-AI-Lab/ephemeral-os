@@ -24,8 +24,8 @@
 <section class="summary">
   <div><b>14</b><span>modules</span></div>
   <div><b>98</b><span>items</span></div>
-  <div><b>119</b><span>fields</span></div>
-  <div><b>62</b><span>methods</span></div>
+  <div><b>121</b><span>fields</span></div>
+  <div><b>63</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -82,7 +82,7 @@
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> initial = initial_messages.map(json_col::encode).transpose()?;
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> agent_runs \
              (id, task_id, initial_messages, agent_name, message_history, terminal_tool_result, \
               token_count, error, created_at, finished_at) \
@@ -96,7 +96,7 @@
         .fetch_one(&amp;<span class="rs-self">self</span>.pool)
         .<span class="rs-kw">await</span>
         .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-agent-run-482">row_to_agent_run</a>(row)?)
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-agent-run-489">row_to_agent_run</a>(row)?)
     }
 </code></pre>
 </details></td></tr><tr id="method-finish-run-58"><td>method</td><td>finish_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-finish-run-58">finish_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
@@ -112,7 +112,7 @@
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> history = message_history.map(json_col::encode).transpose()?;
         <span class="rs-kw">let</span> ttr = terminal_tool_result.map(json_col::encode).transpose()?;
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> agent_runs <span class="rs-type">SET</span> message_history = ?, terminal_tool_result = ?, \
                token_count = ?, error = ?, finished_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
         )
@@ -131,7 +131,7 @@
 </details></td></tr><tr id="method-get-85"><td>method</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#method-get-209">get</a> (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-209">get</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(&quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> id = ?&quot;)
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(&quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> id = ?&quot;)
             .bind(agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
             .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
             .<span class="rs-kw">await</span>
@@ -142,7 +142,7 @@
 </details></td></tr><tr id="method-get-for-task-94"><td>method</td><td>get_for_task</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-get-for-task-94">get_for_task</a> (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-get-for-task-94">get_for_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> task_id = ? <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">DESC</span> <span class="rs-type">LIMIT</span> 1&quot;,
         )
         .bind(task_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
@@ -176,7 +176,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::json_col;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::rows::{row_to_agent_run, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::rows::{row_to_agent_run, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>};
 
 <span class="rs-comment">/// `SQLite` repository for agent runs.</span>
 #[derive(<span class="rs-type">Debug</span>)]
@@ -203,7 +203,7 @@
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> initial = initial_messages.map(json_col::encode).transpose()?;
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> agent_runs \
              (id, task_id, initial_messages, agent_name, message_history, terminal_tool_result, \
               token_count, error, created_at, finished_at) \
@@ -217,7 +217,7 @@
         .fetch_one(&amp;<span class="rs-self">self</span>.pool)
         .<span class="rs-kw">await</span>
         .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-agent-run-482">row_to_agent_run</a>(row)?)
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-agent-run-489">row_to_agent_run</a>(row)?)
     }
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-finish-run-58">finish_run</a>(
@@ -231,7 +231,7 @@
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> history = message_history.map(json_col::encode).transpose()?;
         <span class="rs-kw">let</span> ttr = terminal_tool_result.map(json_col::encode).transpose()?;
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> agent_runs <span class="rs-type">SET</span> message_history = ?, terminal_tool_result = ?, \
                token_count = ?, error = ?, finished_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
         )
@@ -248,7 +248,7 @@
     }
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-209">get</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(&quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> id = ?&quot;)
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(&quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> id = ?&quot;)
             .bind(agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
             .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
             .<span class="rs-kw">await</span>
@@ -257,7 +257,7 @@
     }
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-get-for-task-94">get_for_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-107">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> task_id = ? <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">DESC</span> <span class="rs-type">LIMIT</span> 1&quot;,
         )
         .bind(task_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())

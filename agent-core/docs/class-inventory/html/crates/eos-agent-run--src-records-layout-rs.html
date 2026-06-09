@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>14</b><span>modules</span></div>
-  <div><b>71</b><span>items</span></div>
+  <div><b>74</b><span>items</span></div>
   <div><b>56</b><span>fields</span></div>
   <div><b>39</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">records</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run--src-records-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-records-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-run--src-records-rs.html"><span>records.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-loop-request-rs.html"><span>agent_loop_request.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-persistence-rs.html"><span>agent_run_persistence.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-records-rs.html"><span>agent_run_records.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-agent-run-service-rs.html"><span>agent_run_service.rs</span><small>1/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">records</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run--src-records-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-handle-rs.html"><span>handle.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-io-rs.html"><span>io.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-kind-rs.html"><span>kind.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-records-layout-rs.html"><span>layout.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-record-rs.html"><span>record.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-records-service-rs.html"><span>service.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-agent-run--src-records-rs.html"><span>records.rs</span><small>0/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="records::layout crates/eos-agent-run/src/records/layout.rs resolve_agent_run node_dir parent_announcement request_root required_task_id parent_or_request_dir find_root_agent_dir find_agent_run_dir_in find_dir_named safe_prefixed_segment safe_segment path_to_slash_string">
   <div class="module-head">
     <div>
@@ -67,10 +67,10 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-resolve-agent-run-8">resolve_agent_run</a>(root: &amp;<span class="rs-type">Path</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">let</span> root = root.to_path_buf();
     <span class="rs-kw">let</span> id = agent_run_id.clone();
-    <span class="rs-kw">let</span> found = tokio::task::spawn_blocking(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(&amp;root, &amp;id)).<span class="rs-kw">await</span>??;
+    <span class="rs-kw">let</span> found = tokio::task::spawn_blocking(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(&amp;root, &amp;id)).<span class="rs-kw">await</span>??;
     found.ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-enum-MessageRecordError-4">MessageRecordError</a>::<span class="rs-type">NotFound</span>(agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>().to_owned()))
 }
 </code></pre>
@@ -88,13 +88,13 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-node-dir-21">node_dir</a>(root: &amp;<span class="rs-type">Path</span>, input: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
-    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;agent-run&quot;, input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;agent-run&quot;, input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">match</span> &amp;input.kind {
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Root</span> =&gt; {
-            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-96">required_task_id</a>(input)?;
+            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-95">required_task_id</a>(input)?;
             <span class="rs-type">Ok</span>(request_root
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;root-task&quot;, task_id)?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;root-task&quot;, task_id)?)
                 .join(agent_run_segment))
         }
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">WorkflowTask</span> {
@@ -103,65 +103,64 @@
             attempt_id,
             role,
         } =&gt; {
-            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-96">required_task_id</a>(input)?;
+            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-95">required_task_id</a>(input)?;
             <span class="rs-kw">let</span> workflow_parent =
-                <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a>(&amp;request_root)?.unwrap_or_else(|| request_root.clone());
+                <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a>(&amp;request_root)?.unwrap_or_else(|| request_root.clone());
             <span class="rs-type">Ok</span>(workflow_parent
                 .join(&quot;workflows&quot;)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-124">task_segment_prefix</a>(), task_id)?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-119">task_segment_prefix</a>(), task_id)?)
                 .join(agent_run_segment))
         }
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Subagent</span> {
             parent_agent_run_id,
-        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
+        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
             .join(&quot;subagents&quot;)
-            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(
+            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(
                 &quot;subagent-run&quot;,
                 input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
             )?)),
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Advisor</span> {
             parent_agent_run_id,
-        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
+        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
             .join(&quot;advisors&quot;)
-            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(
+            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(
                 &quot;advisor-run&quot;,
                 input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
             )?)),
-        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Agent</span> =&gt; <span class="rs-type">Ok</span>(request_root.join(agent_run_segment)),
     }
 }
 </code></pre>
 </details>
 
   <p class="source">crates/eos-agent-run/src/records/layout.rs:16</p>
-</article><article id="item-fn-parent-announcement-63" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parent_announcement pub(crate) pub(crate) fn parent_announcement (root : &amp; Path , input : &amp; AgentRunRecordStart &lt; '_ &gt; , node_dir : &amp; Path ,) -&gt; Result &lt; Option &lt; (PathBuf , String) &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
+</article><article id="item-fn-parent-announcement-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parent_announcement pub(crate) pub(crate) fn parent_announcement (root : &amp; Path , input : &amp; AgentRunRecordStart &lt; '_ &gt; , node_dir : &amp; Path ,) -&gt; Result &lt; Option &lt; (PathBuf , String) &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parent_announcement</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-63">parent_announcement</a> (root : &amp; Path , input : &amp; <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a> &lt; &#x27;_ &gt; , node_dir : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; (PathBuf , String) &gt; &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-62">parent_announcement</a> (root : &amp; Path , input : &amp; <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a> &lt; &#x27;_ &gt; , node_dir : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; (PathBuf , String) &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-63">parent_announcement</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-62">parent_announcement</a>(
     root: &amp;<span class="rs-type">Path</span>,
     input: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a>&lt;&#x27;_&gt;,
     node_dir: &amp;<span class="rs-type">Path</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;(<span class="rs-type">PathBuf</span>, <span class="rs-type">String</span>)&gt;&gt; {
-    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">let</span> parent = <span class="rs-kw">match</span> &amp;input.kind {
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Subagent</span> {
             parent_agent_run_id,
         }
         | <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Advisor</span> {
             parent_agent_run_id,
-        } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(&amp;request_root, parent_agent_run_id)?,
-        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">WorkflowTask</span> { .. } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a>(&amp;request_root)?,
-        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Root</span> | <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Agent</span> =&gt; <span class="rs-type">None</span>,
+        } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(&amp;request_root, parent_agent_run_id)?,
+        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">WorkflowTask</span> { .. } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a>(&amp;request_root)?,
+        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Root</span> =&gt; <span class="rs-type">None</span>,
     };
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = parent <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
@@ -170,39 +169,39 @@
         .strip_prefix(&amp;parent)
         .ok()
         .map(path_to_slash_string)
-        .unwrap_or_else(|| <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-200">path_to_slash_string</a>(node_dir));
+        .unwrap_or_else(|| <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-199">path_to_slash_string</a>(node_dir));
     <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>((parent, relative)))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:63</p>
-</article><article id="item-fn-request-root-90" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_root private fn request_root (root : &amp; Path , request_id : &amp; str) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:62</p>
+</article><article id="item-fn-request-root-89" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_root private fn request_root (root : &amp; Path , request_id : &amp; str) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>request_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a> (root : &amp; Path , request_id : &amp; str) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a> (root : &amp; Path , request_id : &amp; str) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; PathBuf &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a>(root: &amp;<span class="rs-type">Path</span>, request_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a>(root: &amp;<span class="rs-type">Path</span>, request_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-type">Ok</span>(root
         .join(&quot;requests&quot;)
-        .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(&quot;request_id&quot;, request_id)?))
+        .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(&quot;request_id&quot;, request_id)?))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:90</p>
-</article><article id="item-fn-required-task-id-96" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn required_task_id private fn required_task_id &lt; 'a &gt; (input : &amp; AgentRunRecordStart &lt; 'a &gt;) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:89</p>
+</article><article id="item-fn-required-task-id-95" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn required_task_id private fn required_task_id &lt; 'a &gt; (input : &amp; AgentRunRecordStart &lt; 'a &gt;) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>required_task_id</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-96">required_task_id</a> &lt; &#x27;a &gt; (input : &amp; <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a> &lt; &#x27;a &gt;) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; &amp; &#x27;a str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-95">required_task_id</a> &lt; &#x27;a &gt; (input : &amp; <a class="symbol-link" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a> &lt; &#x27;a &gt;) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; &amp; &#x27;a str &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -215,20 +214,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:96</p>
-</article><article id="item-fn-parent-or-request-dir-103" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parent_or_request_dir private fn parent_or_request_dir (request_root : &amp; Path , parent_agent_run_id : &amp; AgentRunId) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:95</p>
+</article><article id="item-fn-parent-or-request-dir-102" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parent_or_request_dir private fn parent_or_request_dir (request_root : &amp; Path , parent_agent_run_id : &amp; AgentRunId) -&gt; Result &lt; PathBuf &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parent_or_request_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a> (request_root : &amp; Path , parent_agent_run_id : &amp; AgentRunId) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a> (request_root : &amp; Path , parent_agent_run_id : &amp; AgentRunId) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; PathBuf &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a>(request_root: &amp;<span class="rs-type">Path</span>, parent_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a>(request_root: &amp;<span class="rs-type">Path</span>, parent_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-type">Ok</span>(
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
             request_root
                 .join(&quot;parents-missing&quot;)
                 .join(parent_agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())
@@ -238,18 +237,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:103</p>
-</article><article id="item-fn-find-root-agent-dir-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_root_agent_dir private fn find_root_agent_dir (request_root : &amp; Path) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:102</p>
+</article><article id="item-fn-find-root-agent-dir-112" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_root_agent_dir private fn find_root_agent_dir (request_root : &amp; Path) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>find_root_agent_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a> (request_root : &amp; Path) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; PathBuf &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a> (request_root : &amp; Path) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; PathBuf &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a>(request_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a>(request_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(request_root) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -287,41 +286,41 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:113</p>
-</article><article id="item-fn-find-agent-run-dir-in-149" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_agent_run_dir_in private fn find_agent_run_dir_in (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:112</p>
+</article><article id="item-fn-find-agent-run-dir-in-148" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_agent_run_dir_in private fn find_agent_run_dir_in (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>find_agent_run_dir_in</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a> (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; PathBuf &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a> (root : &amp; Path , agent_run_id : &amp; AgentRunId) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; PathBuf &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(root: &amp;<span class="rs-type">Path</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(root: &amp;<span class="rs-type">Path</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">let</span> needles = [
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;agent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;subagent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;advisor-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;agent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;subagent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;advisor-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
     ];
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a>(root, &amp;needles)
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a>(root, &amp;needles)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:149</p>
-</article><article id="item-fn-find-dir-named-159" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_dir_named private fn find_dir_named (root : &amp; Path , needles : &amp; [String]) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:148</p>
+</article><article id="item-fn-find-dir-named-158" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_dir_named private fn find_dir_named (root : &amp; Path , needles : &amp; [String]) -&gt; Result &lt; Option &lt; PathBuf &gt; &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>find_dir_named</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a> (root : &amp; Path , needles : &amp; [String]) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; PathBuf &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a> (root : &amp; Path , needles : &amp; [String]) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; PathBuf &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a>(root: &amp;<span class="rs-type">Path</span>, needles: &amp;[<span class="rs-type">String</span>]) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a>(root: &amp;<span class="rs-type">Path</span>, needles: &amp;[<span class="rs-type">String</span>]) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(root) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -338,7 +337,7 @@
         {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(entry.path()));
         }
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(found) = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a>(&amp;entry.path(), needles)? {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(found) = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a>(&amp;entry.path(), needles)? {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(found));
         }
     }
@@ -347,31 +346,31 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:159</p>
-</article><article id="item-fn-safe-prefixed-segment-183" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_prefixed_segment private fn safe_prefixed_segment (prefix : &amp; 'static str , id : &amp; str) -&gt; Result &lt; String &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:158</p>
+</article><article id="item-fn-safe-prefixed-segment-182" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_prefixed_segment private fn safe_prefixed_segment (prefix : &amp; 'static str , id : &amp; str) -&gt; Result &lt; String &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>safe_prefixed_segment</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a> (prefix : &amp; &#x27;static str , id : &amp; str) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a> (prefix : &amp; &#x27;static str , id : &amp; str) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(prefix: &amp;&#x27;<span class="rs-kw">static</span> str, id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">String</span>&gt; {
-    <span class="rs-type">Ok</span>(format!(&quot;{prefix}-{}&quot;, <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(prefix, id)?))
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(prefix: &amp;&#x27;<span class="rs-kw">static</span> str, id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-type">Ok</span>(format!(&quot;{prefix}-{}&quot;, <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(prefix, id)?))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:183</p>
-</article><article id="item-fn-safe-segment-187" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_segment private fn safe_segment &lt; 'a &gt; (field : &amp; 'static str , value : &amp; 'a str) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:182</p>
+</article><article id="item-fn-safe-segment-186" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn safe_segment private fn safe_segment &lt; 'a &gt; (field : &amp; 'static str , value : &amp; 'a str) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>safe_segment</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a> &lt; &#x27;a &gt; (field : &amp; &#x27;static str , value : &amp; &#x27;a str) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; &amp; &#x27;a str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a> &lt; &#x27;a &gt; (field : &amp; &#x27;static str , value : &amp; &#x27;a str) -&gt; <a class="symbol-link" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; &amp; &#x27;a str &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -390,18 +389,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:187</p>
-</article><article id="item-fn-path-to-slash-string-200" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_to_slash_string private fn path_to_slash_string (path : &amp; Path) -&gt; String crates/eos-agent-run/src/records/layout.rs  ">
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:186</p>
+</article><article id="item-fn-path-to-slash-string-199" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_to_slash_string private fn path_to_slash_string (path : &amp; Path) -&gt; String crates/eos-agent-run/src/records/layout.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>path_to_slash_string</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-200">path_to_slash_string</a> (path : &amp; Path) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-199">path_to_slash_string</a> (path : &amp; Path) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-200">path_to_slash_string</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-199">path_to_slash_string</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
     path.components()
         .map(|component| component.as_os_str().to_string_lossy())
         .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
@@ -410,7 +409,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/records/layout.rs:200</p>
+  <p class="source">crates/eos-agent-run/src/records/layout.rs:199</p>
 </article></div>
 </section></div>
 </main>
@@ -427,21 +426,21 @@
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::kind::{<a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>, <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a>};
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-resolve-agent-run-8">resolve_agent_run</a>(root: &amp;<span class="rs-type">Path</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">let</span> root = root.to_path_buf();
     <span class="rs-kw">let</span> id = agent_run_id.clone();
-    <span class="rs-kw">let</span> found = tokio::task::spawn_blocking(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(&amp;root, &amp;id)).<span class="rs-kw">await</span>??;
+    <span class="rs-kw">let</span> found = tokio::task::spawn_blocking(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(&amp;root, &amp;id)).<span class="rs-kw">await</span>??;
     found.ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-enum-MessageRecordError-4">MessageRecordError</a>::<span class="rs-type">NotFound</span>(agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>().to_owned()))
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-node-dir-21">node_dir</a>(root: &amp;<span class="rs-type">Path</span>, input: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
-    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;agent-run&quot;, input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;agent-run&quot;, input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">match</span> &amp;input.kind {
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Root</span> =&gt; {
-            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-96">required_task_id</a>(input)?;
+            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-95">required_task_id</a>(input)?;
             <span class="rs-type">Ok</span>(request_root
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;root-task&quot;, task_id)?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;root-task&quot;, task_id)?)
                 .join(agent_run_segment))
         }
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">WorkflowTask</span> {
@@ -450,52 +449,51 @@
             attempt_id,
             role,
         } =&gt; {
-            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-96">required_task_id</a>(input)?;
+            <span class="rs-kw">let</span> task_id = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-required-task-id-95">required_task_id</a>(input)?;
             <span class="rs-kw">let</span> workflow_parent =
-                <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a>(&amp;request_root)?.unwrap_or_else(|| request_root.clone());
+                <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a>(&amp;request_root)?.unwrap_or_else(|| request_root.clone());
             <span class="rs-type">Ok</span>(workflow_parent
                 .join(&quot;workflows&quot;)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
-                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-124">task_segment_prefix</a>(), task_id)?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?)
+                .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(role.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-kind-rs.html#method-task-segment-prefix-119">task_segment_prefix</a>(), task_id)?)
                 .join(agent_run_segment))
         }
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Subagent</span> {
             parent_agent_run_id,
-        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
+        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
             .join(&quot;subagents&quot;)
-            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(
+            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(
                 &quot;subagent-run&quot;,
                 input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
             )?)),
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Advisor</span> {
             parent_agent_run_id,
-        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
+        } =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a>(&amp;request_root, parent_agent_run_id)?
             .join(&quot;advisors&quot;)
-            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(
+            .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(
                 &quot;advisor-run&quot;,
                 input.agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
             )?)),
-        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Agent</span> =&gt; <span class="rs-type">Ok</span>(request_root.join(agent_run_segment)),
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-63">parent_announcement</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-announcement-62">parent_announcement</a>(
     root: &amp;<span class="rs-type">Path</span>,
     input: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a>&lt;&#x27;_&gt;,
     node_dir: &amp;<span class="rs-type">Path</span>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;(<span class="rs-type">PathBuf</span>, <span class="rs-type">String</span>)&gt;&gt; {
-    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+    <span class="rs-kw">let</span> request_root = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a>(root, input.request_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">let</span> parent = <span class="rs-kw">match</span> &amp;input.kind {
         <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Subagent</span> {
             parent_agent_run_id,
         }
         | <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Advisor</span> {
             parent_agent_run_id,
-        } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(&amp;request_root, parent_agent_run_id)?,
-        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">WorkflowTask</span> { .. } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a>(&amp;request_root)?,
-        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Root</span> | <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Agent</span> =&gt; <span class="rs-type">None</span>,
+        } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(&amp;request_root, parent_agent_run_id)?,
+        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">WorkflowTask</span> { .. } =&gt; <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a>(&amp;request_root)?,
+        <a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-enum-AgentRunRecordKind-24">AgentRunRecordKind</a>::<span class="rs-type">Root</span> =&gt; <span class="rs-type">None</span>,
     };
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = parent <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
@@ -504,14 +502,14 @@
         .strip_prefix(&amp;parent)
         .ok()
         .map(path_to_slash_string)
-        .unwrap_or_else(|| <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-200">path_to_slash_string</a>(node_dir));
+        .unwrap_or_else(|| <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-199">path_to_slash_string</a>(node_dir));
     <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>((parent, relative)))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-90">request_root</a>(root: &amp;<span class="rs-type">Path</span>, request_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-request-root-89">request_root</a>(root: &amp;<span class="rs-type">Path</span>, request_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-type">Ok</span>(root
         .join(&quot;requests&quot;)
-        .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(&quot;request_id&quot;, request_id)?))
+        .join(<a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(&quot;request_id&quot;, request_id)?))
 }
 
 <span class="rs-kw">fn</span> required_task_id&lt;&#x27;a&gt;(input: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-records-kind-rs.html#item-struct-AgentRunRecordStart-5">AgentRunRecordStart</a>&lt;&#x27;a&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;&amp;&#x27;a str&gt; {
@@ -521,9 +519,9 @@
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-enum-MessageRecordError-4">MessageRecordError</a>::<a class="symbol-link rs-fn" href="eos-agent-run--src-records-error-rs.html#method-unsafe-segment-43">unsafe_segment</a>(&quot;task_id&quot;, &quot;&quot;))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-103">parent_or_request_dir</a>(request_root: &amp;<span class="rs-type">Path</span>, parent_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-parent-or-request-dir-102">parent_or_request_dir</a>(request_root: &amp;<span class="rs-type">Path</span>, parent_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-type">Ok</span>(
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(request_root, parent_agent_run_id)?.unwrap_or_else(|| {
             request_root
                 .join(&quot;parents-missing&quot;)
                 .join(parent_agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())
@@ -531,7 +529,7 @@
     )
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-113">find_root_agent_dir</a>(request_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-root-agent-dir-112">find_root_agent_dir</a>(request_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(request_root) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -567,17 +565,17 @@
     <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-149">find_agent_run_dir_in</a>(root: &amp;<span class="rs-type">Path</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-agent-run-dir-in-148">find_agent_run_dir_in</a>(root: &amp;<span class="rs-type">Path</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(&quot;agent_run_id&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?;
     <span class="rs-kw">let</span> needles = [
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;agent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;subagent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
-        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(&quot;advisor-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;agent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;subagent-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
+        <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(&quot;advisor-run&quot;, agent_run_id.<a class="symbol-link rs-fn" href="eos-agent-run--src-records-handle-rs.html#method-as-str-99">as_str</a>())?,
     ];
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a>(root, &amp;needles)
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a>(root, &amp;needles)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a>(root: &amp;<span class="rs-type">Path</span>, needles: &amp;[<span class="rs-type">String</span>]) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a>(root: &amp;<span class="rs-type">Path</span>, needles: &amp;[<span class="rs-type">String</span>]) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(root) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -594,15 +592,15 @@
         {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(entry.path()));
         }
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(found) = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-159">find_dir_named</a>(&amp;entry.path(), needles)? {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(found) = <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-find-dir-named-158">find_dir_named</a>(&amp;entry.path(), needles)? {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(found));
         }
     }
     <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-183">safe_prefixed_segment</a>(prefix: &amp;&#x27;<span class="rs-kw">static</span> str, id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">String</span>&gt; {
-    <span class="rs-type">Ok</span>(format!(&quot;{prefix}-{}&quot;, <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-187">safe_segment</a>(prefix, id)?))
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-prefixed-segment-182">safe_prefixed_segment</a>(prefix: &amp;&#x27;<span class="rs-kw">static</span> str, id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-type">Ok</span>(format!(&quot;{prefix}-{}&quot;, <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-safe-segment-186">safe_segment</a>(prefix, id)?))
 }
 
 <span class="rs-kw">fn</span> safe_segment&lt;&#x27;a&gt;(field: &amp;&#x27;<span class="rs-kw">static</span> str, value: &amp;&#x27;a str) -&gt; <a class="symbol-link rs-type" href="eos-agent-run--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;&amp;&#x27;a str&gt; {
@@ -618,7 +616,7 @@
     <span class="rs-type">Ok</span>(value)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-200">path_to_slash_string</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-records-layout-rs.html#item-fn-path-to-slash-string-199">path_to_slash_string</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
     path.components()
         .map(|component| component.as_os_str().to_string_lossy())
         .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()

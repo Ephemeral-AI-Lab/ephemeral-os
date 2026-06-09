@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::isolated::error::IsolatedError;
 
-use super::types::{SnapshotLease, WorkspaceHandle};
+use super::handle::{SnapshotLease, WorkspaceHandle};
 
 /// Snapshot/lease HINGE port — the ONLY layer-stack surface isolated models.
 ///

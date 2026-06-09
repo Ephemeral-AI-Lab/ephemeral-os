@@ -82,7 +82,7 @@ impl AgentLoopState {
     ) -> Result<Self, EngineError> {
         let tool_registry =
             tool_registry_factory.build_tool_registry(AgentLoopToolRegistryBuildInput {
-                agent_run_id: request.agent_run_id.clone(),
+                agent_run_id: request.record_target.agent_run_id.clone(),
                 agent_run_api,
                 background: run_services.background.clone(),
             })?;
@@ -92,7 +92,7 @@ impl AgentLoopState {
             .map(|tool| tool.name.clone())
             .collect();
         Ok(Self {
-            agent_run_id: request.agent_run_id,
+            agent_run_id: request.record_target.agent_run_id,
             conversation_messages: request.initial_messages,
             model_key: request.model_key,
             max_completion_tokens: request.max_completion_tokens,

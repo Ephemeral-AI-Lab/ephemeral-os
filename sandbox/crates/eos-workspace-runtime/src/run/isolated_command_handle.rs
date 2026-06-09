@@ -10,7 +10,7 @@ use std::path::PathBuf;
 /// run [`crate::registry`]; the namespace + lease themselves are owned by the
 /// daemon's isolated-session subsystem and torn down on `exit`.
 #[derive(Debug, Clone)]
-pub struct CommandHandle {
+pub struct IsolatedCommandHandle {
     pub caller_id: String,
     pub workspace_handle_id: String,
     pub layer_stack_root: PathBuf,

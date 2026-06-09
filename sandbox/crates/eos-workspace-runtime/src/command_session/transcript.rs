@@ -4,7 +4,7 @@ use std::path::Path;
 
 use time::{OffsetDateTime, UtcOffset};
 
-use crate::command_session::output::tail_lines;
+use crate::command_session::tail::tail_lines;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TranscriptTimestampTimezone {

@@ -139,7 +139,7 @@
         .map_err(prepare_error)?,
     )
     .map_err(prepare_error)?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dirs = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(context.writable_root)
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dirs = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(context.writable_root)
         .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#method-allocate-24">allocate</a>(&quot;sandbox-overlay&quot;, &amp;<span class="rs-type">InvocationId</span>(invocation_id.clone()))
         .map_err(prepare_workspace_error)?;
     dirs.output_path = dirs.run_dir.join(&quot;command-runner-result.json&quot;);
@@ -319,7 +319,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-fn-prepare-error-226">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
-    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
 }
 </code></pre>
 </details>
@@ -336,7 +336,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-fn-prepare-workspace-error-230">prepare_workspace_error</a>(error: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
-    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
 }
 </code></pre>
 </details>
@@ -353,7 +353,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-fn-finalize-error-234">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
-    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&quot;ephemeral_command_finalize_failed&quot;, error.to_string())
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(&quot;ephemeral_command_finalize_failed&quot;, error.to_string())
 }
 </code></pre>
 </details>
@@ -377,7 +377,7 @@
             .map(|path| <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-struct-PublishFile-219">PublishFile</a> {
                 path: path.clone(),
                 status: &quot;committed&quot;.to_owned(),
-                message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+                message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
             })
             .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-timings-rs.html#method-collect-23">collect</a>());
     };
@@ -689,7 +689,7 @@
         .map_err(prepare_error)?,
     )
     .map_err(prepare_error)?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dirs = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(context.writable_root)
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dirs = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(context.writable_root)
         .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html#method-allocate-24">allocate</a>(&quot;sandbox-overlay&quot;, &amp;<span class="rs-type">InvocationId</span>(invocation_id.clone()))
         .map_err(prepare_workspace_error)?;
     dirs.output_path = dirs.run_dir.join(&quot;command-runner-result.json&quot;);
@@ -835,15 +835,15 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-fn-prepare-error-226">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
-    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-fn-prepare-workspace-error-230">prepare_workspace_error</a>(error: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
-    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(&quot;ephemeral_command_prepare_failed&quot;, error.to_string())
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-fn-finalize-error-234">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
-    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&quot;ephemeral_command_finalize_failed&quot;, error.to_string())
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(&quot;ephemeral_command_finalize_failed&quot;, error.to_string())
 }
 
 <span class="rs-comment">// Hand-parses the publisher port's untyped `PublishOutcome.raw` JSON. It depends</span>
@@ -858,7 +858,7 @@
             .map(|path| <a class="symbol-link rs-type" href="eos-workspace-runtime--src-ephemeral-command-rs.html#item-struct-PublishFile-219">PublishFile</a> {
                 path: path.clone(),
                 status: &quot;committed&quot;.to_owned(),
-                message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+                message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(),
             })
             .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-ephemeral-timings-rs.html#method-collect-23">collect</a>());
     };

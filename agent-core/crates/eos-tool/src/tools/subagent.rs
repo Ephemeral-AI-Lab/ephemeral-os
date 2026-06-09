@@ -155,7 +155,6 @@ mod run_subagent {
                 .agent_run_service
                 .spawn_agent(SpawnAgentRequest {
                     agent_name: agent_name.clone(),
-                    agent_run_id: None,
                     initial_messages: vec![
                         Message::from_user_text(parsed.prompt.clone()),
                         Message::from_user_text(subagent_launch_guidance()),
@@ -167,10 +166,10 @@ mod run_subagent {
                             agent_run_id: parent_agent_run_id,
                         },
                     },
+                    tool_use_id: ctx.tool_use_id.clone(),
                     sandbox_id: ctx.sandbox_id.clone(),
                     workspace_root: ctx.workspace_root.clone(),
                     is_isolated_workspace_mode: ctx.is_isolated_workspace_mode,
-                    persist: true,
                 })
                 .await
             {

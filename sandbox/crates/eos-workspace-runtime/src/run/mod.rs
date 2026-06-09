@@ -13,14 +13,14 @@
 //! container ([`registry`]) and the lifecycle orchestration ([`manager`]).
 #![forbid(unsafe_code)]
 
-mod command_handle;
+mod isolated_command_handle;
 #[cfg(target_os = "linux")]
 mod manager;
 mod ports;
 #[cfg(any(target_os = "linux", test))]
 mod registry;
 
-pub use command_handle::CommandHandle;
+pub use isolated_command_handle::IsolatedCommandHandle;
 pub use ports::WorkspaceRunHostPorts;
 
 #[cfg(target_os = "linux")]

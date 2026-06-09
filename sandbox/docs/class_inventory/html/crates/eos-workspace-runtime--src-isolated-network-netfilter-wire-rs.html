@@ -93,7 +93,7 @@
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u16-275">libc_c_int_to_u16</a>(libc::<span class="rs-type">NFNL_MSG_BATCH_END</span>, &quot;<span class="rs-type">NFNL_MSG_BATCH_END</span>&quot;)?,
         batch_end_seq,
     )?);
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> socket = <span class="rs-type">NlSocket</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-isize-287">libc_c_int_to_isize</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> socket = <span class="rs-type">NlSocket</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-isize-287">libc_c_int_to_isize</a>(
         libc::<span class="rs-type">NETLINK_NETFILTER</span>,
         &quot;<span class="rs-type">NETLINK_NETFILTER</span>&quot;,
     )?)
@@ -102,7 +102,7 @@
         .bind_auto()
         .map_err(|err| <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-network-error-at-320">network_error_at</a>(step.as_str(), err))?;
     socket
-        .connect(&amp;<span class="rs-type">NlSocketAddr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(0, 0))
+        .connect(&amp;<span class="rs-type">NlSocketAddr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(0, 0))
         .map_err(|err| <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-network-error-at-320">network_error_at</a>(step.as_str(), err))?;
     socket
         .send(&amp;message, 0)
@@ -184,7 +184,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-198">append_data_value_attr</a>(buffer: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;u8&gt;, kind: u16, value: &amp;[u8]) {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> nested = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> nested = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-attr-208">append_attr</a>(&amp;<span class="rs-kw">mut</span> nested, <span class="rs-type">NFTA_DATA_VALUE</span>, value);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(buffer, kind, &amp;nested);
 }
@@ -826,7 +826,7 @@
         <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u16-275">libc_c_int_to_u16</a>(libc::<span class="rs-type">NFNL_MSG_BATCH_END</span>, &quot;<span class="rs-type">NFNL_MSG_BATCH_END</span>&quot;)?,
         batch_end_seq,
     )?);
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> socket = <span class="rs-type">NlSocket</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-isize-287">libc_c_int_to_isize</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> socket = <span class="rs-type">NlSocket</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-isize-287">libc_c_int_to_isize</a>(
         libc::<span class="rs-type">NETLINK_NETFILTER</span>,
         &quot;<span class="rs-type">NETLINK_NETFILTER</span>&quot;,
     )?)
@@ -835,7 +835,7 @@
         .bind_auto()
         .map_err(|err| <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-network-error-at-320">network_error_at</a>(step.as_str(), err))?;
     socket
-        .connect(&amp;<span class="rs-type">NlSocketAddr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(0, 0))
+        .connect(&amp;<span class="rs-type">NlSocketAddr</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>(0, 0))
         .map_err(|err| <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-network-error-at-320">network_error_at</a>(step.as_str(), err))?;
     socket
         .send(&amp;message, 0)
@@ -989,7 +989,7 @@
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-198">append_data_value_attr</a>(buffer: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;u8&gt;, kind: u16, value: &amp;[u8]) {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> nested = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> nested = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-94">new</a>();
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-attr-208">append_attr</a>(&amp;<span class="rs-kw">mut</span> nested, <span class="rs-type">NFTA_DATA_VALUE</span>, value);
     <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html#item-fn-append-nested-attr-204">append_nested_attr</a>(buffer, kind, &amp;nested);
 }
