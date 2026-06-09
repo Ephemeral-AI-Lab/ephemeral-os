@@ -4,9 +4,9 @@ use serde_json::Value as JsonValue;
 use time::OffsetDateTime;
 
 use eos_types::{
-    AgentRun, Attempt, AttemptBudget, AttemptClosure, AttemptExecutionTree, AttemptFailReason,
-    AttemptStage, AttemptState, AttemptStatus, CoreError, Iteration, PlanId, Request,
-    RequestStatus, Task, TaskOutcome, UtcDateTime, Workflow,
+    Attempt, AttemptBudget, AttemptClosure, AttemptExecutionTree, AttemptFailReason, AttemptStage,
+    AttemptState, AttemptStatus, CoreError, Iteration, PlanId, Request, RequestStatus, Task,
+    TaskOutcome, UtcDateTime, Workflow,
 };
 
 use crate::error::DbError;
@@ -83,18 +83,6 @@ pub(crate) struct AttemptRow {
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
     pub closed_at: Option<OffsetDateTime>,
-}
-
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub(crate) struct AgentRunRow {
-    pub id: String,
-    pub task_id: Option<String>,
-    pub agent_name: String,
-    pub terminal_payload: Option<String>,
-    pub token_count: i64,
-    pub error: Option<String>,
-    pub created_at: OffsetDateTime,
-    pub finished_at: Option<OffsetDateTime>,
 }
 
 // ---- parse helpers --------------------------------------------------------
@@ -303,21 +291,4 @@ fn attempt_state_from_columns(
             Ok(AttemptState::Closed { closure })
         }
     }
-}
-
-pub(crate) fn row_to_agent_run(r: AgentRunRow) -> Result<AgentRun, DbError> {
-    Ok(AgentRun {
-        id: parse_id("agent_runs.id", &r.id)?,
-        task_id: r
-            .task_id
-            .as_deref()
-            .map(|task_id| parse_id("agent_runs.task_id", task_id))
-            .transpose()?,
-        agent_name: r.agent_name,
-        terminal_payload: json_col::decode_opt(r.terminal_payload.as_deref())?,
-        token_count: r.token_count,
-        error: r.error,
-        created_at: UtcDateTime::from_offset(r.created_at),
-        finished_at: r.finished_at.map(UtcDateTime::from_offset),
-    })
 }

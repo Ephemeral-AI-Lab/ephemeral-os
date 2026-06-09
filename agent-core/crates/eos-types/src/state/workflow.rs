@@ -4,7 +4,8 @@ mod attempt;
 mod iteration;
 mod outcome;
 mod work_item;
-mod workflow;
+#[path = "workflow/workflow.rs"]
+mod workflow_dto;
 
 pub use attempt::{
     Attempt, AttemptBudget, AttemptClosure, AttemptExecutionTree, AttemptFailReason, AttemptStage,
@@ -16,4 +17,4 @@ pub use outcome::{
     WorkerOutcome, WorkflowOutcome, NO_OUTCOME,
 };
 pub use work_item::{DeferredGoal, PlanId, WorkItemId, WorkItemSpec};
-pub use workflow::{Workflow, WorkflowStatus};
+pub use workflow_dto::{Workflow, WorkflowStatus};

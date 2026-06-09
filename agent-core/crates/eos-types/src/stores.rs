@@ -1,41 +1,5 @@
 //! Shared async persistence stores grouped by consuming behavior boundary.
 
-mod engine {
-    //! Engine-facing agent-run persistence contracts.
-
-    use async_trait::async_trait;
-
-    use crate::{AgentRun, AgentRunId, CoreError, JsonObject, TaskId};
-
-    use super::Sealed;
-
-    /// Persistence surface for [`AgentRun`].
-    #[async_trait]
-    pub trait AgentRunStore: Sealed + Send + Sync {
-        /// Create a run row with only the create-time fields set.
-        async fn create_run(
-            &self,
-            agent_run_id: &AgentRunId,
-            task_id: Option<&TaskId>,
-            agent_name: &str,
-        ) -> Result<AgentRun, CoreError>;
-
-        /// Write the finish-time fields. `Ok(None)` means the run does not exist.
-        async fn finish_run(
-            &self,
-            agent_run_id: &AgentRunId,
-            terminal_payload: Option<&JsonObject>,
-            token_count: i64,
-            error: Option<&str>,
-        ) -> Result<Option<AgentRun>, CoreError>;
-
-        /// Load a run by id.
-        async fn get(&self, agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, CoreError>;
-
-        /// The latest agent run for one task, if any.
-        async fn get_for_task(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError>;
-    }
-}
 mod model_registry {
     //! Model-registry persistence contracts.
 
@@ -144,9 +108,9 @@ mod task_agent_run {
     use async_trait::async_trait;
 
     use crate::{
-        AgentName, AgentRunId, AgentRunRecordIndex, CoreError, CreatedTaskAgentRun, JsonObject,
-        ParentAgentRunAnchor, ParentedAgentRunKind, ParentedOutcome, ParentedRun, PlanId,
-        RequestId, RunningRequestAgentRun, TaskExecutionIndex, TaskId, TaskOutcome, TaskRun,
+        AgentName, AgentRun, AgentRunId, AgentRunRecordIndex, CoreError, CreatedTaskAgentRun,
+        JsonObject, ParentAgentRunAnchor, ParentedAgentRunKind, ParentedOutcome, ParentedRun,
+        PlanId, RequestId, RunningRequestAgentRun, TaskExecutionIndex, TaskId, TaskOutcome,
         TaskStatus, ToolUseId, WorkItemId, WorkflowCoordinates, WorkflowTaskRole,
     };
 
@@ -195,7 +159,7 @@ mod task_agent_run {
             task_outcome: Option<&TaskOutcome>,
             token_count: i64,
             error: Option<&str>,
-        ) -> Result<Option<TaskRun>, CoreError>;
+        ) -> Result<Option<AgentRun>, CoreError>;
 
         /// Finish a parent-launched subagent/advisor row.
         async fn finish_parented_run(
@@ -214,14 +178,26 @@ mod task_agent_run {
             agent_run_id: &AgentRunId,
         ) -> Result<Option<AgentRunRecordIndex>, CoreError>;
 
+        /// Load a root/workflow agent-run row by agent-run id.
+        async fn get_agent_run(
+            &self,
+            agent_run_id: &AgentRunId,
+        ) -> Result<Option<AgentRun>, CoreError>;
+
+        /// Load a parented agent-run row by agent-run id.
+        async fn get_parented_run(
+            &self,
+            agent_run_id: &AgentRunId,
+        ) -> Result<Option<ParentedRun>, CoreError>;
+
         /// Load one task-agent-run row by task id.
-        async fn get_task_run(&self, task_id: &TaskId) -> Result<Option<TaskRun>, CoreError>;
+        async fn get_task_run(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError>;
 
         /// Load root/workflow task-agent-run rows for one request.
         async fn list_task_runs_for_request(
             &self,
             request_id: &RequestId,
-        ) -> Result<Vec<TaskRun>, CoreError>;
+        ) -> Result<Vec<AgentRun>, CoreError>;
 
         /// Load running agent runs for one request across root/workflow and
         /// parent-launched lineage rows.
@@ -436,7 +412,6 @@ mod workflow {
     }
 }
 
-pub use engine::AgentRunStore;
 pub use model_registry::ModelStore;
 pub use request_task::{RequestStore, TaskStore};
 pub use task_agent_run::{parented_task_id, TaskAgentRunStore};

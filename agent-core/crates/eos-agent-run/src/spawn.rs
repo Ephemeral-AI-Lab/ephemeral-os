@@ -10,7 +10,6 @@ use eos_types::{
 };
 
 use crate::completion::spawn_forwarder;
-use crate::persistence::create_agent_run;
 use crate::service::AgentRunService;
 
 pub(crate) async fn spawn_agent(
@@ -40,19 +39,6 @@ pub(crate) async fn spawn_agent(
     let agent_def = (**agent_def).clone();
     let agent_run_id = AgentRunId::new_v4();
     let created_run = create_task_agent_run(service, &request, &agent_run_id, &agent_name).await?;
-    let primary_task_id = match &request.target {
-        SpawnAgentTarget::Root { .. } | SpawnAgentTarget::Workflow { .. } => {
-            Some(&created_run.task_id)
-        }
-        SpawnAgentTarget::Subagent { .. } | SpawnAgentTarget::Advisor { .. } => None,
-    };
-    create_agent_run(
-        &*service.agent_run_store,
-        primary_task_id,
-        &agent_run_id,
-        agent_def.name.as_str(),
-    )
-    .await?;
     let record_target = created_run.record_target.clone();
     let start_request = build_start_agent_loop_request(&agent_def, request, record_target);
     let agent_run_api: Arc<dyn AgentRunApi> = Arc::new(service.clone());

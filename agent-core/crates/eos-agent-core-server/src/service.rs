@@ -5,7 +5,7 @@ use std::sync::Arc;
 use eos_agent_run::AgentRunService;
 use eos_sandbox_port::SandboxGateway;
 use eos_types::{
-    AgentName, AttemptStore, IterationStore, RequestId, RequestStore, TaskAgentRunStore, TaskRun,
+    AgentName, AgentRun, AttemptStore, IterationStore, RequestId, RequestStore, TaskAgentRunStore,
     WorkflowStore,
 };
 
@@ -143,7 +143,7 @@ impl AgentCoreService {
     pub async fn list_user_request_tasks(
         &self,
         request_id: &RequestId,
-    ) -> Result<Vec<TaskRun>, AgentCoreServerError> {
+    ) -> Result<Vec<AgentRun>, AgentCoreServerError> {
         crate::user_request::query::list_user_request_tasks(self, request_id).await
     }
 }

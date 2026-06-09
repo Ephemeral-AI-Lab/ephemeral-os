@@ -5,9 +5,9 @@ use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_types::{
     AdvisorVerdict, AgentName, AttemptBudget, AttemptClosure, DeferredGoal, ExecutionNode,
     IterationCreationReason, IterationStatus, JsonObject, ParentAgentRunAnchor,
-    ParentedAgentRunKind, ParentedOutcome, PlanId, RequestId, RequestStatus, Task, TaskOutcome,
-    TaskAgentRunKind, TaskRole, TaskStatus, ToolUseId, UtcDateTime, WorkItemId, WorkItemSpec,
-    WorkflowCoordinates, WorkflowStatus, WorkflowTaskRole,
+    ParentedAgentRunKind, ParentedOutcome, PlanId, RequestId, RequestStatus, Task,
+    TaskAgentRunKind, TaskOutcome, TaskRole, TaskStatus, ToolUseId, UtcDateTime, WorkItemId,
+    WorkItemSpec, WorkflowCoordinates, WorkflowStatus, WorkflowTaskRole,
 };
 use serde_json::json;
 use sqlx::Row;
@@ -26,6 +26,16 @@ async fn table_column_names(db: &Database, table: &str) -> Vec<String> {
         .fetch_all(db.pool())
         .await
         .expect("table_info")
+        .into_iter()
+        .map(|row| row.get("name"))
+        .collect()
+}
+
+async fn table_names(db: &Database) -> Vec<String> {
+    sqlx::query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+        .fetch_all(db.pool())
+        .await
+        .expect("table names")
         .into_iter()
         .map(|row| row.get("name"))
         .collect()
@@ -94,6 +104,21 @@ fn task(id: &str, request_id: &RequestId, role: TaskRole, instruction: &str) -> 
 async fn schema_uses_final_workflow_worker_contract_columns() {
     let (_dir, db) = open_temp().await;
 
+    assert_eq!(
+        table_names(&db).await,
+        [
+            "_sqlx_migrations",
+            "attempts",
+            "iterations",
+            "model_registrations",
+            "parented_runs",
+            "requests",
+            "sqlite_sequence",
+            "task_runs",
+            "tasks",
+            "workflows",
+        ]
+    );
     assert_eq!(
         table_column_names(&db, "tasks").await,
         [

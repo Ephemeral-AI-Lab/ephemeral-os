@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>31</b><span>modules</span></div>
   <div><b>253</b><span>items</span></div>
-  <div><b>267</b><span>fields</span></div>
+  <div><b>266</b><span>fields</span></div>
   <div><b>222</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -65,11 +65,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-run-output-rs.html#item-struct-AgentRunOutputs-23">AgentRunOutputs</a></code>
   <p class="docstring">Output aggregate for live stream observations and durable run records.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Default</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stream</td><td><code>Option &lt; <a class="symbol-link" href="eos-engine--src-run-output-stream-rs.html#item-type-AgentRunStreamSink-162">AgentRunStreamSink</a> &gt;</code></td></tr><tr><td>private</td><td>record</td><td><code>Option &lt; <a class="symbol-link" href="eos-engine--src-run-output-record-store-rs.html#item-struct-AgentRunRecordStore-16">AgentRunRecordStore</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-40"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a> () -&gt; Self</code><p class="docstring">Create an empty output aggregate.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stream</td><td><code>Option &lt; <a class="symbol-link" href="eos-engine--src-run-output-stream-rs.html#item-type-AgentRunStreamSink-162">AgentRunStreamSink</a> &gt;</code></td></tr><tr><td>private</td><td>record</td><td><code>Option &lt; <a class="symbol-link" href="eos-engine--src-run-output-record-store-rs.html#item-struct-AgentRunRecordStore-16">AgentRunRecordStore</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-40"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a> () -&gt; Self</code><p class="docstring">Create an empty output aggregate.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create an empty output aggregate.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-default-27">default</a>()
     }
 </code></pre>
@@ -166,7 +166,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-run-output-rs.html#item-struct-AgentRunOutputs-23">AgentRunOutputs</a> {
     <span class="rs-comment">/// Create an empty output aggregate.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-default-27">default</a>()
     }
 

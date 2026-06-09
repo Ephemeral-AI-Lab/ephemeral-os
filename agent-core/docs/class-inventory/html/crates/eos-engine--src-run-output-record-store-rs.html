@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>31</b><span>modules</span></div>
   <div><b>253</b><span>items</span></div>
-  <div><b>267</b><span>fields</span></div>
+  <div><b>266</b><span>fields</span></div>
   <div><b>222</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -65,11 +65,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-run-output-record-store-rs.html#item-struct-AgentRunRecordStore-16">AgentRunRecordStore</a></code>
   <p class="docstring">File-backed store for resolved agent-run record trees.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-23"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a> (root : impl Into &lt; PathBuf &gt;) -&gt; Self</code><p class="docstring">Create a store rooted at `root`.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-23"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a> (root : impl Into &lt; PathBuf &gt;) -&gt; Self</code><p class="docstring">Create a store rooted at `root`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a store rooted at `root`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(root: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(root: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { root: root.into() }
     }
 </code></pre>
@@ -101,7 +101,7 @@
             },
         );
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(
             &quot;<span class="rs-kw">type</span>&quot;.to_owned(),
             json!(<a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#item-fn-node-type-527">node_type</a>(&amp;record_target.task_agent_run_kind)),
@@ -124,7 +124,7 @@
             .<span class="rs-kw">await</span>?;
         handle.initial_message_count = range.count;
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;count&quot;.to_owned(), json!(range.count));
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_start_byte&quot;.to_owned(), json!(range.start_byte));
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_end_byte&quot;.to_owned(), json!(range.end_byte));
@@ -200,7 +200,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`super::AgentRunRecordError`] if event append fails.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#method-finish-189">finish</a>(&amp;<span class="rs-self">self</span>, status: <a class="symbol-link rs-type" href="eos-engine--src-run-output-record-store-rs.html#item-enum-AgentRunRecordFinishStatus-232">AgentRunRecordFinishStatus</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;status&quot;.to_owned(), json!(status.<a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#method-as-str-243">as_str</a>()));
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#method-append-record-event-199">append_record_event</a>(&quot;node_finished&quot;, payload).<span class="rs-kw">await</span>
     }
@@ -232,7 +232,7 @@
         <span class="rs-kw">let</span> range =
             <a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#item-fn-append-message-rows-323">append_message_rows</a>(&amp;<span class="rs-self">self</span>.messages_path, &amp;<span class="rs-self">self</span>.identity, &quot;message&quot;, messages).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> range.count &gt; 0 {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
             payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;count&quot;.to_owned(), json!(range.count));
             payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_start_byte&quot;.to_owned(), json!(range.start_byte));
             payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_end_byte&quot;.to_owned(), json!(range.end_byte));
@@ -489,7 +489,7 @@
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).<span class="rs-kw">await</span>?;
     }
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>()
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>()
         .create(<span class="rs-kw">true</span>)
         .append(<span class="rs-kw">true</span>)
         .open(path)
@@ -540,7 +540,7 @@
         payload,
         created_at: <span class="rs-type">UtcDateTime</span>::now(),
     };
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>()
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>()
         .create(<span class="rs-kw">true</span>)
         .append(<span class="rs-kw">true</span>)
         .open(path)
@@ -611,7 +611,7 @@
         });
     }
     file.seek(std::io::<span class="rs-type">SeekFrom</span>::<span class="rs-type">Start</span>(after_byte)).<span class="rs-kw">await</span>?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     file.read_to_end(&amp;<span class="rs-kw">mut</span> bytes).<span class="rs-kw">await</span>?;
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-run-output-record-store-rs.html#item-struct-MessageBytes-270">MessageBytes</a> {
         bytes,
@@ -826,7 +826,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#item-fn-message-types-576">message_types</a>(messages: &amp;[<span class="rs-type">Message</span>]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> types = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> types = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     <span class="rs-kw">for</span> block <span class="rs-kw">in</span> messages.iter().flat_map(|message| &amp;message.content) {
         types.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(
             <span class="rs-kw">match</span> block {
@@ -898,7 +898,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-run-output-record-store-rs.html#item-struct-AgentRunRecordStore-16">AgentRunRecordStore</a> {
     <span class="rs-comment">/// Create a store rooted at `root`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(root: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(root: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">PathBuf</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { root: root.into() }
     }
 
@@ -928,7 +928,7 @@
             },
         );
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(
             &quot;<span class="rs-kw">type</span>&quot;.to_owned(),
             json!(<a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#item-fn-node-type-527">node_type</a>(&amp;record_target.task_agent_run_kind)),
@@ -951,7 +951,7 @@
             .<span class="rs-kw">await</span>?;
         handle.initial_message_count = range.count;
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;count&quot;.to_owned(), json!(range.count));
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_start_byte&quot;.to_owned(), json!(range.start_byte));
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_end_byte&quot;.to_owned(), json!(range.end_byte));
@@ -1025,7 +1025,7 @@
         <span class="rs-kw">let</span> range =
             <a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#item-fn-append-message-rows-323">append_message_rows</a>(&amp;<span class="rs-self">self</span>.messages_path, &amp;<span class="rs-self">self</span>.identity, &quot;message&quot;, messages).<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> range.count &gt; 0 {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
             payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;count&quot;.to_owned(), json!(range.count));
             payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_start_byte&quot;.to_owned(), json!(range.start_byte));
             payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;messages_end_byte&quot;.to_owned(), json!(range.end_byte));
@@ -1067,7 +1067,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`super::AgentRunRecordError`] if event append fails.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#method-finish-189">finish</a>(&amp;<span class="rs-self">self</span>, status: <a class="symbol-link rs-type" href="eos-engine--src-run-output-record-store-rs.html#item-enum-AgentRunRecordFinishStatus-232">AgentRunRecordFinishStatus</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
         payload.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(&quot;status&quot;.to_owned(), json!(status.<a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#method-as-str-243">as_str</a>()));
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#method-append-record-event-199">append_record_event</a>(&quot;node_finished&quot;, payload).<span class="rs-kw">await</span>
     }
@@ -1256,7 +1256,7 @@
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).<span class="rs-kw">await</span>?;
     }
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>()
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>()
         .create(<span class="rs-kw">true</span>)
         .append(<span class="rs-kw">true</span>)
         .open(path)
@@ -1294,7 +1294,7 @@
         payload,
         created_at: <span class="rs-type">UtcDateTime</span>::now(),
     };
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>()
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = tokio::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>()
         .create(<span class="rs-kw">true</span>)
         .append(<span class="rs-kw">true</span>)
         .open(path)
@@ -1339,7 +1339,7 @@
         });
     }
     file.seek(std::io::<span class="rs-type">SeekFrom</span>::<span class="rs-type">Start</span>(after_byte)).<span class="rs-kw">await</span>?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     file.read_to_end(&amp;<span class="rs-kw">mut</span> bytes).<span class="rs-kw">await</span>?;
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-run-output-record-store-rs.html#item-struct-MessageBytes-270">MessageBytes</a> {
         bytes,
@@ -1450,7 +1450,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-run-output-record-store-rs.html#item-fn-message-types-576">message_types</a>(messages: &amp;[<span class="rs-type">Message</span>]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> types = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> types = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     <span class="rs-kw">for</span> block <span class="rs-kw">in</span> messages.iter().flat_map(|message| &amp;message.content) {
         types.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(
             <span class="rs-kw">match</span> block {

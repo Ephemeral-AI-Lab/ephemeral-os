@@ -5,7 +5,9 @@ use eos_types::{
     AgentRunId, AgentRunOutcome, AgentRunStatus, Message, TaskStatus,
 };
 
-use crate::persistence::{completion_from_agent_run, finish_agent_run, finish_task_agent_run};
+use crate::persistence::{
+    completion_from_agent_run, completion_from_parented_run, finish_task_agent_run,
+};
 use crate::service::AgentRunService;
 
 pub(crate) fn spawn_forwarder(
@@ -47,15 +49,23 @@ pub(crate) async fn poll_agent_run_outcome(
     {
         return Ok(Some(outcome));
     }
+    if let Some(run) = service
+        .task_agent_run_store
+        .get_agent_run(agent_run_id)
+        .await
+        .map_err(|err| AgentRunError::Internal(err.to_string()))?
+    {
+        return Ok(completion_from_agent_run(agent_run_id, &run));
+    }
     let Some(run) = service
-        .agent_run_store
-        .get(agent_run_id)
+        .task_agent_run_store
+        .get_parented_run(agent_run_id)
         .await
         .map_err(|err| AgentRunError::Internal(err.to_string()))?
     else {
         return Ok(None);
     };
-    Ok(completion_from_agent_run(agent_run_id, &run))
+    Ok(completion_from_parented_run(agent_run_id, &run))
 }
 
 async fn forward_agent_loop_outcome(
@@ -80,15 +90,7 @@ async fn finalize_agent_run_from_agent_loop_outcome(
 ) -> AgentRunOutcome {
     let agent_outcome = agent_run_outcome_from_loop(agent_run_id.clone(), outcome);
     let error = agent_outcome.error.as_deref();
-    let finish = finish_agent_run(
-        &*service.agent_run_store,
-        &agent_run_id,
-        agent_outcome.submission_payload.as_ref(),
-        agent_outcome.token_count,
-        error,
-    )
-    .await;
-    let finish_lineage = finish_task_agent_run(
+    let finish = finish_task_agent_run(
         &*service.task_agent_run_store,
         &agent_run_id,
         task_status_for_agent_status(agent_outcome.status),
@@ -97,7 +99,7 @@ async fn finalize_agent_run_from_agent_loop_outcome(
         error,
     )
     .await;
-    match finish.and(finish_lineage) {
+    match finish {
         Ok(()) => agent_outcome,
         Err(err) => AgentRunOutcome {
             agent_run_id,

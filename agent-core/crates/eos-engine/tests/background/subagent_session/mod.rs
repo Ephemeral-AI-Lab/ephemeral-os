@@ -5,7 +5,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_types::{AgentRun, AgentRunError, SpawnAgentRequest, UtcDateTime};
+use eos_types::{
+    AgentName, AgentRun, AgentRunError, RequestId, SpawnAgentRequest, TaskId, TaskRole, TaskStatus,
+    UtcDateTime,
+};
 
 use crate::EngineNotificationQueue;
 use tokio::time::{sleep, timeout};
@@ -118,13 +121,22 @@ fn manager_with_service(
 
 fn finished_run(terminal_payload: Option<JsonObject>, error: Option<&str>) -> AgentRun {
     AgentRun {
-        id: "run-sub-finished".parse().expect("agent run id"),
-        task_id: None,
-        agent_name: "subagent".to_owned(),
+        task_id: TaskId::new_v4(),
+        agent_run_id: "run-sub-finished".parse().expect("agent run id"),
+        request_id: RequestId::new_v4(),
+        role: TaskRole::Root,
+        status: if error.is_some() {
+            TaskStatus::Failed
+        } else {
+            TaskStatus::Done
+        },
+        agent_name: AgentName::new("subagent").expect("valid agent name"),
         terminal_payload,
+        task_outcome: None,
         token_count: 0,
         error: error.map(str::to_owned),
         created_at: UtcDateTime::now(),
+        updated_at: UtcDateTime::now(),
         finished_at: Some(UtcDateTime::now()),
     }
 }

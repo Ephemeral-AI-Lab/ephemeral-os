@@ -592,7 +592,7 @@
                 },
                 {
                   "name": "list_user_request_tasks",
-                  "signature": "pub async fn list_user_request_tasks (& self , request_id : & RequestId ,) -> Result < Vec < TaskRun > , AgentCoreServerError >",
+                  "signature": "pub async fn list_user_request_tasks (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , AgentCoreServerError >",
                   "kind": "method",
                   "docs": "List task-agent-runs for a user request.\n\n# Errors\nReturns [`AgentCoreServerError`] on store failure.",
                   "line": 139
@@ -747,7 +747,7 @@
               "kind": "fn",
               "name": "list_user_request_tasks",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn list_user_request_tasks (service : & AgentCoreService , request_id : & RequestId ,) -> Result < Vec < TaskRun > , AgentCoreServerError >",
+              "signature": "pub(crate) async fn list_user_request_tasks (service : & AgentCoreService , request_id : & RequestId ,) -> Result < Vec < AgentRun > , AgentCoreServerError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -770,14 +770,14 @@
       "path": "crates/eos-agent-run",
       "stats": {
         "modules": 7,
-        "items": 59,
-        "structs": 9,
+        "items": 54,
+        "structs": 8,
         "enums": 0,
         "traits": 0,
-        "functions": 34,
-        "impls": 16,
-        "fields": 23,
-        "methods": 37
+        "functions": 33,
+        "impls": 13,
+        "fields": 20,
+        "methods": 34
       },
       "modules": [
         {
@@ -1034,7 +1034,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/cancellation.rs",
               "module": "cancellation",
-              "line": 61
+              "line": 60
             }
           ]
         },
@@ -1056,7 +1056,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 11
+              "line": 13
             },
             {
               "kind": "fn",
@@ -1074,7 +1074,7 @@
               ],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 21
+              "line": 23
             },
             {
               "kind": "fn",
@@ -1092,7 +1092,7 @@
               ],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 39
+              "line": 41
             },
             {
               "kind": "fn",
@@ -1110,7 +1110,7 @@
               ],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 61
+              "line": 71
             },
             {
               "kind": "fn",
@@ -1128,7 +1128,7 @@
               ],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 76
+              "line": 86
             },
             {
               "kind": "fn",
@@ -1144,7 +1144,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 113
+              "line": 115
             },
             {
               "kind": "fn",
@@ -1160,7 +1160,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 139
+              "line": 141
             },
             {
               "kind": "fn",
@@ -1176,7 +1176,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/completion.rs",
               "module": "completion",
-              "line": 150
+              "line": 152
             }
           ]
         },
@@ -1189,60 +1189,6 @@
           "path": "crates/eos-agent-run/src/persistence.rs",
           "module": "persistence",
           "items": [
-            {
-              "kind": "fn",
-              "name": "create_agent_run",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn create_agent_run (store : & dyn AgentRunStore , task_id : Option < & TaskId > , agent_run_id : & AgentRunId , agent_name : & str ,) -> Result < () , AgentRunError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async"
-              ],
-              "file": "crates/eos-agent-run/src/persistence.rs",
-              "module": "persistence",
-              "line": 11
-            },
-            {
-              "kind": "fn",
-              "name": "finish_agent_run",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn finish_agent_run (store : & dyn AgentRunStore , agent_run_id : & AgentRunId , submission_payload : Option < & JsonObject > , token_count : Option < i64 > , error : Option < & str > ,) -> Result < () , AgentRunError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async"
-              ],
-              "file": "crates/eos-agent-run/src/persistence.rs",
-              "module": "persistence",
-              "line": 24
-            },
-            {
-              "kind": "fn",
-              "name": "finish_cancelled_agent_run",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn finish_cancelled_agent_run (store : & dyn AgentRunStore , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async"
-              ],
-              "file": "crates/eos-agent-run/src/persistence.rs",
-              "module": "persistence",
-              "line": 43
-            },
             {
               "kind": "fn",
               "name": "finish_task_agent_run",
@@ -1259,7 +1205,7 @@
               ],
               "file": "crates/eos-agent-run/src/persistence.rs",
               "module": "persistence",
-              "line": 56
+              "line": 10
             },
             {
               "kind": "fn",
@@ -1275,13 +1221,13 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/persistence.rs",
               "module": "persistence",
-              "line": 104
+              "line": 58
             },
             {
               "kind": "fn",
-              "name": "cancelled_payload",
-              "visibility": "private",
-              "signature": "fn cancelled_payload (reason : & str) -> JsonObject",
+              "name": "completion_from_parented_run",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn completion_from_parented_run (agent_run_id : & AgentRunId , run : & ParentedRun ,) -> Option < AgentRunOutcome >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -1291,7 +1237,23 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/persistence.rs",
               "module": "persistence",
-              "line": 143
+              "line": 71
+            },
+            {
+              "kind": "fn",
+              "name": "completion_from_parts",
+              "visibility": "private",
+              "signature": "fn completion_from_parts (agent_run_id : & AgentRunId , finished_at : Option < eos_types :: UtcDateTime > , terminal_payload : Option < & JsonObject > , token_count : i64 , error : Option < & String > ,) -> Option < AgentRunOutcome >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-agent-run/src/persistence.rs",
+              "module": "persistence",
+              "line": 84
             },
             {
               "kind": "fn",
@@ -1307,7 +1269,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/persistence.rs",
               "module": "persistence",
-              "line": 150
+              "line": 126
             },
             {
               "kind": "fn",
@@ -1323,7 +1285,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/persistence.rs",
               "module": "persistence",
-              "line": 157
+              "line": 133
             },
             {
               "kind": "fn",
@@ -1339,7 +1301,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/persistence.rs",
               "module": "persistence",
-              "line": 161
+              "line": 137
             }
           ]
         },
@@ -1362,11 +1324,6 @@
                   "name": "loop_launcher",
                   "visibility": "pub(crate)",
                   "ty": "Arc < dyn AgentLoopLauncher >"
-                },
-                {
-                  "name": "agent_run_store",
-                  "visibility": "pub(crate)",
-                  "ty": "Arc < dyn AgentRunStore >"
                 },
                 {
                   "name": "task_agent_run_store",
@@ -1405,7 +1362,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 25
+                  "line": 24
                 }
               ],
               "impl_target": "AgentRunService",
@@ -1417,7 +1374,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service",
-              "line": 24
+              "line": 23
             },
             {
               "kind": "impl",
@@ -1429,10 +1386,10 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (agent_registry : Arc < AgentRegistry > , loop_launcher : Arc < dyn AgentLoopLauncher > , agent_run_store : Arc < dyn AgentRunStore > , task_agent_run_store : Arc < dyn TaskAgentRunStore > ,) -> Self",
+                  "signature": "pub fn new (agent_registry : Arc < AgentRegistry > , loop_launcher : Arc < dyn AgentLoopLauncher > , task_agent_run_store : Arc < dyn TaskAgentRunStore > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build a runner service from injected trait contracts.",
-                  "line": 31
+                  "line": 30
                 }
               ],
               "impl_target": "AgentRunService",
@@ -1443,7 +1400,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service",
-              "line": 30
+              "line": 29
             },
             {
               "kind": "impl",
@@ -1458,28 +1415,28 @@
                   "signature": "async fn spawn_agent (& self , request : SpawnAgentRequest) -> Result < AgentRunId , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 51
+                  "line": 48
                 },
                 {
                   "name": "wait_for_agent_outcome",
                   "signature": "async fn wait_for_agent_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunOutcome , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 55
+                  "line": 52
                 },
                 {
                   "name": "poll_agent_run_outcome",
                   "signature": "async fn poll_agent_run_outcome (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunOutcome > , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 62
+                  "line": 59
                 },
                 {
                   "name": "cancel_agent_run",
                   "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < () , AgentRunError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 69
+                  "line": 66
                 }
               ],
               "impl_target": "AgentRunService",
@@ -1492,7 +1449,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service",
-              "line": 49
+              "line": 46
             },
             {
               "kind": "fn",
@@ -1510,7 +1467,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 103
+              "line": 100
             },
             {
               "kind": "fn",
@@ -1529,7 +1486,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 126
+              "line": 123
             },
             {
               "kind": "fn",
@@ -1548,7 +1505,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 162
+              "line": 158
             },
             {
               "kind": "struct",
@@ -1567,11 +1524,6 @@
                   "ty": "Arc < ControlledLauncher >"
                 },
                 {
-                  "name": "agent_run_store",
-                  "visibility": "private",
-                  "ty": "Arc < FakeAgentRunStore >"
-                },
-                {
                   "name": "task_agent_run_store",
                   "visibility": "private",
                   "ty": "Arc < FakeTaskAgentRunStore >"
@@ -1585,7 +1537,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 202
+              "line": 196
             },
             {
               "kind": "impl",
@@ -1600,7 +1552,7 @@
                   "signature": "fn new () -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 210
+                  "line": 203
                 }
               ],
               "impl_target": "ServiceHarness",
@@ -1611,7 +1563,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 209
+              "line": 202
             },
             {
               "kind": "fn",
@@ -1627,7 +1579,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 231
+              "line": 221
             },
             {
               "kind": "fn",
@@ -1643,7 +1595,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 247
+              "line": 237
             },
             {
               "kind": "fn",
@@ -1659,7 +1611,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 261
+              "line": 251
             },
             {
               "kind": "struct",
@@ -1688,7 +1640,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 281
+              "line": 273
             },
             {
               "kind": "impl",
@@ -1703,14 +1655,14 @@
                   "signature": "fn complete (& self , outcome : AgentLoopOutcome)",
                   "kind": "method",
                   "docs": null,
-                  "line": 288
+                  "line": 280
                 },
                 {
                   "name": "cancellation_reason",
                   "signature": "fn cancellation_reason (& self) -> Option < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 295
+                  "line": 287
                 }
               ],
               "impl_target": "ControlledLauncher",
@@ -1721,7 +1673,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 287
+              "line": 279
             },
             {
               "kind": "impl",
@@ -1736,7 +1688,7 @@
                   "signature": "fn start_agent_loop (& self , _request : StartAgentLoopRequest , _agent_run_api : Arc < dyn AgentRunApi > ,) -> StartedAgentLoop",
                   "kind": "method",
                   "docs": null,
-                  "line": 301
+                  "line": 293
                 }
               ],
               "impl_target": "ControlledLauncher",
@@ -1748,7 +1700,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 300
+              "line": 292
             },
             {
               "kind": "struct",
@@ -1773,7 +1725,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 323
+              "line": 315
             },
             {
               "kind": "impl",
@@ -1788,7 +1740,7 @@
                   "signature": "fn cancel (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 329
+                  "line": 321
                 }
               ],
               "impl_target": "TestCancellation",
@@ -1800,14 +1752,19 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 328
+              "line": 320
             },
             {
               "kind": "struct",
-              "name": "FakeAgentRunStore",
+              "name": "FakeTaskAgentRunStore",
               "visibility": "private",
-              "signature": "struct FakeAgentRunStore",
+              "signature": "struct FakeTaskAgentRunStore",
               "fields": [
+                {
+                  "name": "indexes",
+                  "visibility": "private",
+                  "ty": "StdMutex < HashMap < AgentRunId , AgentRunRecordIndex > >"
+                },
                 {
                   "name": "runs",
                   "visibility": "private",
@@ -1829,130 +1786,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 337
-            },
-            {
-              "kind": "impl",
-              "name": "impl FakeAgentRunStore",
-              "visibility": "private",
-              "signature": "impl FakeAgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "finish_count",
-                  "signature": "fn finish_count (& self) -> usize",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 344
-                }
-              ],
-              "impl_target": "FakeAgentRunStore",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-agent-run/src/service.rs",
-              "module": "service::tests",
-              "line": 343
-            },
-            {
-              "kind": "impl",
-              "name": "impl eos_types :: Sealed for FakeAgentRunStore",
-              "visibility": "private",
-              "signature": "impl eos_types :: Sealed for FakeAgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "FakeAgentRunStore",
-              "trait_name": "eos_types :: Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-run/src/service.rs",
-              "module": "service::tests",
-              "line": 349
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRunStore for FakeAgentRunStore",
-              "visibility": "private",
-              "signature": "impl AgentRunStore for FakeAgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "create_run",
-                  "signature": "async fn create_run (& self , agent_run_id : & AgentRunId , task_id : Option < & TaskId > , agent_name : & str ,) -> Result < AgentRun , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 353
-                },
-                {
-                  "name": "finish_run",
-                  "signature": "async fn finish_run (& self , agent_run_id : & AgentRunId , terminal_payload : Option < & JsonObject > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 373
-                },
-                {
-                  "name": "get",
-                  "signature": "async fn get (& self , agent_run_id : & AgentRunId) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 392
-                },
-                {
-                  "name": "get_for_task",
-                  "signature": "async fn get_for_task (& self , task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 396
-                }
-              ],
-              "impl_target": "FakeAgentRunStore",
-              "trait_name": "AgentRunStore",
-              "docs": null,
-              "tags": [
-                "async_trait",
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-agent-run/src/service.rs",
-              "module": "service::tests",
-              "line": 351
-            },
-            {
-              "kind": "struct",
-              "name": "FakeTaskAgentRunStore",
-              "visibility": "private",
-              "signature": "struct FakeTaskAgentRunStore",
-              "fields": [
-                {
-                  "name": "indexes",
-                  "visibility": "private",
-                  "ty": "StdMutex < HashMap < AgentRunId , AgentRunRecordIndex > >"
-                },
-                {
-                  "name": "finish_count",
-                  "visibility": "private",
-                  "ty": "AtomicUsize"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Default"
-              ],
-              "file": "crates/eos-agent-run/src/service.rs",
-              "module": "service::tests",
-              "line": 404
+              "line": 329
             },
             {
               "kind": "impl",
@@ -1967,7 +1801,7 @@
                   "signature": "fn finish_count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 411
+                  "line": 337
                 }
               ],
               "impl_target": "FakeTaskAgentRunStore",
@@ -1978,7 +1812,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 410
+              "line": 336
             },
             {
               "kind": "impl",
@@ -1997,7 +1831,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 416
+              "line": 342
             },
             {
               "kind": "impl",
@@ -2012,77 +1846,91 @@
                   "signature": "async fn create_root_task_agent_run (& self , request_id : & RequestId , agent_run_id : & AgentRunId , _agent_name : & AgentName ,) -> Result < CreatedTaskAgentRun , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 420
+                  "line": 346
                 },
                 {
                   "name": "create_workflow_task_agent_run",
                   "signature": "async fn create_workflow_task_agent_run (& self , _request_id : & RequestId , _agent_run_id : & AgentRunId , _coords : & WorkflowCoordinates , _role : WorkflowTaskRole , _plan_id : & PlanId , _work_item_id : Option < & WorkItemId > , _agent_name : & AgentName ,) -> Result < CreatedTaskAgentRun , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 437
+                  "line": 367
                 },
                 {
                   "name": "create_parented_task_agent_run",
                   "signature": "async fn create_parented_task_agent_run (& self , _agent_run_id : & AgentRunId , _parent : & ParentAgentRunAnchor , _kind : ParentedAgentRunKind , _tool_use_id : Option < & ToolUseId > , _agent_name : & AgentName ,) -> Result < CreatedTaskAgentRun , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 450
+                  "line": 380
                 },
                 {
                   "name": "finish_task_run",
-                  "signature": "async fn finish_task_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & JsonObject > , task_outcome : Option < & TaskOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < TaskRun > , CoreError >",
+                  "signature": "async fn finish_task_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & JsonObject > , task_outcome : Option < & TaskOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 461
+                  "line": 391
                 },
                 {
                   "name": "finish_parented_run",
                   "signature": "async fn finish_parented_run (& self , _agent_run_id : & AgentRunId , _status : TaskStatus , _terminal_payload : Option < & JsonObject > , _parented_outcome : Option < & ParentedOutcome > , _token_count : i64 , _error : Option < & str > ,) -> Result < Option < ParentedRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 491
+                  "line": 423
                 },
                 {
                   "name": "record_index_for_agent_run",
                   "signature": "async fn record_index_for_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunRecordIndex > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 503
+                  "line": 435
+                },
+                {
+                  "name": "get_agent_run",
+                  "signature": "async fn get_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRun > , CoreError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 442
+                },
+                {
+                  "name": "get_parented_run",
+                  "signature": "async fn get_parented_run (& self , _agent_run_id : & AgentRunId ,) -> Result < Option < ParentedRun > , CoreError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 449
                 },
                 {
                   "name": "get_task_run",
-                  "signature": "async fn get_task_run (& self , _task_id : & TaskId) -> Result < Option < TaskRun > , CoreError >",
+                  "signature": "async fn get_task_run (& self , task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 510
+                  "line": 456
                 },
                 {
                   "name": "list_task_runs_for_request",
-                  "signature": "async fn list_task_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < TaskRun > , CoreError >",
+                  "signature": "async fn list_task_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 514
+                  "line": 463
                 },
                 {
                   "name": "list_running_agent_runs_for_request",
                   "signature": "async fn list_running_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < RunningRequestAgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 525
+                  "line": 474
                 },
                 {
                   "name": "list_parented_runs_for_parent_task",
                   "signature": "async fn list_parented_runs_for_parent_task (& self , _parent_task_id : & TaskId , _kind : ParentedAgentRunKind ,) -> Result < Vec < ParentedRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 541
+                  "line": 490
                 },
                 {
                   "name": "task_execution_index",
                   "signature": "async fn task_execution_index (& self , _task_id : & TaskId ,) -> Result < Option < TaskExecutionIndex > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 551
+                  "line": 500
                 }
               ],
               "impl_target": "FakeTaskAgentRunStore",
@@ -2095,7 +1943,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 418
+              "line": 344
             },
             {
               "kind": "fn",
@@ -2111,13 +1959,13 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 561
+              "line": 510
             },
             {
               "kind": "fn",
               "name": "task_run_from_index",
               "visibility": "private",
-              "signature": "fn task_run_from_index (index : & AgentRunRecordIndex , status : TaskStatus , terminal_payload : Option < & JsonObject > , token_count : i64 , error : Option < & str > ,) -> TaskRun",
+              "signature": "fn task_run_from_index (index : & AgentRunRecordIndex , status : TaskStatus , terminal_payload : Option < & JsonObject > , token_count : i64 , error : Option < & str > ,) -> AgentRun",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -2127,7 +1975,23 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 575
+              "line": 524
+            },
+            {
+              "kind": "fn",
+              "name": "task_role_from_index",
+              "visibility": "private",
+              "signature": "fn task_role_from_index (index : & AgentRunRecordIndex) -> TaskRole",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-agent-run/src/service.rs",
+              "module": "service::tests",
+              "line": 548
             },
             {
               "kind": "fn",
@@ -2143,7 +2007,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 599
+              "line": 563
             }
           ]
         },
@@ -2167,7 +2031,7 @@
               ],
               "file": "crates/eos-agent-run/src/spawn.rs",
               "module": "spawn",
-              "line": 16
+              "line": 15
             },
             {
               "kind": "fn",
@@ -2185,7 +2049,7 @@
               ],
               "file": "crates/eos-agent-run/src/spawn.rs",
               "module": "spawn",
-              "line": 72
+              "line": 58
             },
             {
               "kind": "fn",
@@ -2203,7 +2067,7 @@
               ],
               "file": "crates/eos-agent-run/src/spawn.rs",
               "module": "spawn",
-              "line": 133
+              "line": 119
             },
             {
               "kind": "fn",
@@ -2219,7 +2083,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/spawn.rs",
               "module": "spawn",
-              "line": 149
+              "line": 135
             },
             {
               "kind": "fn",
@@ -2235,7 +2099,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/spawn.rs",
               "module": "spawn",
-              "line": 172
+              "line": 158
             },
             {
               "kind": "fn",
@@ -2251,7 +2115,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/spawn.rs",
               "module": "spawn",
-              "line": 180
+              "line": 166
             }
           ]
         }
@@ -2261,15 +2125,15 @@
       "name": "eos-db",
       "path": "crates/eos-db",
       "stats": {
-        "modules": 15,
-        "items": 101,
-        "structs": 22,
+        "modules": 14,
+        "items": 99,
+        "structs": 21,
         "enums": 1,
         "traits": 0,
-        "functions": 50,
-        "impls": 28,
-        "fields": 140,
-        "methods": 78
+        "functions": 52,
+        "impls": 25,
+        "fields": 133,
+        "methods": 74
       },
       "modules": [
         {
@@ -2546,11 +2410,6 @@
                   "ty": "Arc < SqlAttemptStore >"
                 },
                 {
-                  "name": "agent_runs",
-                  "visibility": "private",
-                  "ty": "Arc < SqlAgentRunStore >"
-                },
-                {
                   "name": "task_agent_runs",
                   "visibility": "private",
                   "ty": "Arc < SqlTaskAgentRunStore >"
@@ -2572,7 +2431,7 @@
               ],
               "file": "crates/eos-db/src/database.rs",
               "module": "database",
-              "line": 21
+              "line": 20
             },
             {
               "kind": "impl",
@@ -2587,77 +2446,70 @@
                   "signature": "pub async fn open (config : & DatabaseConfig) -> Result < Self , DbError >",
                   "kind": "associated-fn",
                   "docs": "Open the `SQLite` file, reject Postgres, apply PRAGMAs, run migrations, and\nconstruct every store.\n\n# Errors\nReturns [`DbError`] for a non-`SQLite` url, a connection/filesystem failure,\nor a migration failure.",
-                  "line": 36
+                  "line": 34
                 },
                 {
                   "name": "requests",
                   "signature": "pub fn requests (& self) -> Arc < dyn RequestStore >",
                   "kind": "method",
                   "docs": "The request store.",
-                  "line": 56
+                  "line": 53
                 },
                 {
                   "name": "tasks",
                   "signature": "pub fn tasks (& self) -> Arc < dyn TaskStore >",
                   "kind": "method",
                   "docs": "The task store.",
-                  "line": 62
+                  "line": 59
                 },
                 {
                   "name": "workflows",
                   "signature": "pub fn workflows (& self) -> Arc < dyn WorkflowStore >",
                   "kind": "method",
                   "docs": "The workflow store.",
-                  "line": 68
+                  "line": 65
                 },
                 {
                   "name": "iterations",
                   "signature": "pub fn iterations (& self) -> Arc < dyn IterationStore >",
                   "kind": "method",
                   "docs": "The iteration store.",
-                  "line": 74
+                  "line": 71
                 },
                 {
                   "name": "attempts",
                   "signature": "pub fn attempts (& self) -> Arc < dyn AttemptStore >",
                   "kind": "method",
                   "docs": "The attempt store.",
-                  "line": 80
-                },
-                {
-                  "name": "agent_runs",
-                  "signature": "pub fn agent_runs (& self) -> Arc < dyn AgentRunStore >",
-                  "kind": "method",
-                  "docs": "The agent-run store.",
-                  "line": 86
+                  "line": 77
                 },
                 {
                   "name": "task_agent_runs",
                   "signature": "pub fn task_agent_runs (& self) -> Arc < dyn TaskAgentRunStore >",
                   "kind": "method",
                   "docs": "The task-agent-run lineage store.",
-                  "line": 92
+                  "line": 83
                 },
                 {
                   "name": "models",
                   "signature": "pub fn models (& self) -> Arc < dyn ModelStore >",
                   "kind": "method",
                   "docs": "The model store (trait surface).",
-                  "line": 98
+                  "line": 89
                 },
                 {
                   "name": "model_registry",
                   "signature": "pub fn model_registry (& self) -> Arc < ModelRegistry >",
                   "kind": "method",
                   "docs": "The concrete model registry (for `active_resolved` / `sync_from_config`,\nwhich are not part of the `ModelStore` trait).",
-                  "line": 104
+                  "line": 95
                 },
                 {
                   "name": "pool",
                   "signature": "pub fn pool (& self) -> & SqlitePool",
                   "kind": "method",
                   "docs": "The underlying connection pool (migration / introspection use).",
-                  "line": 111
+                  "line": 102
                 }
               ],
               "impl_target": "Database",
@@ -2668,7 +2520,7 @@
               ],
               "file": "crates/eos-db/src/database.rs",
               "module": "database",
-              "line": 35
+              "line": 33
             }
           ]
         },
@@ -2857,7 +2709,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Null-preserving decode for nullable JSON columns such as\n`agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do not\ncoerce to `[]`.\n\n# Errors\nReturns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.",
+              "docs": "Null-preserving decode for nullable JSON columns such as\n`task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not\ncoerce to `[]`.\n\n# Errors\nReturns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.",
               "tags": [],
               "file": "crates/eos-db/src/json_col.rs",
               "module": "json_col",
@@ -3499,130 +3351,6 @@
           "items": []
         },
         {
-          "path": "crates/eos-db/src/repositories/agent_run.rs",
-          "module": "repositories::agent_run",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "SqlAgentRunStore",
-              "visibility": "pub",
-              "signature": "pub struct SqlAgentRunStore",
-              "fields": [
-                {
-                  "name": "pool",
-                  "visibility": "private",
-                  "ty": "SqlitePool"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "`SQLite` repository for agent runs.",
-              "tags": [
-                "derive: Debug"
-              ],
-              "file": "crates/eos-db/src/repositories/agent_run.rs",
-              "module": "repositories::agent_run",
-              "line": 15
-            },
-            {
-              "kind": "impl",
-              "name": "impl SqlAgentRunStore",
-              "visibility": "private",
-              "signature": "impl SqlAgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub(crate) fn new (pool : SqlitePool) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 22
-                }
-              ],
-              "impl_target": "SqlAgentRunStore",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-db/src/repositories/agent_run.rs",
-              "module": "repositories::agent_run",
-              "line": 21
-            },
-            {
-              "kind": "impl",
-              "name": "impl Sealed for SqlAgentRunStore",
-              "visibility": "private",
-              "signature": "impl Sealed for SqlAgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": "SqlAgentRunStore",
-              "trait_name": "Sealed",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-db/src/repositories/agent_run.rs",
-              "module": "repositories::agent_run",
-              "line": 27
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRunStore for SqlAgentRunStore",
-              "visibility": "private",
-              "signature": "impl AgentRunStore for SqlAgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "create_run",
-                  "signature": "async fn create_run (& self , agent_run_id : & AgentRunId , task_id : Option < & TaskId > , agent_name : & str ,) -> Result < AgentRun , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 31
-                },
-                {
-                  "name": "finish_run",
-                  "signature": "async fn finish_run (& self , agent_run_id : & AgentRunId , terminal_payload : Option < & JsonObject > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 54
-                },
-                {
-                  "name": "get",
-                  "signature": "async fn get (& self , agent_run_id : & AgentRunId) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 78
-                },
-                {
-                  "name": "get_for_task",
-                  "signature": "async fn get_for_task (& self , task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 87
-                }
-              ],
-              "impl_target": "SqlAgentRunStore",
-              "trait_name": "AgentRunStore",
-              "docs": null,
-              "tags": [
-                "async_trait",
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-db/src/repositories/agent_run.rs",
-              "module": "repositories::agent_run",
-              "line": 29
-            }
-          ]
-        },
-        {
           "path": "crates/eos-db/src/repositories/attempt.rs",
           "module": "repositories::attempt",
           "items": [
@@ -4211,7 +3939,7 @@
                 },
                 {
                   "name": "finish_task_run",
-                  "signature": "async fn finish_task_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & eos_types :: JsonObject > , task_outcome : Option < & TaskOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < TaskRun > , CoreError >",
+                  "signature": "async fn finish_task_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & eos_types :: JsonObject > , task_outcome : Option < & TaskOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
                   "line": 186
@@ -4231,39 +3959,53 @@
                   "line": 250
                 },
                 {
-                  "name": "get_task_run",
-                  "signature": "async fn get_task_run (& self , task_id : & TaskId) -> Result < Option < TaskRun > , CoreError >",
+                  "name": "get_agent_run",
+                  "signature": "async fn get_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
                   "line": 259
                 },
                 {
-                  "name": "list_task_runs_for_request",
-                  "signature": "async fn list_task_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < TaskRun > , CoreError >",
+                  "name": "get_parented_run",
+                  "signature": "async fn get_parented_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < ParentedRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 268
+                  "line": 272
+                },
+                {
+                  "name": "get_task_run",
+                  "signature": "async fn get_task_run (& self , task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 286
+                },
+                {
+                  "name": "list_task_runs_for_request",
+                  "signature": "async fn list_task_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , CoreError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 295
                 },
                 {
                   "name": "list_running_agent_runs_for_request",
                   "signature": "async fn list_running_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < RunningRequestAgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 285
+                  "line": 312
                 },
                 {
                   "name": "list_parented_runs_for_parent_task",
                   "signature": "async fn list_parented_runs_for_parent_task (& self , parent_task_id : & TaskId , kind : ParentedAgentRunKind ,) -> Result < Vec < ParentedRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 308
+                  "line": 335
                 },
                 {
                   "name": "task_execution_index",
                   "signature": "async fn task_execution_index (& self , task_id : & TaskId ,) -> Result < Option < TaskExecutionIndex > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 328
+                  "line": 355
                 }
               ],
               "impl_target": "SqlTaskAgentRunStore",
@@ -4362,7 +4104,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 361
+              "line": 388
             },
             {
               "kind": "struct",
@@ -4408,7 +4150,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 378
+              "line": 405
             },
             {
               "kind": "struct",
@@ -4509,7 +4251,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 387
+              "line": 414
             },
             {
               "kind": "struct",
@@ -4551,7 +4293,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 407
+              "line": 434
             },
             {
               "kind": "fn",
@@ -4567,7 +4309,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 415
+              "line": 442
             },
             {
               "kind": "fn",
@@ -4583,7 +4325,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 429
+              "line": 456
             },
             {
               "kind": "fn",
@@ -4599,13 +4341,13 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 440
+              "line": 467
             },
             {
               "kind": "fn",
               "name": "row_to_task_run",
               "visibility": "private",
-              "signature": "fn row_to_task_run (row : TaskRunRow) -> Result < TaskRun , DbError >",
+              "signature": "fn row_to_task_run (row : TaskRunRow) -> Result < AgentRun , DbError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -4615,7 +4357,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 459
+              "line": 486
             },
             {
               "kind": "fn",
@@ -4631,23 +4373,97 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 480
+              "line": 507
             },
             {
               "kind": "fn",
               "name": "task_run_record_index",
               "visibility": "private",
-              "signature": "fn task_run_record_index (row : & TaskRunRow) -> Result < AgentRunRecordIndex , DbError >",
+              "signature": "async fn task_run_record_index (pool : & SqlitePool , row : & TaskRunRow ,) -> Result < AgentRunRecordIndex , DbError >",
               "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
               "docs": null,
-              "tags": [],
+              "tags": [
+                "async"
+              ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 511
+              "line": 538
+            },
+            {
+              "kind": "struct",
+              "name": "WorkflowTaskRecordIndexRow",
+              "visibility": "private",
+              "signature": "struct WorkflowTaskRecordIndexRow",
+              "fields": [
+                {
+                  "name": "attempt_id",
+                  "visibility": "private",
+                  "ty": "String"
+                },
+                {
+                  "name": "iteration_id",
+                  "visibility": "private",
+                  "ty": "String"
+                },
+                {
+                  "name": "workflow_id",
+                  "visibility": "private",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: sqlx::FromRow"
+              ],
+              "file": "crates/eos-db/src/repositories/task_agent_run.rs",
+              "module": "repositories::task_agent_run",
+              "line": 561
+            },
+            {
+              "kind": "fn",
+              "name": "workflow_task_run_kind",
+              "visibility": "private",
+              "signature": "async fn workflow_task_run_kind (pool : & SqlitePool , task_id : & TaskId , role : TaskRole ,) -> Result < TaskAgentRunKind , DbError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async"
+              ],
+              "file": "crates/eos-db/src/repositories/task_agent_run.rs",
+              "module": "repositories::task_agent_run",
+              "line": 568
+            },
+            {
+              "kind": "fn",
+              "name": "workflow_task_record_index_row",
+              "visibility": "private",
+              "signature": "async fn workflow_task_record_index_row (pool : & SqlitePool , task_id : & TaskId , role : TaskRole ,) -> Result < Option < WorkflowTaskRecordIndexRow > , DbError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async"
+              ],
+              "file": "crates/eos-db/src/repositories/task_agent_run.rs",
+              "module": "repositories::task_agent_run",
+              "line": 589
             },
             {
               "kind": "fn",
@@ -4663,7 +4479,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 529
+              "line": 620
             },
             {
               "kind": "fn",
@@ -4681,7 +4497,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 549
+              "line": 640
             },
             {
               "kind": "fn",
@@ -4697,7 +4513,23 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 594
+              "line": 685
+            },
+            {
+              "kind": "fn",
+              "name": "workflow_role_from_task_role",
+              "visibility": "private",
+              "signature": "fn workflow_role_from_task_role (role : TaskRole) -> Result < WorkflowTaskRole , DbError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-db/src/repositories/task_agent_run.rs",
+              "module": "repositories::task_agent_run",
+              "line": 692
             },
             {
               "kind": "fn",
@@ -4713,7 +4545,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 601
+              "line": 703
             },
             {
               "kind": "fn",
@@ -4731,7 +4563,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 612
+              "line": 714
             },
             {
               "kind": "fn",
@@ -4749,7 +4581,7 @@
               ],
               "file": "crates/eos-db/src/repositories/task_agent_run.rs",
               "module": "repositories::task_agent_run",
-              "line": 626
+              "line": 728
             }
           ]
         },
@@ -5264,67 +5096,6 @@
               "line": 72
             },
             {
-              "kind": "struct",
-              "name": "AgentRunRow",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) struct AgentRunRow",
-              "fields": [
-                {
-                  "name": "id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                },
-                {
-                  "name": "agent_name",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "terminal_payload",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                },
-                {
-                  "name": "token_count",
-                  "visibility": "pub",
-                  "ty": "i64"
-                },
-                {
-                  "name": "error",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                },
-                {
-                  "name": "created_at",
-                  "visibility": "pub",
-                  "ty": "OffsetDateTime"
-                },
-                {
-                  "name": "finished_at",
-                  "visibility": "pub",
-                  "ty": "Option < OffsetDateTime >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: sqlx::FromRow"
-              ],
-              "file": "crates/eos-db/src/rows.rs",
-              "module": "rows",
-              "line": 88
-            },
-            {
               "kind": "fn",
               "name": "parse_id",
               "visibility": "pub(crate)",
@@ -5338,7 +5109,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 102
+              "line": 90
             },
             {
               "kind": "fn",
@@ -5354,7 +5125,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 112
+              "line": 100
             },
             {
               "kind": "fn",
@@ -5370,7 +5141,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 119
+              "line": 107
             },
             {
               "kind": "fn",
@@ -5386,7 +5157,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 129
+              "line": 117
             },
             {
               "kind": "fn",
@@ -5402,7 +5173,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 139
+              "line": 127
             },
             {
               "kind": "fn",
@@ -5418,7 +5189,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 153
+              "line": 141
             },
             {
               "kind": "fn",
@@ -5434,7 +5205,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 165
+              "line": 153
             },
             {
               "kind": "fn",
@@ -5450,7 +5221,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 181
+              "line": 169
             },
             {
               "kind": "fn",
@@ -5466,7 +5237,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 203
+              "line": 191
             },
             {
               "kind": "fn",
@@ -5482,7 +5253,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 237
+              "line": 225
             },
             {
               "kind": "fn",
@@ -5498,23 +5269,7 @@
               "tags": [],
               "file": "crates/eos-db/src/rows.rs",
               "module": "rows",
-              "line": 252
-            },
-            {
-              "kind": "fn",
-              "name": "row_to_agent_run",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn row_to_agent_run (r : AgentRunRow) -> Result < AgentRun , DbError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-db/src/rows.rs",
-              "module": "rows",
-              "line": 308
+              "line": 240
             }
           ]
         }
@@ -5531,7 +5286,7 @@
         "traits": 7,
         "functions": 101,
         "impls": 68,
-        "fields": 267,
+        "fields": 266,
         "methods": 222
       },
       "modules": [
@@ -5893,11 +5648,6 @@
                   "ty": "Arc < dyn TaskStore >"
                 },
                 {
-                  "name": "_agent_run_store",
-                  "visibility": "pub(crate)",
-                  "ty": "Arc < dyn AgentRunStore >"
-                },
-                {
                   "name": "workflow_store",
                   "visibility": "pub(crate)",
                   "ty": "Arc < dyn WorkflowStore >"
@@ -5928,7 +5678,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 104
+                  "line": 102
                 }
               ],
               "impl_target": "ToolCallHookStores",
@@ -5940,7 +5690,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 103
+              "line": 101
             },
             {
               "kind": "impl",
@@ -5952,10 +5702,10 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (task_store : Arc < dyn TaskStore > , agent_run_store : Arc < dyn AgentRunStore > , workflow_store : Arc < dyn WorkflowStore > ,) -> Self",
+                  "signature": "pub fn new (task_store : Arc < dyn TaskStore > , workflow_store : Arc < dyn WorkflowStore >) -> Self",
                   "kind": "constructor",
                   "docs": "Build hook dependencies from runtime-owned stores.",
-                  "line": 110
+                  "line": 108
                 }
               ],
               "impl_target": "ToolCallHookStores",
@@ -5966,7 +5716,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 109
+              "line": 107
             },
             {
               "kind": "struct",
@@ -6000,7 +5750,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 125
+              "line": 118
             },
             {
               "kind": "impl",
@@ -6015,7 +5765,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 134
+                  "line": 127
                 }
               ],
               "impl_target": "BackgroundSessionRuntimeFactory",
@@ -6027,7 +5777,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 133
+              "line": 126
             },
             {
               "kind": "impl",
@@ -6042,21 +5792,21 @@
                   "signature": "pub fn new (command_service : Arc < dyn SandboxCommandApi > , completion_poll_interval : Duration , workflow_service : Arc < dyn WorkflowApi > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build concrete background dependencies from runtime-owned contracts.",
-                  "line": 142
+                  "line": 135
                 },
                 {
                   "name": "from_config",
                   "signature": "pub fn from_config (command_service : Arc < dyn SandboxCommandApi > , config : & EngineRuntimeConfig , workflow_service : Arc < dyn WorkflowApi > ,) -> Result < Self , eos_types :: ConfigError >",
                   "kind": "constructor",
                   "docs": "Build background dependencies from validated engine runtime config.\n\n# Errors\nReturns [`eos_types::ConfigError::OutOfRange`] when the configured poll\ninterval is zero.",
-                  "line": 156
+                  "line": 149
                 },
                 {
                   "name": "build_runtime",
                   "signature": "pub(crate) fn build_runtime (& self , agent_run_id : AgentRunId , agent_run_api : & Arc < dyn AgentRunApi > , notifications : EngineNotificationQueue ,) -> BackgroundSessionRuntime",
                   "kind": "method",
                   "docs": null,
-                  "line": 174
+                  "line": 167
                 }
               ],
               "impl_target": "BackgroundSessionRuntimeFactory",
@@ -6067,7 +5817,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 141
+              "line": 134
             }
           ]
         },
@@ -30833,15 +30583,15 @@
       "name": "eos-types",
       "path": "crates/eos-types",
       "stats": {
-        "modules": 30,
-        "items": 149,
-        "structs": 51,
+        "modules": 28,
+        "items": 147,
+        "structs": 50,
         "enums": 33,
-        "traits": 16,
+        "traits": 15,
         "functions": 6,
         "impls": 40,
-        "fields": 299,
-        "methods": 155
+        "fields": 291,
+        "methods": 153
       },
       "modules": [
         {
@@ -33885,82 +33635,6 @@
           "items": []
         },
         {
-          "path": "crates/eos-types/src/state/engine.rs",
-          "module": "state::engine",
-          "items": []
-        },
-        {
-          "path": "crates/eos-types/src/state/engine/agent_run.rs",
-          "module": "state::engine::agent_run",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AgentRun",
-              "visibility": "pub",
-              "signature": "pub struct AgentRun",
-              "fields": [
-                {
-                  "name": "id",
-                  "visibility": "pub",
-                  "ty": "AgentRunId"
-                },
-                {
-                  "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "Option < TaskId >"
-                },
-                {
-                  "name": "agent_name",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "terminal_payload",
-                  "visibility": "pub",
-                  "ty": "Option < JsonObject >"
-                },
-                {
-                  "name": "token_count",
-                  "visibility": "pub",
-                  "ty": "i64"
-                },
-                {
-                  "name": "error",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
-                },
-                {
-                  "name": "created_at",
-                  "visibility": "pub",
-                  "ty": "UtcDateTime"
-                },
-                {
-                  "name": "finished_at",
-                  "visibility": "pub",
-                  "ty": "Option < UtcDateTime >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Immutable view of a persisted agent-run row (Rust `AgentRunRecord`).",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde"
-              ],
-              "file": "crates/eos-types/src/state/engine/agent_run.rs",
-              "module": "state::engine::agent_run",
-              "line": 8
-            }
-          ]
-        },
-        {
           "path": "crates/eos-types/src/state/model_registry.rs",
           "module": "state::model_registry",
           "items": []
@@ -34402,9 +34076,9 @@
             },
             {
               "kind": "struct",
-              "name": "TaskRun",
+              "name": "AgentRun",
               "visibility": "pub",
-              "signature": "pub struct TaskRun",
+              "signature": "pub struct AgentRun",
               "fields": [
                 {
                   "name": "task_id",
@@ -34476,7 +34150,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Persisted root/planner/worker task-agent-run row.",
+              "docs": "Persisted root/planner/worker agent-run row.",
               "tags": [
                 "derive: Clone",
                 "derive: Debug",
@@ -36531,53 +36205,6 @@
           "items": [
             {
               "kind": "trait",
-              "name": "AgentRunStore",
-              "visibility": "pub",
-              "signature": "pub trait AgentRunStore",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "create_run",
-                  "signature": "async fn create_run (& self , agent_run_id : & AgentRunId , task_id : Option < & TaskId > , agent_name : & str ,) -> Result < AgentRun , CoreError >",
-                  "kind": "required",
-                  "docs": "Create a run row with only the create-time fields set.",
-                  "line": 15
-                },
-                {
-                  "name": "finish_run",
-                  "signature": "async fn finish_run (& self , agent_run_id : & AgentRunId , terminal_payload : Option < & JsonObject > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "required",
-                  "docs": "Write the finish-time fields. `Ok(None)` means the run does not exist.",
-                  "line": 23
-                },
-                {
-                  "name": "get",
-                  "signature": "async fn get (& self , agent_run_id : & AgentRunId) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "required",
-                  "docs": "Load a run by id.",
-                  "line": 32
-                },
-                {
-                  "name": "get_for_task",
-                  "signature": "async fn get_for_task (& self , task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
-                  "kind": "required",
-                  "docs": "The latest agent run for one task, if any.",
-                  "line": 35
-                }
-              ],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Persistence surface for [`AgentRun`].",
-              "tags": [
-                "async_trait"
-              ],
-              "file": "crates/eos-types/src/stores.rs",
-              "module": "stores::engine",
-              "line": 12
-            },
-            {
-              "kind": "trait",
               "name": "ModelStore",
               "visibility": "pub",
               "signature": "pub trait ModelStore",
@@ -36589,28 +36216,28 @@
                   "signature": "async fn register (& self , model_key : & str , label : & str , class_path : & str , kwargs : & JsonObject , activate : bool ,) -> Result < ModelRegistration , CoreError >",
                   "kind": "required",
                   "docs": "Create or update a registration.",
-                  "line": 51
+                  "line": 15
                 },
                 {
                   "name": "delete",
                   "signature": "async fn delete (& self , model_key : & str) -> Result < bool , CoreError >",
                   "kind": "required",
                   "docs": "Delete by key; `Ok(false)` means no such key.",
-                  "line": 61
+                  "line": 25
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , model_key : & str) -> Result < Option < ModelRegistration > , CoreError >",
                   "kind": "required",
                   "docs": "Load a registration by key.",
-                  "line": 64
+                  "line": 28
                 },
                 {
                   "name": "active",
                   "signature": "async fn active (& self) -> Result < Option < ModelRegistration > , CoreError >",
                   "kind": "required",
                   "docs": "The single active registration, if any.",
-                  "line": 67
+                  "line": 31
                 }
               ],
               "impl_target": null,
@@ -36621,7 +36248,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::model_registry",
-              "line": 48
+              "line": 12
             },
             {
               "kind": "trait",
@@ -36636,35 +36263,35 @@
                   "signature": "async fn insert_task (& self , task : & Task) -> Result < () , CoreError >",
                   "kind": "required",
                   "docs": "Insert a fresh task row.",
-                  "line": 86
+                  "line": 50
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , id : & TaskId) -> Result < Option < Task > , CoreError >",
                   "kind": "required",
                   "docs": "Load a task by id.",
-                  "line": 89
+                  "line": 53
                 },
                 {
                   "name": "set_task_status_if_current",
                   "signature": "async fn set_task_status_if_current (& self , id : & TaskId , expected : TaskStatus , status : TaskStatus , task_outcome : Option < & TaskOutcome > ,) -> Result < Option < Task > , CoreError >",
                   "kind": "required",
                   "docs": "Optimistic-concurrency status flip.",
-                  "line": 92
+                  "line": 56
                 },
                 {
                   "name": "latch_attempt_tasks_cancelled",
                   "signature": "async fn latch_attempt_tasks_cancelled (& self , ids : & [TaskId]) -> Result < () , CoreError >",
                   "kind": "required",
                   "docs": "Bulk-latch task rows to [`TaskStatus::Cancelled`] before runtime teardown.",
-                  "line": 101
+                  "line": 65
                 },
                 {
                   "name": "list_for_request",
                   "signature": "async fn list_for_request (& self , request_id : & RequestId) -> Result < Vec < Task > , CoreError >",
                   "kind": "required",
                   "docs": "All tasks owned by one request, ordered by creation.",
-                  "line": 104
+                  "line": 68
                 }
               ],
               "impl_target": null,
@@ -36675,7 +36302,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::request_task",
-              "line": 83
+              "line": 47
             },
             {
               "kind": "trait",
@@ -36690,35 +36317,35 @@
                   "signature": "async fn create_request (& self , request_id : & RequestId , cwd : & str , sandbox_id : Option < & SandboxId > , request_prompt : & str ,) -> Result < () , CoreError >",
                   "kind": "required",
                   "docs": "Create a new request row.",
-                  "line": 111
+                  "line": 75
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , id : & RequestId) -> Result < Option < Request > , CoreError >",
                   "kind": "required",
                   "docs": "Load a request by id.",
-                  "line": 120
+                  "line": 84
                 },
                 {
                   "name": "set_root_task_id",
                   "signature": "async fn set_root_task_id (& self , id : & RequestId , root_task_id : & TaskId ,) -> Result < Request , CoreError >",
                   "kind": "required",
                   "docs": "Set the root task id and return the updated request.",
-                  "line": 123
+                  "line": 87
                 },
                 {
                   "name": "finish_request",
                   "signature": "async fn finish_request (& self , id : & RequestId , status : RequestStatus ,) -> Result < Option < Request > , CoreError >",
                   "kind": "required",
                   "docs": "Finish the request with `status`, stamping `finished_at` server-side.",
-                  "line": 130
+                  "line": 94
                 },
                 {
                   "name": "list",
                   "signature": "async fn list (& self) -> Result < Vec < Request > , CoreError >",
                   "kind": "required",
                   "docs": "List all requests, newest first.",
-                  "line": 137
+                  "line": 101
                 }
               ],
               "impl_target": null,
@@ -36730,7 +36357,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::request_task",
-              "line": 108
+              "line": 72
             },
             {
               "kind": "trait",
@@ -36745,77 +36372,91 @@
                   "signature": "async fn create_root_task_agent_run (& self , request_id : & RequestId , agent_run_id : & AgentRunId , agent_name : & AgentName ,) -> Result < CreatedTaskAgentRun , CoreError >",
                   "kind": "required",
                   "docs": "Create the root task-agent-run row and bind `Request.root_task_id`.",
-                  "line": 158
+                  "line": 122
                 },
                 {
                   "name": "create_workflow_task_agent_run",
                   "signature": "async fn create_workflow_task_agent_run (& self , request_id : & RequestId , agent_run_id : & AgentRunId , coords : & WorkflowCoordinates , role : WorkflowTaskRole , plan_id : & PlanId , work_item_id : Option < & WorkItemId > , agent_name : & AgentName ,) -> Result < CreatedTaskAgentRun , CoreError >",
                   "kind": "required",
                   "docs": "Create a workflow task-agent-run row.",
-                  "line": 166
+                  "line": 130
                 },
                 {
                   "name": "create_parented_task_agent_run",
                   "signature": "async fn create_parented_task_agent_run (& self , agent_run_id : & AgentRunId , parent : & ParentAgentRunAnchor , kind : ParentedAgentRunKind , tool_use_id : Option < & ToolUseId > , agent_name : & AgentName ,) -> Result < CreatedTaskAgentRun , CoreError >",
                   "kind": "required",
                   "docs": "Create a parent-launched subagent/advisor row with a derived own task id.",
-                  "line": 179
+                  "line": 143
                 },
                 {
                   "name": "finish_task_run",
-                  "signature": "async fn finish_task_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & JsonObject > , task_outcome : Option < & TaskOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < TaskRun > , CoreError >",
+                  "signature": "async fn finish_task_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & JsonObject > , task_outcome : Option < & TaskOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "required",
                   "docs": "Finish a root/workflow task-agent-run row.",
-                  "line": 189
+                  "line": 153
                 },
                 {
                   "name": "finish_parented_run",
                   "signature": "async fn finish_parented_run (& self , agent_run_id : & AgentRunId , status : TaskStatus , terminal_payload : Option < & JsonObject > , parented_outcome : Option < & ParentedOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < ParentedRun > , CoreError >",
                   "kind": "required",
                   "docs": "Finish a parent-launched subagent/advisor row.",
-                  "line": 200
+                  "line": 164
                 },
                 {
                   "name": "record_index_for_agent_run",
                   "signature": "async fn record_index_for_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunRecordIndex > , CoreError >",
                   "kind": "required",
                   "docs": "Resolve the record-index input for one run id.",
-                  "line": 211
+                  "line": 175
+                },
+                {
+                  "name": "get_agent_run",
+                  "signature": "async fn get_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRun > , CoreError >",
+                  "kind": "required",
+                  "docs": "Load a root/workflow agent-run row by agent-run id.",
+                  "line": 181
+                },
+                {
+                  "name": "get_parented_run",
+                  "signature": "async fn get_parented_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < ParentedRun > , CoreError >",
+                  "kind": "required",
+                  "docs": "Load a parented agent-run row by agent-run id.",
+                  "line": 187
                 },
                 {
                   "name": "get_task_run",
-                  "signature": "async fn get_task_run (& self , task_id : & TaskId) -> Result < Option < TaskRun > , CoreError >",
+                  "signature": "async fn get_task_run (& self , task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "required",
                   "docs": "Load one task-agent-run row by task id.",
-                  "line": 217
+                  "line": 193
                 },
                 {
                   "name": "list_task_runs_for_request",
-                  "signature": "async fn list_task_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < TaskRun > , CoreError >",
+                  "signature": "async fn list_task_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "required",
                   "docs": "Load root/workflow task-agent-run rows for one request.",
-                  "line": 220
+                  "line": 196
                 },
                 {
                   "name": "list_running_agent_runs_for_request",
                   "signature": "async fn list_running_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < RunningRequestAgentRun > , CoreError >",
                   "kind": "required",
                   "docs": "Load running agent runs for one request across root/workflow and\nparent-launched lineage rows.",
-                  "line": 226
+                  "line": 202
                 },
                 {
                   "name": "list_parented_runs_for_parent_task",
                   "signature": "async fn list_parented_runs_for_parent_task (& self , parent_task_id : & TaskId , kind : ParentedAgentRunKind ,) -> Result < Vec < ParentedRun > , CoreError >",
                   "kind": "required",
                   "docs": "Load parent-launched child runs for one parent task and kind.",
-                  "line": 233
+                  "line": 209
                 },
                 {
                   "name": "task_execution_index",
                   "signature": "async fn task_execution_index (& self , task_id : & TaskId ,) -> Result < Option < TaskExecutionIndex > , CoreError >",
                   "kind": "required",
                   "docs": "Derive the flat read-side child index for one task.",
-                  "line": 240
+                  "line": 216
                 }
               ],
               "impl_target": null,
@@ -36826,7 +36467,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::task_agent_run",
-              "line": 155
+              "line": 119
             },
             {
               "kind": "fn",
@@ -36842,7 +36483,7 @@
               "tags": [],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::task_agent_run",
-              "line": 247
+              "line": 223
             },
             {
               "kind": "trait",
@@ -36857,49 +36498,49 @@
                   "signature": "async fn insert (& self , request_id : & RequestId , parent_task_id : & TaskId , parent_agent_run_id : & AgentRunId , tool_use_id : Option < & ToolUseId > , workflow_goal : & str ,) -> Result < Workflow , CoreError >",
                   "kind": "required",
                   "docs": "Insert a fresh open workflow and return it.",
-                  "line": 288
+                  "line": 264
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , id : & WorkflowId) -> Result < Option < Workflow > , CoreError >",
                   "kind": "required",
                   "docs": "Load a workflow by id.",
-                  "line": 298
+                  "line": 274
                 },
                 {
                   "name": "append_iteration_id",
                   "signature": "async fn append_iteration_id (& self , id : & WorkflowId , iteration_id : & IterationId ,) -> Result < Workflow , CoreError >",
                   "kind": "required",
                   "docs": "Append a child iteration id and return the updated workflow.",
-                  "line": 301
+                  "line": 277
                 },
                 {
                   "name": "set_status",
                   "signature": "async fn set_status (& self , id : & WorkflowId , status : WorkflowStatus , closed_at : Option < UtcDateTime > ,) -> Result < Workflow , CoreError >",
                   "kind": "required",
                   "docs": "Set status and optionally close time.",
-                  "line": 308
+                  "line": 284
                 },
                 {
                   "name": "list_for_parent_task",
                   "signature": "async fn list_for_parent_task (& self , parent_task_id : & TaskId ,) -> Result < Vec < Workflow > , CoreError >",
                   "kind": "required",
                   "docs": "All workflows launched by one parent task, ordered by creation.",
-                  "line": 316
+                  "line": 292
                 },
                 {
                   "name": "list_for_launching_agent_run",
                   "signature": "async fn list_for_launching_agent_run (& self , parent_agent_run_id : & AgentRunId ,) -> Result < Vec < Workflow > , CoreError >",
                   "kind": "required",
                   "docs": "All workflows launched by one agent run, ordered by creation.",
-                  "line": 322
+                  "line": 298
                 },
                 {
                   "name": "cancel_open_workflows_for_request",
                   "signature": "async fn cancel_open_workflows_for_request (& self , request_id : & RequestId , reason : & str ,) -> Result < usize , CoreError >",
                   "kind": "required",
                   "docs": "Mark all open workflows for a request as cancelled.",
-                  "line": 328
+                  "line": 304
                 }
               ],
               "impl_target": null,
@@ -36910,7 +36551,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::workflow",
-              "line": 285
+              "line": 261
             },
             {
               "kind": "trait",
@@ -36925,42 +36566,42 @@
                   "signature": "async fn insert (& self , workflow_id : & WorkflowId , sequence_no : i64 , creation_reason : IterationCreationReason , workflow_goal : & str , iteration_goal : & str , attempt_budget : AttemptBudget ,) -> Result < Iteration , CoreError >",
                   "kind": "required",
                   "docs": "Insert a fresh open iteration and return it.",
-                  "line": 339
+                  "line": 315
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , id : & IterationId) -> Result < Option < Iteration > , CoreError >",
                   "kind": "required",
                   "docs": "Load an iteration by id.",
-                  "line": 350
+                  "line": 326
                 },
                 {
                   "name": "append_attempt_id",
                   "signature": "async fn append_attempt_id (& self , id : & IterationId , attempt_id : & AttemptId ,) -> Result < Iteration , CoreError >",
                   "kind": "required",
                   "docs": "Append a child attempt id and return the updated iteration.",
-                  "line": 353
+                  "line": 329
                 },
                 {
                   "name": "set_status",
                   "signature": "async fn set_status (& self , id : & IterationId , status : IterationStatus , closed_at : Option < UtcDateTime > ,) -> Result < Iteration , CoreError >",
                   "kind": "required",
                   "docs": "Set status and optionally close time.",
-                  "line": 360
+                  "line": 336
                 },
                 {
                   "name": "list_for_workflow",
                   "signature": "async fn list_for_workflow (& self , workflow_id : & WorkflowId ,) -> Result < Vec < Iteration > , CoreError >",
                   "kind": "required",
                   "docs": "All iterations of a workflow, ordered by sequence number.",
-                  "line": 368
+                  "line": 344
                 },
                 {
                   "name": "cancel_open_iterations_for_request",
                   "signature": "async fn cancel_open_iterations_for_request (& self , request_id : & RequestId , reason : & str ,) -> Result < usize , CoreError >",
                   "kind": "required",
                   "docs": "Mark all open iterations for a request as cancelled.",
-                  "line": 374
+                  "line": 350
                 }
               ],
               "impl_target": null,
@@ -36971,7 +36612,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::workflow",
-              "line": 336
+              "line": 312
             },
             {
               "kind": "trait",
@@ -36986,56 +36627,56 @@
                   "signature": "async fn insert (& self , iteration_id : & IterationId , workflow_id : & WorkflowId , attempt_sequence_no : i64 ,) -> Result < Attempt , CoreError >",
                   "kind": "required",
                   "docs": "Insert a fresh attempt in the planning stage and return it.",
-                  "line": 385
+                  "line": 361
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , id : & AttemptId) -> Result < Option < Attempt > , CoreError >",
                   "kind": "required",
                   "docs": "Load an attempt by id.",
-                  "line": 393
+                  "line": 369
                 },
                 {
                   "name": "bind_planner_task",
                   "signature": "async fn bind_planner_task (& self , id : & AttemptId , planner_task_id : & TaskId ,) -> Result < Attempt , CoreError >",
                   "kind": "required",
                   "docs": "Bind the planner task assigned to this attempt.",
-                  "line": 396
+                  "line": 372
                 },
                 {
                   "name": "record_plan_nodes",
                   "signature": "async fn record_plan_nodes (& self , id : & AttemptId , nodes : & [ExecutionNode] ,) -> Result < Attempt , CoreError >",
                   "kind": "required",
                   "docs": "Record the planner-authored execution tree nodes and transition to run.",
-                  "line": 403
+                  "line": 379
                 },
                 {
                   "name": "bind_worker_task",
                   "signature": "async fn bind_worker_task (& self , id : & AttemptId , work_item_id : & WorkItemId , task_id : & TaskId ,) -> Result < Attempt , CoreError >",
                   "kind": "required",
                   "docs": "Bind a worker task to one execution-tree node.",
-                  "line": 410
+                  "line": 386
                 },
                 {
                   "name": "close",
                   "signature": "async fn close (& self , id : & AttemptId , closure : AttemptClosure ,) -> Result < Attempt , CoreError >",
                   "kind": "required",
                   "docs": "Close the attempt with a typed terminal closure.",
-                  "line": 418
+                  "line": 394
                 },
                 {
                   "name": "list_for_iteration",
                   "signature": "async fn list_for_iteration (& self , iteration_id : & IterationId ,) -> Result < Vec < Attempt > , CoreError >",
                   "kind": "required",
                   "docs": "All attempts of an iteration, ordered by attempt sequence number.",
-                  "line": 425
+                  "line": 401
                 },
                 {
                   "name": "cancel_open_attempts_for_request",
                   "signature": "async fn cancel_open_attempts_for_request (& self , request_id : & RequestId ,) -> Result < usize , CoreError >",
                   "kind": "required",
                   "docs": "Mark all open attempts for a request as cancelled.",
-                  "line": 431
+                  "line": 407
                 }
               ],
               "impl_target": null,
@@ -37046,7 +36687,7 @@
               ],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores::workflow",
-              "line": 382
+              "line": 358
             },
             {
               "kind": "type",
@@ -37062,7 +36703,7 @@
               "tags": [],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores",
-              "line": 445
+              "line": 420
             },
             {
               "kind": "trait",
@@ -37078,7 +36719,7 @@
               "tags": [],
               "file": "crates/eos-types/src/stores.rs",
               "module": "stores",
-              "line": 448
+              "line": 423
             }
           ]
         },
@@ -39572,7 +39213,7 @@
               "kind": "fn",
               "name": "render_worker_agent_context",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn render_worker_agent_context (deps : & AttemptResources , attempt : & Attempt , work_item : & WorkItemSpec , worker_task_id : & eos_types :: TaskId ,) -> Result < AgentContext >",
+              "signature": "pub(crate) async fn render_worker_agent_context (deps : & AttemptResources , attempt : & Attempt , work_item : & WorkItemSpec , task_id : & eos_types :: TaskId ,) -> Result < AgentContext >",
               "fields": [],
               "variants": [],
               "methods": [],

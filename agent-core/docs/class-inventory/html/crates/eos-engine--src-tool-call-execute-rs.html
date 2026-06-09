@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>31</b><span>modules</span></div>
   <div><b>253</b><span>items</span></div>
-  <div><b>267</b><span>fields</span></div>
+  <div><b>266</b><span>fields</span></div>
   <div><b>222</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -116,7 +116,7 @@
     ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
     hooks: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-ToolCallHooks-62">ToolCallHooks</a>&gt;,
 ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">ToolResult</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_trace: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_trace: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     <span class="rs-kw">for</span> &amp;hook <span class="rs-kw">in</span> &amp;tool.hooks {
         <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-hook-112">run_hook</a>(hook, raw_input, ctx, hooks).<span class="rs-kw">await</span>? {
             <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Pass</span>(meta) =&gt; hook_trace.push(json!({
@@ -259,7 +259,7 @@
     ctx: &amp;<span class="rs-type">ExecutionMetadata</span>,
     hooks: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-ToolCallHooks-62">ToolCallHooks</a>&gt;,
 ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">ToolResult</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_trace: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hook_trace: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     <span class="rs-kw">for</span> &amp;hook <span class="rs-kw">in</span> &amp;tool.hooks {
         <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-hook-112">run_hook</a>(hook, raw_input, ctx, hooks).<span class="rs-kw">await</span>? {
             <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Pass</span>(meta) =&gt; hook_trace.push(json!({

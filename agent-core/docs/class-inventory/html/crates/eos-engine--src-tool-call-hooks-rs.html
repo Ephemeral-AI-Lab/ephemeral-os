@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>31</b><span>modules</span></div>
   <div><b>253</b><span>items</span></div>
-  <div><b>267</b><span>fields</span></div>
+  <div><b>266</b><span>fields</span></div>
   <div><b>222</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -65,14 +65,14 @@
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a></code>
   <p class="docstring">A hook denial.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>message</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>policy</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>pub(super)</td><td>reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>extra</td><td><code>JsonObject</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-42"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a> (message : impl Into &lt; String &gt; , policy : &amp; &#x27;static str) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>message</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>policy</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>pub(super)</td><td>reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>extra</td><td><code>JsonObject</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-42"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a> (message : impl Into &lt; String &gt; , policy : &amp; &#x27;static str) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, policy: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, policy: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             message: message.into(),
             policy,
             reason: <span class="rs-type">None</span>,
-            extra: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(),
+            extra: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(),
         }
     }
 </code></pre>
@@ -102,9 +102,9 @@
   <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-ToolCallHooks-62">ToolCallHooks</a></code>
   <p class="docstring">Engine-owned state used by tool-call pre-hooks.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-session-runtime-rs.html#item-struct-BackgroundSessionRuntime-153">BackgroundSessionRuntime</a></code></td></tr><tr><td>private</td><td>dependencies</td><td><code><a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-92">ToolCallHookStores</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-70"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a> (background : &amp; <a class="symbol-link" href="eos-engine--src-background-session-runtime-rs.html#item-struct-BackgroundSessionRuntime-153">BackgroundSessionRuntime</a> , dependencies : <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-92">ToolCallHookStores</a> ,) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-session-runtime-rs.html#item-struct-BackgroundSessionRuntime-153">BackgroundSessionRuntime</a></code></td></tr><tr><td>private</td><td>dependencies</td><td><code><a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-92">ToolCallHookStores</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-70"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a> (background : &amp; <a class="symbol-link" href="eos-engine--src-background-session-runtime-rs.html#item-struct-BackgroundSessionRuntime-153">BackgroundSessionRuntime</a> , dependencies : <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-92">ToolCallHookStores</a> ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(
         background: &amp;<a class="symbol-link rs-type" href="eos-engine--src-background-session-runtime-rs.html#item-struct-BackgroundSessionRuntime-153">BackgroundSessionRuntime</a>,
         dependencies: <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-92">ToolCallHookStores</a>,
     ) -&gt; <span class="rs-self">Self</span> {
@@ -170,7 +170,7 @@
   <h4>Variants</h4><table><tbody><tr><td>Pass</td><td><code>0: JsonObject</code></td></tr><tr><td>Deny</td><td><code>0: <a class="symbol-link" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-pass-27"><td>associated-fn</td><td>pass</td><td><code>fn <a class="symbol-link" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a> () -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a>() -&gt; <span class="rs-self">Self</span> {
-        <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Pass</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>())
+        <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Pass</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>())
     }
 </code></pre>
 </details></td></tr></tbody></table>
@@ -251,7 +251,7 @@
         &quot;phase&quot;: &quot;pre&quot;,
     });
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     metadata.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(
         &quot;hook_failure&quot;.to_owned(),
         json!({
@@ -498,7 +498,7 @@
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-destructive-git-377">run_destructive_git</a>(raw_input: &amp;<span class="rs-type">JsonObject</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a> {
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-shell-command-271">shell_command</a>(raw_input) {
         <span class="rs-type">Some</span>(command) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-has-git-mutation-command-353">has_git_mutation_command</a>(command) =&gt; {
-            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(<span class="rs-type">DESTRUCTIVE_GIT_MESSAGE</span>, &quot;destructive_git&quot;))
+            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(<span class="rs-type">DESTRUCTIVE_GIT_MESSAGE</span>, &quot;destructive_git&quot;))
         }
         _ =&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a>(),
     }
@@ -520,7 +520,7 @@
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-destructive-shell-386">run_destructive_shell</a>(raw_input: &amp;<span class="rs-type">JsonObject</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a> {
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-shell-command-271">shell_command</a>(raw_input) {
         <span class="rs-type">Some</span>(command) <span class="rs-kw">if</span> <span class="rs-type">DESTRUCTIVE_SHELL_PATTERN</span>.is_match(command) =&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(
-            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(<span class="rs-type">DESTRUCTIVE_SHELL_MESSAGE</span>, &quot;destructive_shell&quot;),
+            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(<span class="rs-type">DESTRUCTIVE_SHELL_MESSAGE</span>, &quot;destructive_shell&quot;),
         ),
         _ =&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a>(),
     }
@@ -542,7 +542,7 @@
   <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-block-in-isolated-mode-397">run_block_in_isolated_mode</a>(ctx: &amp;<span class="rs-type">ExecutionMetadata</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>, <span class="rs-type">ToolError</span>&gt; {
     <span class="rs-kw">if</span> ctx.is_isolated_workspace_mode {
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(
-            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(<span class="rs-type">BLOCK_IN_ISOLATED_MESSAGE</span>, &quot;block_in_isolated_mode&quot;)
+            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(<span class="rs-type">BLOCK_IN_ISOLATED_MESSAGE</span>, &quot;block_in_isolated_mode&quot;)
                 .<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-with-reason-51">with_reason</a>(&quot;isolated_workspace_open&quot;),
         ))
     } <span class="rs-kw">else</span> {
@@ -588,7 +588,7 @@
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a>() -&gt; <span class="rs-self">Self</span> {
-        <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Pass</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>())
+        <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Pass</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>())
     }
 }
 
@@ -602,12 +602,12 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, policy: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, policy: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             message: message.into(),
             policy,
             reason: <span class="rs-type">None</span>,
-            extra: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(),
+            extra: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(),
         }
     }
 
@@ -630,7 +630,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-ToolCallHooks-62">ToolCallHooks</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(
         background: &amp;<a class="symbol-link rs-type" href="eos-engine--src-background-session-runtime-rs.html#item-struct-BackgroundSessionRuntime-153">BackgroundSessionRuntime</a>,
         dependencies: <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-ToolCallHookStores-92">ToolCallHookStores</a>,
     ) -&gt; <span class="rs-self">Self</span> {
@@ -724,7 +724,7 @@
         &quot;phase&quot;: &quot;pre&quot;,
     });
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>();
     metadata.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(
         &quot;hook_failure&quot;.to_owned(),
         json!({
@@ -762,12 +762,12 @@
 
 <span class="rs-kw">const</span> <span class="rs-type">DESTRUCTIVE_SHELL_MESSAGE</span>: &amp;str = &quot;<span class="rs-type">BLOCKED</span>: destructive shell command that targets workspace or system directories (rm -r /testbed, mv /testbed, etc.) is forbidden. <span class="rs-type">These</span> commands destroy the shared workspace and cannot be undone. <span class="rs-type">Use</span> targeted file operations instead.&quot;;
 
-<span class="rs-kw">static</span> <span class="rs-type">GIT_COMMAND_PATTERN</span>: <span class="rs-type">LazyLock</span>&lt;<span class="rs-type">Regex</span>&gt; = <span class="rs-type">LazyLock</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(|| {
-    <span class="rs-type">Regex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(r&quot;(?i)(?:^|[;&amp;|]\s*)(?:command\s+)?git\b([^;&amp;|]*)&quot;).expect(&quot;valid git pattern&quot;)
+<span class="rs-kw">static</span> <span class="rs-type">GIT_COMMAND_PATTERN</span>: <span class="rs-type">LazyLock</span>&lt;<span class="rs-type">Regex</span>&gt; = <span class="rs-type">LazyLock</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(|| {
+    <span class="rs-type">Regex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(r&quot;(?i)(?:^|[;&amp;|]\s*)(?:command\s+)?git\b([^;&amp;|]*)&quot;).expect(&quot;valid git pattern&quot;)
 });
 
-<span class="rs-kw">static</span> <span class="rs-type">DESTRUCTIVE_SHELL_PATTERN</span>: <span class="rs-type">LazyLock</span>&lt;<span class="rs-type">Regex</span>&gt; = <span class="rs-type">LazyLock</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(|| {
-    <span class="rs-type">Regex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(concat!(
+<span class="rs-kw">static</span> <span class="rs-type">DESTRUCTIVE_SHELL_PATTERN</span>: <span class="rs-type">LazyLock</span>&lt;<span class="rs-type">Regex</span>&gt; = <span class="rs-type">LazyLock</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(|| {
+    <span class="rs-type">Regex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(concat!(
         r&quot;(?i)(?:^|[;&amp;|]\s*)(?:&quot;,
         r&quot;rm\s+(?:-\<span class="rs-type">S</span>*[rR]\<span class="rs-type">S</span>*\s+|--recursive\s+)(?:/(?:testbed|workspace|home|opt|usr|var|etc|tmp)\b|/\s|/\.\.|\.\.)&quot;,
         r&quot;|mv\s+/(?:testbed|workspace|home|opt|usr|var|etc)(?:/[^/\s]*)?(?:\s|$)&quot;,
@@ -940,7 +940,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-destructive-git-377">run_destructive_git</a>(raw_input: &amp;<span class="rs-type">JsonObject</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a> {
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-shell-command-271">shell_command</a>(raw_input) {
         <span class="rs-type">Some</span>(command) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-has-git-mutation-command-353">has_git_mutation_command</a>(command) =&gt; {
-            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(<span class="rs-type">DESTRUCTIVE_GIT_MESSAGE</span>, &quot;destructive_git&quot;))
+            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(<span class="rs-type">DESTRUCTIVE_GIT_MESSAGE</span>, &quot;destructive_git&quot;))
         }
         _ =&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a>(),
     }
@@ -949,7 +949,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-destructive-shell-386">run_destructive_shell</a>(raw_input: &amp;<span class="rs-type">JsonObject</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a> {
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-shell-command-271">shell_command</a>(raw_input) {
         <span class="rs-type">Some</span>(command) <span class="rs-kw">if</span> <span class="rs-type">DESTRUCTIVE_SHELL_PATTERN</span>.is_match(command) =&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(
-            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(<span class="rs-type">DESTRUCTIVE_SHELL_MESSAGE</span>, &quot;destructive_shell&quot;),
+            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(<span class="rs-type">DESTRUCTIVE_SHELL_MESSAGE</span>, &quot;destructive_shell&quot;),
         ),
         _ =&gt; <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-pass-27">pass</a>(),
     }
@@ -960,7 +960,7 @@
 <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#item-fn-run-block-in-isolated-mode-397">run_block_in_isolated_mode</a>(ctx: &amp;<span class="rs-type">ExecutionMetadata</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>, <span class="rs-type">ToolError</span>&gt; {
     <span class="rs-kw">if</span> ctx.is_isolated_workspace_mode {
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-enum-HookOutcome-17">HookOutcome</a>::<span class="rs-type">Deny</span>(
-            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-110">new</a>(<span class="rs-type">BLOCK_IN_ISOLATED_MESSAGE</span>, &quot;block_in_isolated_mode&quot;)
+            <a class="symbol-link rs-type" href="eos-engine--src-tool-call-hooks-rs.html#item-struct-HookDenial-32">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(<span class="rs-type">BLOCK_IN_ISOLATED_MESSAGE</span>, &quot;block_in_isolated_mode&quot;)
                 .<a class="symbol-link rs-fn" href="eos-engine--src-tool-call-hooks-rs.html#method-with-reason-51">with_reason</a>(&quot;isolated_workspace_open&quot;),
         ))
     } <span class="rs-kw">else</span> {

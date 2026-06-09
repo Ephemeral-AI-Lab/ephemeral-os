@@ -119,17 +119,6 @@ CREATE TABLE attempts (
 CREATE INDEX ix_attempts_iteration_id ON attempts(iteration_id);
 CREATE INDEX ix_attempts_workflow_id ON attempts(workflow_id);
 
-CREATE TABLE agent_runs (
-    id                   TEXT PRIMARY KEY,
-    task_id              TEXT UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
-    agent_name           TEXT NOT NULL,
-    terminal_payload     TEXT,
-    token_count          INTEGER NOT NULL DEFAULT 0,
-    error                TEXT,
-    created_at           TEXT NOT NULL,
-    finished_at          TEXT
-);
-
 CREATE TABLE model_registrations (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     key         TEXT NOT NULL UNIQUE,

@@ -3,7 +3,7 @@
 //! There are two decode paths because the Rust stores disagree on NULL
 //! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors `task_store`'s
 //! `record.x or []` coercion (NULL/empty → `T::default()`); [`decode_opt`]
-//! mirrors `agent_run_store`'s nullable columns that must preserve `None`.
+//! mirrors task-agent-run nullable columns that must preserve `None`.
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -33,7 +33,7 @@ pub(crate) fn decode_default<T: DeserializeOwned + Default>(
 }
 
 /// Null-preserving decode for nullable JSON columns such as
-/// `agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do not
+/// `task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not
 /// coerce to `[]`.
 ///
 /// # Errors

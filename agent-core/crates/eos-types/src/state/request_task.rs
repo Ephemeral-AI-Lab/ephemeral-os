@@ -5,5 +5,5 @@ mod task;
 
 pub use request::{Request, RequestStatus};
 pub use task::{
-    ParentedRun, RunningRequestAgentRun, Task, TaskRole, TaskRun, TaskStatus, TASK_AGENT_ROLES,
+    AgentRun, ParentedRun, RunningRequestAgentRun, Task, TaskRole, TaskStatus, TASK_AGENT_ROLES,
 };

@@ -1,6 +1,6 @@
 //! Query user-request state.
 
-use eos_types::{RequestId, TaskRun};
+use eos_types::{AgentRun, RequestId};
 
 use crate::dto::{UserRequestDetail, UserRequestSummary};
 use crate::error::AgentCoreServerError;
@@ -46,7 +46,7 @@ pub(crate) async fn list_user_requests(
 pub(crate) async fn list_user_request_tasks(
     service: &AgentCoreService,
     request_id: &RequestId,
-) -> Result<Vec<TaskRun>, AgentCoreServerError> {
+) -> Result<Vec<AgentRun>, AgentCoreServerError> {
     if service.request_store.get(request_id).await?.is_none() {
         return Err(AgentCoreServerError::UserRequestNotFound(
             request_id.clone(),

@@ -55,12 +55,12 @@ pub use state::{
     BackgroundSessionCounts, DeferredGoal, ExecutionNode, Iteration, IterationCreationReason,
     IterationOutcome, IterationStatus, ModelRegistration, ParentedOutcome, ParentedRun, PlanId,
     PlanOutcomeSubmission, PlannerOutcome, Request, RequestStatus, RunningRequestAgentRun,
-    SubmissionStatus, Task, TaskOutcome, TaskRole, TaskRun, TaskStatus, WorkItemId, WorkItemSpec,
+    SubmissionStatus, Task, TaskOutcome, TaskRole, TaskStatus, WorkItemId, WorkItemSpec,
     WorkerOutcome, WorkerOutcomeSubmission, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
     TASK_AGENT_ROLES,
 };
 pub use stores::{
-    parented_task_id, AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore,
-    Sealed, StoreError, TaskAgentRunStore, TaskStore, WorkflowStore,
+    parented_task_id, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
+    TaskAgentRunStore, TaskStore, WorkflowStore,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
 use eos_tool::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
 use eos_types::{
-    AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, AgentRunStore, JsonObject, Message,
-    TaskStore, ToolUseId, WorkflowApi, WorkflowStore,
+    AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, JsonObject, Message, TaskStore, ToolUseId,
+    WorkflowApi, WorkflowStore,
 };
 use serde_json::json;
 
@@ -94,8 +94,6 @@ pub trait AgentLoopToolRegistryFactory: Send + Sync {
 pub struct ToolCallHookStores {
     /// Task rows used for workflow ancestry checks.
     pub(crate) _task_store: Arc<dyn TaskStore>,
-    /// Agent-run rows used to resolve a task when call metadata is incomplete.
-    pub(crate) _agent_run_store: Arc<dyn AgentRunStore>,
     /// Workflow rows used to walk parent-task ancestry.
     pub(crate) workflow_store: Arc<dyn WorkflowStore>,
 }
@@ -109,14 +107,9 @@ impl std::fmt::Debug for ToolCallHookStores {
 impl ToolCallHookStores {
     /// Build hook dependencies from runtime-owned stores.
     #[must_use]
-    pub fn new(
-        task_store: Arc<dyn TaskStore>,
-        agent_run_store: Arc<dyn AgentRunStore>,
-        workflow_store: Arc<dyn WorkflowStore>,
-    ) -> Self {
+    pub fn new(task_store: Arc<dyn TaskStore>, workflow_store: Arc<dyn WorkflowStore>) -> Self {
         Self {
             _task_store: task_store,
-            _agent_run_store: agent_run_store,
             workflow_store,
         }
     }

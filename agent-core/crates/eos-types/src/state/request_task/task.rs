@@ -86,9 +86,9 @@ pub struct Task {
     pub task_outcome: Option<TaskOutcome>,
 }
 
-/// Persisted root/planner/worker task-agent-run row.
+/// Persisted root/planner/worker agent-run row.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct TaskRun {
+pub struct AgentRun {
     /// Schedulable task identity.
     pub task_id: TaskId,
     /// Agent-run execution and record identity.

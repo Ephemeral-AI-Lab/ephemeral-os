@@ -9,7 +9,7 @@ pub(crate) async fn render_worker_agent_context(
     deps: &AttemptResources,
     attempt: &Attempt,
     work_item: &WorkItemSpec,
-    worker_task_id: &eos_types::TaskId,
+    task_id: &eos_types::TaskId,
 ) -> Result<AgentContext> {
     let planner = planner_outcome_for_attempt(deps, attempt).await?;
     let needs = dependency_sections(deps, attempt, work_item).await?;
@@ -21,7 +21,7 @@ pub(crate) async fn render_worker_agent_context(
             ContextSection::new("work_item")
                 .with_attrs(vec![
                     ("work_item_id".to_owned(), work_item.id.as_str().to_owned()),
-                    ("task_id".to_owned(), worker_task_id.as_str().to_owned()),
+                    ("task_id".to_owned(), task_id.as_str().to_owned()),
                     (
                         "agent_name".to_owned(),
                         work_item.agent_name.as_str().to_owned(),
