@@ -1,20 +1,20 @@
-/// Result alias for message-record operations.
+/// Result alias for agent-run record operations.
 pub type Result<T> = std::result::Result<T, AgentRunRecordError>;
 
-/// File-backed message-record service failures.
+/// File-backed agent-run record store failures.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum AgentRunRecordError {
-    /// A path segment would escape the message-record root or create ambiguous layout.
-    #[error("unsafe message-record path segment for {field}: {value:?}")]
+    /// A path segment would escape the record root or create ambiguous layout.
+    #[error("unsafe agent-run record path segment for {field}: {value:?}")]
     UnsafeSegment {
         /// Field whose value was rejected.
         field: &'static str,
         /// Rejected value.
         value: String,
     },
-    /// The requested agent-run message-record directory does not exist.
-    #[error("agent-run message record not found: {0}")]
+    /// The requested agent-run record directory does not exist.
+    #[error("agent-run record not found: {0}")]
     NotFound(String),
     /// A byte offset was beyond the current file length.
     #[error("message offset {offset} is beyond file length {len}")]
@@ -25,10 +25,10 @@ pub enum AgentRunRecordError {
         len: u64,
     },
     /// Filesystem I/O failed.
-    #[error("message-record io error: {0}")]
+    #[error("agent-run record io error: {0}")]
     Io(#[from] std::io::Error),
     /// JSON encoding or decoding failed.
-    #[error("message-record json error: {0}")]
+    #[error("agent-run record json error: {0}")]
     Json(#[from] serde_json::Error),
 }
 

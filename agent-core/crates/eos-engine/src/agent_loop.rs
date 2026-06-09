@@ -1,10 +1,12 @@
 //! Public non-blocking agent-loop API and internal loop executor.
 
+mod config;
 mod contracts;
 mod executor;
 mod launcher;
 mod state;
 
+pub use config::{EngineRuntimeConfig, DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS};
 pub use contracts::{
     AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory, BackgroundSessionRuntimeFactory,
     ExecutionMetadataBuildInput, ToolCallHookStores, ToolExecutionMetadataReader,

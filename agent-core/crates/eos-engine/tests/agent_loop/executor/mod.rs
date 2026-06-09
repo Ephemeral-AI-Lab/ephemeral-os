@@ -110,7 +110,7 @@ async fn cancellation_after_assistant_completion_skips_tool_dispatch() {
         cancel_signal,
         background_sessions: None,
         hook_stores: None,
-        event_outputs: EngineEventOutputs::new(),
+        run_outputs: AgentRunOutputs::new(),
         agent_run_api: Arc::new(UnusedAgentRunApi),
     };
 
@@ -137,7 +137,7 @@ fn test_executor() -> AgentLoopExecutor {
         cancel_signal: AgentLoopCancelSignal::for_test(),
         background_sessions: None,
         hook_stores: None,
-        event_outputs: EngineEventOutputs::new(),
+        run_outputs: AgentRunOutputs::new(),
         agent_run_api: Arc::new(UnusedAgentRunApi),
     }
 }
@@ -337,9 +337,9 @@ struct PendingStreamSource {
 impl ProviderStreamSource for PendingStreamSource {
     async fn stream(&self, _request: &LlmRequest) -> Result<EngineStream, EngineError> {
         self.stream_started.notify_one();
-        Ok(Box::pin(
-            stream::pending::<Result<StreamEvent, EngineError>>(),
-        ))
+        Ok(Box::pin(stream::pending::<
+            Result<AgentRunStreamEvent, EngineError>,
+        >()))
     }
 }
 
@@ -358,11 +358,11 @@ impl ProviderStreamSource for CancelOnCompletionSource {
     }
 }
 
-fn assistant_complete_with_tool_use() -> StreamEvent {
-    StreamEvent::AssistantMessageComplete {
+fn assistant_complete_with_tool_use() -> AgentRunStreamEvent {
+    AgentRunStreamEvent::AssistantMessageComplete {
         agent_name: String::new(),
         agent_run_id: None,
-        payload: Box::new(crate::event::AssistantMessageComplete {
+        payload: Box::new(crate::AssistantMessageComplete {
             message: Message {
                 role: eos_llm_client::MessageRole::Assistant,
                 content: vec![ContentBlock::ToolUse {

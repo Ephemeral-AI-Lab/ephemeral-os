@@ -8,7 +8,7 @@ use eos_tool::ToolResult;
 use eos_types::AgentRun;
 use eos_types::{AgentRunApi, AgentRunId, AgentRunOutcome, AgentRunStatus, JsonObject};
 use serde_json::{json, Value};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::session_runtime::{
@@ -92,6 +92,7 @@ struct SubagentSessionState {
 pub(in crate::background) struct SubagentSessionManager {
     agent_run_id: AgentRunId,
     sessions: Arc<Mutex<SubagentSessionState>>,
+    monitor_wakeup: Arc<Notify>,
     agent_run_service: Arc<dyn AgentRunApi>,
     notification: BackgroundNotificationEmitter,
 }
@@ -113,6 +114,7 @@ impl SubagentSessionManager {
         Self {
             agent_run_id,
             sessions: Arc::new(Mutex::new(SubagentSessionState::default())),
+            monitor_wakeup: Arc::new(Notify::new()),
             agent_run_service,
             notification,
         }
@@ -212,6 +214,24 @@ impl SubagentSessionManager {
             .map(|session| session.agent_run_id().clone())
             .collect()
     }
+
+    async fn has_running_sessions(&self) -> bool {
+        self.sessions
+            .lock()
+            .await
+            .sessions
+            .values()
+            .any(|session| matches!(session.status(), BackgroundSessionStatus::Running))
+    }
+
+    async fn wait_for_running_session(&self) {
+        loop {
+            if self.has_running_sessions().await {
+                return;
+            }
+            self.monitor_wakeup.notified().await;
+        }
+    }
 }
 
 pub(in crate::background) struct SubagentSessionMonitor {
@@ -232,6 +252,7 @@ impl SubagentSessionMonitor {
         Self {
             join: tokio::spawn(async move {
                 loop {
+                    manager.wait_for_running_session().await;
                     for completion in manager.poll_completions().await {
                         manager.push_notification_on_completion(completion).await;
                     }
@@ -253,6 +274,7 @@ impl BackgroundSessionManager for SubagentSessionManager {
             .await
             .sessions
             .insert(session.id().clone(), session);
+        self.monitor_wakeup.notify_one();
     }
 
     async fn count(&self) -> usize {

@@ -12,6 +12,7 @@ use eos_types::{
 };
 use serde_json::json;
 
+use super::config::EngineRuntimeConfig;
 use crate::background::BackgroundSessionRuntime;
 use crate::notifications::EngineNotificationQueue;
 use crate::EngineError;
@@ -147,6 +148,24 @@ impl BackgroundSessionRuntimeFactory {
             completion_poll_interval,
             workflow_service,
         }
+    }
+
+    /// Build background dependencies from validated engine runtime config.
+    ///
+    /// # Errors
+    /// Returns [`eos_types::ConfigError::OutOfRange`] when the configured poll
+    /// interval is zero.
+    pub fn from_config(
+        command_service: Arc<dyn SandboxCommandApi>,
+        config: &EngineRuntimeConfig,
+        workflow_service: Arc<dyn WorkflowApi>,
+    ) -> Result<Self, eos_types::ConfigError> {
+        config.validate()?;
+        Ok(Self::new(
+            command_service,
+            config.background_completion_poll_interval(),
+            workflow_service,
+        ))
     }
 
     pub(crate) fn build_runtime(

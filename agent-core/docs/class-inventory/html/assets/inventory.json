@@ -5918,21 +5918,182 @@
       "name": "eos-engine",
       "path": "crates/eos-engine",
       "stats": {
-        "modules": 32,
-        "items": 256,
-        "structs": 62,
-        "enums": 10,
+        "modules": 29,
+        "items": 254,
+        "structs": 60,
+        "enums": 9,
         "traits": 7,
-        "functions": 99,
-        "impls": 69,
-        "fields": 279,
-        "methods": 218
+        "functions": 102,
+        "impls": 68,
+        "fields": 267,
+        "methods": 222
       },
       "modules": [
         {
           "path": "crates/eos-engine/src/agent_loop.rs",
           "module": "agent_loop",
           "items": []
+        },
+        {
+          "path": "crates/eos-engine/src/agent_loop/config.rs",
+          "module": "agent_loop::config",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "EngineRuntimeConfig",
+              "visibility": "pub",
+              "signature": "pub struct EngineRuntimeConfig",
+              "fields": [
+                {
+                  "name": "background_completion_poll_interval_ms",
+                  "visibility": "pub",
+                  "ty": "u64"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Runtime tunables for engine-owned loop behavior.",
+              "tags": [
+                "config",
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "non_exhaustive",
+                "serde",
+                "serde: deny_unknown_fields"
+              ],
+              "file": "crates/eos-engine/src/agent_loop/config.rs",
+              "module": "agent_loop::config",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl Default for EngineRuntimeConfig",
+              "visibility": "private",
+              "signature": "impl Default for EngineRuntimeConfig",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "default",
+                  "signature": "fn default () -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 27
+                }
+              ],
+              "impl_target": "EngineRuntimeConfig",
+              "trait_name": "Default",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/agent_loop/config.rs",
+              "module": "agent_loop::config",
+              "line": 26
+            },
+            {
+              "kind": "impl",
+              "name": "impl EngineRuntimeConfig",
+              "visibility": "private",
+              "signature": "impl EngineRuntimeConfig",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "load_from_dir",
+                  "signature": "pub fn load_from_dir (config_dir : impl AsRef < Path >) -> Result < Self , ConfigError >",
+                  "kind": "associated-fn",
+                  "docs": "Load the `runtime` section from `config_dir/prd.yml < config_dir/local.yml`.\n\nMissing files are skipped; the merged document must contain a `runtime`\nsection matching [`EngineRuntimeConfig`].\n\n# Errors\nReturns [`ConfigError`] when a present file cannot be read or parsed, the\nmerged document has no `runtime` section, or validation fails.",
+                  "line": 35
+                },
+                {
+                  "name": "load_from_paths",
+                  "signature": "pub fn load_from_paths (paths : & [PathBuf]) -> Result < Self , ConfigError >",
+                  "kind": "associated-fn",
+                  "docs": "Load the `runtime` section from an explicit ordered list of YAML files.\n\nFiles are merged left to right: mappings recurse, while scalars and\narrays replace the previous value.\n\n# Errors\nReturns [`ConfigError`] when a present file cannot be read or parsed, the\nmerged document has no `runtime` section, or validation fails.",
+                  "line": 48
+                },
+                {
+                  "name": "background_completion_poll_interval",
+                  "signature": "pub fn background_completion_poll_interval (& self) -> Duration",
+                  "kind": "method",
+                  "docs": "Return the background completion poll interval as a [`Duration`].",
+                  "line": 78
+                },
+                {
+                  "name": "validate",
+                  "signature": "pub fn validate (& self) -> Result < () , ConfigError >",
+                  "kind": "method",
+                  "docs": "Enforce numeric range constraints.\n\n# Errors\nReturns [`ConfigError::OutOfRange`] when the background completion poll\ninterval is zero.",
+                  "line": 84
+                }
+              ],
+              "impl_target": "EngineRuntimeConfig",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/agent_loop/config.rs",
+              "module": "agent_loop::config",
+              "line": 34
+            },
+            {
+              "kind": "fn",
+              "name": "default_background_completion_poll_interval_ms",
+              "visibility": "private",
+              "signature": "const fn default_background_completion_poll_interval_ms () -> u64",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/agent_loop/config.rs",
+              "module": "agent_loop::config",
+              "line": 100
+            },
+            {
+              "kind": "fn",
+              "name": "read_yaml",
+              "visibility": "private",
+              "signature": "fn read_yaml (path : & Path) -> Result < Option < Value > , ConfigError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/agent_loop/config.rs",
+              "module": "agent_loop::config",
+              "line": 104
+            },
+            {
+              "kind": "fn",
+              "name": "deep_merge",
+              "visibility": "private",
+              "signature": "fn deep_merge (base : & mut Value , overlay : Value)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/agent_loop/config.rs",
+              "module": "agent_loop::config",
+              "line": 113
+            }
+          ]
         },
         {
           "path": "crates/eos-engine/src/agent_loop/contracts.rs",
@@ -5954,7 +6115,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 19
+              "line": 20
             },
             {
               "kind": "struct",
@@ -5994,7 +6155,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 30
+              "line": 31
             },
             {
               "kind": "trait",
@@ -6009,14 +6170,14 @@
                   "signature": "async fn agent_run_snapshot (& self , agent_run_id : & AgentRunId ,) -> Result < AgentRunRuntimeSnapshot , EngineError >",
                   "kind": "required",
                   "docs": "Load the current runtime snapshot for one agent run.",
-                  "line": 46
+                  "line": 47
                 },
                 {
                   "name": "build_execution_metadata",
                   "signature": "async fn build_execution_metadata (& self , input : ExecutionMetadataBuildInput ,) -> Result < ExecutionMetadata , EngineError >",
                   "kind": "required",
                   "docs": "Render per-tool-call execution metadata from the current agent state.",
-                  "line": 52
+                  "line": 53
                 }
               ],
               "impl_target": null,
@@ -6027,7 +6188,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 43
+              "line": 44
             },
             {
               "kind": "struct",
@@ -6061,7 +6222,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 59
+              "line": 60
             },
             {
               "kind": "impl",
@@ -6076,7 +6237,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 71
+                  "line": 72
                 }
               ],
               "impl_target": "AgentLoopToolRegistryBuildInput",
@@ -6088,7 +6249,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 70
+              "line": 71
             },
             {
               "kind": "trait",
@@ -6103,7 +6264,7 @@
                   "signature": "fn build_tool_registry (& self , input : AgentLoopToolRegistryBuildInput ,) -> Result < ToolRegistry , EngineError >",
                   "kind": "required",
                   "docs": "Build a concrete tool registry for one loop.",
-                  "line": 81
+                  "line": 82
                 }
               ],
               "impl_target": null,
@@ -6112,7 +6273,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 79
+              "line": 80
             },
             {
               "kind": "struct",
@@ -6146,7 +6307,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 88
+              "line": 89
             },
             {
               "kind": "impl",
@@ -6161,7 +6322,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 100
+                  "line": 101
                 }
               ],
               "impl_target": "ToolCallHookStores",
@@ -6173,7 +6334,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 99
+              "line": 100
             },
             {
               "kind": "impl",
@@ -6188,7 +6349,7 @@
                   "signature": "pub fn new (task_store : Arc < dyn TaskStore > , agent_run_store : Arc < dyn AgentRunStore > , workflow_store : Arc < dyn WorkflowStore > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build hook dependencies from runtime-owned stores.",
-                  "line": 106
+                  "line": 107
                 }
               ],
               "impl_target": "ToolCallHookStores",
@@ -6199,7 +6360,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 105
+              "line": 106
             },
             {
               "kind": "struct",
@@ -6233,7 +6394,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 121
+              "line": 122
             },
             {
               "kind": "impl",
@@ -6248,7 +6409,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 130
+                  "line": 131
                 }
               ],
               "impl_target": "BackgroundSessionRuntimeFactory",
@@ -6260,7 +6421,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 129
+              "line": 130
             },
             {
               "kind": "impl",
@@ -6275,14 +6436,21 @@
                   "signature": "pub fn new (command_service : Arc < dyn SandboxCommandApi > , completion_poll_interval : Duration , workflow_service : Arc < dyn WorkflowApi > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build concrete background dependencies from runtime-owned contracts.",
-                  "line": 138
+                  "line": 139
+                },
+                {
+                  "name": "from_config",
+                  "signature": "pub fn from_config (command_service : Arc < dyn SandboxCommandApi > , config : & EngineRuntimeConfig , workflow_service : Arc < dyn WorkflowApi > ,) -> Result < Self , eos_types :: ConfigError >",
+                  "kind": "constructor",
+                  "docs": "Build background dependencies from validated engine runtime config.\n\n# Errors\nReturns [`eos_types::ConfigError::OutOfRange`] when the configured poll\ninterval is zero.",
+                  "line": 153
                 },
                 {
                   "name": "build_runtime",
                   "signature": "pub(crate) fn build_runtime (& self , agent_run_id : AgentRunId , agent_run_api : & Arc < dyn AgentRunApi > , notifications : EngineNotificationQueue ,) -> BackgroundSessionRuntime",
                   "kind": "method",
                   "docs": null,
-                  "line": 152
+                  "line": 171
                 }
               ],
               "impl_target": "BackgroundSessionRuntimeFactory",
@@ -6293,7 +6461,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/contracts.rs",
               "module": "agent_loop::contracts",
-              "line": 137
+              "line": 138
             }
           ]
         },
@@ -6338,9 +6506,9 @@
                   "ty": "Option < ToolCallHookStores >"
                 },
                 {
-                  "name": "event_outputs",
+                  "name": "run_outputs",
                   "visibility": "private",
-                  "ty": "EngineEventOutputs"
+                  "ty": "AgentRunOutputs"
                 },
                 {
                   "name": "agent_run_api",
@@ -6356,7 +6524,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 29
+              "line": 26
             },
             {
               "kind": "struct",
@@ -6395,9 +6563,9 @@
                   "ty": "Option < ToolCallHookStores >"
                 },
                 {
-                  "name": "event_outputs",
+                  "name": "run_outputs",
                   "visibility": "pub(crate)",
-                  "ty": "EngineEventOutputs"
+                  "ty": "AgentRunOutputs"
                 },
                 {
                   "name": "agent_run_api",
@@ -6413,7 +6581,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 41
+              "line": 38
             },
             {
               "kind": "impl",
@@ -6428,7 +6596,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 54
+                  "line": 51
                 }
               ],
               "impl_target": "AgentLoopExecutor",
@@ -6440,7 +6608,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 53
+              "line": 50
             },
             {
               "kind": "impl",
@@ -6455,84 +6623,84 @@
                   "signature": "pub(crate) fn new (input : AgentLoopExecutorInput) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 60
+                  "line": 57
                 },
                 {
                   "name": "execute_agent_loop",
                   "signature": "pub(crate) async fn execute_agent_loop (self , request : StartAgentLoopRequest ,) -> AgentLoopOutcome",
                   "kind": "method",
                   "docs": null,
-                  "line": 73
+                  "line": 70
                 },
                 {
                   "name": "finish_cancelled_agent_loop",
-                  "signature": "async fn finish_cancelled_agent_loop (& self , record : Option < LoopRecordHandle > , state : AgentLoopState , reason : String ,) -> AgentLoopOutcome",
+                  "signature": "async fn finish_cancelled_agent_loop (& self , record : Option < AgentRunRecordHandle > , state : AgentLoopState , reason : String ,) -> AgentLoopOutcome",
                   "kind": "method",
                   "docs": null,
-                  "line": 180
+                  "line": 177
                 },
                 {
                   "name": "start_agent_run_record",
-                  "signature": "async fn start_agent_run_record (& self , request : & StartAgentLoopRequest , event_identity : & AgentRunRuntimeSnapshot ,) -> Result < Option < LoopRecordHandle > , EngineError >",
+                  "signature": "async fn start_agent_run_record (& self , request : & StartAgentLoopRequest , event_identity : & AgentRunRuntimeSnapshot ,) -> Result < Option < AgentRunRecordHandle > , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 193
+                  "line": 190
                 },
                 {
                   "name": "finish_agent_run_record",
-                  "signature": "async fn finish_agent_run_record (& self , record : Option < LoopRecordHandle > , outcome : AgentLoopOutcome ,) -> AgentLoopOutcome",
+                  "signature": "async fn finish_agent_run_record (& self , record : Option < AgentRunRecordHandle > , outcome : AgentLoopOutcome ,) -> AgentLoopOutcome",
                   "kind": "method",
                   "docs": null,
-                  "line": 227
+                  "line": 212
                 },
                 {
                   "name": "execute_assistant_turn",
                   "signature": "async fn execute_assistant_turn (& self , provider_stream_source : & Arc < dyn ProviderStreamSource > , event_identity : & AgentRunRuntimeSnapshot , state : & mut AgentLoopState ,) -> Result < AssistantTurnResult , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 254
+                  "line": 234
                 },
                 {
                   "name": "dispatch_tool_batch",
                   "signature": "async fn dispatch_tool_batch (& self , state : & AgentLoopState , calls : & [ToolUseRequest] ,) -> Result < LoopToolDispatchOutcome , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 336
+                  "line": 316
                 },
                 {
                   "name": "execute_registered_tool",
                   "signature": "async fn execute_registered_tool (& self , state : & AgentLoopState , call : & ToolUseRequest , tool : & RegisteredTool , conversation : Arc < [Message] > ,) -> Result < ToolResult , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 435
+                  "line": 415
                 },
                 {
                   "name": "build_run_services",
                   "signature": "fn build_run_services (& self , agent_run_id : & AgentRunId) -> AgentLoopRunServices",
                   "kind": "method",
                   "docs": null,
-                  "line": 480
+                  "line": 460
                 },
                 {
                   "name": "resolve_provider_stream_source",
                   "signature": "fn resolve_provider_stream_source (& self , request : & StartAgentLoopRequest , agent_run_snapshot : & AgentRunRuntimeSnapshot ,) -> Arc < dyn ProviderStreamSource >",
                   "kind": "method",
                   "docs": null,
-                  "line": 490
+                  "line": 470
                 },
                 {
                   "name": "drain_notifications",
                   "signature": "async fn drain_notifications (& self , state : & mut AgentLoopState , event_identity : & AgentRunRuntimeSnapshot ,)",
                   "kind": "method",
                   "docs": null,
-                  "line": 501
+                  "line": 481
                 },
                 {
                   "name": "emit_event",
-                  "signature": "fn emit_event (& self , event : & StreamEvent)",
+                  "signature": "fn emit_event (& self , event : & AgentRunStreamEvent)",
                   "kind": "method",
                   "docs": null,
-                  "line": 515
+                  "line": 495
                 }
               ],
               "impl_target": "AgentLoopExecutor",
@@ -6543,34 +6711,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 59
-            },
-            {
-              "kind": "struct",
-              "name": "LoopRecordHandle",
-              "visibility": "private",
-              "signature": "struct LoopRecordHandle",
-              "fields": [
-                {
-                  "name": "handle",
-                  "visibility": "private",
-                  "ty": "AgentRunRecordHandle"
-                },
-                {
-                  "name": "initial_message_count",
-                  "visibility": "private",
-                  "ty": "usize"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/agent_loop/executor.rs",
-              "module": "agent_loop::executor",
-              "line": 520
+              "line": 56
             },
             {
               "kind": "enum",
@@ -6616,7 +6757,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 525
+              "line": 500
             },
             {
               "kind": "struct",
@@ -6643,7 +6784,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 542
+              "line": 517
             },
             {
               "kind": "struct",
@@ -6675,7 +6816,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 547
+              "line": 522
             },
             {
               "kind": "struct",
@@ -6713,7 +6854,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 553
+              "line": 528
             },
             {
               "kind": "fn",
@@ -6729,7 +6870,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 560
+              "line": 535
             },
             {
               "kind": "fn",
@@ -6745,7 +6886,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 584
+              "line": 559
             },
             {
               "kind": "fn",
@@ -6761,7 +6902,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 603
+              "line": 578
             },
             {
               "kind": "fn",
@@ -6777,13 +6918,13 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 614
+              "line": 589
             },
             {
               "kind": "fn",
               "name": "node_finish_status",
               "visibility": "private",
-              "signature": "fn node_finish_status (kind : & AgentLoopOutcomeKind) -> NodeFinishStatus",
+              "signature": "fn node_finish_status (kind : & AgentLoopOutcomeKind) -> AgentRunRecordFinishStatus",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -6793,7 +6934,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 632
+              "line": 607
             },
             {
               "kind": "fn",
@@ -6809,7 +6950,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 639
+              "line": 614
             },
             {
               "kind": "fn",
@@ -6825,7 +6966,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 649
+              "line": 624
             },
             {
               "kind": "fn",
@@ -6841,7 +6982,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/executor.rs",
               "module": "agent_loop::executor",
-              "line": 659
+              "line": 634
             }
           ]
         },
@@ -7062,14 +7203,14 @@
                   "ty": "Option < ToolCallHookStores >"
                 },
                 {
-                  "name": "event_outputs",
+                  "name": "run_outputs",
                   "visibility": "private",
-                  "ty": "EngineEventOutputs"
+                  "ty": "AgentRunOutputs"
                 },
                 {
-                  "name": "live_event_sink_factory",
+                  "name": "stream_sink_factory",
                   "visibility": "private",
-                  "ty": "Option < EngineEventSinkFactory >"
+                  "ty": "Option < AgentRunStreamSinkFactory >"
                 }
               ],
               "variants": [],
@@ -7153,17 +7294,17 @@
                   "line": 158
                 },
                 {
-                  "name": "with_event_outputs",
-                  "signature": "pub fn with_event_outputs (mut self , event_outputs : EngineEventOutputs) -> Self",
+                  "name": "with_run_outputs",
+                  "signature": "pub fn with_run_outputs (mut self , run_outputs : AgentRunOutputs) -> Self",
                   "kind": "method",
-                  "docs": "Attach event output fan-out for each run.",
+                  "docs": "Attach output fan-out for each run.",
                   "line": 165
                 },
                 {
-                  "name": "with_live_event_sink_factory",
-                  "signature": "pub fn with_live_event_sink_factory (mut self , factory : EngineEventSinkFactory) -> Self",
+                  "name": "with_stream_sink_factory",
+                  "signature": "pub fn with_stream_sink_factory (mut self , factory : AgentRunStreamSinkFactory) -> Self",
                   "kind": "method",
-                  "docs": "Attach a live event sink factory resolved for each loop start request.",
+                  "docs": "Attach a live stream sink factory resolved for each loop start request.",
                   "line": 172
                 }
               ],
@@ -7739,6 +7880,11 @@
                   "ty": "Arc < Mutex < CommandSessions > >"
                 },
                 {
+                  "name": "monitor_wakeup",
+                  "visibility": "private",
+                  "ty": "Arc < Notify >"
+                },
+                {
                   "name": "agent_run_id",
                   "visibility": "private",
                   "ty": "AgentRunId"
@@ -7779,7 +7925,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 102
+                  "line": 103
                 }
               ],
               "impl_target": "CommandSessionManager",
@@ -7791,7 +7937,7 @@
               ],
               "file": "crates/eos-engine/src/background/command_session.rs",
               "module": "background::command_session",
-              "line": 101
+              "line": 102
             },
             {
               "kind": "impl",
@@ -7806,42 +7952,56 @@
                   "signature": "pub(crate :: background) fn new (agent_run_id : AgentRunId , command_service : Arc < dyn SandboxCommandApi > , notification : BackgroundNotificationEmitter ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 110
+                  "line": 111
                 },
                 {
                   "name": "register_background_session",
                   "signature": "pub(crate :: background) async fn register_background_session (& self , command_session_id : & CommandSessionId , sandbox_id : & SandboxId ,)",
                   "kind": "method",
                   "docs": null,
-                  "line": 123
+                  "line": 125
+                },
+                {
+                  "name": "has_running_sessions",
+                  "signature": "async fn has_running_sessions (& self) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 141
+                },
+                {
+                  "name": "wait_for_running_session",
+                  "signature": "async fn wait_for_running_session (& self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 149
                 },
                 {
                   "name": "running_by_sandbox",
                   "signature": "fn running_by_sandbox (sessions : & CommandSessions) -> Vec < (SandboxId , Vec < CommandSessionId >) >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 136
+                  "line": 158
                 },
                 {
                   "name": "running_sandboxes",
                   "signature": "fn running_sandboxes (sessions : & CommandSessions) -> Vec < SandboxId >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 149
+                  "line": 171
                 },
                 {
                   "name": "ingest_completions",
                   "signature": "fn ingest_completions (sessions : & mut CommandSessions , completions : & [eos_types :: JsonObject] ,) -> Vec < CommandCompletion >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 159
+                  "line": 181
                 },
                 {
                   "name": "poll_completions",
                   "signature": "pub(crate :: background) async fn poll_completions (& self) -> Vec < CommandCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 190
+                  "line": 212
                 }
               ],
               "impl_target": "CommandSessionManager",
@@ -7852,7 +8012,7 @@
               ],
               "file": "crates/eos-engine/src/background/command_session.rs",
               "module": "background::command_session",
-              "line": 109
+              "line": 110
             },
             {
               "kind": "struct",
@@ -7874,7 +8034,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/command_session.rs",
               "module": "background::command_session",
-              "line": 214
+              "line": 236
             },
             {
               "kind": "impl",
@@ -7889,7 +8049,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 219
+                  "line": 241
                 }
               ],
               "impl_target": "CommandSessionMonitor",
@@ -7901,7 +8061,7 @@
               ],
               "file": "crates/eos-engine/src/background/command_session.rs",
               "module": "background::command_session",
-              "line": 218
+              "line": 240
             },
             {
               "kind": "impl",
@@ -7916,7 +8076,7 @@
                   "signature": "pub(crate :: background) fn spawn (manager : CommandSessionManager , interval : Duration) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 225
+                  "line": 247
                 }
               ],
               "impl_target": "CommandSessionMonitor",
@@ -7927,7 +8087,7 @@
               ],
               "file": "crates/eos-engine/src/background/command_session.rs",
               "module": "background::command_session",
-              "line": 224
+              "line": 246
             },
             {
               "kind": "impl",
@@ -7942,28 +8102,28 @@
                   "signature": "async fn insert (& self , session : Self :: Session)",
                   "kind": "method",
                   "docs": null,
-                  "line": 244
+                  "line": 267
                 },
                 {
                   "name": "count",
                   "signature": "async fn count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 251
+                  "line": 275
                 },
                 {
                   "name": "push_notification_on_completion",
                   "signature": "async fn push_notification_on_completion (& self , completion : Self :: Completion)",
                   "kind": "method",
                   "docs": null,
-                  "line": 260
+                  "line": 284
                 },
                 {
                   "name": "cancel",
                   "signature": "async fn cancel (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 272
+                  "line": 296
                 }
               ],
               "impl_target": "CommandSessionManager",
@@ -7976,7 +8136,7 @@
               ],
               "file": "crates/eos-engine/src/background/command_session.rs",
               "module": "background::command_session",
-              "line": 239
+              "line": 262
             }
           ]
         },
@@ -8920,6 +9080,11 @@
                   "ty": "Arc < Mutex < SubagentSessionState > >"
                 },
                 {
+                  "name": "monitor_wakeup",
+                  "visibility": "private",
+                  "ty": "Arc < Notify >"
+                },
+                {
                   "name": "agent_run_service",
                   "visibility": "private",
                   "ty": "Arc < dyn AgentRunApi >"
@@ -8955,7 +9120,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 100
+                  "line": 101
                 }
               ],
               "impl_target": "SubagentSessionManager",
@@ -8967,7 +9132,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 99
+              "line": 100
             },
             {
               "kind": "impl",
@@ -8982,42 +9147,56 @@
                   "signature": "pub(crate :: background) fn new (agent_run_id : AgentRunId , agent_run_service : Arc < dyn AgentRunApi > , notification : BackgroundNotificationEmitter ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 108
+                  "line": 109
                 },
                 {
                   "name": "cancel_one",
                   "signature": "async fn cancel_one (& self , agent_run_id : & AgentRunId , reason : & str) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 121
+                  "line": 123
                 },
                 {
                   "name": "cancel_agent_run",
                   "signature": "pub(crate :: background) async fn cancel_agent_run (& self , child_run_id : & AgentRunId , reason : & str ,) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 150
+                  "line": 152
                 },
                 {
                   "name": "settle",
                   "signature": "pub(super) async fn settle (& self , agent_run_id : & AgentRunId , status : BackgroundSessionStatus , result : ToolResult ,) -> Option < SubagentCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 158
+                  "line": 160
                 },
                 {
                   "name": "poll_completions",
                   "signature": "pub(crate :: background) async fn poll_completions (& self) -> Vec < SubagentCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 174
+                  "line": 176
                 },
                 {
                   "name": "running_agent_runs",
                   "signature": "async fn running_agent_runs (& self) -> Vec < AgentRunId >",
                   "kind": "method",
                   "docs": null,
-                  "line": 205
+                  "line": 207
+                },
+                {
+                  "name": "has_running_sessions",
+                  "signature": "async fn has_running_sessions (& self) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 218
+                },
+                {
+                  "name": "wait_for_running_session",
+                  "signature": "async fn wait_for_running_session (& self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 227
                 }
               ],
               "impl_target": "SubagentSessionManager",
@@ -9028,7 +9207,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 107
+              "line": 108
             },
             {
               "kind": "struct",
@@ -9050,7 +9229,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 217
+              "line": 237
             },
             {
               "kind": "impl",
@@ -9065,7 +9244,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 222
+                  "line": 242
                 }
               ],
               "impl_target": "SubagentSessionMonitor",
@@ -9077,7 +9256,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 221
+              "line": 241
             },
             {
               "kind": "impl",
@@ -9092,7 +9271,7 @@
                   "signature": "pub(crate :: background) fn spawn (manager : SubagentSessionManager , interval : Duration ,) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 228
+                  "line": 248
                 }
               ],
               "impl_target": "SubagentSessionMonitor",
@@ -9103,7 +9282,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 227
+              "line": 247
             },
             {
               "kind": "impl",
@@ -9118,28 +9297,28 @@
                   "signature": "async fn insert (& self , session : Self :: Session)",
                   "kind": "method",
                   "docs": null,
-                  "line": 250
+                  "line": 271
                 },
                 {
                   "name": "count",
                   "signature": "async fn count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 258
+                  "line": 280
                 },
                 {
                   "name": "push_notification_on_completion",
                   "signature": "async fn push_notification_on_completion (& self , completion : Self :: Completion)",
                   "kind": "method",
                   "docs": null,
-                  "line": 268
+                  "line": 290
                 },
                 {
                   "name": "cancel",
                   "signature": "async fn cancel (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 279
+                  "line": 301
                 }
               ],
               "impl_target": "SubagentSessionManager",
@@ -9152,7 +9331,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 245
+              "line": 266
             },
             {
               "kind": "impl",
@@ -9167,21 +9346,21 @@
                   "signature": "pub(crate :: background) async fn register_background_session (& self , agent_run_id : & AgentRunId ,)",
                   "kind": "method",
                   "docs": null,
-                  "line": 311
+                  "line": 333
                 },
                 {
                   "name": "cancel_background_agent_run",
                   "signature": "pub(crate :: background) async fn cancel_background_agent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 325
+                  "line": 347
                 },
                 {
                   "name": "cancel_all_background_sessions",
                   "signature": "pub(crate :: background) async fn cancel_all_background_sessions (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 333
+                  "line": 355
                 }
               ],
               "impl_target": "SubagentSessionManager",
@@ -9192,7 +9371,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 310
+              "line": 332
             },
             {
               "kind": "fn",
@@ -9208,7 +9387,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 338
+              "line": 360
             },
             {
               "kind": "fn",
@@ -9224,7 +9403,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 353
+              "line": 375
             },
             {
               "kind": "fn",
@@ -9240,7 +9419,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 361
+              "line": 383
             },
             {
               "kind": "fn",
@@ -9256,7 +9435,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 371
+              "line": 393
             },
             {
               "kind": "fn",
@@ -9272,7 +9451,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 381
+              "line": 403
             },
             {
               "kind": "fn",
@@ -9290,7 +9469,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 400
+              "line": 422
             },
             {
               "kind": "fn",
@@ -9306,7 +9485,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent_session.rs",
               "module": "background::subagent_session",
-              "line": 422
+              "line": 444
             }
           ]
         },
@@ -9474,6 +9653,11 @@
                   "ty": "Arc < Mutex < HashMap < WorkflowId , WorkflowSession > > >"
                 },
                 {
+                  "name": "monitor_wakeup",
+                  "visibility": "private",
+                  "ty": "Arc < Notify >"
+                },
+                {
                   "name": "workflow_service",
                   "visibility": "private",
                   "ty": "Arc < dyn WorkflowApi >"
@@ -9509,7 +9693,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 80
+                  "line": 81
                 }
               ],
               "impl_target": "WorkflowSessionManager",
@@ -9521,7 +9705,7 @@
               ],
               "file": "crates/eos-engine/src/background/workflow_session.rs",
               "module": "background::workflow_session",
-              "line": 79
+              "line": 80
             },
             {
               "kind": "impl",
@@ -9536,56 +9720,70 @@
                   "signature": "pub(crate :: background) fn new (agent_run_id : AgentRunId , workflow_service : Arc < dyn WorkflowApi > , notification : BackgroundNotificationEmitter ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 88
+                  "line": 89
                 },
                 {
                   "name": "register_background_session",
                   "signature": "pub(crate :: background) async fn register_background_session (& self , workflow : & StartedWorkflow ,)",
                   "kind": "method",
                   "docs": null,
-                  "line": 101
+                  "line": 103
                 },
                 {
                   "name": "cancel_session",
                   "signature": "pub(crate :: background) async fn cancel_session (& self , workflow_id : & WorkflowId) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 109
+                  "line": 111
                 },
                 {
                   "name": "cancel_background_sessions",
                   "signature": "pub(crate :: background) async fn cancel_background_sessions (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 117
+                  "line": 119
                 },
                 {
                   "name": "running_ids",
                   "signature": "pub(super) async fn running_ids (& self) -> Vec < WorkflowId >",
                   "kind": "method",
                   "docs": null,
-                  "line": 135
+                  "line": 137
                 },
                 {
                   "name": "running_sessions",
                   "signature": "async fn running_sessions (& self) -> Vec < WorkflowSession >",
                   "kind": "method",
                   "docs": null,
-                  "line": 145
+                  "line": 147
+                },
+                {
+                  "name": "has_running_sessions",
+                  "signature": "async fn has_running_sessions (& self) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 157
+                },
+                {
+                  "name": "wait_for_running_session",
+                  "signature": "async fn wait_for_running_session (& self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 165
                 },
                 {
                   "name": "settle_running",
                   "signature": "async fn settle_running (& self , workflow_id : & WorkflowId , status : BackgroundSessionStatus ,) -> Option < WorkflowCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 155
+                  "line": 174
                 },
                 {
                   "name": "poll_completions",
                   "signature": "pub(crate :: background) async fn poll_completions (& self) -> Vec < WorkflowCompletion >",
                   "kind": "method",
                   "docs": null,
-                  "line": 171
+                  "line": 190
                 }
               ],
               "impl_target": "WorkflowSessionManager",
@@ -9596,7 +9794,7 @@
               ],
               "file": "crates/eos-engine/src/background/workflow_session.rs",
               "module": "background::workflow_session",
-              "line": 87
+              "line": 88
             },
             {
               "kind": "struct",
@@ -9618,7 +9816,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/workflow_session.rs",
               "module": "background::workflow_session",
-              "line": 198
+              "line": 217
             },
             {
               "kind": "impl",
@@ -9633,7 +9831,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 203
+                  "line": 222
                 }
               ],
               "impl_target": "WorkflowSessionMonitor",
@@ -9645,7 +9843,7 @@
               ],
               "file": "crates/eos-engine/src/background/workflow_session.rs",
               "module": "background::workflow_session",
-              "line": 202
+              "line": 221
             },
             {
               "kind": "impl",
@@ -9660,7 +9858,7 @@
                   "signature": "pub(crate :: background) fn spawn (manager : WorkflowSessionManager , interval : Duration ,) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 209
+                  "line": 228
                 }
               ],
               "impl_target": "WorkflowSessionMonitor",
@@ -9671,7 +9869,7 @@
               ],
               "file": "crates/eos-engine/src/background/workflow_session.rs",
               "module": "background::workflow_session",
-              "line": 208
+              "line": 227
             },
             {
               "kind": "impl",
@@ -9686,28 +9884,28 @@
                   "signature": "async fn insert (& self , session : Self :: Session)",
                   "kind": "method",
                   "docs": null,
-                  "line": 231
+                  "line": 251
                 },
                 {
                   "name": "count",
                   "signature": "async fn count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 238
+                  "line": 259
                 },
                 {
                   "name": "push_notification_on_completion",
                   "signature": "async fn push_notification_on_completion (& self , completion : Self :: Completion)",
                   "kind": "method",
                   "docs": null,
-                  "line": 247
+                  "line": 268
                 },
                 {
                   "name": "cancel",
                   "signature": "async fn cancel (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 257
+                  "line": 278
                 }
               ],
               "impl_target": "WorkflowSessionManager",
@@ -9720,684 +9918,7 @@
               ],
               "file": "crates/eos-engine/src/background/workflow_session.rs",
               "module": "background::workflow_session",
-              "line": 226
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-engine/src/event.rs",
-          "module": "event",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AssistantMessageComplete",
-              "visibility": "pub",
-              "signature": "pub struct AssistantMessageComplete",
-              "fields": [
-                {
-                  "name": "message",
-                  "visibility": "pub",
-                  "ty": "Message"
-                },
-                {
-                  "name": "usage",
-                  "visibility": "pub",
-                  "ty": "UsageSnapshot"
-                },
-                {
-                  "name": "stop_reason",
-                  "visibility": "pub",
-                  "ty": "Option < StopReason >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Payload carried by [`StreamEvent::AssistantMessageComplete`].",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::event",
-              "line": 14
-            },
-            {
-              "kind": "enum",
-              "name": "StreamEvent",
-              "visibility": "pub",
-              "signature": "pub enum StreamEvent",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "ReasoningDelta",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "text",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "AssistantTextDelta",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "text",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "AssistantMessageComplete",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "payload",
-                      "visibility": "private",
-                      "ty": "Box < AssistantMessageComplete >"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolUseDelta",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    },
-                    {
-                      "name": "name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "input",
-                      "visibility": "private",
-                      "ty": "JsonObject"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolExecutionStarted",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "tool_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "tool_input",
-                      "visibility": "private",
-                      "ty": "JsonObject"
-                    },
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolExecutionCompleted",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "tool_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "output",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "is_error",
-                      "visibility": "private",
-                      "ty": "bool"
-                    },
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    },
-                    {
-                      "name": "metadata",
-                      "visibility": "private",
-                      "ty": "JsonObject"
-                    },
-                    {
-                      "name": "is_terminal",
-                      "visibility": "private",
-                      "ty": "bool"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolExecutionProgress",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    },
-                    {
-                      "name": "tool_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "output",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "ToolExecutionCancelled",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "tool_use_id",
-                      "visibility": "private",
-                      "ty": "ToolUseId"
-                    },
-                    {
-                      "name": "tool_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "reason",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                },
-                {
-                  "name": "SystemNotification",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "visibility": "private",
-                      "ty": "String"
-                    },
-                    {
-                      "name": "agent_run_id",
-                      "visibility": "private",
-                      "ty": "Option < AgentRunId >"
-                    },
-                    {
-                      "name": "text",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A broad agent-run stream event: provider deltas plus engine-domain tool and\nnotification events.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "non_exhaustive",
-                "serde",
-                "serde: rename_all",
-                "serde: tag"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::event",
-              "line": 25
-            },
-            {
-              "kind": "impl",
-              "name": "impl JsonSchema for StreamEvent",
-              "visibility": "private",
-              "signature": "impl JsonSchema for StreamEvent",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "schema_name",
-                  "signature": "fn schema_name () -> String",
-                  "kind": "associated-fn",
-                  "docs": null,
-                  "line": 159
-                },
-                {
-                  "name": "json_schema",
-                  "signature": "fn json_schema (gen : & mut schemars :: gen :: SchemaGenerator) -> schemars :: schema :: Schema",
-                  "kind": "associated-fn",
-                  "docs": null,
-                  "line": 163
-                }
-              ],
-              "impl_target": "StreamEvent",
-              "trait_name": "JsonSchema",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::event",
-              "line": 158
-            },
-            {
-              "kind": "fn",
-              "name": "stamp_identity",
-              "visibility": "pub",
-              "signature": "pub fn stamp_identity (mut event : StreamEvent , agent_name : & str , agent_run_id : & AgentRunId ,) -> StreamEvent",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Fill missing event identity from the query context identity.",
-              "tags": [
-                "must_use"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::event",
-              "line": 168
-            },
-            {
-              "kind": "fn",
-              "name": "stamp_identity_fills_empty_fields",
-              "visibility": "private",
-              "signature": "fn stamp_identity_fills_empty_fields ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::event::tests",
-              "line": 239
-            },
-            {
-              "kind": "struct",
-              "name": "EngineEventOutputs",
-              "visibility": "pub",
-              "signature": "pub struct EngineEventOutputs",
-              "fields": [
-                {
-                  "name": "live_event_sink",
-                  "visibility": "private",
-                  "ty": "Option < EngineEventSink >"
-                },
-                {
-                  "name": "event_printer",
-                  "visibility": "private",
-                  "ty": "Option < EngineEventPrinter >"
-                },
-                {
-                  "name": "run_record_writer",
-                  "visibility": "private",
-                  "ty": "Option < AgentRunRecordWriter >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Output aggregate for live observations, printing, and durable run records.",
-              "tags": [
-                "derive: Clone",
-                "derive: Default"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::outputs",
-              "line": 275
-            },
-            {
-              "kind": "impl",
-              "name": "impl std :: fmt :: Debug for EngineEventOutputs",
-              "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for EngineEventOutputs",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 284
-                }
-              ],
-              "impl_target": "EngineEventOutputs",
-              "trait_name": "std :: fmt :: Debug",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::outputs",
-              "line": 283
-            },
-            {
-              "kind": "impl",
-              "name": "impl EngineEventOutputs",
-              "visibility": "private",
-              "signature": "impl EngineEventOutputs",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new () -> Self",
-                  "kind": "constructor",
-                  "docs": "Create an empty output aggregate.",
-                  "line": 294
-                },
-                {
-                  "name": "with_live_event_sink",
-                  "signature": "pub fn with_live_event_sink (mut self , live_event_sink : Option < EngineEventSink >) -> Self",
-                  "kind": "method",
-                  "docs": "Attach live event observation.",
-                  "line": 300
-                },
-                {
-                  "name": "with_event_printer",
-                  "signature": "pub fn with_event_printer (mut self , event_printer : Option < EngineEventPrinter >) -> Self",
-                  "kind": "method",
-                  "docs": "Attach human-readable event printing.",
-                  "line": 307
-                },
-                {
-                  "name": "with_run_record_writer",
-                  "signature": "pub fn with_run_record_writer (mut self , run_record_writer : Option < AgentRunRecordWriter > ,) -> Self",
-                  "kind": "method",
-                  "docs": "Attach durable agent-run record writing.",
-                  "line": 314
-                },
-                {
-                  "name": "observe",
-                  "signature": "pub(crate) fn observe (& self , event : & StreamEvent)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 324
-                },
-                {
-                  "name": "run_record_writer",
-                  "signature": "pub(crate) fn run_record_writer (& self) -> Option < & AgentRunRecordWriter >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 333
-                }
-              ],
-              "impl_target": "EngineEventOutputs",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::outputs",
-              "line": 293
-            },
-            {
-              "kind": "type",
-              "name": "EngineEventPrintSink",
-              "visibility": "private",
-              "signature": "type EngineEventPrintSink = Arc < dyn Fn (String) + Send + Sync >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::printer",
-              "line": 345
-            },
-            {
-              "kind": "struct",
-              "name": "EngineEventPrinter",
-              "visibility": "pub",
-              "signature": "pub struct EngineEventPrinter",
-              "fields": [
-                {
-                  "name": "sink",
-                  "visibility": "private",
-                  "ty": "EngineEventPrintSink"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Renders engine events into a caller-provided sink.",
-              "tags": [
-                "derive: Clone"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::printer",
-              "line": 347
-            },
-            {
-              "kind": "impl",
-              "name": "impl std :: fmt :: Debug for EngineEventPrinter",
-              "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for EngineEventPrinter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 354
-                }
-              ],
-              "impl_target": "EngineEventPrinter",
-              "trait_name": "std :: fmt :: Debug",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::printer",
-              "line": 353
-            },
-            {
-              "kind": "impl",
-              "name": "impl EngineEventPrinter",
-              "visibility": "private",
-              "signature": "impl EngineEventPrinter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new < F > (sink : F) -> Self where F : Fn (String) + Send + Sync + 'static ,",
-                  "kind": "constructor",
-                  "docs": "Create a printer from a text sink.",
-                  "line": 360
-                },
-                {
-                  "name": "print",
-                  "signature": "pub fn print (& self , event : & StreamEvent)",
-                  "kind": "method",
-                  "docs": "Render and emit one engine event.",
-                  "line": 371
-                }
-              ],
-              "impl_target": "EngineEventPrinter",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::printer",
-              "line": 359
-            },
-            {
-              "kind": "fn",
-              "name": "render_engine_event",
-              "visibility": "private",
-              "signature": "fn render_engine_event (event : & StreamEvent) -> String",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::printer",
-              "line": 377
-            },
-            {
-              "kind": "fn",
-              "name": "printer_renders_midflight_tool_events_without_records",
-              "visibility": "private",
-              "signature": "fn printer_renders_midflight_tool_events_without_records ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::printer::tests",
-              "line": 416
-            },
-            {
-              "kind": "type",
-              "name": "EngineEventSink",
-              "visibility": "pub",
-              "signature": "pub type EngineEventSink = Arc < dyn Fn (& StreamEvent) + Send + Sync >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Per-run stream/tool/system event sink.",
-              "tags": [],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::sink",
-              "line": 448
-            },
-            {
-              "kind": "type",
-              "name": "EngineEventSinkFactory",
-              "visibility": "pub",
-              "signature": "pub type EngineEventSinkFactory = Arc < dyn Fn (& StartAgentLoopRequest) -> Option < EngineEventSink > + Send + Sync >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Factory for a live event sink bound to one loop start request.",
-              "tags": [],
-              "file": "crates/eos-engine/src/event.rs",
-              "module": "event::sink",
-              "line": 451
+              "line": 246
             }
           ]
         },
@@ -11201,7 +10722,7 @@
               "kind": "type",
               "name": "EngineStream",
               "visibility": "pub",
-              "signature": "pub type EngineStream = Pin < Box < dyn Stream < Item = Result < StreamEvent , EngineError > > + Send > >",
+              "signature": "pub type EngineStream = Pin < Box < dyn Stream < Item = Result < AgentRunStreamEvent , EngineError > > + Send > >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11211,7 +10732,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source",
-              "line": 291
+              "line": 290
             },
             {
               "kind": "type",
@@ -11336,7 +10857,7 @@
               "kind": "fn",
               "name": "adapt_event",
               "visibility": "private",
-              "signature": "fn adapt_event (event : LlmStreamEvent) -> Result < StreamEvent , EngineError >",
+              "signature": "fn adapt_event (event : LlmStreamEvent) -> Result < AgentRunStreamEvent , EngineError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11361,7 +10882,7 @@
                   "signature": "async fn stream (& self , request : & LlmRequest) -> Result < EngineStream , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 377
+                  "line": 379
                 }
               ],
               "impl_target": "LlmProviderStreamSource",
@@ -11374,7 +10895,7 @@
               ],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source",
-              "line": 375
+              "line": 377
             },
             {
               "kind": "struct",
@@ -11400,7 +10921,7 @@
               ],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source::tests",
-              "line": 400
+              "line": 402
             },
             {
               "kind": "impl",
@@ -11415,7 +10936,7 @@
                   "signature": "async fn stream_message (& self , _request : LlmRequest ,) -> Result < LlmStream , ProviderError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 407
+                  "line": 409
                 }
               ],
               "impl_target": "ScriptedClient",
@@ -11428,7 +10949,7 @@
               ],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source::tests",
-              "line": 405
+              "line": 407
             },
             {
               "kind": "fn",
@@ -11444,7 +10965,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source::tests",
-              "line": 415
+              "line": 417
             },
             {
               "kind": "fn",
@@ -11463,7 +10984,7 @@
               ],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source::tests",
-              "line": 419
+              "line": 421
             },
             {
               "kind": "fn",
@@ -11482,7 +11003,7 @@
               ],
               "file": "crates/eos-engine/src/provider_stream.rs",
               "module": "provider_stream::source::tests",
-              "line": 478
+              "line": 480
             }
           ]
         },
@@ -11505,7 +11026,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Result alias for message-record operations.",
+              "docs": "Result alias for agent-run record operations.",
               "tags": [],
               "file": "crates/eos-engine/src/records/error.rs",
               "module": "records::error",
@@ -11582,7 +11103,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "File-backed message-record service failures.",
+              "docs": "File-backed agent-run record store failures.",
               "tags": [
                 "derive: Debug",
                 "derive: thiserror::Error",
@@ -11629,9 +11150,135 @@
           ]
         },
         {
-          "path": "crates/eos-engine/src/records/handle.rs",
-          "module": "records::handle",
+          "path": "crates/eos-engine/src/records/layout.rs",
+          "module": "records::layout",
           "items": [
+            {
+              "kind": "fn",
+              "name": "record_dir",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn record_dir (root : & Path , record_dir : & AgentRunRecordDir) -> Result < PathBuf >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/layout.rs",
+              "module": "records::layout",
+              "line": 7
+            },
+            {
+              "kind": "fn",
+              "name": "record_dir_path",
+              "visibility": "private",
+              "signature": "fn record_dir_path (root : & Path , record_dir : & str) -> Result < PathBuf >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/layout.rs",
+              "module": "records::layout",
+              "line": 11
+            },
+            {
+              "kind": "fn",
+              "name": "safe_segment",
+              "visibility": "private",
+              "signature": "fn safe_segment < 'a > (field : & 'static str , value : & 'a str) -> Result < & 'a str >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/layout.rs",
+              "module": "records::layout",
+              "line": 19
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/records/store.rs",
+          "module": "records::store",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "AgentRunRecordStore",
+              "visibility": "pub",
+              "signature": "pub struct AgentRunRecordStore",
+              "fields": [
+                {
+                  "name": "root",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "File-backed store for resolved agent-run record trees.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 15
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentRunRecordStore",
+              "visibility": "private",
+              "signature": "impl AgentRunRecordStore",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (root : impl Into < PathBuf >) -> Self",
+                  "kind": "constructor",
+                  "docs": "Create a store rooted at `root`.",
+                  "line": 22
+                },
+                {
+                  "name": "start_agent_run_at",
+                  "signature": "pub async fn start_agent_run_at (& self , record_target : & AgentRunRecordTarget , agent_name : & str , system_prompt : & str , initial_messages : & [Message] ,) -> Result < AgentRunRecordHandle >",
+                  "kind": "method",
+                  "docs": "Create one agent-run record directory, write its initial messages, and\nappend the initial record-local events.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if path validation, directory\ncreation, JSON encoding, or file append fails.",
+                  "line": 28
+                },
+                {
+                  "name": "read_messages_at",
+                  "signature": "pub async fn read_messages_at (& self , record_dir : & AgentRunRecordDir , after_byte : u64 ,) -> Result < MessageBytes >",
+                  "kind": "method",
+                  "docs": "Read raw `messages.jsonl` bytes for a resolved record directory after\n`after_byte`.\n\n# Errors\nReturns [`super::AgentRunRecordError::NotFound`] if the record directory\nor message file does not exist.",
+                  "line": 88
+                },
+                {
+                  "name": "read_record_events_at",
+                  "signature": "pub async fn read_record_events_at (& self , record_dir : & AgentRunRecordDir , after_seq : u64 ,) -> Result < Vec < AgentRunRecordEvent > >",
+                  "kind": "method",
+                  "docs": "Replay record-local events for a resolved record directory with\n`seq > after_seq`.\n\n# Errors\nReturns [`super::AgentRunRecordError::NotFound`] if the record directory\nor event file does not exist.",
+                  "line": 103
+                }
+              ],
+              "impl_target": "AgentRunRecordStore",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 21
+            },
             {
               "kind": "struct",
               "name": "AgentRunRecordHandle",
@@ -11639,7 +11286,7 @@
               "signature": "pub struct AgentRunRecordHandle",
               "fields": [
                 {
-                  "name": "node_dir",
+                  "name": "record_dir",
                   "visibility": "private",
                   "ty": "PathBuf"
                 },
@@ -11656,21 +11303,26 @@
                 {
                   "name": "identity",
                   "visibility": "private",
-                  "ty": "RecordIdentity"
+                  "ty": "AgentRunRecordIdentity"
+                },
+                {
+                  "name": "initial_message_count",
+                  "visibility": "private",
+                  "ty": "usize"
                 }
               ],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "A started agent-run message-record node.",
+              "docs": "A started agent-run record directory.",
               "tags": [
                 "derive: Clone",
                 "derive: Debug"
               ],
-              "file": "crates/eos-engine/src/records/handle.rs",
-              "module": "records::handle",
-              "line": 15
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 119
             },
             {
               "kind": "impl",
@@ -11681,60 +11333,67 @@
               "variants": [],
               "methods": [
                 {
-                  "name": "node_dir",
-                  "signature": "pub fn node_dir (& self) -> & Path",
+                  "name": "record_dir",
+                  "signature": "pub fn record_dir (& self) -> & Path",
                   "kind": "method",
-                  "docs": "Node directory.",
-                  "line": 25
+                  "docs": "Record directory.",
+                  "line": 130
+                },
+                {
+                  "name": "initial_message_count",
+                  "signature": "pub fn initial_message_count (& self) -> usize",
+                  "kind": "method",
+                  "docs": "Number of initial message rows written when the run was started.",
+                  "line": 136
                 },
                 {
                   "name": "append_messages",
                   "signature": "pub async fn append_messages (& self , messages : & [Message]) -> Result < MessageAppendRange >",
                   "kind": "method",
                   "docs": "Append later model-visible messages and announce the byte range in\n`events.jsonl`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if message or event append fails.",
-                  "line": 31
+                  "line": 142
                 },
                 {
                   "name": "read_messages",
-                  "signature": "pub async fn read_messages (& self , after_byte : u64) -> Result < RecordBytes >",
+                  "signature": "pub async fn read_messages (& self , after_byte : u64) -> Result < MessageBytes >",
                   "kind": "method",
                   "docs": "Read raw `messages.jsonl` bytes after `after_byte`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if the message file is missing or\nthe byte offset is out of range.",
-                  "line": 58
+                  "line": 170
                 },
                 {
-                  "name": "read_events",
-                  "signature": "pub async fn read_events (& self , after_seq : u64) -> Result < Vec < NodeEvent > >",
+                  "name": "read_record_events",
+                  "signature": "pub async fn read_record_events (& self , after_seq : u64) -> Result < Vec < AgentRunRecordEvent > >",
                   "kind": "method",
-                  "docs": "Replay node-local events with `seq > after_seq`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if the event file is missing or an\nevent row cannot be decoded.",
-                  "line": 67
+                  "docs": "Replay record-local events with `seq > after_seq`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if the event file is missing or an\nevent row cannot be decoded.",
+                  "line": 179
                 },
                 {
                   "name": "finish",
-                  "signature": "pub async fn finish (& self , status : NodeFinishStatus) -> Result < () >",
+                  "signature": "pub async fn finish (& self , status : AgentRunRecordFinishStatus) -> Result < () >",
                   "kind": "method",
-                  "docs": "Append the terminal node event.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if event append fails.",
-                  "line": 76
+                  "docs": "Append the terminal record event.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if event append fails.",
+                  "line": 188
+                },
+                {
+                  "name": "append_record_event",
+                  "signature": "async fn append_record_event (& self , kind : impl Into < String > , payload : JsonObject ,) -> Result < () >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 198
                 },
                 {
                   "name": "append_initial_messages",
-                  "signature": "pub(crate) async fn append_initial_messages (& self , system_prompt : & str , initial_messages : & [Message] ,) -> Result < MessageAppendRange >",
+                  "signature": "async fn append_initial_messages (& self , system_prompt : & str , initial_messages : & [Message] ,) -> Result < MessageAppendRange >",
                   "kind": "method",
                   "docs": null,
-                  "line": 86
+                  "line": 206
                 },
                 {
-                  "name": "append_event",
-                  "signature": "pub(crate) async fn append_event (& self , kind : impl Into < String > , payload : JsonObject ,) -> Result < () >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 100
-                },
-                {
-                  "name": "from_node_dir",
-                  "signature": "pub(crate) fn from_node_dir (node_dir : PathBuf , identity : RecordIdentity) -> Self",
+                  "name": "from_record_dir",
+                  "signature": "fn from_record_dir (record_dir : PathBuf , identity : AgentRunRecordIdentity) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 108
+                  "line": 220
                 }
               ],
               "impl_target": "AgentRunRecordHandle",
@@ -11743,15 +11402,15 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/records/handle.rs",
-              "module": "records::handle",
-              "line": 24
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 129
             },
             {
               "kind": "enum",
-              "name": "NodeFinishStatus",
+              "name": "AgentRunRecordFinishStatus",
               "visibility": "pub",
-              "signature": "pub enum NodeFinishStatus",
+              "signature": "pub enum AgentRunRecordFinishStatus",
               "fields": [],
               "variants": [
                 {
@@ -11775,58 +11434,202 @@
                 "derive: PartialEq",
                 "non_exhaustive"
               ],
-              "file": "crates/eos-engine/src/records/handle.rs",
-              "module": "records::handle",
-              "line": 118
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 231
             },
             {
               "kind": "impl",
-              "name": "impl NodeFinishStatus",
+              "name": "impl AgentRunRecordFinishStatus",
               "visibility": "private",
-              "signature": "impl NodeFinishStatus",
+              "signature": "impl AgentRunRecordFinishStatus",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "as_str",
-                  "signature": "fn as_str (self) -> & 'static str",
+                  "signature": "const fn as_str (self) -> & 'static str",
                   "kind": "method",
                   "docs": null,
-                  "line": 129
+                  "line": 242
                 }
               ],
-              "impl_target": "NodeFinishStatus",
+              "impl_target": "AgentRunRecordFinishStatus",
               "trait_name": null,
               "docs": null,
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/records/handle.rs",
-              "module": "records::handle",
-              "line": 128
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 241
             },
             {
-              "kind": "fn",
-              "name": "message_types",
-              "visibility": "private",
-              "signature": "fn message_types (messages : & [Message]) -> Vec < String >",
-              "fields": [],
+              "kind": "struct",
+              "name": "AgentRunRecordIdentity",
+              "visibility": "pub",
+              "signature": "pub struct AgentRunRecordIdentity",
+              "fields": [
+                {
+                  "name": "request_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "task_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                }
+              ],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/records/handle.rs",
-              "module": "records::handle",
-              "line": 137
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-engine/src/records/io.rs",
-          "module": "records::io",
-          "items": [
+              "docs": "Stable identity columns written on every record row.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 250
+            },
+            {
+              "kind": "struct",
+              "name": "MessageAppendRange",
+              "visibility": "pub",
+              "signature": "pub struct MessageAppendRange",
+              "fields": [
+                {
+                  "name": "count",
+                  "visibility": "pub",
+                  "ty": "usize"
+                },
+                {
+                  "name": "start_byte",
+                  "visibility": "pub",
+                  "ty": "u64"
+                },
+                {
+                  "name": "end_byte",
+                  "visibility": "pub",
+                  "ty": "u64"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Byte range produced by a message append.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 261
+            },
+            {
+              "kind": "struct",
+              "name": "MessageBytes",
+              "visibility": "pub",
+              "signature": "pub struct MessageBytes",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "visibility": "pub",
+                  "ty": "Vec < u8 >"
+                },
+                {
+                  "name": "next_byte_offset",
+                  "visibility": "pub",
+                  "ty": "u64"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Raw message-record bytes plus the next tail offset.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 272
+            },
+            {
+              "kind": "struct",
+              "name": "AgentRunRecordEvent",
+              "visibility": "pub",
+              "signature": "pub struct AgentRunRecordEvent",
+              "fields": [
+                {
+                  "name": "request_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "task_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "seq",
+                  "visibility": "pub",
+                  "ty": "u64"
+                },
+                {
+                  "name": "kind",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "payload",
+                  "visibility": "pub",
+                  "ty": "JsonObject"
+                },
+                {
+                  "name": "created_at",
+                  "visibility": "pub",
+                  "ty": "UtcDateTime"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One record-local `events.jsonl` row.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 281
+            },
             {
               "kind": "struct",
               "name": "MessageRow",
@@ -11873,9 +11676,9 @@
                 "derive: Serialize",
                 "serde"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 11
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 303
             },
             {
               "kind": "struct",
@@ -11923,15 +11726,15 @@
                 "derive: Serialize",
                 "serde"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 22
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 314
             },
             {
               "kind": "fn",
               "name": "append_message_rows",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn append_message_rows (path : & Path , identity : & RecordIdentity , row_type : & 'static str , messages : & [Message] ,) -> Result < MessageAppendRange >",
+              "visibility": "private",
+              "signature": "async fn append_message_rows (path : & Path , identity : & AgentRunRecordIdentity , row_type : & 'static str , messages : & [Message] ,) -> Result < MessageAppendRange >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11941,15 +11744,15 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 33
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 325
             },
             {
               "kind": "fn",
               "name": "append_initial_message_rows",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn append_initial_message_rows (path : & Path , identity : & RecordIdentity , system_prompt : & str , initial_messages : & [Message] ,) -> Result < MessageAppendRange >",
+              "visibility": "private",
+              "signature": "async fn append_initial_message_rows (path : & Path , identity : & AgentRunRecordIdentity , system_prompt : & str , initial_messages : & [Message] ,) -> Result < MessageAppendRange >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11959,9 +11762,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 53
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 345
             },
             {
               "kind": "fn",
@@ -11977,33 +11780,15 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 81
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 373
             },
             {
               "kind": "fn",
-              "name": "append_event",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn append_event (path : & Path , identity : & RecordIdentity , kind : String , payload : JsonObject ,) -> Result < () >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async"
-              ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 112
-            },
-            {
-              "kind": "fn",
-              "name": "next_event_seq",
+              "name": "append_record_event",
               "visibility": "private",
-              "signature": "async fn next_event_seq (path : & Path) -> Result < u64 >",
+              "signature": "async fn append_record_event (path : & Path , identity : & AgentRunRecordIdentity , kind : String , payload : JsonObject ,) -> Result < () >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12013,15 +11798,33 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 143
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 404
+            },
+            {
+              "kind": "fn",
+              "name": "next_record_event_seq",
+              "visibility": "private",
+              "signature": "async fn next_record_event_seq (path : & Path) -> Result < u64 >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async"
+              ],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 435
             },
             {
               "kind": "fn",
               "name": "read_bytes_after",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn read_bytes_after (path : & Path , after_byte : u64) -> Result < RecordBytes >",
+              "visibility": "private",
+              "signature": "async fn read_bytes_after (path : & Path , after_byte : u64) -> Result < MessageBytes >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12031,15 +11834,15 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 160
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 452
             },
             {
               "kind": "fn",
-              "name": "read_events_after",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn read_events_after (path : & Path , after_seq : u64) -> Result < Vec < NodeEvent > >",
+              "name": "read_record_events_after",
+              "visibility": "private",
+              "signature": "async fn read_record_events_after (path : & Path , after_seq : u64) -> Result < Vec < AgentRunRecordEvent > >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12049,9 +11852,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 184
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 476
             },
             {
               "kind": "fn",
@@ -12067,15 +11870,15 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 203
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 495
             },
             {
               "kind": "fn",
-              "name": "role_wire",
+              "name": "validate_record_target",
               "visibility": "private",
-              "signature": "fn role_wire (role : MessageRole) -> & 'static str",
+              "signature": "fn validate_record_target (target : & AgentRunRecordTarget) -> Result < () >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12083,188 +11886,15 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/io.rs",
-              "module": "records::io",
-              "line": 211
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-engine/src/records/kind.rs",
-          "module": "records::kind",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AgentRunRecordStart",
-              "visibility": "pub",
-              "signature": "pub struct AgentRunRecordStart< 'a >",
-              "fields": [
-                {
-                  "name": "request_id",
-                  "visibility": "pub",
-                  "ty": "& 'a RequestId"
-                },
-                {
-                  "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "Option < & 'a TaskId >"
-                },
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "& 'a AgentRunId"
-                },
-                {
-                  "name": "agent_name",
-                  "visibility": "pub",
-                  "ty": "& 'a str"
-                },
-                {
-                  "name": "kind",
-                  "visibility": "pub",
-                  "ty": "& 'a AgentRunRecordKind"
-                },
-                {
-                  "name": "system_prompt",
-                  "visibility": "pub",
-                  "ty": "& 'a str"
-                },
-                {
-                  "name": "initial_messages",
-                  "visibility": "pub",
-                  "ty": "& 'a [Message]"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Input for starting an agent-run message-record node.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug"
-              ],
-              "file": "crates/eos-engine/src/records/kind.rs",
-              "module": "records::kind",
-              "line": 7
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 503
             },
             {
-              "kind": "enum",
-              "name": "AgentRunRecordKind",
-              "visibility": "pub",
-              "signature": "pub enum AgentRunRecordKind",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Root",
-                  "fields": []
-                },
-                {
-                  "name": "WorkflowTask",
-                  "fields": [
-                    {
-                      "name": "workflow_id",
-                      "visibility": "private",
-                      "ty": "WorkflowId"
-                    },
-                    {
-                      "name": "iteration_id",
-                      "visibility": "private",
-                      "ty": "IterationId"
-                    },
-                    {
-                      "name": "attempt_id",
-                      "visibility": "private",
-                      "ty": "AttemptId"
-                    },
-                    {
-                      "name": "role",
-                      "visibility": "private",
-                      "ty": "WorkflowTaskRole"
-                    }
-                  ]
-                },
-                {
-                  "name": "Subagent",
-                  "fields": [
-                    {
-                      "name": "parent_agent_run_id",
-                      "visibility": "private",
-                      "ty": "AgentRunId"
-                    }
-                  ]
-                },
-                {
-                  "name": "Advisor",
-                  "fields": [
-                    {
-                      "name": "parent_agent_run_id",
-                      "visibility": "private",
-                      "ty": "AgentRunId"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Agent-run message-record node type and location facts.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-engine/src/records/kind.rs",
-              "module": "records::kind",
-              "line": 26
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRunRecordKind",
+              "kind": "fn",
+              "name": "validate_kind_segments",
               "visibility": "private",
-              "signature": "impl AgentRunRecordKind",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "from_task_agent_run_kind",
-                  "signature": "pub(crate) fn from_task_agent_run_kind (kind : & TaskAgentRunKind) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 55
-                },
-                {
-                  "name": "node_type",
-                  "signature": "pub(crate) fn node_type (& self) -> & 'static str",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 78
-                },
-                {
-                  "name": "extend_payload",
-                  "signature": "pub(crate) fn extend_payload (& self , payload : & mut JsonObject)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 87
-                }
-              ],
-              "impl_target": "AgentRunRecordKind",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-engine/src/records/kind.rs",
-              "module": "records::kind",
-              "line": 54
-            },
-            {
-              "kind": "fn",
-              "name": "workflow_node_type",
-              "visibility": "private",
-              "signature": "fn workflow_node_type (role : WorkflowTaskRole) -> & 'static str",
+              "signature": "fn validate_kind_segments (kind : & TaskAgentRunKind) -> Result < () >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12272,79 +11902,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/kind.rs",
-              "module": "records::kind",
-              "line": 116
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-engine/src/records/layout.rs",
-          "module": "records::layout",
-          "items": [
-            {
-              "kind": "fn",
-              "name": "node_dir",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn node_dir (root : & Path , input : & AgentRunRecordStart < '_ >) -> Result < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
-              "line": 11
-            },
-            {
-              "kind": "fn",
-              "name": "record_dir",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn record_dir (root : & Path , record_dir : & AgentRunRecordDir) -> Result < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
-              "line": 55
-            },
-            {
-              "kind": "fn",
-              "name": "validate_start_segments",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn validate_start_segments (input : & AgentRunRecordStart < '_ >) -> Result < () >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
-              "line": 59
-            },
-            {
-              "kind": "fn",
-              "name": "record_dir_path",
-              "visibility": "private",
-              "signature": "fn record_dir_path (root : & Path , record_dir : & str) -> Result < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
-              "line": 89
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 510
             },
             {
               "kind": "fn",
@@ -12358,279 +11918,15 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
-              "line": 97
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-engine/src/records/record.rs",
-          "module": "records::record",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "RecordIdentity",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) struct RecordIdentity",
-              "fields": [
-                {
-                  "name": "request_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Stable identity columns written on every node-local record row.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-engine/src/records/record.rs",
-              "module": "records::record",
-              "line": 4
-            },
-            {
-              "kind": "struct",
-              "name": "MessageAppendRange",
-              "visibility": "pub",
-              "signature": "pub struct MessageAppendRange",
-              "fields": [
-                {
-                  "name": "count",
-                  "visibility": "pub",
-                  "ty": "usize"
-                },
-                {
-                  "name": "start_byte",
-                  "visibility": "pub",
-                  "ty": "u64"
-                },
-                {
-                  "name": "end_byte",
-                  "visibility": "pub",
-                  "ty": "u64"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Byte range produced by a message append.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-engine/src/records/record.rs",
-              "module": "records::record",
-              "line": 12
-            },
-            {
-              "kind": "struct",
-              "name": "RecordBytes",
-              "visibility": "pub",
-              "signature": "pub struct RecordBytes",
-              "fields": [
-                {
-                  "name": "bytes",
-                  "visibility": "pub",
-                  "ty": "Vec < u8 >"
-                },
-                {
-                  "name": "next_byte_offset",
-                  "visibility": "pub",
-                  "ty": "u64"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Raw message-record bytes plus the next tail offset.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-engine/src/records/record.rs",
-              "module": "records::record",
-              "line": 23
-            },
-            {
-              "kind": "struct",
-              "name": "NodeEvent",
-              "visibility": "pub",
-              "signature": "pub struct NodeEvent",
-              "fields": [
-                {
-                  "name": "request_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "seq",
-                  "visibility": "pub",
-                  "ty": "u64"
-                },
-                {
-                  "name": "kind",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "payload",
-                  "visibility": "pub",
-                  "ty": "JsonObject"
-                },
-                {
-                  "name": "created_at",
-                  "visibility": "pub",
-                  "ty": "UtcDateTime"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One node-local event row.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde"
-              ],
-              "file": "crates/eos-engine/src/records/record.rs",
-              "module": "records::record",
-              "line": 32
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-engine/src/records/writer.rs",
-          "module": "records::writer",
-          "items": [
-            {
-              "kind": "struct",
-              "name": "AgentRunRecordWriter",
-              "visibility": "pub",
-              "signature": "pub struct AgentRunRecordWriter",
-              "fields": [
-                {
-                  "name": "root",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "File-backed writer for one resolved agent-run record tree.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug"
-              ],
-              "file": "crates/eos-engine/src/records/writer.rs",
-              "module": "records::writer",
-              "line": 13
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRunRecordWriter",
-              "visibility": "private",
-              "signature": "impl AgentRunRecordWriter",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new (root : impl Into < PathBuf >) -> Self",
-                  "kind": "constructor",
-                  "docs": "Create a service rooted at `root`.",
-                  "line": 20
-                },
-                {
-                  "name": "start_agent_run",
-                  "signature": "pub async fn start_agent_run (& self , input : AgentRunRecordStart < '_ > ,) -> Result < AgentRunRecordHandle >",
-                  "kind": "method",
-                  "docs": "Create one agent-run node, write its initial messages, and append the\ninitial node-local events.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if path validation, directory\ncreation, JSON encoding, or file append fails.",
-                  "line": 26
-                },
-                {
-                  "name": "start_agent_run_at",
-                  "signature": "pub async fn start_agent_run_at (& self , record_dir : & AgentRunRecordDir , input : AgentRunRecordStart < '_ > ,) -> Result < AgentRunRecordHandle >",
-                  "kind": "method",
-                  "docs": "Create one agent-run node at a pre-resolved record directory.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if path validation, directory\ncreation, JSON encoding, or file append fails.",
-                  "line": 40
-                },
-                {
-                  "name": "start_agent_run_in_node_dir",
-                  "signature": "async fn start_agent_run_in_node_dir (& self , node_dir : PathBuf , input : AgentRunRecordStart < '_ > ,) -> Result < AgentRunRecordHandle >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 55
-                },
-                {
-                  "name": "read_messages_at",
-                  "signature": "pub async fn read_messages_at (& self , record_dir : & AgentRunRecordDir , after_byte : u64 ,) -> Result < RecordBytes >",
-                  "kind": "method",
-                  "docs": "Read raw `messages.jsonl` bytes for a resolved record directory after\n`after_byte`.\n\n# Errors\nReturns [`super::AgentRunRecordError::NotFound`] if the node or message\nfile does not exist.",
-                  "line": 90
-                },
-                {
-                  "name": "read_events_at",
-                  "signature": "pub async fn read_events_at (& self , record_dir : & AgentRunRecordDir , after_seq : u64 ,) -> Result < Vec < NodeEvent > >",
-                  "kind": "method",
-                  "docs": "Replay node-local events for a resolved record directory with\n`seq > after_seq`.\n\n# Errors\nReturns [`super::AgentRunRecordError::NotFound`] if the node or event file\ndoes not exist.",
-                  "line": 105
-                }
-              ],
-              "impl_target": "AgentRunRecordWriter",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-engine/src/records/writer.rs",
-              "module": "records::writer",
-              "line": 19
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 529
             },
             {
               "kind": "fn",
-              "name": "record_identity",
+              "name": "node_type",
               "visibility": "private",
-              "signature": "fn record_identity (input : & AgentRunRecordStart < '_ >) -> Result < RecordIdentity >",
+              "signature": "fn node_type (kind : & TaskAgentRunKind) -> & 'static str",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12638,9 +11934,604 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/writer.rs",
-              "module": "records::writer",
-              "line": 121
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 542
+            },
+            {
+              "kind": "fn",
+              "name": "extend_payload",
+              "visibility": "private",
+              "signature": "fn extend_payload (kind : & TaskAgentRunKind , payload : & mut JsonObject)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 557
+            },
+            {
+              "kind": "fn",
+              "name": "workflow_node_type",
+              "visibility": "private",
+              "signature": "fn workflow_node_type (role : WorkflowTaskRole) -> & 'static str",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 584
+            },
+            {
+              "kind": "fn",
+              "name": "message_types",
+              "visibility": "private",
+              "signature": "fn message_types (messages : & [Message]) -> Vec < String >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 592
+            },
+            {
+              "kind": "fn",
+              "name": "role_wire",
+              "visibility": "private",
+              "signature": "fn role_wire (role : MessageRole) -> & 'static str",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/records/store.rs",
+              "module": "records::store",
+              "line": 610
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/records/stream.rs",
+          "module": "records::stream",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "AssistantMessageComplete",
+              "visibility": "pub",
+              "signature": "pub struct AssistantMessageComplete",
+              "fields": [
+                {
+                  "name": "message",
+                  "visibility": "pub",
+                  "ty": "Message"
+                },
+                {
+                  "name": "usage",
+                  "visibility": "pub",
+                  "ty": "UsageSnapshot"
+                },
+                {
+                  "name": "stop_reason",
+                  "visibility": "pub",
+                  "ty": "Option < StopReason >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Payload carried by [`AgentRunStreamEvent::AssistantMessageComplete`].",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "serde"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 10
+            },
+            {
+              "kind": "enum",
+              "name": "AgentRunStreamEvent",
+              "visibility": "pub",
+              "signature": "pub enum AgentRunStreamEvent",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "ReasoningDelta",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "text",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "AssistantTextDelta",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "text",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "AssistantMessageComplete",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "payload",
+                      "visibility": "private",
+                      "ty": "Box < AssistantMessageComplete >"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolUseDelta",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    },
+                    {
+                      "name": "name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "input",
+                      "visibility": "private",
+                      "ty": "JsonObject"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolExecutionStarted",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "tool_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "tool_input",
+                      "visibility": "private",
+                      "ty": "JsonObject"
+                    },
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolExecutionCompleted",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "tool_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "output",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "is_error",
+                      "visibility": "private",
+                      "ty": "bool"
+                    },
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    },
+                    {
+                      "name": "metadata",
+                      "visibility": "private",
+                      "ty": "JsonObject"
+                    },
+                    {
+                      "name": "is_terminal",
+                      "visibility": "private",
+                      "ty": "bool"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolExecutionProgress",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    },
+                    {
+                      "name": "tool_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "output",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "ToolExecutionCancelled",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "tool_use_id",
+                      "visibility": "private",
+                      "ty": "ToolUseId"
+                    },
+                    {
+                      "name": "tool_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "reason",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "SystemNotification",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "visibility": "private",
+                      "ty": "String"
+                    },
+                    {
+                      "name": "agent_run_id",
+                      "visibility": "private",
+                      "ty": "Option < AgentRunId >"
+                    },
+                    {
+                      "name": "text",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "A broad agent-run stream event: provider deltas plus engine-domain tool and\nnotification events.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "non_exhaustive",
+                "serde",
+                "serde: rename_all",
+                "serde: tag"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 21
+            },
+            {
+              "kind": "impl",
+              "name": "impl JsonSchema for AgentRunStreamEvent",
+              "visibility": "private",
+              "signature": "impl JsonSchema for AgentRunStreamEvent",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "schema_name",
+                  "signature": "fn schema_name () -> String",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 155
+                },
+                {
+                  "name": "json_schema",
+                  "signature": "fn json_schema (gen : & mut schemars :: gen :: SchemaGenerator) -> schemars :: schema :: Schema",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 159
+                }
+              ],
+              "impl_target": "AgentRunStreamEvent",
+              "trait_name": "JsonSchema",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 154
+            },
+            {
+              "kind": "type",
+              "name": "AgentRunStreamSink",
+              "visibility": "pub",
+              "signature": "pub type AgentRunStreamSink = Arc < dyn Fn (& AgentRunStreamEvent) + Send + Sync >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Per-run stream/tool/system event sink.",
+              "tags": [],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 164
+            },
+            {
+              "kind": "type",
+              "name": "AgentRunStreamSinkFactory",
+              "visibility": "pub",
+              "signature": "pub type AgentRunStreamSinkFactory = Arc < dyn Fn (& StartAgentLoopRequest) -> Option < AgentRunStreamSink > + Send + Sync >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Factory for a live stream sink bound to one loop start request.",
+              "tags": [],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 167
+            },
+            {
+              "kind": "struct",
+              "name": "AgentRunOutputs",
+              "visibility": "pub",
+              "signature": "pub struct AgentRunOutputs",
+              "fields": [
+                {
+                  "name": "stream",
+                  "visibility": "private",
+                  "ty": "Option < AgentRunStreamSink >"
+                },
+                {
+                  "name": "record",
+                  "visibility": "private",
+                  "ty": "Option < AgentRunRecordStore >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Output aggregate for live stream observations and durable run records.",
+              "tags": [
+                "derive: Clone",
+                "derive: Default"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 171
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for AgentRunOutputs",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for AgentRunOutputs",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 179
+                }
+              ],
+              "impl_target": "AgentRunOutputs",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 178
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentRunOutputs",
+              "visibility": "private",
+              "signature": "impl AgentRunOutputs",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new () -> Self",
+                  "kind": "constructor",
+                  "docs": "Create an empty output aggregate.",
+                  "line": 188
+                },
+                {
+                  "name": "with_stream",
+                  "signature": "pub fn with_stream (mut self , stream : Option < AgentRunStreamSink >) -> Self",
+                  "kind": "method",
+                  "docs": "Attach live stream observation.",
+                  "line": 194
+                },
+                {
+                  "name": "with_record",
+                  "signature": "pub fn with_record (mut self , record : Option < AgentRunRecordStore >) -> Self",
+                  "kind": "method",
+                  "docs": "Attach durable agent-run record writing.",
+                  "line": 201
+                },
+                {
+                  "name": "observe",
+                  "signature": "pub(crate) fn observe (& self , event : & AgentRunStreamEvent)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 208
+                },
+                {
+                  "name": "record_store",
+                  "signature": "pub(crate) fn record_store (& self) -> Option < & AgentRunRecordStore >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 214
+                }
+              ],
+              "impl_target": "AgentRunOutputs",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 187
+            },
+            {
+              "kind": "fn",
+              "name": "stamp_identity",
+              "visibility": "pub",
+              "signature": "pub fn stamp_identity (mut event : AgentRunStreamEvent , agent_name : & str , agent_run_id : & AgentRunId ,) -> AgentRunStreamEvent",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Fill missing event identity from the query context identity.",
+              "tags": [
+                "must_use"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream",
+              "line": 219
+            },
+            {
+              "kind": "fn",
+              "name": "stamp_identity_fills_empty_fields",
+              "visibility": "private",
+              "signature": "fn stamp_identity_fills_empty_fields ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-engine/src/records/stream.rs",
+              "module": "records::stream::tests",
+              "line": 290
             }
           ]
         },
@@ -13991,11 +13882,11 @@
       "path": "crates/eos-llm-client",
       "stats": {
         "modules": 15,
-        "items": 162,
+        "items": 153,
         "structs": 26,
         "enums": 9,
         "traits": 1,
-        "functions": 91,
+        "functions": 82,
         "impls": 34,
         "fields": 100,
         "methods": 62
@@ -15115,173 +15006,6 @@
               "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
               "module": "clients::anthropic_api_client",
               "line": 419
-            },
-            {
-              "kind": "fn",
-              "name": "decode_fixture",
-              "visibility": "private",
-              "signature": "async fn decode_fixture (raw : & str) -> Vec < Result < LlmStreamEvent , ProviderError > >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 444
-            },
-            {
-              "kind": "fn",
-              "name": "in_stream_error_frame_is_swallowed_at_decoder_level",
-              "visibility": "private",
-              "signature": "async fn in_stream_error_frame_is_swallowed_at_decoder_level ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 461
-            },
-            {
-              "kind": "fn",
-              "name": "decodes_anthropic_sse_fixture",
-              "visibility": "private",
-              "signature": "async fn decodes_anthropic_sse_fixture ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 497
-            },
-            {
-              "kind": "fn",
-              "name": "reasoning_compat_decode_maps_thinking_delta",
-              "visibility": "private",
-              "signature": "async fn reasoning_compat_decode_maps_thinking_delta ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 560
-            },
-            {
-              "kind": "fn",
-              "name": "encode_projects_tools_per_provider",
-              "visibility": "private",
-              "signature": "fn encode_projects_tools_per_provider ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 584
-            },
-            {
-              "kind": "fn",
-              "name": "tool_result_wire_omits_metadata_and_is_terminal",
-              "visibility": "private",
-              "signature": "fn tool_result_wire_omits_metadata_and_is_terminal ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 634
-            },
-            {
-              "kind": "fn",
-              "name": "system_notification_wraps_in_reminder_tag",
-              "visibility": "private",
-              "signature": "fn system_notification_wraps_in_reminder_tag ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 663
-            },
-            {
-              "kind": "fn",
-              "name": "claude_coding_plan_uses_oauth_transport_shape",
-              "visibility": "private",
-              "signature": "fn claude_coding_plan_uses_oauth_transport_shape ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 680
-            },
-            {
-              "kind": "fn",
-              "name": "parse_error_log_omits_secrets",
-              "visibility": "private",
-              "signature": "async fn parse_error_log_omits_secrets ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test",
-                "traced_test"
-              ],
-              "file": "crates/eos-llm-client/src/clients/anthropic_api_client.rs",
-              "module": "clients::anthropic_api_client::tests",
-              "line": 737
             }
           ]
         },
@@ -18263,11 +17987,11 @@
       "path": "crates/eos-sandbox-port",
       "stats": {
         "modules": 23,
-        "items": 157,
+        "items": 144,
         "structs": 41,
         "enums": 8,
         "traits": 4,
-        "functions": 87,
+        "functions": 74,
         "impls": 17,
         "fields": 146,
         "methods": 49
@@ -21596,238 +21320,6 @@
               "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
               "module": "tool_dispatch::parse",
               "line": 374
-            },
-            {
-              "kind": "fn",
-              "name": "obj",
-              "visibility": "private",
-              "signature": "fn obj (value : Value) -> JsonObject",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 423
-            },
-            {
-              "kind": "fn",
-              "name": "identity_envelope_has_top_level_caller_and_optional_invocation",
-              "visibility": "private",
-              "signature": "fn identity_envelope_has_top_level_caller_and_optional_invocation ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 433
-            },
-            {
-              "kind": "fn",
-              "name": "parse_read_file_decodes_fields_and_timings",
-              "visibility": "private",
-              "signature": "fn parse_read_file_decodes_fields_and_timings ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 455
-            },
-            {
-              "kind": "fn",
-              "name": "parse_missing_success_and_exists_are_false",
-              "visibility": "private",
-              "signature": "fn parse_missing_success_and_exists_are_false ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 473
-            },
-            {
-              "kind": "fn",
-              "name": "parse_drops_blank_paths_and_kinds",
-              "visibility": "private",
-              "signature": "fn parse_drops_blank_paths_and_kinds ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 489
-            },
-            {
-              "kind": "fn",
-              "name": "parse_exec_derives_success_from_status",
-              "visibility": "private",
-              "signature": "fn parse_exec_derives_success_from_status ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 507
-            },
-            {
-              "kind": "fn",
-              "name": "parse_exec_does_not_filter_changed_paths",
-              "visibility": "private",
-              "signature": "fn parse_exec_does_not_filter_changed_paths ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 534
-            },
-            {
-              "kind": "fn",
-              "name": "strict_int_rejects_bool",
-              "visibility": "private",
-              "signature": "fn strict_int_rejects_bool ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 548
-            },
-            {
-              "kind": "fn",
-              "name": "parse_preserves_workspace_field",
-              "visibility": "private",
-              "signature": "fn parse_preserves_workspace_field ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 555
-            },
-            {
-              "kind": "fn",
-              "name": "guarded_parses_conflict_and_changed_paths",
-              "visibility": "private",
-              "signature": "fn guarded_parses_conflict_and_changed_paths ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 576
-            },
-            {
-              "kind": "fn",
-              "name": "guarded_mutation_source_collapses_falsy",
-              "visibility": "private",
-              "signature": "fn guarded_mutation_source_collapses_falsy ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 595
-            },
-            {
-              "kind": "fn",
-              "name": "user_visible_strips_internal_error_prefix",
-              "visibility": "private",
-              "signature": "fn user_visible_strips_internal_error_prefix ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 616
-            },
-            {
-              "kind": "fn",
-              "name": "conflict_classifier_matches_code_or_marker",
-              "visibility": "private",
-              "signature": "fn conflict_classifier_matches_code_or_marker ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-sandbox-port/src/tool_dispatch/parse.rs",
-              "module": "tool_dispatch::parse::tests",
-              "line": 622
             }
           ]
         },
@@ -22779,13 +22271,13 @@
               "kind": "fn",
               "name": "run_until",
               "visibility": "pub",
-              "signature": "pub async fn run_until < S , F > (stream : & mut S , mut stop : F) -> Vec < StreamEvent > where S : Stream < Item = Result < StreamEvent , EngineError > > + Unpin , F : FnMut (& StreamEvent) -> bool ,",
+              "signature": "pub async fn run_until < S , F > (stream : & mut S , mut stop : F) -> Vec < AgentRunStreamEvent > where S : Stream < Item = Result < AgentRunStreamEvent , EngineError > > + Unpin , F : FnMut (& AgentRunStreamEvent) -> bool ,",
               "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`\nreturns `true` for one (inclusive) or the stream ends, then return the\ncollected events.\n\n# Panics\nPanics if the stream yields an `EngineError` item (a test-harness assertion).",
+              "docs": "Pull `stream` forward, collecting each streamed [`AgentRunStreamEvent`] until `stop`\nreturns `true` for one (inclusive) or the stream ends, then return the\ncollected events.\n\n# Panics\nPanics if the stream yields an `EngineError` item (a test-harness assertion).",
               "tags": [
                 "async"
               ],
@@ -22813,7 +22305,7 @@
                 {
                   "name": "turns",
                   "visibility": "private",
-                  "ty": "tokio :: sync :: Mutex < Vec < Vec < StreamEvent > > >"
+                  "ty": "tokio :: sync :: Mutex < Vec < Vec < AgentRunStreamEvent > > >"
                 },
                 {
                   "name": "block_when_empty",
@@ -22843,14 +22335,14 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (turns : Vec < Vec < StreamEvent > >) -> Self",
+                  "signature": "pub fn new (turns : Vec < Vec < AgentRunStreamEvent > >) -> Self",
                   "kind": "constructor",
                   "docs": "Replay `turns` in order; an exhausted source returns an empty turn.",
                   "line": 29
                 },
                 {
                   "name": "new_blocking",
-                  "signature": "pub fn new_blocking (turns : Vec < Vec < StreamEvent > >) -> Self",
+                  "signature": "pub fn new_blocking (turns : Vec < Vec < AgentRunStreamEvent > >) -> Self",
                   "kind": "associated-fn",
                   "docs": "Replay `turns`, then block forever (the agent stays running).",
                   "line": 38
@@ -22898,7 +22390,7 @@
               "kind": "fn",
               "name": "factory_from",
               "visibility": "pub",
-              "signature": "pub fn factory_from (turns : Vec < Vec < StreamEvent > >) -> ProviderStreamSourceFactory",
+              "signature": "pub fn factory_from (turns : Vec < Vec < AgentRunStreamEvent > >) -> ProviderStreamSourceFactory",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -22916,7 +22408,7 @@
               "kind": "fn",
               "name": "factory_root_blocks_after",
               "visibility": "pub",
-              "signature": "pub fn factory_root_blocks_after (root_turns : Vec < Vec < StreamEvent > >) -> ProviderStreamSourceFactory",
+              "signature": "pub fn factory_root_blocks_after (root_turns : Vec < Vec < AgentRunStreamEvent > >) -> ProviderStreamSourceFactory",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -22934,7 +22426,7 @@
               "kind": "fn",
               "name": "factory_by_agent",
               "visibility": "pub",
-              "signature": "pub fn factory_by_agent (by_agent : Vec < (& 'static str , Vec < Vec < StreamEvent > >) > ,) -> ProviderStreamSourceFactory",
+              "signature": "pub fn factory_by_agent (by_agent : Vec < (& 'static str , Vec < Vec < AgentRunStreamEvent > >) > ,) -> ProviderStreamSourceFactory",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -22952,7 +22444,7 @@
               "kind": "fn",
               "name": "tool_use_turn",
               "visibility": "pub",
-              "signature": "pub fn tool_use_turn (tool_use_id : & str , tool_name : & str , input : serde_json :: Value ,) -> Vec < StreamEvent >",
+              "signature": "pub fn tool_use_turn (tool_use_id : & str , tool_name : & str , input : serde_json :: Value ,) -> Vec < AgentRunStreamEvent >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -22970,7 +22462,7 @@
               "kind": "fn",
               "name": "text_turn",
               "visibility": "pub",
-              "signature": "pub fn text_turn (text : & str) -> Vec < StreamEvent >",
+              "signature": "pub fn text_turn (text : & str) -> Vec < AgentRunStreamEvent >",
               "fields": [],
               "variants": [],
               "methods": [],

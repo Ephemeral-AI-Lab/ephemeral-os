@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_types::{AgentRunId, StartedWorkflow, WorkflowApi, WorkflowId, WorkflowTerminalStatus};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::session_runtime::{
@@ -72,6 +72,7 @@ pub(in crate::background) struct WorkflowCompletion {
 pub(in crate::background) struct WorkflowSessionManager {
     agent_run_id: AgentRunId,
     sessions: Arc<Mutex<HashMap<WorkflowId, WorkflowSession>>>,
+    monitor_wakeup: Arc<Notify>,
     workflow_service: Arc<dyn WorkflowApi>,
     notification: BackgroundNotificationEmitter,
 }
@@ -93,6 +94,7 @@ impl WorkflowSessionManager {
         Self {
             agent_run_id,
             sessions: Arc::new(Mutex::new(HashMap::new())),
+            monitor_wakeup: Arc::new(Notify::new()),
             workflow_service,
             notification,
         }
@@ -150,6 +152,23 @@ impl WorkflowSessionManager {
             .filter(|session| matches!(session.status(), BackgroundSessionStatus::Running))
             .cloned()
             .collect()
+    }
+
+    async fn has_running_sessions(&self) -> bool {
+        self.sessions
+            .lock()
+            .await
+            .values()
+            .any(|session| matches!(session.status(), BackgroundSessionStatus::Running))
+    }
+
+    async fn wait_for_running_session(&self) {
+        loop {
+            if self.has_running_sessions().await {
+                return;
+            }
+            self.monitor_wakeup.notified().await;
+        }
     }
 
     async fn settle_running(
@@ -213,6 +232,7 @@ impl WorkflowSessionMonitor {
         Self {
             join: tokio::spawn(async move {
                 loop {
+                    manager.wait_for_running_session().await;
                     for completion in manager.poll_completions().await {
                         manager.push_notification_on_completion(completion).await;
                     }
@@ -233,6 +253,7 @@ impl BackgroundSessionManager for WorkflowSessionManager {
             .lock()
             .await
             .insert(session.id().clone(), session);
+        self.monitor_wakeup.notify_one();
     }
 
     async fn count(&self) -> usize {

@@ -97,8 +97,8 @@ fn parse_exec_derives_success_from_status() {
     assert_eq!(ok.output.stdout, "hi");
 
     for failing in ["error", "timed_out"] {
-        let result = parse_exec_command_result(&obj(serde_json::json!({"status": failing})))
-            .expect("parse");
+        let result =
+            parse_exec_command_result(&obj(serde_json::json!({"status": failing}))).expect("parse");
         assert!(!result.base.success, "status {failing} is not success");
     }
 

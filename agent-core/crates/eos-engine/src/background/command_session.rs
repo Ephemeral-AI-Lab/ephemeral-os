@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
 use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::session_runtime::{
@@ -93,6 +93,7 @@ pub(in crate::background) struct CommandCompletion {
 #[derive(Clone)]
 pub(in crate::background) struct CommandSessionManager {
     sessions: Arc<Mutex<CommandSessions>>,
+    monitor_wakeup: Arc<Notify>,
     agent_run_id: AgentRunId,
     command_service: Arc<dyn SandboxCommandApi>,
     notification: BackgroundNotificationEmitter,
@@ -114,6 +115,7 @@ impl CommandSessionManager {
     ) -> Self {
         Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
+            monitor_wakeup: Arc::new(Notify::new()),
             agent_run_id,
             command_service,
             notification,
@@ -126,11 +128,31 @@ impl CommandSessionManager {
         sandbox_id: &SandboxId,
     ) {
         let session = CommandSession::running(command_session_id.clone(), sandbox_id.clone());
+        {
+            self.sessions
+                .lock()
+                .await
+                .entry(command_session_id.clone())
+                .or_insert(session);
+        }
+        self.monitor_wakeup.notify_one();
+    }
+
+    async fn has_running_sessions(&self) -> bool {
         self.sessions
             .lock()
             .await
-            .entry(command_session_id.clone())
-            .or_insert(session);
+            .values()
+            .any(|session| matches!(session.status(), BackgroundSessionStatus::Running))
+    }
+
+    async fn wait_for_running_session(&self) {
+        loop {
+            if self.has_running_sessions().await {
+                return;
+            }
+            self.monitor_wakeup.notified().await;
+        }
     }
 
     fn running_by_sandbox(sessions: &CommandSessions) -> Vec<(SandboxId, Vec<CommandSessionId>)> {
@@ -226,6 +248,7 @@ impl CommandSessionMonitor {
         Self {
             join: tokio::spawn(async move {
                 loop {
+                    manager.wait_for_running_session().await;
                     for completion in manager.poll_completions().await {
                         manager.push_notification_on_completion(completion).await;
                     }
@@ -246,6 +269,7 @@ impl BackgroundSessionManager for CommandSessionManager {
             .lock()
             .await
             .insert(session.id().clone(), session);
+        self.monitor_wakeup.notify_one();
     }
 
     async fn count(&self) -> usize {

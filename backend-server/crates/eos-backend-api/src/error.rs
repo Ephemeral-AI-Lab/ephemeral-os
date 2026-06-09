@@ -119,7 +119,7 @@ impl From<AgentRunRecordError> for ApiError {
             AgentRunRecordError::OffsetOutOfRange { .. }
             | AgentRunRecordError::UnsafeSegment { .. } => Self::BadRequest(err.to_string()),
             other => {
-                tracing::error!(error = %other, "agent message-record error");
+                tracing::error!(error = %other, "agent-run record error");
                 Self::Internal
             }
         }

@@ -56,27 +56,27 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-run-until-7" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_until pub pub async fn run_until &lt; S , F &gt; (stream : &amp; mut S , mut stop : F) -&gt; Vec &lt; StreamEvent &gt; where S : Stream &lt; Item = Result &lt; StreamEvent , EngineError &gt; &gt; + Unpin , F : FnMut (&amp; StreamEvent) -&gt; bool , crates/eos-testkit/src/engine.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-run-until-7" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_until pub pub async fn run_until &lt; S , F &gt; (stream : &amp; mut S , mut stop : F) -&gt; Vec &lt; AgentRunStreamEvent &gt; where S : Stream &lt; Item = Result &lt; AgentRunStreamEvent , EngineError &gt; &gt; + Unpin , F : FnMut (&amp; AgentRunStreamEvent) -&gt; bool , crates/eos-testkit/src/engine.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_until</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub async fn <a class="symbol-link" href="eos-testkit--src-engine-rs.html#item-fn-run-until-7">run_until</a> &lt; S , F &gt; (stream : &amp; mut S , mut stop : F) -&gt; Vec &lt; StreamEvent &gt; where S : Stream &lt; Item = Result &lt; StreamEvent , EngineError &gt; &gt; + Unpin , F : FnMut (&amp; StreamEvent) -&gt; bool ,</code>
-  <p class="docstring">Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`<br>returns `true` for one (inclusive) or the stream ends, then return the<br>collected events.<br># Panics<br>Panics if the stream yields an `EngineError` item (a test-harness assertion).</p>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-testkit--src-engine-rs.html#item-fn-run-until-7">run_until</a> &lt; S , F &gt; (stream : &amp; mut S , mut stop : F) -&gt; Vec &lt; AgentRunStreamEvent &gt; where S : Stream &lt; Item = Result &lt; AgentRunStreamEvent , EngineError &gt; &gt; + Unpin , F : FnMut (&amp; AgentRunStreamEvent) -&gt; bool ,</code>
+  <p class="docstring">Pull `stream` forward, collecting each streamed [`AgentRunStreamEvent`] until `stop`<br>returns `true` for one (inclusive) or the stream ends, then return the<br>collected events.<br># Panics<br>Panics if the stream yields an `EngineError` item (a test-harness assertion).</p>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`</span>
+  <pre><code><span class="rs-comment">/// Pull `stream` forward, collecting each streamed [`AgentRunStreamEvent`] until `stop`</span>
 <span class="rs-comment">/// returns `true` for one (inclusive) or the stream ends, then return the</span>
 <span class="rs-comment">/// collected events.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Panics</span>
 <span class="rs-comment">/// Panics if the stream yields an `EngineError` item (a test-harness assertion).</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> run_until&lt;<span class="rs-type">S</span>, <span class="rs-type">F</span>&gt;(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">S</span>, <span class="rs-kw">mut</span> stop: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> run_until&lt;<span class="rs-type">S</span>, <span class="rs-type">F</span>&gt;(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">S</span>, <span class="rs-kw">mut</span> stop: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentRunStreamEvent</span>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">StreamEvent</span>, <span class="rs-type">EngineError</span>&gt;&gt; + <span class="rs-type">Unpin</span>,
-    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(&amp;<span class="rs-type">StreamEvent</span>) -&gt; bool,
+    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunStreamEvent</span>, <span class="rs-type">EngineError</span>&gt;&gt; + <span class="rs-type">Unpin</span>,
+    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(&amp;<span class="rs-type">AgentRunStreamEvent</span>) -&gt; bool,
 {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> events = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>();
     <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = stream.next().<span class="rs-kw">await</span> {
@@ -103,20 +103,20 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Layer-A stepping: pull an engine event stream to a chosen checkpoint.</span>
 
-<span class="rs-kw">use</span> eos_engine::{<span class="rs-type">EngineError</span>, <span class="rs-type">StreamEvent</span>};
+<span class="rs-kw">use</span> eos_engine::{<span class="rs-type">EngineError</span>, <span class="rs-type">AgentRunStreamEvent</span>};
 <span class="rs-kw">use</span> futures::<span class="rs-type">Stream</span>;
 <span class="rs-kw">use</span> futures::<span class="rs-type">StreamExt</span>;
 
-<span class="rs-comment">/// Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`</span>
+<span class="rs-comment">/// Pull `stream` forward, collecting each streamed [`AgentRunStreamEvent`] until `stop`</span>
 <span class="rs-comment">/// returns `true` for one (inclusive) or the stream ends, then return the</span>
 <span class="rs-comment">/// collected events.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Panics</span>
 <span class="rs-comment">/// Panics if the stream yields an `EngineError` item (a test-harness assertion).</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> run_until&lt;<span class="rs-type">S</span>, <span class="rs-type">F</span>&gt;(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">S</span>, <span class="rs-kw">mut</span> stop: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> run_until&lt;<span class="rs-type">S</span>, <span class="rs-type">F</span>&gt;(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">S</span>, <span class="rs-kw">mut</span> stop: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentRunStreamEvent</span>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">StreamEvent</span>, <span class="rs-type">EngineError</span>&gt;&gt; + <span class="rs-type">Unpin</span>,
-    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(&amp;<span class="rs-type">StreamEvent</span>) -&gt; bool,
+    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunStreamEvent</span>, <span class="rs-type">EngineError</span>&gt;&gt; + <span class="rs-type">Unpin</span>,
+    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(&amp;<span class="rs-type">AgentRunStreamEvent</span>) -&gt; bool,
 {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> events = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-29">new</a>();
     <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = stream.next().<span class="rs-kw">await</span> {

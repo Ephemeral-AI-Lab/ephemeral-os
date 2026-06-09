@@ -83,7 +83,11 @@ pub async fn transcript(
                 .await?
                 .map(|index| format_record_dir(&index))
                 .ok_or(ApiError::NotFound("agent run"))?;
-            let messages = match state.message_records.read_messages_at(&record_dir, 0).await {
+            let messages = match state
+                .agent_run_records
+                .read_messages_at(&record_dir, 0)
+                .await
+            {
                 Ok(bytes) => parse_jsonl_messages(&bytes.bytes)?,
                 Err(AgentRunRecordError::NotFound(_)) => Vec::new(),
                 Err(err) => return Err(ApiError::from(err)),

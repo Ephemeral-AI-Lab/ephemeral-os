@@ -11,7 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_engine::{
     AssistantMessageComplete, EngineError, EngineStream, ProviderStreamSource,
-    ProviderStreamSourceFactory, StreamEvent,
+    ProviderStreamSourceFactory, AgentRunStreamEvent,
 };
 use eos_llm_client::{ContentBlock, LlmRequest, Message, MessageRole, UsageSnapshot};
 
@@ -21,14 +21,14 @@ use eos_llm_client::{ContentBlock, LlmRequest, Message, MessageRole, UsageSnapsh
 /// tests).
 #[derive(Debug)]
 pub struct ScriptedSource {
-    turns: tokio::sync::Mutex<Vec<Vec<StreamEvent>>>,
+    turns: tokio::sync::Mutex<Vec<Vec<AgentRunStreamEvent>>>,
     block_when_empty: bool,
 }
 
 impl ScriptedSource {
     /// Replay `turns` in order; an exhausted source returns an empty turn.
     #[must_use]
-    pub fn new(turns: Vec<Vec<StreamEvent>>) -> Self {
+    pub fn new(turns: Vec<Vec<AgentRunStreamEvent>>) -> Self {
         Self {
             turns: tokio::sync::Mutex::new(turns),
             block_when_empty: false,
@@ -37,7 +37,7 @@ impl ScriptedSource {
 
     /// Replay `turns`, then block forever (the agent stays running).
     #[must_use]
-    pub fn new_blocking(turns: Vec<Vec<StreamEvent>>) -> Self {
+    pub fn new_blocking(turns: Vec<Vec<AgentRunStreamEvent>>) -> Self {
         Self {
             turns: tokio::sync::Mutex::new(turns),
             block_when_empty: true,
@@ -64,7 +64,7 @@ impl ProviderStreamSource for ScriptedSource {
 
 /// A factory that always returns the given scripted turns.
 #[must_use]
-pub fn factory_from(turns: Vec<Vec<StreamEvent>>) -> ProviderStreamSourceFactory {
+pub fn factory_from(turns: Vec<Vec<AgentRunStreamEvent>>) -> ProviderStreamSourceFactory {
     Arc::new(move |_request, _agent_state| {
         Arc::new(ScriptedSource::new(turns.clone())) as Arc<dyn ProviderStreamSource>
     })
@@ -73,7 +73,7 @@ pub fn factory_from(turns: Vec<Vec<StreamEvent>>) -> ProviderStreamSourceFactory
 /// A factory where the `root` agent plays `root_turns` then blocks (stays
 /// running), and every other agent gets an empty (first-turn-erroring) source.
 #[must_use]
-pub fn factory_root_blocks_after(root_turns: Vec<Vec<StreamEvent>>) -> ProviderStreamSourceFactory {
+pub fn factory_root_blocks_after(root_turns: Vec<Vec<AgentRunStreamEvent>>) -> ProviderStreamSourceFactory {
     Arc::new(move |_request, agent_state| {
         if agent_state.agent_name == "root" {
             Arc::new(ScriptedSource::new_blocking(root_turns.clone()))
@@ -88,9 +88,9 @@ pub fn factory_root_blocks_after(root_turns: Vec<Vec<StreamEvent>>) -> ProviderS
 /// the map gets an empty (first-turn-erroring) source.
 #[must_use]
 pub fn factory_by_agent(
-    by_agent: Vec<(&'static str, Vec<Vec<StreamEvent>>)>,
+    by_agent: Vec<(&'static str, Vec<Vec<AgentRunStreamEvent>>)>,
 ) -> ProviderStreamSourceFactory {
-    let scripts: HashMap<String, Vec<Vec<StreamEvent>>> = by_agent
+    let scripts: HashMap<String, Vec<Vec<AgentRunStreamEvent>>> = by_agent
         .into_iter()
         .map(|(name, turns)| (name.to_owned(), turns))
         .collect();
@@ -110,12 +110,12 @@ pub fn tool_use_turn(
     tool_use_id: &str,
     tool_name: &str,
     input: serde_json::Value,
-) -> Vec<StreamEvent> {
+) -> Vec<AgentRunStreamEvent> {
     let input = match input {
         serde_json::Value::Object(map) => map,
         _ => eos_types::JsonObject::new(),
     };
-    vec![StreamEvent::AssistantMessageComplete {
+    vec![AgentRunStreamEvent::AssistantMessageComplete {
         agent_name: String::new(),
         agent_run_id: None,
         payload: Box::new(AssistantMessageComplete {
@@ -135,8 +135,8 @@ pub fn tool_use_turn(
 
 /// One assistant text turn (no tool call).
 #[must_use]
-pub fn text_turn(text: &str) -> Vec<StreamEvent> {
-    vec![StreamEvent::AssistantMessageComplete {
+pub fn text_turn(text: &str) -> Vec<AgentRunStreamEvent> {
+    vec![AgentRunStreamEvent::AssistantMessageComplete {
         agent_name: String::new(),
         agent_run_id: None,
         payload: Box::new(AssistantMessageComplete {

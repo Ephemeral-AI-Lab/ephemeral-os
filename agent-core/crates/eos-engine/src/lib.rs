@@ -4,7 +4,6 @@
 
 pub mod agent_loop;
 pub mod background;
-pub mod event;
 mod notifications;
 pub mod provider_stream;
 pub mod records;
@@ -14,16 +13,12 @@ pub mod tool_call;
 
 pub use agent_loop::{
     AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory, BackgroundSessionRuntimeFactory,
-    ExecutionMetadataBuildInput, TokioAgentLoopLauncher, ToolCallHookStores,
-    ToolExecutionMetadataReader,
+    EngineRuntimeConfig, ExecutionMetadataBuildInput, TokioAgentLoopLauncher, ToolCallHookStores,
+    ToolExecutionMetadataReader, DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS,
 };
 pub use background::{
     BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSessionRuntime,
     BackgroundSessionStatus, BackgroundSessionTeardown,
-};
-pub use event::{
-    stamp_identity, AssistantMessageComplete, EngineEventOutputs, EngineEventPrinter,
-    EngineEventSink, EngineEventSinkFactory, StreamEvent,
 };
 pub use notifications::{
     make_default_notification_rules, EngineNotificationQueue, NotificationRule,
@@ -31,6 +26,10 @@ pub use notifications::{
 };
 pub use provider_stream::{
     EngineStream, LlmProviderStreamSource, ProviderStreamSource, ProviderStreamSourceFactory,
+};
+pub use records::{
+    stamp_identity, AgentRunOutputs, AgentRunRecordStore, AgentRunStreamEvent, AgentRunStreamSink,
+    AgentRunStreamSinkFactory, AssistantMessageComplete,
 };
 pub use support::EngineError;
 pub use telemetry::PromptReportRecorder;

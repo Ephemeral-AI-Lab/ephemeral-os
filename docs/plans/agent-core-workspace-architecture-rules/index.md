@@ -1,6 +1,6 @@
 # Agent-Core Workspace Architecture Rules - Index
 
-Status: Phase 04 and Phase 05 implemented; `eos-agent-core` retired; Phase 06 in progress
+Status: Phase 06 structural closeout filed; final inventory is 10 crates and 167 modules
 Date: 2026-06-09
 Owner: agent-core workspace
 
@@ -37,8 +37,8 @@ Source: `agent-core/docs/class-inventory/html/assets/inventory.json`
 | --- | ---: | ---: |
 | Crates | 10 | 10 |
 | Modules | 167 | 150-170 |
-| Items | 1546 | lower after crate, module, and compatibility collapse |
-| Methods | 933 | lower after service/resource split collapse |
+| Items | 1407 | lower after crate, module, and compatibility collapse |
+| Methods | 903 | lower after service/resource split collapse |
 
 Current high-module crates:
 
@@ -318,7 +318,8 @@ agent-core/
             ├── phase-03b-execution-lineage-materialization_SPEC.md
             ├── phase-04-eos-engine-agent-run_SPEC.md
             ├── phase-05-agent-core-server-boundary_SPEC.md
-            └── phase-06-verification-module-budget_SPEC.md
+            ├── phase-06-verification-module-budget_SPEC.md
+            └── conclusive-report.md
 ```
 
 ## Phase Index
@@ -347,9 +348,9 @@ verification command or evidence used for that phase.
 | 2. Crate map and DAG | Implemented | final 10-crate agent-core map is active; older runtime/facade crates are retired; verified by the current `cargo test -p workspace-guard` DAG and inventory rules |
 | 3. `eos-tool` | Implemented | `eos-tool-ports` is gone; tool modules collapsed; hook execution is engine-owned |
 | 3B. Execution lineage/materialization | Implemented (bridge-compatible v1) | normalized `task_runs`/`parented_runs`, workflow launch lineage, request-rooted record dirs, and bounded execution-tree reader are active; verified with current checks over `eos-db`, `eos-agent-run`, `eos-workflow`, and the backend-facing service path |
-| 4. `eos-engine` and `eos-agent-run` | Implemented | records live in `eos-engine::records`, loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`, and naming is closed on `AgentLoopCompletion::terminal_outcome`, `EngineEventOutputs`, `AgentRunRecordWriter`, and `BackgroundSessionRuntimeFactory`; verified with scoped checks/tests and combined changed-crate clippy |
+| 4. `eos-engine` and `eos-agent-run` | Implemented | records and live stream outputs live in `eos-engine::records`, loop contracts live in `eos-types`, engine exposes concrete launcher/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`, and naming is closed on `AgentLoopCompletion::terminal_outcome`, `AgentRunOutputs`, `AgentRunRecordStore`, `AgentRunStreamEvent`, and `BackgroundSessionRuntimeFactory`; latest closeout verified by `cargo test -p eos-engine --test message_records`, `cargo test -p eos-types`, `cargo check -p eos-testkit --all-targets`, backend record/stream checks, workspace guard public-surface test, and `cargo clippy -p eos-engine --all-targets -- -D warnings` |
 | 5. Agent core server boundary | Implemented | `eos-agent-core-server` owns backend-facing request lifecycle orchestration, the legacy `eos-agent-core` crate is removed, backend agent-core resources live under `/api/agent-core/*`, request-scoped cancellation is store-owned, and backend `EventBus` owns replay-safe live milestone streaming; verified with `cargo check -p eos-agent-core-server --all-targets`, `cargo check -p eos-agent-run --all-targets`, `cargo check -p eos-types --all-targets`, `cargo check -p eos-backend-runtime --all-targets`, `cargo check -p eos-backend-audit --all-targets`, `cargo check -p eos-backend-api --all-targets`, and `cargo test -p workspace-guard` |
-| 6. Verification and budget | In progress | `eos-agent-core` is removed, `eos-agent-core-server` is retained, query fanout / unused workflow handles / backend-only audit contracts were removed from agent-core, stale backend inventory pages for retired runtime launcher/host/reaper were deleted, the default guard budget report is 167 modules, `EOS_WORKSPACE_GUARD_FINAL_LAYOUT=1` passes the strict 170-module total, and the source LOC table meets the expected cuts after moving source-local tests under crate `tests/` trees |
+| 6. Verification and budget | Structural closeout filed | `conclusive-report.md` records the current 10-crate, 167-module, 1407-item, 903-method inventory; `eos-agent-core` is removed, `eos-agent-core-server` is retained, query fanout / unused workflow handles / backend-only audit contracts were removed from agent-core, stale backend inventory pages for retired runtime launcher/host/reaper were deleted, `cargo test -p workspace-guard` passes, `EOS_WORKSPACE_GUARD_FINAL_LAYOUT=1 cargo test -p workspace-guard module_budget_report_is_available -- --nocapture` passes the strict 170-module total, and the source LOC table meets the expected cuts after moving source-local tests under crate `tests/` trees |
 
 ## Global Acceptance Criteria
 

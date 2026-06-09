@@ -13,16 +13,13 @@ use super::{
     BackgroundSessionRuntimeFactory, ExecutionMetadataBuildInput, StartAgentLoopRequest,
     ToolCallHookStores, ToolExecutionMetadataReader,
 };
-use crate::event::EngineEventOutputs;
 use crate::notifications::EngineNotificationQueue;
 use crate::provider_stream::{messages::build_provider_messages, ProviderStreamSource};
-use crate::records::{
-    AgentRunRecordHandle, AgentRunRecordKind, AgentRunRecordStart, NodeFinishStatus,
-};
+use crate::records::{AgentRunRecordFinishStatus, AgentRunRecordHandle};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
 };
-use crate::{stamp_identity, EngineError, StreamEvent};
+use crate::{stamp_identity, AgentRunOutputs, AgentRunStreamEvent, EngineError};
 
 const MAX_FOREGROUND_TOOL_CONCURRENCY: usize = 8;
 
@@ -34,7 +31,7 @@ pub(crate) struct AgentLoopExecutor {
     cancel_signal: AgentLoopCancelSignal,
     background_sessions: Option<BackgroundSessionRuntimeFactory>,
     hook_stores: Option<ToolCallHookStores>,
-    event_outputs: EngineEventOutputs,
+    run_outputs: AgentRunOutputs,
     agent_run_api: Arc<dyn AgentRunApi>,
 }
 
@@ -46,7 +43,7 @@ pub(crate) struct AgentLoopExecutorInput {
     pub(crate) cancel_signal: AgentLoopCancelSignal,
     pub(crate) background_sessions: Option<BackgroundSessionRuntimeFactory>,
     pub(crate) hook_stores: Option<ToolCallHookStores>,
-    pub(crate) event_outputs: EngineEventOutputs,
+    pub(crate) run_outputs: AgentRunOutputs,
     pub(crate) agent_run_api: Arc<dyn AgentRunApi>,
 }
 
@@ -65,7 +62,7 @@ impl AgentLoopExecutor {
             cancel_signal: input.cancel_signal,
             background_sessions: input.background_sessions,
             hook_stores: input.hook_stores,
-            event_outputs: input.event_outputs,
+            run_outputs: input.run_outputs,
             agent_run_api: input.agent_run_api,
         }
     }
@@ -179,7 +176,7 @@ impl AgentLoopExecutor {
 
     async fn finish_cancelled_agent_loop(
         &self,
-        record: Option<LoopRecordHandle>,
+        record: Option<AgentRunRecordHandle>,
         state: AgentLoopState,
         reason: String,
     ) -> AgentLoopOutcome {
@@ -194,58 +191,41 @@ impl AgentLoopExecutor {
         &self,
         request: &StartAgentLoopRequest,
         event_identity: &AgentRunRuntimeSnapshot,
-    ) -> Result<Option<LoopRecordHandle>, EngineError> {
-        let Some(run_record_writer) = self.event_outputs.run_record_writer() else {
+    ) -> Result<Option<AgentRunRecordHandle>, EngineError> {
+        let Some(record_store) = self.run_outputs.record_store() else {
             return Ok(None);
         };
-        let record_kind = AgentRunRecordKind::from_task_agent_run_kind(
-            &request.record_target.task_agent_run_kind,
-        );
         let (system_prompt, initial_messages) =
             split_record_initial_messages(&request.initial_messages);
-        let handle = run_record_writer
+        let handle = record_store
             .start_agent_run_at(
-                &request.record_target.record_dir,
-                AgentRunRecordStart {
-                    request_id: &request.record_target.request_id,
-                    task_id: Some(&request.record_target.task_id),
-                    agent_run_id: &request.record_target.agent_run_id,
-                    agent_name: &event_identity.agent_name,
-                    kind: &record_kind,
-                    system_prompt: &system_prompt,
-                    initial_messages: &initial_messages,
-                },
+                &request.record_target,
+                &event_identity.agent_name,
+                &system_prompt,
+                &initial_messages,
             )
             .await
             .map_err(|error| EngineError::Internal(error.to_string()))?;
-        Ok(Some(LoopRecordHandle {
-            handle,
-            initial_message_count: initial_messages.len(),
-        }))
+        Ok(Some(handle))
     }
 
     async fn finish_agent_run_record(
         &self,
-        record: Option<LoopRecordHandle>,
+        record: Option<AgentRunRecordHandle>,
         outcome: AgentLoopOutcome,
     ) -> AgentLoopOutcome {
         let Some(record) = record else {
             return outcome;
         };
         let later_messages = loop_messages_to_llm_messages(&outcome.final_conversation_messages);
-        let later_message_start = record.initial_message_count.min(later_messages.len());
+        let later_message_start = record.initial_message_count().min(later_messages.len());
         if let Err(error) = record
-            .handle
             .append_messages(&later_messages[later_message_start..])
             .await
         {
             return record_write_failed(outcome, error);
         }
-        if let Err(error) = record
-            .handle
-            .finish(node_finish_status(&outcome.kind))
-            .await
-        {
+        if let Err(error) = record.finish(node_finish_status(&outcome.kind)).await {
             return record_write_failed(outcome, error);
         }
         outcome
@@ -278,7 +258,7 @@ impl AgentLoopExecutor {
                 &event_identity.agent_name,
                 &event_identity.agent_run_id,
             );
-            if let StreamEvent::AssistantMessageComplete { payload, .. } = &event {
+            if let AgentRunStreamEvent::AssistantMessageComplete { payload, .. } = &event {
                 final_usage = Some(payload.usage);
                 final_message = Some(payload.message.clone());
             }
@@ -451,7 +431,7 @@ impl AgentLoopExecutor {
             })
             .await
             .map_err(|err| EngineError::Internal(err.to_string()))?;
-        self.emit_event(&StreamEvent::ToolExecutionStarted {
+        self.emit_event(&AgentRunStreamEvent::ToolExecutionStarted {
             agent_name: metadata.agent_name.clone(),
             agent_run_id: metadata.agent_run_id.clone(),
             tool_name: call.name.clone(),
@@ -464,7 +444,7 @@ impl AgentLoopExecutor {
                 .map(|stores| crate::tool_call::ToolCallHooks::new(background, stores))
         });
         let result = execute_tool_once(tool, &call.input, &metadata, hooks.as_ref()).await?;
-        self.emit_event(&StreamEvent::ToolExecutionCompleted {
+        self.emit_event(&AgentRunStreamEvent::ToolExecutionCompleted {
             agent_name: metadata.agent_name,
             agent_run_id: metadata.agent_run_id,
             tool_name: call.name.clone(),
@@ -504,7 +484,7 @@ impl AgentLoopExecutor {
         event_identity: &AgentRunRuntimeSnapshot,
     ) {
         for notification in state.drain_notifications().await {
-            self.emit_event(&StreamEvent::SystemNotification {
+            self.emit_event(&AgentRunStreamEvent::SystemNotification {
                 agent_name: event_identity.agent_name.clone(),
                 agent_run_id: Some(event_identity.agent_run_id.clone()),
                 text: notification.message,
@@ -512,14 +492,9 @@ impl AgentLoopExecutor {
         }
     }
 
-    fn emit_event(&self, event: &StreamEvent) {
-        self.event_outputs.observe(event);
+    fn emit_event(&self, event: &AgentRunStreamEvent) {
+        self.run_outputs.observe(event);
     }
-}
-
-struct LoopRecordHandle {
-    handle: AgentRunRecordHandle,
-    initial_message_count: usize,
 }
 
 /// Result of one private assistant turn.
@@ -629,10 +604,10 @@ fn split_record_initial_messages(messages: &[AgentLoopMessage]) -> (String, Vec<
     (system_prompt, llm_messages)
 }
 
-fn node_finish_status(kind: &AgentLoopOutcomeKind) -> NodeFinishStatus {
+fn node_finish_status(kind: &AgentLoopOutcomeKind) -> AgentRunRecordFinishStatus {
     match kind {
-        AgentLoopOutcomeKind::TerminalToolSubmitted { .. } => NodeFinishStatus::Completed,
-        AgentLoopOutcomeKind::LoopFailed { .. } => NodeFinishStatus::Failed,
+        AgentLoopOutcomeKind::TerminalToolSubmitted { .. } => AgentRunRecordFinishStatus::Completed,
+        AgentLoopOutcomeKind::LoopFailed { .. } => AgentRunRecordFinishStatus::Failed,
     }
 }
 

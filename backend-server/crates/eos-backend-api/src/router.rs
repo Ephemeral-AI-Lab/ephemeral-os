@@ -17,7 +17,7 @@ use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{EventBus, SandboxManager, SandboxManagerError};
 use eos_backend_store::{EventLogRepo, RunMetaRepo};
 use eos_backend_types::SandboxView;
-use eos_engine::records::AgentRunRecordWriter as AgentMessageRecords;
+use eos_engine::records::AgentRunRecordStore as AgentRunRecords;
 use eos_types::{AgentRunStore, SandboxId, TaskAgentRunStore, TaskStore};
 
 use crate::handlers;
@@ -67,7 +67,7 @@ pub struct AppState {
     pub(crate) task_store: Arc<dyn TaskStore>,
     pub(crate) agent_run_store: Arc<dyn AgentRunStore>,
     pub(crate) task_agent_run_store: Arc<dyn TaskAgentRunStore>,
-    pub(crate) message_records: AgentMessageRecords,
+    pub(crate) agent_run_records: AgentRunRecords,
 }
 
 /// Named input parts used to assemble [`AppState`].
@@ -91,7 +91,7 @@ pub struct AppStateParts {
     /// Durable task-agent-run lineage store.
     pub task_agent_run_store: Arc<dyn TaskAgentRunStore>,
     /// File-backed agent-run record reader.
-    pub message_records: AgentMessageRecords,
+    pub agent_run_records: AgentRunRecords,
 }
 
 impl std::fmt::Debug for AppStateParts {
@@ -122,7 +122,7 @@ impl AppState {
             task_store,
             agent_run_store,
             task_agent_run_store,
-            message_records,
+            agent_run_records,
         } = parts;
         Self {
             agent_core,
@@ -134,7 +134,7 @@ impl AppState {
             task_store,
             agent_run_store,
             task_agent_run_store,
-            message_records,
+            agent_run_records,
         }
     }
 }

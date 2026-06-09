@@ -16,7 +16,7 @@ use tokio::sync::{broadcast, mpsc};
 
 use eos_backend_store::{EventLogRepo, StoreError};
 use eos_backend_types::{EventRecord, EVENT_STREAM_GAP};
-use eos_engine::{EngineEventSink, EngineEventSinkFactory, StreamEvent};
+use eos_engine::{AgentRunStreamEvent, AgentRunStreamSink, AgentRunStreamSinkFactory};
 use eos_types::{RequestId, UtcDateTime};
 
 const DEFAULT_QUEUE_CAPACITY: usize = 1024;
@@ -99,7 +99,7 @@ impl EventBus {
 
     /// Build the per-loop live sink factory consumed by `TokioAgentLoopLauncher`.
     #[must_use]
-    pub fn live_event_sink_factory(self: &Arc<Self>) -> EngineEventSinkFactory {
+    pub fn stream_sink_factory(self: &Arc<Self>) -> AgentRunStreamSinkFactory {
         let bus = Arc::clone(self);
         Arc::new(move |request| Some(bus.register(&request.record_target.request_id)))
     }
@@ -108,7 +108,7 @@ impl EventBus {
     /// sink. The returned sink must be dropped when the loop finishes; dropping the
     /// last sink for a request closes its live tail after the drainer flushes.
     #[must_use]
-    pub fn register(&self, request_id: &RequestId) -> EngineEventSink {
+    pub fn register(&self, request_id: &RequestId) -> AgentRunStreamSink {
         let handle = self.stream_for_request(request_id);
         handle.active_sinks.fetch_add(1, Ordering::AcqRel);
         let guard = SinkGuard {
@@ -118,7 +118,7 @@ impl EventBus {
         };
         let tx = handle.tx.clone();
         let stream = handle.stream.clone();
-        Arc::new(move |event: &StreamEvent| {
+        Arc::new(move |event: &AgentRunStreamEvent| {
             let _keep_alive = &guard;
             let Ok(payload) = serde_json::to_value(event) else {
                 return;

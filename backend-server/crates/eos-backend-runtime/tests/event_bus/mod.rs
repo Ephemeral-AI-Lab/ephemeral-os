@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 
 use eos_backend_types::{EventRecord, EVENT_STREAM_GAP};
-use eos_engine::StreamEvent;
+use eos_engine::AgentRunStreamEvent;
 use eos_types::{RequestId, UtcDateTime};
 
 use crate::test_support::{rid, temp_store};
@@ -24,7 +24,7 @@ fn milestone(seq: i64, request: &RequestId, kind: &str) -> EventRecord {
     }
 }
 
-fn system_event(text: &str) -> StreamEvent {
+fn system_event(text: &str) -> AgentRunStreamEvent {
     serde_json::from_value(serde_json::json!({
         "type": "system_notification",
         "agent_name": "root",

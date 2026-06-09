@@ -1,4 +1,4 @@
-//! Agent-run node message-record routes.
+//! Agent-run record routes.
 
 use std::collections::VecDeque;
 use std::convert::Infallible;
@@ -13,7 +13,7 @@ use axum::Json;
 use futures::stream;
 use serde::Deserialize;
 
-use eos_engine::records::{AgentRunRecordWriter as AgentMessageRecords, NodeEvent};
+use eos_engine::records::{AgentRunRecordEvent, AgentRunRecordStore as AgentRunRecords};
 use eos_types::{format_record_dir, AgentRunId, AgentRunRecordDir};
 
 use super::parse_id;
@@ -47,7 +47,7 @@ pub async fn messages(
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
     let record_dir = record_dir_for_agent_run(&state, &agent_run_id).await?;
     let bytes = state
-        .message_records
+        .agent_run_records
         .read_messages_at(&record_dir, query.after_byte.unwrap_or(0))
         .await?;
     Response::builder()
@@ -65,13 +65,13 @@ pub async fn events(
     State(state): State<AppState>,
     Path(agent_run_id): Path<String>,
     Query(query): Query<EventsQuery>,
-) -> Result<Json<Vec<NodeEvent>>, ApiError> {
+) -> Result<Json<Vec<AgentRunRecordEvent>>, ApiError> {
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
     let record_dir = record_dir_for_agent_run(&state, &agent_run_id).await?;
     Ok(Json(
         state
-            .message_records
-            .read_events_at(&record_dir, query.after_seq.unwrap_or(0))
+            .agent_run_records
+            .read_record_events_at(&record_dir, query.after_seq.unwrap_or(0))
             .await?,
     ))
 }
@@ -87,11 +87,11 @@ pub async fn stream(
     let record_dir = record_dir_for_agent_run(&state, &agent_run_id).await?;
     let last_seq = last_event_id(&headers).or(query.last_seq).unwrap_or(0);
     let initial = state
-        .message_records
-        .read_events_at(&record_dir, last_seq)
+        .agent_run_records
+        .read_record_events_at(&record_dir, last_seq)
         .await?;
     let tail = TailState::new(
-        state.message_records,
+        state.agent_run_records,
         record_dir,
         last_seq,
         VecDeque::from(initial),
@@ -110,15 +110,15 @@ pub async fn stream(
             }
             tokio::time::sleep(Duration::from_millis(250)).await;
             match tail
-                .message_records
-                .read_events_at(&tail.record_dir, tail.next_seq)
+                .agent_run_records
+                .read_record_events_at(&tail.record_dir, tail.next_seq)
                 .await
             {
                 Ok(events) => {
                     tail.pending = VecDeque::from(events);
                 }
                 Err(err) => {
-                    tracing::error!(error = %err, "agent-run SSE message-record tail failed");
+                    tracing::error!(error = %err, "agent-run SSE record tail failed");
                     return None;
                 }
             }
@@ -129,22 +129,22 @@ pub async fn stream(
 
 #[derive(Debug)]
 struct TailState {
-    message_records: AgentMessageRecords,
+    agent_run_records: AgentRunRecords,
     record_dir: AgentRunRecordDir,
     next_seq: u64,
-    pending: VecDeque<NodeEvent>,
+    pending: VecDeque<AgentRunRecordEvent>,
     finished: bool,
 }
 
 impl TailState {
     fn new(
-        message_records: AgentMessageRecords,
+        agent_run_records: AgentRunRecords,
         record_dir: AgentRunRecordDir,
         last_seq: u64,
-        pending: VecDeque<NodeEvent>,
+        pending: VecDeque<AgentRunRecordEvent>,
     ) -> Self {
         Self {
-            message_records,
+            agent_run_records,
             record_dir,
             next_seq: last_seq,
             pending,
@@ -153,7 +153,7 @@ impl TailState {
     }
 }
 
-fn to_sse_event(event: &NodeEvent) -> Event {
+fn to_sse_event(event: &AgentRunRecordEvent) -> Event {
     let payload = serde_json::to_string(&event.payload).unwrap_or_else(|err| {
         tracing::error!(error = %err, "failed to encode SSE event payload");
         "{}".to_owned()

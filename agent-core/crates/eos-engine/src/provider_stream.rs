@@ -285,11 +285,11 @@ mod source {
     use eos_types::{AgentRunRuntimeSnapshot, StartAgentLoopRequest};
     use futures::{Stream, StreamExt};
 
-    use crate::event::{AssistantMessageComplete, StreamEvent};
-    use crate::EngineError;
+    use crate::{AgentRunStreamEvent, AssistantMessageComplete, EngineError};
 
     /// The engine stream returned by one model turn.
-    pub type EngineStream = Pin<Box<dyn Stream<Item = Result<StreamEvent, EngineError>> + Send>>;
+    pub type EngineStream =
+        Pin<Box<dyn Stream<Item = Result<AgentRunStreamEvent, EngineError>> + Send>>;
 
     /// Per-loop provider stream source factory.
     pub type ProviderStreamSourceFactory = Arc<
@@ -330,14 +330,16 @@ mod source {
         }
     }
 
-    fn adapt_event(event: LlmStreamEvent) -> Result<StreamEvent, EngineError> {
+    fn adapt_event(event: LlmStreamEvent) -> Result<AgentRunStreamEvent, EngineError> {
         match event {
-            LlmStreamEvent::AssistantTextDelta { text } => Ok(StreamEvent::AssistantTextDelta {
-                agent_name: String::new(),
-                agent_run_id: None,
-                text,
-            }),
-            LlmStreamEvent::ReasoningDelta { text } => Ok(StreamEvent::ReasoningDelta {
+            LlmStreamEvent::AssistantTextDelta { text } => {
+                Ok(AgentRunStreamEvent::AssistantTextDelta {
+                    agent_name: String::new(),
+                    agent_run_id: None,
+                    text,
+                })
+            }
+            LlmStreamEvent::ReasoningDelta { text } => Ok(AgentRunStreamEvent::ReasoningDelta {
                 agent_name: String::new(),
                 agent_run_id: None,
                 text,
@@ -346,7 +348,7 @@ mod source {
                 tool_use_id,
                 name,
                 input,
-            } => Ok(StreamEvent::ToolUseDelta {
+            } => Ok(AgentRunStreamEvent::ToolUseDelta {
                 agent_name: String::new(),
                 agent_run_id: None,
                 tool_use_id,
@@ -357,7 +359,7 @@ mod source {
                 message,
                 usage,
                 stop_reason,
-            } => Ok(StreamEvent::AssistantMessageComplete {
+            } => Ok(AgentRunStreamEvent::AssistantMessageComplete {
                 agent_name: String::new(),
                 agent_run_id: None,
                 payload: Box::new(AssistantMessageComplete {
@@ -454,20 +456,20 @@ mod source {
             let mut stream = source.stream(&request()).await.expect("stream");
             assert!(matches!(
                 stream.next().await.expect("text").expect("ok"),
-                StreamEvent::AssistantTextDelta { text, .. } if text == "hello"
+                AgentRunStreamEvent::AssistantTextDelta { text, .. } if text == "hello"
             ));
             assert!(matches!(
                 stream.next().await.expect("reasoning").expect("ok"),
-                StreamEvent::ReasoningDelta { text, .. } if text == "thinking"
+                AgentRunStreamEvent::ReasoningDelta { text, .. } if text == "thinking"
             ));
             assert!(matches!(
                 stream.next().await.expect("tool").expect("ok"),
-                StreamEvent::ToolUseDelta { name, input, .. }
+                AgentRunStreamEvent::ToolUseDelta { name, input, .. }
                     if name == "read_file" && input["path"] == json!("README.md")
             ));
             assert!(matches!(
                 stream.next().await.expect("complete").expect("ok"),
-                StreamEvent::AssistantMessageComplete { payload, .. }
+                AgentRunStreamEvent::AssistantMessageComplete { payload, .. }
                     if payload.message == final_message
                         && payload.usage.input_tokens == 7
                         && payload.stop_reason == Some(StopReason::EndTurn)

@@ -1,7 +1,7 @@
 //! Public fixture-contract tests for `eos-testkit`.
 #![allow(clippy::expect_used)]
 
-use eos_engine::{EngineError, ProviderStreamSource, StreamEvent};
+use eos_engine::{EngineError, ProviderStreamSource, AgentRunStreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec};
 use eos_sandbox_port::{DaemonOp, SandboxTransport};
 use eos_testkit::{
@@ -68,14 +68,14 @@ fn runtime_snapshot(agent_name: &str) -> AgentRunRuntimeSnapshot {
     }
 }
 
-async fn collect_source(source: &dyn ProviderStreamSource) -> Vec<StreamEvent> {
+async fn collect_source(source: &dyn ProviderStreamSource) -> Vec<AgentRunStreamEvent> {
     collect_source_with_request(source, &request()).await
 }
 
 async fn collect_source_with_request(
     source: &dyn ProviderStreamSource,
     request: &LlmRequest,
-) -> Vec<StreamEvent> {
+) -> Vec<AgentRunStreamEvent> {
     let mut stream = source.stream(request).await.expect("stream opens");
     let mut events = Vec::new();
     while let Some(item) = stream.next().await {
@@ -84,9 +84,9 @@ async fn collect_source_with_request(
     events
 }
 
-fn complete_text(events: &[StreamEvent]) -> String {
+fn complete_text(events: &[AgentRunStreamEvent]) -> String {
     match events.last() {
-        Some(StreamEvent::AssistantMessageComplete { payload, .. }) => {
+        Some(AgentRunStreamEvent::AssistantMessageComplete { payload, .. }) => {
             payload.message.assistant_text()
         }
         other => panic!("expected assistant completion, got {other:?}"),
@@ -139,7 +139,7 @@ fn tool_use_turn_drops_non_object_input_to_empty_object() {
     let events = tool_use_turn("toolu_1", "read_file", json!("not an object"));
 
     let input = match events.as_slice() {
-        [StreamEvent::AssistantMessageComplete { payload, .. }] => {
+        [AgentRunStreamEvent::AssistantMessageComplete { payload, .. }] => {
             match payload.message.content.as_slice() {
                 [ContentBlock::ToolUse { input, .. }] => input,
                 other => panic!("expected tool use block, got {other:?}"),
@@ -153,17 +153,17 @@ fn tool_use_turn_drops_non_object_input_to_empty_object() {
 #[tokio::test]
 async fn run_until_stops_inclusively_at_matching_event() {
     let events = vec![
-        Ok(StreamEvent::AssistantTextDelta {
+        Ok(AgentRunStreamEvent::AssistantTextDelta {
             agent_name: String::new(),
             agent_run_id: None,
             text: "one".to_owned(),
         }),
-        Ok(StreamEvent::AssistantTextDelta {
+        Ok(AgentRunStreamEvent::AssistantTextDelta {
             agent_name: String::new(),
             agent_run_id: None,
             text: "two".to_owned(),
         }),
-        Ok(StreamEvent::AssistantTextDelta {
+        Ok(AgentRunStreamEvent::AssistantTextDelta {
             agent_name: String::new(),
             agent_run_id: None,
             text: "three".to_owned(),
@@ -173,14 +173,14 @@ async fn run_until_stops_inclusively_at_matching_event() {
 
     let collected = run_until(
         &mut stream,
-        |event| matches!(event, StreamEvent::AssistantTextDelta { text, .. } if text == "two"),
+        |event| matches!(event, AgentRunStreamEvent::AssistantTextDelta { text, .. } if text == "two"),
     )
     .await;
 
     assert_eq!(collected.len(), 2);
     assert!(matches!(
         collected.last(),
-        Some(StreamEvent::AssistantTextDelta { text, .. }) if text == "two"
+        Some(AgentRunStreamEvent::AssistantTextDelta { text, .. }) if text == "two"
     ));
 }
 

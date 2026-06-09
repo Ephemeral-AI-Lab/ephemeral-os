@@ -47,4 +47,4 @@ workflow:
     max_concurrent_task_runs: 8
 
 runtime:
-  command_session_completion_poll_interval_ms: 1000
+  background_completion_poll_interval_ms: 1000

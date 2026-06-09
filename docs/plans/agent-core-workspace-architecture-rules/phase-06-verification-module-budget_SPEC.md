@@ -1,6 +1,6 @@
 # Phase 06 - Verification and Module Budget Spec
 
-Status: In progress - final module and source LOC budgets achieved
+Status: Structural closeout filed - final module and source LOC budgets achieved
 Date: 2026-06-09
 Owner: agent-core verification
 
@@ -101,8 +101,8 @@ The source-folder LOC target is met. Current nonblank Rust LOC:
 | `agent-core/crates/eos-workflow/src/` | 4,702 | 3,789 | -913 | -150 to -350 | Yes, exceeds target |
 | `agent-core/crates/eos-agent-core-server/src/` | 480 | 470 | -10 | 0 to -50 | Yes |
 | `agent-core/crates/eos-db/src/` | 3,282 | 3,257 | -25 | 0 to -200 | Yes |
-| `agent-core/crates/eos-llm-client/src/` | 3,353 | 3,353 | 0 | 0 to -200 | Neutral |
-| `agent-core/crates/eos-sandbox-port/src/` | 2,974 | 2,974 | 0 | 0 to -100 | Neutral |
+| `agent-core/crates/eos-llm-client/src/` | 3,353 | 3,054 | -299 | 0 to -200 | Yes, exceeds target |
+| `agent-core/crates/eos-sandbox-port/src/` | 2,974 | 2,772 | -202 | 0 to -100 | Yes, exceeds target |
 
 The large `src/` LOC drop comes from moving source-local test modules under the
 owning crate `tests/` trees and leaving `#[path]` shims for private access. This
@@ -208,15 +208,15 @@ agent-core/
 | Run workspace tests | Not started |
 | Run clippy | Done for touched agent-core crates - `cargo clippy -p eos-workflow -p eos-types -p eos-agent-core-server -p eos-engine --all-targets -- -D warnings` |
 | Regenerate class inventory | Done - `cargo run --manifest-path scripts/class-inventory/Cargo.toml` wrote 10 crate inventories |
-| Compare crate/module/item/method counts | Done for module total and source LOC - guard reports 167 Rust modules, within the 150-170 target; source LOC meets the expected-cut table |
+| Compare crate/module/item/method counts | Done - regenerated inventory reports 10 crates, 167 modules, 1407 items, and 903 methods; guard reports 167 Rust modules, within the 150-170 target; source LOC meets the expected-cut table |
 | Add executable final-budget gate | Done - `EOS_WORKSPACE_GUARD_FINAL_LAYOUT=1` enforces the 170 total and reports per-crate caps as advisory |
 | Remove dead dependencies | Done for obsolete `eos-agent-core` workspace dependencies; `cargo machete --with-metadata` is clean in `agent-core` and `backend-server` |
 | Remove compatibility re-exports | Done for the obsolete `eos-agent-core` crate path and unused workflow service-support handles |
 | Clean stale backend inventory docs | Done - regenerated backend class inventory and deleted orphaned `host.rs` / `launcher.rs` / `reaper.rs` pages; stale-reference grep is clean |
 | Reconnect live event publishing | Done - backend `EventBus` again exposes replay-safe live sinks via the engine launcher sink factory; verified by `cargo test -p eos-backend-runtime event_bus -- --nocapture` and `cargo test -p eos-backend-api --test stream -- --nocapture` |
-| Update final docs and index tracker | In progress - index records regenerated 10-crate inventory, 167-module status, and source LOC cut status |
+| Update final docs and index tracker | Done - index and `conclusive-report.md` record the regenerated 10-crate, 167-module, 1407-item, 903-method inventory and source LOC cut status |
 | Update `index.md` Progress Tracker with Phase 06 result and exit artifact | Done - Phase 06 entry records the default guard budget and final-layout gate |
-| Confirm `index.md` Progress Tracker records every phase result and exit artifact | In progress |
+| Confirm `index.md` Progress Tracker records every phase result and exit artifact | Done - every phase row has a status and exit artifact; Phase 06 points at `conclusive-report.md` |
 
 ## Acceptance Criteria
 

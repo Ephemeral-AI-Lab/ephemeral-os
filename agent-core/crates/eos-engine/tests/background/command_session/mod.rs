@@ -99,13 +99,21 @@ async fn monitor_polls_and_emits_into_own_notifier() {
     )]));
     let notifier = EngineNotificationQueue::new();
     let manager = manager("agent-a", &notifier, transport.clone());
+    let _monitor = CommandSessionMonitor::spawn(manager.clone(), Duration::from_millis(1));
+    sleep(Duration::from_millis(20)).await;
+    assert!(
+        transport
+            .payloads(DaemonOp::CommandCollectCompleted)
+            .is_empty(),
+        "idle monitor should not poll before a session is registered"
+    );
+
     manager
         .register_background_session(
             &"cmd_1".parse().expect("command id"),
             &"sandbox-a".parse().expect("sandbox id"),
         )
         .await;
-    let _monitor = CommandSessionMonitor::spawn(manager.clone(), Duration::from_millis(1));
 
     let notifications = timeout(Duration::from_millis(200), async {
         loop {

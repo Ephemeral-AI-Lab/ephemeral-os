@@ -15,7 +15,7 @@ use tower::ServiceExt;
 use eos_backend_runtime::{DeleteRejection, SandboxManagerError};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{BackendRunStatus, EventRecord, RunMeta, SandboxState};
-use eos_engine::records::AgentRunRecordWriter as AgentMessageRecords;
+use eos_engine::records::AgentRunRecordStore as AgentRunRecords;
 use eos_types::RequestStatus;
 use eos_types::{AgentRunId, RequestId, SandboxId, TaskId, UtcDateTime};
 
@@ -90,7 +90,7 @@ fn seed_agent_message_record(
     let node = root
         .join("requests/req-1/root-task-task-1")
         .join(format!("agent-run-{}", agent_run_id.as_str()));
-    std::fs::create_dir_all(&node).expect("message-record dir");
+    std::fs::create_dir_all(&node).expect("agent-run record dir");
     std::fs::write(
         node.join("messages.jsonl"),
         concat!(
@@ -411,7 +411,7 @@ async fn events_route_replays_persisted_milestones() {
 #[tokio::test]
 async fn agent_run_messages_route_returns_raw_jsonl_with_next_offset() {
     let (store, _dir) = test_store().await;
-    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
+    let message_records_dir = tempfile::tempdir().expect("agent-run record tempdir");
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
     let node = seed_agent_message_record(message_records_dir.path(), &agent_run_id);
     let full_len = std::fs::metadata(node.join("messages.jsonl"))
@@ -421,7 +421,7 @@ async fn agent_run_messages_route_returns_raw_jsonl_with_next_offset() {
         &store,
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_agent_core_state(None, vec![], None),
-        AgentMessageRecords::new(message_records_dir.path()),
+        AgentRunRecords::new(message_records_dir.path()),
     );
 
     let (status, body) = send(
@@ -466,14 +466,14 @@ async fn agent_run_messages_route_returns_raw_jsonl_with_next_offset() {
 #[tokio::test]
 async fn agent_run_events_route_replays_node_local_events() {
     let (store, _dir) = test_store().await;
-    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
+    let message_records_dir = tempfile::tempdir().expect("agent-run record tempdir");
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
     seed_agent_message_record(message_records_dir.path(), &agent_run_id);
     let app = router_with_message_records(
         &store,
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_agent_core_state(None, vec![], None),
-        AgentMessageRecords::new(message_records_dir.path()),
+        AgentRunRecords::new(message_records_dir.path()),
     );
 
     let (status, body) = send(
@@ -496,14 +496,14 @@ async fn agent_run_events_route_replays_node_local_events() {
 #[tokio::test]
 async fn agent_run_sse_replays_from_last_event_id() {
     let (store, _dir) = test_store().await;
-    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
+    let message_records_dir = tempfile::tempdir().expect("agent-run record tempdir");
     let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
     seed_agent_message_record(message_records_dir.path(), &agent_run_id);
     let app = router_with_message_records(
         &store,
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_agent_core_state(None, vec![], None),
-        AgentMessageRecords::new(message_records_dir.path()),
+        AgentRunRecords::new(message_records_dir.path()),
     );
 
     let request = Request::builder()
@@ -764,7 +764,7 @@ async fn transcript_returns_messages() {
 #[tokio::test]
 async fn transcript_prefers_agent_run_messages_jsonl() {
     let (store, _dir) = test_store().await;
-    let message_records_dir = tempfile::tempdir().expect("message-record tempdir");
+    let message_records_dir = tempfile::tempdir().expect("agent-run record tempdir");
     let task_id: TaskId = "task-1".parse().expect("task id");
     let request_id: RequestId = "req-1".parse().expect("request id");
     let task = make_task(&task_id, &request_id);
@@ -778,7 +778,7 @@ async fn transcript_prefers_agent_run_messages_jsonl() {
         &store,
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_agent_core_state(None, vec![task], Some(run)),
-        AgentMessageRecords::new(message_records_dir.path()),
+        AgentRunRecords::new(message_records_dir.path()),
     );
 
     let (status, body) = send(

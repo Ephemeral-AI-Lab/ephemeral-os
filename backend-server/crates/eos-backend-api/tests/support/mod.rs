@@ -23,7 +23,7 @@ use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{EventBus, SandboxManagerError};
 use eos_backend_store::{BackendStore, RunMetaRepo};
 use eos_backend_types::{BackendRunStatus, SandboxState, SandboxView};
-use eos_engine::records::AgentRunRecordWriter as AgentMessageRecords;
+use eos_engine::records::AgentRunRecordStore as AgentRunRecords;
 use eos_sandbox_port::{
     DaemonOp, RequestProvisioner, RequestSandboxBinding, SandboxGateway, SandboxPortError,
     SandboxProvisionError, SandboxTransport,
@@ -59,19 +59,19 @@ pub fn router(
         store,
         sandboxes,
         agent_core_state,
-        AgentMessageRecords::new(std::env::temp_dir().join(format!(
+        AgentRunRecords::new(std::env::temp_dir().join(format!(
             "eos_backend_api_message_records_{}",
             std::process::id()
         ))),
     )
 }
 
-/// Build a router using an explicit message-record service.
+/// Build a router using an explicit agent-run record service.
 pub fn router_with_message_records(
     store: &BackendStore,
     sandboxes: Arc<dyn SandboxRegistry>,
     agent_core_state: AgentCoreTestState,
-    records: AgentMessageRecords,
+    records: AgentRunRecords,
 ) -> Router {
     let event_bus = Arc::new(EventBus::new(store.event_log().clone()));
     let stats = StatsReader::new(store.obs_events().clone(), store.audit_cursors().clone());
@@ -120,7 +120,7 @@ pub fn router_with_message_records(
         task_store,
         agent_run_store,
         task_agent_run_store,
-        message_records: records,
+        agent_run_records: records,
     });
     eos_backend_api::build_router(state)
 }

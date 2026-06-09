@@ -1,20 +1,21 @@
-//! File-backed agent-run message records.
+//! Agent-run record and stream output surfaces.
 //!
-//! The message-record root is supplied by the backend composition root, but the
+//! The record root is supplied by the backend composition root, but durable
 //! message/event contents are started and finished by the engine loop where
-//! provider-visible messages and tool events are observed in order.
+//! provider-visible messages and tool events are observed in order. Live stream
+//! observations share this owner because they are emitted by the same run.
 
 mod error;
-mod handle;
-mod io;
-mod kind;
 mod layout;
-mod record;
-mod writer;
+mod store;
+mod stream;
 
-pub use eos_types::WorkflowTaskRole;
 pub use error::{AgentRunRecordError, Result};
-pub use handle::{AgentRunRecordHandle, NodeFinishStatus};
-pub use kind::{AgentRunRecordKind, AgentRunRecordStart};
-pub use record::{MessageAppendRange, NodeEvent, RecordBytes};
-pub use writer::AgentRunRecordWriter;
+pub use store::{
+    AgentRunRecordEvent, AgentRunRecordFinishStatus, AgentRunRecordHandle, AgentRunRecordIdentity,
+    AgentRunRecordStore, MessageAppendRange, MessageBytes,
+};
+pub use stream::{
+    stamp_identity, AgentRunOutputs, AgentRunStreamEvent, AgentRunStreamSink,
+    AgentRunStreamSinkFactory, AssistantMessageComplete,
+};

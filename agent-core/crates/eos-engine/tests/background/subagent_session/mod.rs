@@ -1,11 +1,14 @@
 #![allow(clippy::expect_used)]
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_types::{AgentRun, AgentRunError, SpawnAgentRequest, UtcDateTime};
 
 use crate::EngineNotificationQueue;
+use tokio::time::{sleep, timeout};
 
 use super::*;
 
@@ -41,10 +44,74 @@ impl AgentRunApi for FakeAgentRunService {
     }
 }
 
+#[derive(Debug, Default)]
+struct CompletingAgentRunService {
+    polls: AtomicUsize,
+}
+
+impl CompletingAgentRunService {
+    fn poll_count(&self) -> usize {
+        self.polls.load(Ordering::SeqCst)
+    }
+}
+
+#[async_trait]
+impl AgentRunApi for CompletingAgentRunService {
+    async fn spawn_agent(&self, _request: SpawnAgentRequest) -> Result<AgentRunId, AgentRunError> {
+        Ok(AgentRunId::new_v4())
+    }
+
+    async fn wait_for_agent_outcome(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<AgentRunOutcome, AgentRunError> {
+        Err(AgentRunError::NotActiveInProcess(agent_run_id.clone()))
+    }
+
+    async fn poll_agent_run_outcome(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> Result<Option<AgentRunOutcome>, AgentRunError> {
+        self.polls.fetch_add(1, Ordering::SeqCst);
+        let mut payload = JsonObject::new();
+        payload.insert("output".to_owned(), json!("findings"));
+        payload.insert("is_error".to_owned(), json!(false));
+        payload.insert("metadata".to_owned(), json!({}));
+        payload.insert("is_terminal".to_owned(), json!(true));
+        Ok(Some(AgentRunOutcome {
+            agent_run_id: agent_run_id.clone(),
+            status: AgentRunStatus::Completed,
+            submission_payload: Some(payload),
+            message_history: Vec::new(),
+            token_count: Some(0),
+            error: None,
+        }))
+    }
+
+    async fn cancel_agent_run(
+        &self,
+        _agent_run_id: &AgentRunId,
+        _reason: &str,
+    ) -> Result<(), AgentRunError> {
+        Ok(())
+    }
+}
+
 fn manager(notifier: &EngineNotificationQueue) -> SubagentSessionManager {
     SubagentSessionManager::new(
         "owner-run".parse().expect("agent run id"),
         Arc::new(FakeAgentRunService),
+        BackgroundNotificationEmitter::new(notifier.clone()),
+    )
+}
+
+fn manager_with_service(
+    notifier: &EngineNotificationQueue,
+    agent_run_service: Arc<dyn AgentRunApi>,
+) -> SubagentSessionManager {
+    SubagentSessionManager::new(
+        "owner-run".parse().expect("agent run id"),
+        agent_run_service,
         BackgroundNotificationEmitter::new(notifier.clone()),
     )
 }
@@ -118,6 +185,44 @@ async fn count_cancel_and_completion_notification_are_manager_owned() {
     assert!(notifications[0]
         .message
         .contains("[BACKGROUND COMPLETED] agent_run_id=run-sub-2"));
+    assert!(notifications[0].message.contains("findings"));
+}
+
+#[tokio::test]
+async fn monitor_sleeps_until_subagent_session_is_registered() {
+    let notifier = EngineNotificationQueue::new();
+    let agent_run_service = Arc::new(CompletingAgentRunService::default());
+    let manager = manager_with_service(&notifier, agent_run_service.clone());
+    let _monitor = SubagentSessionMonitor::spawn(manager.clone(), Duration::from_millis(1));
+
+    sleep(Duration::from_millis(20)).await;
+    assert_eq!(
+        agent_run_service.poll_count(),
+        0,
+        "idle monitor should not poll before a subagent is registered"
+    );
+
+    manager
+        .register_background_session(&"run-sub-1".parse().expect("agent run id"))
+        .await;
+
+    let notifications = timeout(Duration::from_millis(200), async {
+        loop {
+            let drained = notifier.drain().await;
+            if !drained.is_empty() {
+                break drained;
+            }
+            sleep(Duration::from_millis(2)).await;
+        }
+    })
+    .await
+    .expect("subagent completion notification");
+
+    assert_eq!(agent_run_service.poll_count(), 1);
+    assert_eq!(notifications.len(), 1);
+    assert!(notifications[0]
+        .message
+        .contains("[BACKGROUND COMPLETED] agent_run_id=run-sub-1"));
     assert!(notifications[0].message.contains("findings"));
 }
 

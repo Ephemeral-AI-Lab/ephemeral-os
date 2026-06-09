@@ -1,19 +1,19 @@
 //! Layer-A stepping: pull an engine event stream to a chosen checkpoint.
 
-use eos_engine::{EngineError, StreamEvent};
+use eos_engine::{EngineError, AgentRunStreamEvent};
 use futures::Stream;
 use futures::StreamExt;
 
-/// Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`
+/// Pull `stream` forward, collecting each streamed [`AgentRunStreamEvent`] until `stop`
 /// returns `true` for one (inclusive) or the stream ends, then return the
 /// collected events.
 ///
 /// # Panics
 /// Panics if the stream yields an `EngineError` item (a test-harness assertion).
-pub async fn run_until<S, F>(stream: &mut S, mut stop: F) -> Vec<StreamEvent>
+pub async fn run_until<S, F>(stream: &mut S, mut stop: F) -> Vec<AgentRunStreamEvent>
 where
-    S: Stream<Item = Result<StreamEvent, EngineError>> + Unpin,
-    F: FnMut(&StreamEvent) -> bool,
+    S: Stream<Item = Result<AgentRunStreamEvent, EngineError>> + Unpin,
+    F: FnMut(&AgentRunStreamEvent) -> bool,
 {
     let mut events = Vec::new();
     while let Some(item) = stream.next().await {

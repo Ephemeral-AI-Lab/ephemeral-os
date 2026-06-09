@@ -12,8 +12,8 @@ use super::{
     AgentLoopExecutor, AgentLoopExecutorInput, AgentLoopToolRegistryFactory,
     BackgroundSessionRuntimeFactory, ToolCallHookStores, ToolExecutionMetadataReader,
 };
-use crate::event::{EngineEventOutputs, EngineEventSinkFactory};
 use crate::provider_stream::{ProviderStreamSource, ProviderStreamSourceFactory};
+use crate::{AgentRunOutputs, AgentRunStreamSinkFactory};
 
 #[derive(Clone, Debug)]
 struct WatchAgentLoopCancellation {
@@ -91,8 +91,8 @@ pub struct TokioAgentLoopLauncher {
     execution_metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     background_sessions: Option<BackgroundSessionRuntimeFactory>,
     hook_stores: Option<ToolCallHookStores>,
-    event_outputs: EngineEventOutputs,
-    live_event_sink_factory: Option<EngineEventSinkFactory>,
+    run_outputs: AgentRunOutputs,
+    stream_sink_factory: Option<AgentRunStreamSinkFactory>,
 }
 
 impl std::fmt::Debug for TokioAgentLoopLauncher {
@@ -143,8 +143,8 @@ impl TokioAgentLoopLauncher {
             execution_metadata_reader,
             background_sessions: None,
             hook_stores: None,
-            event_outputs: EngineEventOutputs::new(),
-            live_event_sink_factory: None,
+            run_outputs: AgentRunOutputs::new(),
+            stream_sink_factory: None,
         }
     }
 
@@ -162,17 +162,17 @@ impl TokioAgentLoopLauncher {
         self
     }
 
-    /// Attach event output fan-out for each run.
+    /// Attach output fan-out for each run.
     #[must_use]
-    pub fn with_event_outputs(mut self, event_outputs: EngineEventOutputs) -> Self {
-        self.event_outputs = event_outputs;
+    pub fn with_run_outputs(mut self, run_outputs: AgentRunOutputs) -> Self {
+        self.run_outputs = run_outputs;
         self
     }
 
-    /// Attach a live event sink factory resolved for each loop start request.
+    /// Attach a live stream sink factory resolved for each loop start request.
     #[must_use]
-    pub fn with_live_event_sink_factory(mut self, factory: EngineEventSinkFactory) -> Self {
-        self.live_event_sink_factory = Some(factory);
+    pub fn with_stream_sink_factory(mut self, factory: AgentRunStreamSinkFactory) -> Self {
+        self.stream_sink_factory = Some(factory);
         self
     }
 }
@@ -185,13 +185,13 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
     ) -> StartedAgentLoop {
         let (completion_sender, completion_wait) = oneshot::channel();
         let (cancel_handle, cancel_signal) = agent_loop_cancel_pair();
-        let event_outputs = self
-            .live_event_sink_factory
+        let run_outputs = self
+            .stream_sink_factory
             .as_ref()
             .and_then(|factory| factory(&request))
             .map_or_else(
-                || self.event_outputs.clone(),
-                |sink| self.event_outputs.clone().with_live_event_sink(Some(sink)),
+                || self.run_outputs.clone(),
+                |sink| self.run_outputs.clone().with_stream(Some(sink)),
             );
         let loop_executor = AgentLoopExecutor::new(AgentLoopExecutorInput {
             provider_stream_source: self.provider_stream_source.clone(),
@@ -200,7 +200,7 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
             cancel_signal,
             background_sessions: self.background_sessions.clone(),
             hook_stores: self.hook_stores.clone(),
-            event_outputs,
+            run_outputs,
             agent_run_api,
         });
 
