@@ -1,5 +1,4 @@
-/// Result alias for agent-run record operations.
-pub type Result<T> = std::result::Result<T, AgentRunRecordError>;
+pub(crate) type Result<T> = std::result::Result<T, AgentRunRecordError>;
 
 /// File-backed agent-run record store failures.
 #[derive(Debug, thiserror::Error)]

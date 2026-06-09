@@ -5918,12 +5918,12 @@
       "name": "eos-engine",
       "path": "crates/eos-engine",
       "stats": {
-        "modules": 29,
-        "items": 254,
+        "modules": 31,
+        "items": 253,
         "structs": 60,
         "enums": 9,
         "traits": 7,
-        "functions": 102,
+        "functions": 101,
         "impls": 68,
         "fields": 267,
         "methods": 222
@@ -10413,6 +10413,11 @@
         {
           "path": "crates/eos-engine/src/provider_stream.rs",
           "module": "provider_stream",
+          "items": []
+        },
+        {
+          "path": "crates/eos-engine/src/provider_stream/messages.rs",
+          "module": "provider_stream::messages",
           "items": [
             {
               "kind": "fn",
@@ -10426,9 +10431,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages",
-              "line": 11
+              "line": 8
             },
             {
               "kind": "fn",
@@ -10442,9 +10447,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages",
-              "line": 20
+              "line": 17
             },
             {
               "kind": "fn",
@@ -10458,9 +10463,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages",
-              "line": 31
+              "line": 28
             },
             {
               "kind": "fn",
@@ -10474,9 +10479,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages",
-              "line": 42
+              "line": 39
             },
             {
               "kind": "fn",
@@ -10490,9 +10495,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages",
-              "line": 52
+              "line": 49
             },
             {
               "kind": "fn",
@@ -10506,9 +10511,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages",
-              "line": 62
+              "line": 59
             },
             {
               "kind": "fn",
@@ -10522,9 +10527,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 123
+              "line": 119
             },
             {
               "kind": "fn",
@@ -10538,9 +10543,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 127
+              "line": 123
             },
             {
               "kind": "fn",
@@ -10554,9 +10559,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 138
+              "line": 134
             },
             {
               "kind": "fn",
@@ -10570,9 +10575,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 152
+              "line": 148
             },
             {
               "kind": "fn",
@@ -10588,9 +10593,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 168
+              "line": 164
             },
             {
               "kind": "fn",
@@ -10606,9 +10611,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 180
+              "line": 176
             },
             {
               "kind": "fn",
@@ -10624,9 +10629,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 190
+              "line": 186
             },
             {
               "kind": "fn",
@@ -10642,9 +10647,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 199
+              "line": 195
             },
             {
               "kind": "fn",
@@ -10660,9 +10665,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 215
+              "line": 211
             },
             {
               "kind": "fn",
@@ -10678,9 +10683,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 227
+              "line": 223
             },
             {
               "kind": "fn",
@@ -10696,9 +10701,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 239
+              "line": 235
             },
             {
               "kind": "fn",
@@ -10714,10 +10719,16 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/messages.rs",
               "module": "provider_stream::messages::tests",
-              "line": 251
-            },
+              "line": 247
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/provider_stream/source.rs",
+          "module": "provider_stream::source",
+          "items": [
             {
               "kind": "type",
               "name": "EngineStream",
@@ -10730,9 +10741,9 @@
               "trait_name": null,
               "docs": "The engine stream returned by one model turn.",
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 290
+              "line": 13
             },
             {
               "kind": "type",
@@ -10746,9 +10757,9 @@
               "trait_name": null,
               "docs": "Per-loop provider stream source factory.",
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 294
+              "line": 17
             },
             {
               "kind": "trait",
@@ -10763,7 +10774,7 @@
                   "signature": "async fn stream (& self , request : & LlmRequest) -> Result < EngineStream , EngineError >",
                   "kind": "required",
                   "docs": "Open one model turn for `request`.\n\n# Errors\nReturns [`EngineError`] for request construction or stream setup faults.",
-                  "line": 305
+                  "line": 28
                 }
               ],
               "impl_target": null,
@@ -10772,9 +10783,9 @@
               "tags": [
                 "async_trait"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 301
+              "line": 24
             },
             {
               "kind": "struct",
@@ -10796,9 +10807,9 @@
               "tags": [
                 "derive: Clone"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 312
+              "line": 35
             },
             {
               "kind": "impl",
@@ -10813,7 +10824,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 319
+                  "line": 42
                 }
               ],
               "impl_target": "LlmProviderStreamSource",
@@ -10823,9 +10834,9 @@
                 "impl",
                 "trait-impl"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 318
+              "line": 41
             },
             {
               "kind": "impl",
@@ -10840,7 +10851,7 @@
                   "signature": "pub fn new (client : Arc < dyn LlmClient >) -> Self",
                   "kind": "constructor",
                   "docs": "Create a provider stream source from a provider-neutral client.",
-                  "line": 326
+                  "line": 49
                 }
               ],
               "impl_target": "LlmProviderStreamSource",
@@ -10849,9 +10860,9 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 325
+              "line": 48
             },
             {
               "kind": "fn",
@@ -10865,9 +10876,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 333
+              "line": 56
             },
             {
               "kind": "impl",
@@ -10882,7 +10893,7 @@
                   "signature": "async fn stream (& self , request : & LlmRequest) -> Result < EngineStream , EngineError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 379
+                  "line": 102
                 }
               ],
               "impl_target": "LlmProviderStreamSource",
@@ -10893,9 +10904,9 @@
                 "impl",
                 "trait-impl"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source",
-              "line": 377
+              "line": 100
             },
             {
               "kind": "struct",
@@ -10919,9 +10930,9 @@
                 "derive: Debug",
                 "port/service"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source::tests",
-              "line": 402
+              "line": 125
             },
             {
               "kind": "impl",
@@ -10933,10 +10944,10 @@
               "methods": [
                 {
                   "name": "stream_message",
-                  "signature": "async fn stream_message (& self , _request : LlmRequest ,) -> Result < LlmStream , ProviderError >",
+                  "signature": "async fn stream_message (& self , _request : LlmRequest) -> Result < LlmStream , ProviderError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 409
+                  "line": 132
                 }
               ],
               "impl_target": "ScriptedClient",
@@ -10947,9 +10958,9 @@
                 "impl",
                 "trait-impl"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source::tests",
-              "line": 407
+              "line": 130
             },
             {
               "kind": "fn",
@@ -10963,9 +10974,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source::tests",
-              "line": 417
+              "line": 137
             },
             {
               "kind": "fn",
@@ -10982,9 +10993,9 @@
                 "async",
                 "tokio::test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source::tests",
-              "line": 421
+              "line": 141
             },
             {
               "kind": "fn",
@@ -11001,20 +11012,132 @@
                 "async",
                 "tokio::test"
               ],
-              "file": "crates/eos-engine/src/provider_stream.rs",
+              "file": "crates/eos-engine/src/provider_stream/source.rs",
               "module": "provider_stream::source::tests",
-              "line": 480
+              "line": 200
             }
           ]
         },
         {
-          "path": "crates/eos-engine/src/records.rs",
-          "module": "records",
-          "items": []
+          "path": "crates/eos-engine/src/run_output.rs",
+          "module": "run_output",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "AgentRunOutputs",
+              "visibility": "pub",
+              "signature": "pub struct AgentRunOutputs",
+              "fields": [
+                {
+                  "name": "stream",
+                  "visibility": "private",
+                  "ty": "Option < AgentRunStreamSink >"
+                },
+                {
+                  "name": "record",
+                  "visibility": "private",
+                  "ty": "Option < AgentRunRecordStore >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Output aggregate for live stream observations and durable run records.",
+              "tags": [
+                "derive: Clone",
+                "derive: Default"
+              ],
+              "file": "crates/eos-engine/src/run_output.rs",
+              "module": "run_output",
+              "line": 23
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for AgentRunOutputs",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for AgentRunOutputs",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 31
+                }
+              ],
+              "impl_target": "AgentRunOutputs",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/run_output.rs",
+              "module": "run_output",
+              "line": 30
+            },
+            {
+              "kind": "impl",
+              "name": "impl AgentRunOutputs",
+              "visibility": "private",
+              "signature": "impl AgentRunOutputs",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new () -> Self",
+                  "kind": "constructor",
+                  "docs": "Create an empty output aggregate.",
+                  "line": 40
+                },
+                {
+                  "name": "with_stream",
+                  "signature": "pub fn with_stream (mut self , stream : Option < AgentRunStreamSink >) -> Self",
+                  "kind": "method",
+                  "docs": "Attach live stream observation.",
+                  "line": 46
+                },
+                {
+                  "name": "with_record",
+                  "signature": "pub fn with_record (mut self , record : Option < AgentRunRecordStore >) -> Self",
+                  "kind": "method",
+                  "docs": "Attach durable agent-run record writing.",
+                  "line": 53
+                },
+                {
+                  "name": "observe",
+                  "signature": "pub(crate) fn observe (& self , event : & AgentRunStreamEvent)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 60
+                },
+                {
+                  "name": "record_store",
+                  "signature": "pub(crate) fn record_store (& self) -> Option < & AgentRunRecordStore >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 66
+                }
+              ],
+              "impl_target": "AgentRunOutputs",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/run_output.rs",
+              "module": "run_output",
+              "line": 39
+            }
+          ]
         },
         {
-          "path": "crates/eos-engine/src/records/error.rs",
-          "module": "records::error",
+          "path": "crates/eos-engine/src/run_output/error.rs",
+          "module": "run_output::error",
           "items": [
             {
               "kind": "type",
@@ -11028,8 +11151,8 @@
               "trait_name": null,
               "docs": "Result alias for agent-run record operations.",
               "tags": [],
-              "file": "crates/eos-engine/src/records/error.rs",
-              "module": "records::error",
+              "file": "crates/eos-engine/src/run_output/error.rs",
+              "module": "run_output::error",
               "line": 1
             },
             {
@@ -11110,8 +11233,8 @@
                 "error",
                 "non_exhaustive"
               ],
-              "file": "crates/eos-engine/src/records/error.rs",
-              "module": "records::error",
+              "file": "crates/eos-engine/src/run_output/error.rs",
+              "module": "run_output::error",
               "line": 4
             },
             {
@@ -11143,15 +11266,15 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/records/error.rs",
-              "module": "records::error",
+              "file": "crates/eos-engine/src/run_output/error.rs",
+              "module": "run_output::error",
               "line": 35
             }
           ]
         },
         {
-          "path": "crates/eos-engine/src/records/layout.rs",
-          "module": "records::layout",
+          "path": "crates/eos-engine/src/run_output/layout.rs",
+          "module": "run_output::layout",
           "items": [
             {
               "kind": "fn",
@@ -11165,8 +11288,8 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
+              "file": "crates/eos-engine/src/run_output/layout.rs",
+              "module": "run_output::layout",
               "line": 7
             },
             {
@@ -11181,15 +11304,15 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
+              "file": "crates/eos-engine/src/run_output/layout.rs",
+              "module": "run_output::layout",
               "line": 11
             },
             {
               "kind": "fn",
               "name": "safe_segment",
-              "visibility": "private",
-              "signature": "fn safe_segment < 'a > (field : & 'static str , value : & 'a str) -> Result < & 'a str >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn safe_segment < 'a > (field : & 'static str , value : & 'a str) -> Result < & 'a str >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11197,15 +11320,15 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/layout.rs",
-              "module": "records::layout",
+              "file": "crates/eos-engine/src/run_output/layout.rs",
+              "module": "run_output::layout",
               "line": 19
             }
           ]
         },
         {
-          "path": "crates/eos-engine/src/records/store.rs",
-          "module": "records::store",
+          "path": "crates/eos-engine/src/run_output/record_store.rs",
+          "module": "run_output::record_store",
           "items": [
             {
               "kind": "struct",
@@ -11228,9 +11351,9 @@
                 "derive: Clone",
                 "derive: Debug"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 15
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 16
             },
             {
               "kind": "impl",
@@ -11245,28 +11368,28 @@
                   "signature": "pub fn new (root : impl Into < PathBuf >) -> Self",
                   "kind": "constructor",
                   "docs": "Create a store rooted at `root`.",
-                  "line": 22
+                  "line": 23
                 },
                 {
                   "name": "start_agent_run_at",
                   "signature": "pub async fn start_agent_run_at (& self , record_target : & AgentRunRecordTarget , agent_name : & str , system_prompt : & str , initial_messages : & [Message] ,) -> Result < AgentRunRecordHandle >",
                   "kind": "method",
                   "docs": "Create one agent-run record directory, write its initial messages, and\nappend the initial record-local events.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if path validation, directory\ncreation, JSON encoding, or file append fails.",
-                  "line": 28
+                  "line": 29
                 },
                 {
                   "name": "read_messages_at",
                   "signature": "pub async fn read_messages_at (& self , record_dir : & AgentRunRecordDir , after_byte : u64 ,) -> Result < MessageBytes >",
                   "kind": "method",
                   "docs": "Read raw `messages.jsonl` bytes for a resolved record directory after\n`after_byte`.\n\n# Errors\nReturns [`super::AgentRunRecordError::NotFound`] if the record directory\nor message file does not exist.",
-                  "line": 88
+                  "line": 89
                 },
                 {
                   "name": "read_record_events_at",
                   "signature": "pub async fn read_record_events_at (& self , record_dir : & AgentRunRecordDir , after_seq : u64 ,) -> Result < Vec < AgentRunRecordEvent > >",
                   "kind": "method",
                   "docs": "Replay record-local events for a resolved record directory with\n`seq > after_seq`.\n\n# Errors\nReturns [`super::AgentRunRecordError::NotFound`] if the record directory\nor event file does not exist.",
-                  "line": 103
+                  "line": 104
                 }
               ],
               "impl_target": "AgentRunRecordStore",
@@ -11275,9 +11398,9 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 21
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 22
             },
             {
               "kind": "struct",
@@ -11320,9 +11443,9 @@
                 "derive: Clone",
                 "derive: Debug"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 119
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 120
             },
             {
               "kind": "impl",
@@ -11337,63 +11460,63 @@
                   "signature": "pub fn record_dir (& self) -> & Path",
                   "kind": "method",
                   "docs": "Record directory.",
-                  "line": 130
+                  "line": 131
                 },
                 {
                   "name": "initial_message_count",
                   "signature": "pub fn initial_message_count (& self) -> usize",
                   "kind": "method",
                   "docs": "Number of initial message rows written when the run was started.",
-                  "line": 136
+                  "line": 137
                 },
                 {
                   "name": "append_messages",
                   "signature": "pub async fn append_messages (& self , messages : & [Message]) -> Result < MessageAppendRange >",
                   "kind": "method",
                   "docs": "Append later model-visible messages and announce the byte range in\n`events.jsonl`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if message or event append fails.",
-                  "line": 142
+                  "line": 143
                 },
                 {
                   "name": "read_messages",
                   "signature": "pub async fn read_messages (& self , after_byte : u64) -> Result < MessageBytes >",
                   "kind": "method",
                   "docs": "Read raw `messages.jsonl` bytes after `after_byte`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if the message file is missing or\nthe byte offset is out of range.",
-                  "line": 170
+                  "line": 171
                 },
                 {
                   "name": "read_record_events",
                   "signature": "pub async fn read_record_events (& self , after_seq : u64) -> Result < Vec < AgentRunRecordEvent > >",
                   "kind": "method",
                   "docs": "Replay record-local events with `seq > after_seq`.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if the event file is missing or an\nevent row cannot be decoded.",
-                  "line": 179
+                  "line": 180
                 },
                 {
                   "name": "finish",
                   "signature": "pub async fn finish (& self , status : AgentRunRecordFinishStatus) -> Result < () >",
                   "kind": "method",
                   "docs": "Append the terminal record event.\n\n# Errors\nReturns [`super::AgentRunRecordError`] if event append fails.",
-                  "line": 188
+                  "line": 189
                 },
                 {
                   "name": "append_record_event",
                   "signature": "async fn append_record_event (& self , kind : impl Into < String > , payload : JsonObject ,) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 198
+                  "line": 199
                 },
                 {
                   "name": "append_initial_messages",
                   "signature": "async fn append_initial_messages (& self , system_prompt : & str , initial_messages : & [Message] ,) -> Result < MessageAppendRange >",
                   "kind": "method",
                   "docs": null,
-                  "line": 206
+                  "line": 207
                 },
                 {
                   "name": "from_record_dir",
                   "signature": "fn from_record_dir (record_dir : PathBuf , identity : AgentRunRecordIdentity) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 220
+                  "line": 221
                 }
               ],
               "impl_target": "AgentRunRecordHandle",
@@ -11402,9 +11525,9 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 129
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 130
             },
             {
               "kind": "enum",
@@ -11434,9 +11557,9 @@
                 "derive: PartialEq",
                 "non_exhaustive"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 231
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 232
             },
             {
               "kind": "impl",
@@ -11451,7 +11574,7 @@
                   "signature": "const fn as_str (self) -> & 'static str",
                   "kind": "method",
                   "docs": null,
-                  "line": 242
+                  "line": 243
                 }
               ],
               "impl_target": "AgentRunRecordFinishStatus",
@@ -11460,30 +11583,30 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 241
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 242
             },
             {
               "kind": "struct",
               "name": "AgentRunRecordIdentity",
-              "visibility": "pub",
-              "signature": "pub struct AgentRunRecordIdentity",
+              "visibility": "private",
+              "signature": "struct AgentRunRecordIdentity",
               "fields": [
                 {
                   "name": "request_id",
-                  "visibility": "pub",
-                  "ty": "String"
+                  "visibility": "private",
+                  "ty": "RequestId"
                 },
                 {
                   "name": "task_id",
-                  "visibility": "pub",
-                  "ty": "String"
+                  "visibility": "private",
+                  "ty": "TaskId"
                 },
                 {
                   "name": "agent_run_id",
-                  "visibility": "pub",
-                  "ty": "String"
+                  "visibility": "private",
+                  "ty": "AgentRunId"
                 }
               ],
               "variants": [],
@@ -11497,9 +11620,9 @@
                 "derive: Eq",
                 "derive: PartialEq"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 250
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 251
             },
             {
               "kind": "struct",
@@ -11535,9 +11658,9 @@
                 "derive: Eq",
                 "derive: PartialEq"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 261
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 259
             },
             {
               "kind": "struct",
@@ -11567,9 +11690,9 @@
                 "derive: Eq",
                 "derive: PartialEq"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 272
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 270
             },
             {
               "kind": "struct",
@@ -11626,9 +11749,9 @@
                 "derive: Serialize",
                 "serde"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 281
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 279
             },
             {
               "kind": "struct",
@@ -11676,9 +11799,9 @@
                 "derive: Serialize",
                 "serde"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 303
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 301
             },
             {
               "kind": "struct",
@@ -11726,9 +11849,9 @@
                 "derive: Serialize",
                 "serde"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 314
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 312
             },
             {
               "kind": "fn",
@@ -11744,9 +11867,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 325
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 323
             },
             {
               "kind": "fn",
@@ -11762,9 +11885,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 345
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 343
             },
             {
               "kind": "fn",
@@ -11780,9 +11903,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 373
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 371
             },
             {
               "kind": "fn",
@@ -11798,9 +11921,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 404
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 402
             },
             {
               "kind": "fn",
@@ -11816,9 +11939,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 435
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 433
             },
             {
               "kind": "fn",
@@ -11834,9 +11957,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 452
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 450
             },
             {
               "kind": "fn",
@@ -11852,9 +11975,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 476
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 474
             },
             {
               "kind": "fn",
@@ -11870,9 +11993,9 @@
               "tags": [
                 "async"
               ],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 495
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 493
             },
             {
               "kind": "fn",
@@ -11886,9 +12009,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 503
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 501
             },
             {
               "kind": "fn",
@@ -11902,25 +12025,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 510
-            },
-            {
-              "kind": "fn",
-              "name": "safe_segment",
-              "visibility": "private",
-              "signature": "fn safe_segment < 'a > (field : & 'static str , value : & 'a str) -> Result < & 'a str >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 529
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 508
             },
             {
               "kind": "fn",
@@ -11934,9 +12041,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 542
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 527
             },
             {
               "kind": "fn",
@@ -11950,9 +12057,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 557
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 542
             },
             {
               "kind": "fn",
@@ -11966,9 +12073,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 584
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 569
             },
             {
               "kind": "fn",
@@ -11982,9 +12089,9 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 592
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 577
             },
             {
               "kind": "fn",
@@ -11998,15 +12105,15 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/records/store.rs",
-              "module": "records::store",
-              "line": 610
+              "file": "crates/eos-engine/src/run_output/record_store.rs",
+              "module": "run_output::record_store",
+              "line": 595
             }
           ]
         },
         {
-          "path": "crates/eos-engine/src/records/stream.rs",
-          "module": "records::stream",
+          "path": "crates/eos-engine/src/run_output/stream.rs",
+          "module": "run_output::stream",
           "items": [
             {
               "kind": "struct",
@@ -12044,9 +12151,9 @@
                 "derive: Serialize",
                 "serde"
               ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 10
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream",
+              "line": 8
             },
             {
               "kind": "enum",
@@ -12316,9 +12423,9 @@
                 "serde: rename_all",
                 "serde: tag"
               ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 21
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream",
+              "line": 19
             },
             {
               "kind": "impl",
@@ -12333,14 +12440,14 @@
                   "signature": "fn schema_name () -> String",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 155
+                  "line": 153
                 },
                 {
                   "name": "json_schema",
                   "signature": "fn json_schema (gen : & mut schemars :: gen :: SchemaGenerator) -> schemars :: schema :: Schema",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 159
+                  "line": 157
                 }
               ],
               "impl_target": "AgentRunStreamEvent",
@@ -12350,9 +12457,9 @@
                 "impl",
                 "trait-impl"
               ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 154
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream",
+              "line": 152
             },
             {
               "kind": "type",
@@ -12366,9 +12473,9 @@
               "trait_name": null,
               "docs": "Per-run stream/tool/system event sink.",
               "tags": [],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 164
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream",
+              "line": 162
             },
             {
               "kind": "type",
@@ -12382,120 +12489,9 @@
               "trait_name": null,
               "docs": "Factory for a live stream sink bound to one loop start request.",
               "tags": [],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 167
-            },
-            {
-              "kind": "struct",
-              "name": "AgentRunOutputs",
-              "visibility": "pub",
-              "signature": "pub struct AgentRunOutputs",
-              "fields": [
-                {
-                  "name": "stream",
-                  "visibility": "private",
-                  "ty": "Option < AgentRunStreamSink >"
-                },
-                {
-                  "name": "record",
-                  "visibility": "private",
-                  "ty": "Option < AgentRunRecordStore >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Output aggregate for live stream observations and durable run records.",
-              "tags": [
-                "derive: Clone",
-                "derive: Default"
-              ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 171
-            },
-            {
-              "kind": "impl",
-              "name": "impl std :: fmt :: Debug for AgentRunOutputs",
-              "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for AgentRunOutputs",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "fmt",
-                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 179
-                }
-              ],
-              "impl_target": "AgentRunOutputs",
-              "trait_name": "std :: fmt :: Debug",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 178
-            },
-            {
-              "kind": "impl",
-              "name": "impl AgentRunOutputs",
-              "visibility": "private",
-              "signature": "impl AgentRunOutputs",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new () -> Self",
-                  "kind": "constructor",
-                  "docs": "Create an empty output aggregate.",
-                  "line": 188
-                },
-                {
-                  "name": "with_stream",
-                  "signature": "pub fn with_stream (mut self , stream : Option < AgentRunStreamSink >) -> Self",
-                  "kind": "method",
-                  "docs": "Attach live stream observation.",
-                  "line": 194
-                },
-                {
-                  "name": "with_record",
-                  "signature": "pub fn with_record (mut self , record : Option < AgentRunRecordStore >) -> Self",
-                  "kind": "method",
-                  "docs": "Attach durable agent-run record writing.",
-                  "line": 201
-                },
-                {
-                  "name": "observe",
-                  "signature": "pub(crate) fn observe (& self , event : & AgentRunStreamEvent)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 208
-                },
-                {
-                  "name": "record_store",
-                  "signature": "pub(crate) fn record_store (& self) -> Option < & AgentRunRecordStore >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 214
-                }
-              ],
-              "impl_target": "AgentRunOutputs",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 187
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream",
+              "line": 165
             },
             {
               "kind": "fn",
@@ -12511,9 +12507,9 @@
               "tags": [
                 "must_use"
               ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream",
-              "line": 219
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream",
+              "line": 169
             },
             {
               "kind": "fn",
@@ -12529,9 +12525,9 @@
               "tags": [
                 "test"
               ],
-              "file": "crates/eos-engine/src/records/stream.rs",
-              "module": "records::stream::tests",
-              "line": 290
+              "file": "crates/eos-engine/src/run_output/stream.rs",
+              "module": "run_output::stream::tests",
+              "line": 240
             }
           ]
         },

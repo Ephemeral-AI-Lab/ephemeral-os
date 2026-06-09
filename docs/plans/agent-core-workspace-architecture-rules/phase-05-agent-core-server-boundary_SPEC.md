@@ -79,9 +79,9 @@ The following routes do not belong to `AgentCoreService` in this phase:
 | `GET /api/user-requests/{request_id}/events` | `GET /api/agent-core/requests/{request_id}/events` | backend event log/SSE layer |
 | `GET /api/user-requests/{request_id}/stream` | `GET /api/agent-core/requests/{request_id}/stream` | backend event log/SSE layer |
 | `GET /api/tasks/{task_id}` | `GET /api/agent-core/tasks/{task_id}` | task read handler over store rows |
-| `GET /api/tasks/{task_id}/transcript` | `GET /api/agent-core/tasks/{task_id}/transcript` | `eos-engine::records::AgentRunRecordWriter` read path |
-| `GET /api/agent-runs/{agent_run_id}/messages` | `GET /api/agent-core/agent-runs/{agent_run_id}/messages` | `eos-engine::records::AgentRunRecordWriter` read path |
-| `GET /api/agent-runs/{agent_run_id}/events` | `GET /api/agent-core/agent-runs/{agent_run_id}/events` | `eos-engine::records::AgentRunRecordWriter` read path |
+| `GET /api/tasks/{task_id}/transcript` | `GET /api/agent-core/tasks/{task_id}/transcript` | `eos-engine::run_output::AgentRunRecordStore` read path |
+| `GET /api/agent-runs/{agent_run_id}/messages` | `GET /api/agent-core/agent-runs/{agent_run_id}/messages` | `eos-engine::run_output::AgentRunRecordStore` read path |
+| `GET /api/agent-runs/{agent_run_id}/events` | `GET /api/agent-core/agent-runs/{agent_run_id}/events` | `eos-engine::run_output::AgentRunRecordStore` read path |
 | `GET /api/agent-runs/{agent_run_id}/stream` | `GET /api/agent-core/agent-runs/{agent_run_id}/stream` | backend SSE layer over agent-run records |
 
 Do not pull transcript/record routes into `eos-agent-core-server` just to reduce
@@ -557,7 +557,7 @@ respectively, not on `AgentCoreService` as ad hoc SQL.
 | implementation folder | `user_request/` |
 | backend agent-core namespace | `/api/agent-core` |
 | active agent-run owner | `eos-agent-run::ActiveAgentRunRegistry` |
-| record writer owner | `eos-engine::records::AgentRunRecordWriter` |
+| record store owner | `eos-engine::run_output::AgentRunRecordStore` |
 
 Forbidden target names:
 
@@ -598,7 +598,7 @@ references during migration. They must not appear in the final target.
 | 7 | Remove `RunControl` from backend API state | Implemented |
 | 8 | Remove `AgentCoreReads` from backend API state | Implemented |
 | 9 | Remove top-level agent-core cancellation registry/handler from public exports | Implemented |
-| 10 | Keep message/transcript routes backed by `eos-engine::records::AgentRunRecordWriter` | Implemented |
+| 10 | Keep message/transcript routes backed by `eos-engine::run_output::AgentRunRecordStore` | Implemented |
 | 11 | Update backend OpenAPI and API contract tests for `/api/agent-core/*` paths | Implemented |
 | 12 | Update `agent-core/Cargo.toml` workspace members and workspace dependencies | Implemented |
 | 13 | Update phase index and architecture docs after compile gates pass | Implemented |
@@ -637,7 +637,7 @@ references during migration. They must not appear in the final target.
   delegates active handle teardown to `AgentRunService`.
 - Workflow, iteration, and attempt cancellation bookkeeping is request-scoped
   and store-owned.
-- Message and transcript routes still use `eos-engine::records::AgentRunRecordWriter`.
+- Message and transcript routes still use `eos-engine::run_output::AgentRunRecordStore`.
 - `router.rs` remains in `backend-server`; no axum router is added under
   `agent-core`.
 - `cargo check -p eos-agent-core-server --all-targets` passes.

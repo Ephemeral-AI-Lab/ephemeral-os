@@ -2,8 +2,9 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use eos_types::{
-    AgentRunRecordDir, AgentRunRecordTarget, ContentBlock, JsonObject, Message, MessageRole,
-    ParentedAgentRunKind, TaskAgentRunKind, UtcDateTime, WorkflowTaskRole,
+    AgentRunId, AgentRunRecordDir, AgentRunRecordTarget, ContentBlock, JsonObject, Message,
+    MessageRole, ParentedAgentRunKind, RequestId, TaskAgentRunKind, TaskId, UtcDateTime,
+    WorkflowTaskRole,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -45,9 +46,9 @@ impl AgentRunRecordStore {
         let mut handle = AgentRunRecordHandle::from_record_dir(
             record_dir,
             AgentRunRecordIdentity {
-                request_id: record_target.request_id.to_string(),
-                task_id: record_target.task_id.to_string(),
-                agent_run_id: record_target.agent_run_id.to_string(),
+                request_id: record_target.request_id.clone(),
+                task_id: record_target.task_id.clone(),
+                agent_run_id: record_target.agent_run_id.clone(),
             },
         );
 
@@ -249,13 +250,10 @@ impl AgentRunRecordFinishStatus {
 
 /// Stable identity columns written on every record row.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AgentRunRecordIdentity {
-    /// Owning request id.
-    pub request_id: String,
-    /// Owning task id.
-    pub task_id: String,
-    /// Agent-run id.
-    pub agent_run_id: String,
+struct AgentRunRecordIdentity {
+    request_id: RequestId,
+    task_id: TaskId,
+    agent_run_id: AgentRunId,
 }
 
 /// Byte range produced by a message append.
@@ -412,9 +410,9 @@ async fn append_record_event(
     }
     let seq = next_record_event_seq(path).await?;
     let event = AgentRunRecordEvent {
-        request_id: identity.request_id.clone(),
-        task_id: identity.task_id.clone(),
-        agent_run_id: identity.agent_run_id.clone(),
+        request_id: identity.request_id.as_str().to_owned(),
+        task_id: identity.task_id.as_str().to_owned(),
+        agent_run_id: identity.agent_run_id.as_str().to_owned(),
         seq,
         kind,
         payload,
@@ -501,42 +499,29 @@ async fn file_len_or_zero(path: &Path) -> Result<u64> {
 }
 
 fn validate_record_target(target: &AgentRunRecordTarget) -> Result<()> {
-    safe_segment("request_id", target.request_id.as_str())?;
-    safe_segment("task_id", target.task_id.as_str())?;
-    safe_segment("agent-run", target.agent_run_id.as_str())?;
+    layout::safe_segment("request_id", target.request_id.as_str())?;
+    layout::safe_segment("task_id", target.task_id.as_str())?;
+    layout::safe_segment("agent-run", target.agent_run_id.as_str())?;
     validate_kind_segments(&target.task_agent_run_kind)
 }
 
 fn validate_kind_segments(kind: &TaskAgentRunKind) -> Result<()> {
     match kind {
         TaskAgentRunKind::Workflow { workflow, .. } => {
-            safe_segment("workflow", workflow.workflow_id.as_str())?;
-            safe_segment("iteration", workflow.iteration_id.as_str())?;
-            safe_segment("attempt", workflow.attempt_id.as_str())?;
+            layout::safe_segment("workflow", workflow.workflow_id.as_str())?;
+            layout::safe_segment("iteration", workflow.iteration_id.as_str())?;
+            layout::safe_segment("attempt", workflow.attempt_id.as_str())?;
             Ok(())
         }
         TaskAgentRunKind::Parented {
             parent_agent_run_id,
             ..
         } => {
-            safe_segment("agent_run_id", parent_agent_run_id.as_str())?;
+            layout::safe_segment("agent_run_id", parent_agent_run_id.as_str())?;
             Ok(())
         }
         TaskAgentRunKind::Root => Ok(()),
     }
-}
-
-fn safe_segment<'a>(field: &'static str, value: &'a str) -> Result<&'a str> {
-    if value.is_empty()
-        || value == "."
-        || value == ".."
-        || value.contains('/')
-        || value.contains('\\')
-        || value.contains(std::path::MAIN_SEPARATOR)
-    {
-        return Err(AgentRunRecordError::unsafe_segment(field, value));
-    }
-    Ok(value)
 }
 
 fn node_type(kind: &TaskAgentRunKind) -> &'static str {

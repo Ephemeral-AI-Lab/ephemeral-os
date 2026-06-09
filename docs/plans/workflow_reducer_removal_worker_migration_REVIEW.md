@@ -422,22 +422,38 @@ agent-core/crates/eos-agent-run/src/spawn.rs   reshape SpawnAgentTarget::Workflo
 pub enum TaskRole { Root, Planner, Worker }                 // was {Root,Planner,Generator,Reducer}
 pub const TASK_AGENT_ROLES: [TaskRole; 3] = [Root, Planner, Worker];
 impl TaskStatus { pub const fn is_terminal(self) -> bool {/* Done|Failed|Blocked|Cancelled */} }
-pub struct Task {                                           // `outcomes: Vec<…>` field REMOVED
+pub struct Task {                                           // execution state + direct-parent anchor
     pub id: TaskId, pub request_id: RequestId, pub role: TaskRole,
-    pub instruction: String, pub status: TaskStatus,
-    pub workflow_id: Option<WorkflowId>, pub iteration_id: Option<IterationId>,
-    pub attempt_id: Option<AttemptId>, pub agent_name: Option<String>,
-    pub needs: Vec<TaskId>,
+    pub instruction: String, pub status: TaskStatus,        // instruction = universal runner input (kept)
+    pub attempt_id: Option<AttemptId>,                      // DIRECT workflow-parent FK (queried; kept)
+    pub agent_name: Option<String>,
     pub terminal_payload: Option<JsonObject>,               // stays Option<JsonObject>; holds a TaskOutcome
 }   // ParentedRun unchanged; its terminal_payload holds a ParentedOutcome (separate family)
+// ▶ RECOMMENDED normalization (review §7, beyond SPEC):
+//   - DROP workflow_id, iteration_id from Task (+ dead indexes ix_tasks_workflow_id/iteration_id):
+//     never filtered by any query; derive via attempt_id → Attempt → Iteration.
+//   - DROP needs from Task: it is PLAN structure (WorkItemSpec.needs), not Task state. The DAG
+//     scheduler becomes plan-driven (ready/dag_resolution take work_items, not &[Task].needs).
+//   - KEEP attempt_id: the one real WHERE predicate + the record-path lineage root.
 
 // ── eos-types work_item.rs ──
 pub struct WorkItemId(String);                              // was GeneratorId
 pub struct DeferredGoal(String);                            // kept (PlanDisposition deleted)
 pub struct WorkItemSpec { pub id: WorkItemId, pub agent_name: AgentName,
                           pub work_spec: String, pub needs: Vec<WorkItemId> }
-pub fn planner_task_id(attempt_id: &AttemptId) -> TaskId;                       // deterministic
-pub fn worker_task_id(attempt_id: &AttemptId, work_item_id: &WorkItemId) -> TaskId;
+pub fn planner_task_id(attempt_id: &AttemptId) -> TaskId;             // "{attempt_id}:planner"
+pub fn worker_task_id(attempt_id: &AttemptId, work_item_id: &WorkItemId) -> TaskId;  // "{attempt_id}:{work_item_id}"
+// ▶ ID encoding change: drop the ":gen:"/":red:" role segments — workers are denoted by work_item_id,
+//   attempt-anchored only for global uniqueness (work_item_ids are plan-local: "w1","w2").
+//   DELETE reverse parsers generator_id_from_task_id / reducer_id_from_task_id: data access uses the
+//   stored Task.attempt_id column, never id-string parsing. The WorkflowNodeId param of the old
+//   workflow_task_id() goes with it.
+// ▶ Creation: planner authors work_item_id in submit_plan_outcome (plan = SoT, no worker rows yet);
+//   the worker_task_id is MINTED AT SPAWN by create_workflow_task_agent_run (deterministic
+//   = worker_task_id(attempt_id, work_item_id)), not eagerly materialized — so materialize_plan_tasks'
+//   eager worker-row loop is deleted and the DAG scheduler MUST be plan-driven (reads work_items +
+//   spawned-task statuses, since unspawned workers have no row). AgentLaunch / SpawnAgentTarget::Workflow
+//   carry the existing WorkflowCoordinates{workflow_id,iteration_id,attempt_id} bundle + work_item_id.
 
 // ── eos-types outcome.rs ──  (DELETED: ExecutionRole, ExecutionTaskOutcome, TaskOutcomeStatus,
 //                                       present_status, execution_outcome_for_submission)
@@ -504,4 +520,110 @@ pub enum TerminalTool { RootTask, Plan, Worker, Advisor, Subagent }   // 6 → 5
 // ToolName terminals: SubmitRootTaskOutcome, SubmitPlanOutcome, SubmitWorkerOutcome,
 //                     SubmitAdvisorOutcome, SubmitSubagentOutcome   (ALL: 22 → 21)
 ```
+
+### Target workflow-store DB schema
+
+**`work_item` is NOT a table.** The plan is the single source of truth and lives as
+typed JSON in the **planner run's `terminal_payload`** (`TaskOutcome::Planner`); each
+work item is *executed* as a **worker `task_runs` row** linked by `work_item_id`.
+Where each piece of a work item lives:
+
+| Work-item piece | Home |
+| --- | --- |
+| `work_item_id`, `work_spec`, `needs`, `agent_name` (authored structure) | `task_runs(role='planner').terminal_payload` → `TaskOutcome::Planner.work_items[]` |
+| execution status + deliverable | worker `task_runs(role='worker')` row: `status` + `terminal_payload` (`TaskOutcome::Worker`) |
+| work-item ↔ task link | worker row's `work_item_id` column; `task_id = worker_task_id(attempt_id, work_item_id)` |
+
+```sql
+-- WORKFLOW (lifecycle authority for the whole run)
+CREATE TABLE workflows (
+    id             TEXT PRIMARY KEY,
+    request_id     TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+    parent_task_id TEXT NOT NULL,
+    launched_by_agent_run_id TEXT NOT NULL,
+    tool_use_id    TEXT,
+    goal           TEXT NOT NULL,
+    status         TEXT NOT NULL,                  -- WorkflowStatus
+    iteration_ids  TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT
+    -- DROP outcomes  (read-side projection over the latest iteration; §11 symmetry)
+);
+
+-- ITERATION (vertical / deferred-goal-continuation axis)
+CREATE TABLE iterations (
+    id              TEXT PRIMARY KEY,
+    workflow_id     TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+    sequence_no     INTEGER NOT NULL,
+    creation_reason TEXT NOT NULL,
+    goal            TEXT NOT NULL,
+    attempt_budget  INTEGER NOT NULL,
+    status          TEXT NOT NULL,                 -- IterationStatus
+    attempt_ids     TEXT NOT NULL DEFAULT '[]',
+    deferred_goal_for_next_iteration TEXT,         -- DeferredGoal (KEEP; rename from deferred_goal)
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT,
+    CONSTRAINT uq_iteration_workflow_sequence UNIQUE (workflow_id, sequence_no)
+    -- DROP outcomes  (read-side projection)
+);
+
+-- ATTEMPT (horizontal / retry axis)
+CREATE TABLE attempts (
+    id                  TEXT PRIMARY KEY,
+    iteration_id        TEXT NOT NULL REFERENCES iterations(id) ON DELETE CASCADE,
+    workflow_id         TEXT NOT NULL,             -- denormalized; derivable via iteration_id (optional drop)
+    attempt_sequence_no INTEGER NOT NULL,
+    stage               TEXT NOT NULL,             -- Plan|Run|Closed (only Plan-vs-Run is non-redundant w/ status)
+    status              TEXT NOT NULL,             -- AttemptStatus
+    planner_task_id     TEXT,                      -- KEEP (recording anchor + "planning started" guard)
+    fail_reason         TEXT,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT,
+    CONSTRAINT uq_attempt_iteration_sequence UNIQUE (iteration_id, attempt_sequence_no)
+    -- DROP generator_task_ids, reducer_task_ids   (plan lives in TaskOutcome::Planner)
+    -- DROP outcomes                               (read-side projection over worker tasks)
+    -- DROP deferred_goal                          (lives in iterations.deferred_goal_for_next_iteration)
+);
+
+-- WORK ITEM execution rows (planner + workers) live in task_runs:
+CREATE TABLE task_runs (
+    task_id          TEXT PRIMARY KEY,             -- planner "{attempt}:planner"; worker "{attempt}:{work_item_id}"
+    agent_run_id     TEXT NOT NULL UNIQUE,
+    request_id       TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+    role             TEXT NOT NULL,                -- 'root' | 'planner' | 'worker'
+    status           TEXT NOT NULL,
+    attempt_id       TEXT,                         -- KEEP (direct-parent anchor; the one filtered predicate)
+    work_item_id     TEXT,                         -- ADD: worker's plan denotation (NULL for root/planner)
+    agent_name       TEXT NOT NULL,
+    terminal_payload TEXT,                         -- TaskOutcome {Root|Planner|Worker} (JSON)
+    token_count INTEGER NOT NULL DEFAULT 0, error TEXT,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT,
+    CHECK (
+      (role='root'    AND attempt_id IS NULL     AND work_item_id IS NULL)
+      OR (role='planner' AND attempt_id IS NOT NULL AND work_item_id IS NULL)
+      OR (role='worker'  AND attempt_id IS NOT NULL AND work_item_id IS NOT NULL)
+    )
+    -- DROP workflow_id, iteration_id (+ ix_task_runs_workflow_coordinate) → derive via attempt_id;
+    --   keep the coordinate ONLY if a real reporting query filters task_runs by it.
+);
+-- (the schedulable `tasks` table mirrors this for the worker DAG; same role/attempt_id/work_item_id
+--  narrowing applies, and its needs/outcomes/workflow_id/iteration_id columns drop per review §7.)
+```
+
+**Optional alternative — a first-class `work_items` table.** Only if the scheduler
+or tooling needs to *query* plan structure relationally rather than parse the
+planner's `terminal_payload`:
+
+```sql
+CREATE TABLE work_items (             -- DEVIATES from SPEC "plan lives only in TaskOutcome::Planner"
+    attempt_id   TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+    work_item_id TEXT NOT NULL,       -- planner-authored, unique within attempt
+    agent_name   TEXT NOT NULL,
+    work_spec    TEXT NOT NULL,
+    needs        TEXT NOT NULL DEFAULT '[]',   -- JSON array of WorkItemId
+    PRIMARY KEY (attempt_id, work_item_id)
+);
+```
+Trade-off: gains relational queryability + a clean FK target for worker rows;
+costs a second write path that must stay in sync with `TaskOutcome::Planner` and
+breaks the SPEC's single-source-of-truth invariant. **Recommendation: don't** — the
+plan is one immutable JSON row (the planner run's payload), cheap to load and cache;
+keep it as the sole authority.
 ```

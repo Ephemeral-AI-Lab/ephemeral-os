@@ -5,8 +5,6 @@ use eos_types::{AgentRunId, JsonObject, StartAgentLoopRequest, ToolUseId};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::AgentRunRecordStore;
-
 /// Payload carried by [`AgentRunStreamEvent::AssistantMessageComplete`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AssistantMessageComplete {
@@ -167,54 +165,6 @@ pub type AgentRunStreamSink = Arc<dyn Fn(&AgentRunStreamEvent) + Send + Sync>;
 /// Factory for a live stream sink bound to one loop start request.
 pub type AgentRunStreamSinkFactory =
     Arc<dyn Fn(&StartAgentLoopRequest) -> Option<AgentRunStreamSink> + Send + Sync>;
-
-/// Output aggregate for live stream observations and durable run records.
-#[derive(Clone, Default)]
-pub struct AgentRunOutputs {
-    stream: Option<AgentRunStreamSink>,
-    record: Option<AgentRunRecordStore>,
-}
-
-impl std::fmt::Debug for AgentRunOutputs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AgentRunOutputs")
-            .field("has_stream", &self.stream.is_some())
-            .field("has_record", &self.record.is_some())
-            .finish()
-    }
-}
-
-impl AgentRunOutputs {
-    /// Create an empty output aggregate.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Attach live stream observation.
-    #[must_use]
-    pub fn with_stream(mut self, stream: Option<AgentRunStreamSink>) -> Self {
-        self.stream = stream;
-        self
-    }
-
-    /// Attach durable agent-run record writing.
-    #[must_use]
-    pub fn with_record(mut self, record: Option<AgentRunRecordStore>) -> Self {
-        self.record = record;
-        self
-    }
-
-    pub(crate) fn observe(&self, event: &AgentRunStreamEvent) {
-        if let Some(stream) = &self.stream {
-            stream(event);
-        }
-    }
-
-    pub(crate) fn record_store(&self) -> Option<&AgentRunRecordStore> {
-        self.record.as_ref()
-    }
-}
 
 /// Fill missing event identity from the query context identity.
 #[must_use]

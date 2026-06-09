@@ -17,7 +17,7 @@ use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{EventBus, SandboxManager, SandboxManagerError};
 use eos_backend_store::{EventLogRepo, RunMetaRepo};
 use eos_backend_types::SandboxView;
-use eos_engine::records::AgentRunRecordStore as AgentRunRecords;
+use eos_engine::run_output::AgentRunRecordStore as AgentRunRecords;
 use eos_types::{AgentRunStore, SandboxId, TaskAgentRunStore, TaskStore};
 
 use crate::handlers;
@@ -86,7 +86,7 @@ pub struct AppStateParts {
     pub stats: StatsReader,
     /// Durable task store.
     pub task_store: Arc<dyn TaskStore>,
-    /// Durable compatibility agent-run store.
+    /// Durable agent-run store.
     pub agent_run_store: Arc<dyn AgentRunStore>,
     /// Durable task-agent-run lineage store.
     pub task_agent_run_store: Arc<dyn TaskAgentRunStore>,

@@ -6,7 +6,7 @@ pub mod agent_loop;
 pub mod background;
 mod notifications;
 pub mod provider_stream;
-pub mod records;
+pub mod run_output;
 mod support;
 mod telemetry;
 pub mod tool_call;
@@ -27,7 +27,7 @@ pub use notifications::{
 pub use provider_stream::{
     EngineStream, LlmProviderStreamSource, ProviderStreamSource, ProviderStreamSourceFactory,
 };
-pub use records::{
+pub use run_output::{
     stamp_identity, AgentRunOutputs, AgentRunRecordStore, AgentRunStreamEvent, AgentRunStreamSink,
     AgentRunStreamSinkFactory, AssistantMessageComplete,
 };

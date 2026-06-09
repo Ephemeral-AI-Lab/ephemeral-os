@@ -1,14 +1,14 @@
 # eos-engine Agent-Run Records and Stream Output Merge - SPEC
 
-Status: Implemented (2026-06-09 — records/event merge landed and verified)
+Status: Implemented (2026-06-09 — run-output cleanup landed and verified)
 Date: 2026-06-09
 Owner: `eos-engine`
 
 Scope:
 - `agent-core/crates/eos-engine/src/event.rs` (single file with inline
   `event`/`outputs`/`printer`/`sink` modules; there is no `event/` directory)
-- `agent-core/crates/eos-engine/src/records.rs`
-- `agent-core/crates/eos-engine/src/records/`
+- `agent-core/crates/eos-engine/src/run_output.rs`
+- `agent-core/crates/eos-engine/src/run_output/`
 - `agent-core/crates/eos-engine/src/provider_stream.rs` (the renamed
   `AgentRunStreamEvent` producer and `EngineStream` owner)
 - `agent-core/crates/eos-engine/src/agent_loop/{executor,launcher}.rs`
@@ -30,7 +30,7 @@ Related:
 
 ## 1. Intent
 
-Merge the current `eos-engine` `event` module into `records` and simplify the
+Merge the current `eos-engine` `event` module into `run_output` and simplify the
 record implementation at the same time. The engine should have one local owner
 for agent-run output surfaces:
 
@@ -40,15 +40,17 @@ for agent-run output surfaces:
 - live stream sinks,
 - the output fan-out object passed into the agent loop.
 
-After this refactor, `records` is the umbrella module, `stream` names live
-observation, and `record` names durable disk state. The file layout should get
-smaller, not just move the current split under a new folder.
+After this refactor, `run_output` is the umbrella module, `stream` names live
+observation, `record_store` names durable disk state, and `AgentRunOutputs`
+lives at the umbrella root instead of under either child. The file layout should
+get smaller, not just move the current split under a new folder.
 
-This deliberately widens `records` from "durable disk state" to "agent-run
-output" (live stream plus durable record). The canonical producer of the live
-stream is still `provider_stream.rs`, so in-crate producers and the `eos-testkit`
-helpers import the stream types through the engine root facade (`crate::` /
-`eos_engine::` re-exports) rather than reaching into `records::stream`.
+This deliberately uses `run_output` for the aggregate concept instead of making
+`records` mean both durable disk state and live stream observations. The
+canonical producer of the live stream is still `provider_stream`, so in-crate
+producers and the `eos-testkit` helpers import the stream types through the
+engine root facade (`crate::` / `eos_engine::` re-exports) rather than reaching
+into `run_output::stream`.
 
 ## 2. Problem
 
@@ -69,12 +71,13 @@ crates/eos-engine/src/
 ```
 
 `event/` is not a directory today; it was already collapsed into one `event.rs`.
-The simplification below is a consolidation of `records/` plus a fold of
-`event.rs`, not an un-nesting of an `event/` tree.
+The simplification below is a consolidation of the old `records/` files plus a
+fold of `event.rs`, followed by a final rename of the umbrella owner to
+`run_output`.
 
 That creates three naming problems:
 
-- the `event` module is not the `events.jsonl` owner; `records/` is.
+- the `event` module is not the `events.jsonl` owner; the durable record store is.
 - `NodeEvent` is a durable `events.jsonl` row, not a live stream event.
 - `EngineEventOutputs` carries an `AgentRunRecordWriter`, so live output and
   durable output are already coupled but named as if only event streaming is
@@ -101,27 +104,28 @@ module until there is a real reason to split it.
 ## 3. Goals
 
 - Remove the top-level `event` module from `eos-engine`.
-- Move live stream event types, stream sink, sink factory, and output fan-out
-  under `records/stream.rs`.
+- Move live stream event types, stream sink, and sink factory under
+  `run_output/stream.rs`.
+- Move the stream-plus-record fan-out object to `run_output.rs`.
 - Drop the printer type **and its rendering entirely**. The printer is unwired
   and the live sink self-formats via serde (`backend-runtime` `event_bus.rs`
   calls `serde_json::to_value(event)`), so no production code renders. Do not
   introduce a `render_stream_event` export with zero callers; if a printing
   consumer is added later, reintroduce a renderer then.
-- Collapse durable record internals into `records/store.rs`.
-- Keep `records/error.rs` and a small `records/layout.rs`.
+- Collapse durable record internals into `run_output/record_store.rs`.
+- Keep `run_output/error.rs` and a small `run_output/layout.rs`.
 - Remove the engine-local `AgentRunRecordKind` and `AgentRunRecordStart`; use
   `StartAgentLoopRequest.record_target.task_agent_run_kind` and the pre-resolved
   `record_target.record_dir`. `AgentRunRecordKind` is structurally a duplicate of
   `TaskAgentRunKind`, **but it also uniquely owns the `node_started` payload
   writers** (`node_type()` → the `type` string, `extend_payload()` → the
   workflow/parent fields). Relocate those as free fns over `&TaskAgentRunKind`
-  inside `records/store.rs` (keep them in `eos-engine`; do not add them to
+  inside `run_output/record_store.rs` (keep them in `eos-engine`; do not add them to
   `eos-types`). Deleting them silently breaks the §4 Non-Goal on `node_started`
   payload shape.
 - Route the in-crate `StreamEvent` producers (`provider_stream.rs`) and the
   `eos-testkit` helpers through the engine root facade (`crate::` /
-  `eos_engine::` re-exports), not `crate::records::stream::…`, so the physical
+  `eos_engine::` re-exports), not `crate::run_output::stream::…`, so the physical
   module location stays behind the public facade.
 - Rename types and fields so:
   - `record` means durable agent-run record state,
@@ -131,8 +135,8 @@ module until there is a real reason to split it.
 - Keep `messages.jsonl` and `events.jsonl` literal file names unchanged.
 - Keep `eos-engine` as the owner. Do not move these files into
   `eos-agent-run`, `eos-types`, or a new crate.
-- Preserve the public root exports that callers need, but route them through
-  `records`.
+- Preserve the public root exports that callers need, but route the module
+  surface through `run_output`.
 
 ## 4. Non-Goals
 
@@ -158,18 +162,18 @@ that no longer carry independent ownership.
 
 | Area | Current | Larger Merge Draft | Simplified Target |
 | --- | --- | --- | --- |
-| Live stream module | `event.rs` (one file, inline `event`/`outputs`/`printer`/`sink` mods) | `records/{stream,outputs,printer,sink}.rs` | `records/stream.rs` owns stream event, sink, sink factory, and outputs (no renderer) |
-| Durable records | `records/{handle,io,record,writer}.rs` | `records/{messages,events,handle,store}.rs` | `records/store.rs` owns store, handle, row DTOs, append/read helpers |
-| Layout facts | engine-local `AgentRunRecordKind` can derive paths and writes `node_started` payload | keep `kind.rs` | delete `AgentRunRecordKind`; relocate `node_type`/`extend_payload` as free fns over `&TaskAgentRunKind` in `store.rs`; consume `AgentRunRecordTarget` |
-| Path helper | `records/layout.rs` can format from kind | keep layout module | shrink to root-join and safe segment validation; delete `node_dir` + the `AgentRunRecordKind→TaskAgentRunKind→format_record_dir` round-trip |
-| Output aggregate | `EngineEventOutputs` | `AgentRunOutputs` | `AgentRunOutputs` in `records/stream.rs` |
+| Live stream module | `event.rs` (one file, inline `event`/`outputs`/`printer`/`sink` mods) | `records/{stream,outputs,printer,sink}.rs` | `run_output/stream.rs` owns stream event, sink, and sink factory (no renderer) |
+| Durable records | `records/{handle,io,record,writer}.rs` | `records/{messages,events,handle,store}.rs` | `run_output/record_store.rs` owns store, handle, row DTOs, append/read helpers |
+| Layout facts | engine-local `AgentRunRecordKind` can derive paths and writes `node_started` payload | keep `kind.rs` | delete `AgentRunRecordKind`; relocate `node_type`/`extend_payload` as free fns over `&TaskAgentRunKind` in `record_store.rs`; consume `AgentRunRecordTarget` |
+| Path helper | `run_output/layout.rs` can format from kind | keep layout module | shrink to root-join and safe segment validation; delete `node_dir` + the `AgentRunRecordKind→TaskAgentRunKind→format_record_dir` round-trip |
+| Output aggregate | `EngineEventOutputs` | `AgentRunOutputs` | `AgentRunOutputs` in `run_output.rs` |
 | Live sink factory | recently added root/event export | missing from larger draft | keep as `AgentRunStreamSinkFactory` |
 | Stream rendering | `EngineEventPrinter` + `render_engine_event` (unwired) | keep `render_stream_event` free fn | delete both; the live sink self-formats via serde, so no renderer has a caller |
-| Public module | `pub mod event` and `pub mod records` | `pub mod records` only | `pub mod records` only |
+| Public module | `pub mod event` and `pub mod run_output` | `pub mod run_output` only | `pub mod run_output` only |
 | Downstream callers | import `AgentRunRecordWriter`, `NodeEvent`, root stream types across `eos-testkit`, `backend-runtime`, `backend-api` | scoped only to backend | migrate `eos-testkit` (public API), `backend-runtime`, `backend-api`; method renames (`read_events_at` → `read_record_events_at`); no compatibility aliases retained |
-| Workspace guard | expects `mod:event` / `use:event`; has no `use:records` | optional update | required: drop `mod:event`/`use:event`, **add `use:records`** |
+| Workspace guard | expects `mod:event` / `use:event`; has no `use:run_output` | optional update | required: drop `mod:event`/`use:event`, **add `use:run_output`** |
 
-Expected impact in `agent-core/crates/eos-engine/src/{event,records}`:
+Expected impact in `agent-core/crates/eos-engine/src/{event,run_output,provider_stream}`:
 
 | Measure | Estimate |
 | --- | ---: |
@@ -194,12 +198,12 @@ agent-core/crates/eos-engine/
 |   |   |-- executor.rs
 |   |   |-- launcher.rs
 |   |   `-- state.rs
-|   |-- records.rs
-|   |-- records/
-|   |   |-- error.rs       # AgentRunRecordError and Result
+|   |-- run_output.rs     # AgentRunOutputs aggregate + public re-exports
+|   |-- run_output/
+|   |   |-- error.rs       # AgentRunRecordError and crate-local Result alias
 |   |   |-- layout.rs      # root join + safe record_dir segment validation
-|   |   |-- store.rs       # durable JSONL store, handle, row DTOs, helpers
-|   |   `-- stream.rs      # live stream event, sink, sink factory, outputs (no renderer)
+|   |   |-- record_store.rs # durable JSONL store, handle, row DTOs, helpers
+|   |   `-- stream.rs      # live stream event, sink, sink factory (no renderer)
 |   |-- provider_stream.rs
 |   |-- provider_stream/
 |   |   |-- messages.rs
@@ -217,6 +221,7 @@ Deleted final paths:
 
 ```text
 agent-core/crates/eos-engine/src/event.rs   # single file; no `event/` directory exists
+agent-core/crates/eos-engine/src/records.rs
 agent-core/crates/eos-engine/src/records/handle.rs
 agent-core/crates/eos-engine/src/records/io.rs
 agent-core/crates/eos-engine/src/records/kind.rs
@@ -224,10 +229,10 @@ agent-core/crates/eos-engine/src/records/record.rs
 agent-core/crates/eos-engine/src/records/writer.rs
 ```
 
-Do not replace those deleted paths with `records/messages.rs`,
-`records/events.rs`, `records/outputs.rs`, `records/printer.rs`, or
-`records/sink.rs` in this phase. If `store.rs` or `stream.rs` later grows
-because of a real ownership split, make that a separate follow-up with a
+Do not replace those deleted paths with `run_output/messages.rs`,
+`run_output/events.rs`, `run_output/outputs.rs`, `run_output/printer.rs`, or
+`run_output/sink.rs` in this phase. If `record_store.rs` or `stream.rs` later
+grows because of a real ownership split, make that a separate follow-up with a
 specific reason.
 
 ## 7. Naming Rules
@@ -270,7 +275,7 @@ inheritance-style trait names for this refactor.
 | `AgentRunRecordHandle::node_dir` | `record_dir` | avoid node vocabulary in Rust API |
 | `NodeEvent` | `AgentRunRecordEvent` | durable `events.jsonl` row; also a serialized API DTO (`Json<Vec<_>>`, SSE), so keep field names identical — the rename must not change the JSON/SSE shape |
 | `NodeFinishStatus` | `AgentRunRecordFinishStatus` | durable finish record status |
-| `RecordIdentity` | `AgentRunRecordIdentity` | durable row identity columns |
+| `RecordIdentity` | private `AgentRunRecordIdentity` | typed durable row identity held by the handle |
 | `RecordBytes` | `MessageBytes` | raw bytes are from `messages.jsonl` |
 | `append_event` | `append_record_event` | durable event row append |
 | `read_events` | `read_record_events` | durable events, not stream events |
@@ -291,15 +296,11 @@ API stability requires an explicit alias.
 | `AgentLoopExecutorInput` | `provider_stream_source: AgentLoopProviderStream`; `tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>`; `execution_metadata_reader: Arc<dyn ToolExecutionMetadataReader>`; `cancel_signal: AgentLoopCancelSignal`; `background_sessions: Option<BackgroundSessionRuntimeFactory>`; `hook_stores: Option<ToolCallHookStores>`; `run_outputs: AgentRunOutputs`; `agent_run_api: Arc<dyn AgentRunApi>` |
 | `AgentLoopExecutor` | same owned fields as `AgentLoopExecutorInput` |
 
-### 9.2 `records/stream.rs`
+### 9.2 `run_output.rs`
 
 | Type | Fields |
 | --- | --- |
 | `AgentRunOutputs` | `stream: Option<AgentRunStreamSink>`; `record: Option<AgentRunRecordStore>` |
-| `AgentRunStreamEvent` | same variants and JSON shape as today's `StreamEvent`: `ReasoningDelta`, `AssistantTextDelta`, `AssistantMessageComplete`, `ToolUseDelta`, `ToolExecutionStarted`, `ToolExecutionCompleted`, `ToolExecutionProgress`, `ToolExecutionCancelled`, `SystemNotification` |
-| `AssistantMessageComplete` | `message: Message`; `usage: UsageSnapshot`; `stop_reason: Option<StopReason>` |
-| `AgentRunStreamSink` | type alias: `Arc<dyn Fn(&AgentRunStreamEvent) + Send + Sync>` |
-| `AgentRunStreamSinkFactory` | type alias: `Arc<dyn Fn(&StartAgentLoopRequest) -> Option<AgentRunStreamSink> + Send + Sync>` |
 
 `AgentRunOutputs` methods:
 
@@ -323,13 +324,22 @@ side. The accessor stays `record_store()` so the field `record` and the method d
 not collide. This two-field shape is only clean because the printer is collapsed;
 a surviving `stream_printer` field would make the bare `stream` field ambiguous.
 
-### 9.3 `records/store.rs`
+### 9.3 `run_output/stream.rs`
+
+| Type | Fields |
+| --- | --- |
+| `AgentRunStreamEvent` | same variants and JSON shape as today's `StreamEvent`: `ReasoningDelta`, `AssistantTextDelta`, `AssistantMessageComplete`, `ToolUseDelta`, `ToolExecutionStarted`, `ToolExecutionCompleted`, `ToolExecutionProgress`, `ToolExecutionCancelled`, `SystemNotification` |
+| `AssistantMessageComplete` | `message: Message`; `usage: UsageSnapshot`; `stop_reason: Option<StopReason>` |
+| `AgentRunStreamSink` | type alias: `Arc<dyn Fn(&AgentRunStreamEvent) + Send + Sync>` |
+| `AgentRunStreamSinkFactory` | type alias: `Arc<dyn Fn(&StartAgentLoopRequest) -> Option<AgentRunStreamSink> + Send + Sync>` |
+
+### 9.4 `run_output/record_store.rs`
 
 | Type | Fields |
 | --- | --- |
 | `AgentRunRecordStore` | `root: PathBuf` |
 | `AgentRunRecordHandle` | `record_dir: PathBuf`; `messages_path: PathBuf`; `events_path: PathBuf`; `identity: AgentRunRecordIdentity`; `initial_message_count: usize` |
-| `AgentRunRecordIdentity` | `request_id: String`; `task_id: String`; `agent_run_id: String` |
+| private `AgentRunRecordIdentity` | `request_id: RequestId`; `task_id: TaskId`; `agent_run_id: AgentRunId` |
 | `AgentRunRecordEvent` | `request_id: String`; `task_id: String`; `agent_run_id: String`; `seq: u64`; `kind: String`; `payload: JsonObject`; `created_at: UtcDateTime` |
 | `AgentRunRecordFinishStatus` | enum variants: `Completed`, `Failed` |
 | `MessageAppendRange` | `count: usize`; `start_byte: u64`; `end_byte: u64` |
@@ -387,12 +397,12 @@ Do not keep a target `AgentRunRecordKind` or `AgentRunRecordStart` in
 `eos-engine`. If tests still need hand-built records, they should construct an
 `AgentRunRecordTarget` with a closed `TaskAgentRunKind` from `eos-types`.
 
-`store.rs` owns the `node_started` payload vocabulary that previously lived on
-`AgentRunRecordKind`. Port it as two free fns over the closed `eos-types` enum —
-keep them in `eos-engine`, do not add them to `eos-types`:
+`record_store.rs` owns the `node_started` payload vocabulary that previously
+lived on `AgentRunRecordKind`. Port it as two free fns over the closed
+`eos-types` enum — keep them in `eos-engine`, do not add them to `eos-types`:
 
 ```rust
-// records/store.rs
+// run_output/record_store.rs
 fn node_type(kind: &TaskAgentRunKind) -> &'static str;  // "root_agent", "workflow_planner", "subagent", ...
 fn extend_payload(kind: &TaskAgentRunKind, payload: &mut JsonObject);
 ```
@@ -413,32 +423,31 @@ Simplifications that fall out of taking `&AgentRunRecordTarget` directly:
 
 ## 10. Public Export Target
 
-`records.rs` becomes the single local export surface for record and stream
-outputs:
+`run_output.rs` becomes the single local export surface for run outputs:
 
 ```rust
 mod error;
 mod layout;
-mod store;
+mod record_store;
 mod stream;
 
-pub use error::{AgentRunRecordError, Result};
-pub use store::{
+pub use error::AgentRunRecordError;
+pub use record_store::{
     AgentRunRecordEvent, AgentRunRecordFinishStatus, AgentRunRecordHandle,
-    AgentRunRecordIdentity, AgentRunRecordStore, MessageAppendRange, MessageBytes,
+    AgentRunRecordStore, MessageAppendRange, MessageBytes,
 };
 pub use stream::{
-    stamp_identity, AgentRunOutputs, AgentRunStreamEvent, AgentRunStreamSink,
+    stamp_identity, AgentRunStreamEvent, AgentRunStreamSink,
     AgentRunStreamSinkFactory, AssistantMessageComplete,
 };
 ```
 
-`lib.rs` should re-export from `records`, not from `event`:
+`lib.rs` should re-export from `run_output`, not from `event`:
 
 ```rust
-pub mod records;
+pub mod run_output;
 
-pub use records::{
+pub use run_output::{
     stamp_identity, AgentRunOutputs, AgentRunRecordStore, AgentRunStreamEvent,
     AgentRunStreamSink, AgentRunStreamSinkFactory, AssistantMessageComplete,
 };
@@ -448,25 +457,25 @@ Do not keep `pub mod event` in the final state.
 
 The in-crate `StreamEvent` producer (`provider_stream.rs`) and the `eos-testkit`
 helpers import these stream types via the crate root / `eos_engine::` facade,
-not `crate::records::stream`, so the physical module location stays hidden.
+not `crate::run_output::stream`, so the physical module location stays hidden.
 
-The new root `pub use records::{…}` line introduces a `use:records` public-surface
-token. The current `workspace-guard` allowlist has `mod:records` but no
-`use:records`, so the guard update must **add** `use:records` (and drop
-`mod:event` / `use:event`), not only remove the event tokens.
+The root `pub use run_output::{…}` line introduces a `use:run_output`
+public-surface token. The `workspace-guard` allowlist must contain
+`mod:run_output` and `use:run_output`, and must not contain the old `mod:event`
+or `use:event` tokens.
 
 ## 11. Migration Plan
 
-### Step 1: Collapse durable records into `records/store.rs`
+### Step 1: Collapse durable records into `run_output/record_store.rs`
 
 - Move `AgentRunRecordWriter`, `AgentRunRecordHandle`, row DTOs, byte-range DTOs,
-  and JSONL append/read helpers into `records/store.rs`.
+  and JSONL append/read helpers into `run_output/record_store.rs`.
 - Rename `AgentRunRecordWriter` to `AgentRunRecordStore`.
 - Rename `NodeEvent` to `AgentRunRecordEvent`.
 - Rename `RecordBytes` to `MessageBytes`.
 - Keep persisted row JSON shape and event `kind` strings unchanged.
 - Relocate `node_type` / `extend_payload` as free fns over `&TaskAgentRunKind`
-  in `store.rs`, then assert a `node_started` row built from each
+  in `record_store.rs`, then assert a `node_started` row built from each
   `TaskAgentRunKind` variant still carries the same `type` plus workflow/parent
   fields. This guards the §4 Non-Goal; deleting `kind.rs` without this step
   changes the `node_started` payload.
@@ -486,10 +495,11 @@ token. The current `workspace-guard` allowlist has `mod:records` but no
   - `cargo test -p eos-types` (the relocated path-layout test)
   - `cargo test -p eos-engine message_records --test message_records`
 
-### Step 2: Move stream outputs into `records/stream.rs`
+### Step 2: Move stream outputs into `run_output`
 
-- Move live stream event, sink, sink factory, and output fan-out into
-  `records/stream.rs`.
+- Move live stream event, sink, and sink factory into `run_output/stream.rs`.
+- Move the output fan-out aggregate into `run_output.rs`, so the parent owns the
+  stream-plus-record pair instead of making one child import the other.
 - Rename `EngineEventOutputs` to `AgentRunOutputs` and name its fields `stream`
   and `record` (the field types carry the sink/store role); builders become
   `with_stream` / `with_record`.
@@ -503,10 +513,10 @@ token. The current `workspace-guard` allowlist has `mod:records` but no
   `AssistantMessageComplete`, `EngineStream`) and the engine tests
   `tests/agent_loop/{executor,launcher}/mod.rs` (`EngineEventOutputs`, the
   `event_outputs` field, `StreamEvent`). Point producers at the crate root
-  facade (`crate::AgentRunStreamEvent`), not `crate::records::stream`.
+  facade (`crate::AgentRunStreamEvent`), not `crate::run_output::stream`.
 - Collapse the executor's `LoopRecordHandle` wrapper into the handle's new
   `initial_message_count`.
-- Update remaining engine imports from `crate::event::*` to `crate::records::*`
+- Update remaining engine imports from `crate::event::*` to `crate::run_output::*`
   / the crate root.
 - Remove `event.rs` (there is no `event/` directory).
 - Because `StreamEvent` / `EngineEventSink` / `EngineEventSinkFactory` are also
@@ -527,7 +537,7 @@ token. The current `workspace-guard` allowlist has `mod:records` but no
   root alias.
 - Update backend runtime event-bus imports (`src/event_bus.rs`,
   `tests/event_bus/mod.rs`) from root `EngineEvent*` / `StreamEvent` names to the
-  new root exports or `eos_engine::records::*`.
+  new root exports or `eos_engine::run_output::*`.
 - Update backend API record imports from `AgentRunRecordWriter` / `NodeEvent`
   to `AgentRunRecordStore` / `AgentRunRecordEvent`, unless an explicit
   compatibility alias is required for API stability. Also rename the
@@ -536,9 +546,9 @@ token. The current `workspace-guard` allowlist has `mod:records` but no
   unchanged.
 - Update backend API tests and support helpers.
 - Update `workspace-guard/tests/public_surface.rs` for `eos-engine`: remove
-  `mod:event` and `use:event`, **and add `use:records`** (the new root
-  `pub use records::{…}` introduces that surface token; the guard asserts exact
-  set equality, so a missing `use:records` fails the test).
+  `mod:event` and `use:event`, **and add `use:run_output`** (the new root
+  `pub use run_output::{…}` introduces that surface token; the guard asserts exact
+  set equality, so a missing `use:run_output` fails the test).
 - Run:
   - `cargo check -p eos-engine --all-targets`
   - `cargo check -p eos-testkit --all-targets`
@@ -599,6 +609,7 @@ are consumed outside the scoped crates.
 Implementation closeout evidence (2026-06-09):
 
 - `cd agent-core && cargo check -p eos-engine --all-targets`
+- `cd agent-core && cargo test -p eos-engine --lib provider_stream`
 - `cd agent-core && cargo test -p eos-engine --test message_records`
 - `cd agent-core && cargo test -p eos-types`
 - `cd agent-core && cargo check -p eos-testkit --all-targets`
@@ -614,12 +625,13 @@ Implementation closeout evidence (2026-06-09):
 
 - `agent-core/crates/eos-engine/src/event.rs` does not exist.
 - `agent-core/crates/eos-engine/src/event/` does not exist.
-- `records/` contains exactly the target files from section 6 unless the
+- `run_output/` contains exactly the target files from section 6 unless the
   implementation updates this spec with a concrete ownership reason.
-- `records/store.rs` owns durable JSONL store, handle, row DTOs, and append/read
+- `run_output/record_store.rs` owns durable JSONL store, handle, row DTOs, and append/read
   helpers for both `messages.jsonl` and `events.jsonl`.
-- `records/stream.rs` owns live stream event, sink, sink factory, and output
-  fan-out (no renderer).
+- `run_output/stream.rs` owns live stream event, sink, and sink factory (no
+  renderer).
+- `run_output.rs` owns the `AgentRunOutputs` fan-out aggregate.
 - `AgentRunOutputs` is the only output aggregate passed through launcher and
   executor.
 - `AgentRunOutputs` exposes exactly two fields, named `stream` and `record`, with
@@ -647,7 +659,7 @@ Implementation closeout evidence (2026-06-09):
 - `format_record_dir` path-layout coverage (workflow / subagent / advisor dir
   shapes) lives in an `eos-types` test, not only in `tests/message_records.rs`.
 - `workspace-guard/tests/public_surface.rs` for `eos-engine` drops `mod:event`
-  and `use:event` and adds `use:records`.
+  and `use:event` and adds `use:run_output`.
 - `cargo check -p eos-engine --all-targets` passes.
 - `cargo test -p eos-engine --test message_records` passes.
 - `cargo test -p eos-types` passes (relocated path-layout coverage).
@@ -660,8 +672,8 @@ Implementation closeout evidence (2026-06-09):
 flowchart LR
   Loop["AgentLoopExecutor"] --> Outputs["AgentRunOutputs"]
 
-  Outputs --> Stream["records/stream.rs"]
-  Outputs --> Store["records/store.rs"]
+  Outputs --> Stream["run_output/stream.rs"]
+  Outputs --> Store["run_output/record_store.rs"]
 
   Stream --> Sink["AgentRunStreamSink"]
   Stream --> Factory["AgentRunStreamSinkFactory"]
@@ -678,9 +690,9 @@ The conceptual boundary is:
 
 | Surface | Module | Primary Names |
 | --- | --- | --- |
-| live model/tool/system observations | `records/stream.rs` | `AgentRunStreamEvent`, `AgentRunStreamSink`, `AgentRunStreamSinkFactory` |
-| output fan-out for one run | `records/stream.rs` | `AgentRunOutputs` |
-| durable message rows | `records/store.rs` | `MessageAppendRange`, `MessageBytes` |
-| durable event rows | `records/store.rs` | `AgentRunRecordEvent` |
-| durable record lifecycle | `records/store.rs` | `AgentRunRecordStore`, `AgentRunRecordHandle` |
-| path safety | `records/layout.rs` | root join and safe segment validation only |
+| live model/tool/system observations | `run_output/stream.rs` | `AgentRunStreamEvent`, `AgentRunStreamSink`, `AgentRunStreamSinkFactory` |
+| output fan-out for one run | `run_output.rs` | `AgentRunOutputs` |
+| durable message rows | `run_output/record_store.rs` | `MessageAppendRange`, `MessageBytes` |
+| durable event rows | `run_output/record_store.rs` | `AgentRunRecordEvent` |
+| durable record lifecycle | `run_output/record_store.rs` | `AgentRunRecordStore`, `AgentRunRecordHandle` |
+| path safety | `run_output/layout.rs` | root join and safe segment validation only |

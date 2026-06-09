@@ -29,7 +29,7 @@ thiserror.workspace = true
 tracing.workspace = true
 # tokio drives the event-bus channels (mpsc/broadcast).
 tokio.workspace = true
-# the event-bus callback classifies StreamEvents and builds owned EventRecord
+# the event-bus callback classifies AgentRunStreamEvent values and builds owned EventRecord
 # payloads (serde_json::to_value).
 serde_json.workspace = true
 

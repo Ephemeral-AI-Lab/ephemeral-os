@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::str::FromStr;
 
-use eos_engine::records::{
+use eos_engine::run_output::{
     AgentRunRecordError, AgentRunRecordFinishStatus, AgentRunRecordHandle, AgentRunRecordStore,
 };
 use eos_types::{

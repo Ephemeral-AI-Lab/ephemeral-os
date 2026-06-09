@@ -15,7 +15,7 @@ use super::{
 };
 use crate::notifications::EngineNotificationQueue;
 use crate::provider_stream::{messages::build_provider_messages, ProviderStreamSource};
-use crate::records::{AgentRunRecordFinishStatus, AgentRunRecordHandle};
+use crate::run_output::{AgentRunRecordFinishStatus, AgentRunRecordHandle};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
 };

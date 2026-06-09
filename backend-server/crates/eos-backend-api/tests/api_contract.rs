@@ -15,7 +15,7 @@ use tower::ServiceExt;
 use eos_backend_runtime::{DeleteRejection, SandboxManagerError};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{BackendRunStatus, EventRecord, RunMeta, SandboxState};
-use eos_engine::records::AgentRunRecordStore as AgentRunRecords;
+use eos_engine::run_output::AgentRunRecordStore as AgentRunRecords;
 use eos_types::RequestStatus;
 use eos_types::{AgentRunId, RequestId, SandboxId, TaskId, UtcDateTime};
 

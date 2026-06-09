@@ -6,7 +6,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
 
-use eos_engine::records::AgentRunRecordError;
+use eos_engine::run_output::AgentRunRecordError;
 use eos_types::{format_record_dir, AgentRun, Task, TaskRun};
 use eos_types::{AgentRunId, TaskId};
 

@@ -16,7 +16,7 @@ fn record_dir_path(root: &Path, record_dir: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn safe_segment<'a>(field: &'static str, value: &'a str) -> Result<&'a str> {
+pub(crate) fn safe_segment<'a>(field: &'static str, value: &'a str) -> Result<&'a str> {
     if value.is_empty()
         || value == "."
         || value == ".."
