@@ -1,12 +1,12 @@
-//! The loaded, merged config document. `eos-config` owns loading and merge only;
-//! each runtime crate owns its typed section schema and deserializes it on demand
-//! via [`ConfigDocument::section`]. This is the seam that replaces the former
+//! The loaded, merged config document. Runtime owns loading and merge only; each
+//! owner crate owns its typed section schema and deserializes it on demand via
+//! [`ConfigDocument::section`]. This is the seam that replaces the former
 //! `CentralConfig` aggregate: there is no central composition-root struct.
 
 use serde::de::DeserializeOwned;
 use serde_yaml::{Mapping, Value};
 
-use crate::error::ConfigError;
+use eos_types::ConfigError;
 
 /// A loaded, merged configuration document (`prd.yml` overlaid by `local.yml`).
 /// Sections are deserialized into their owning typed schema on demand.
@@ -25,13 +25,12 @@ impl ConfigDocument {
     ///
     /// Range/contradiction checks are the section type's own `validate()`
     /// responsibility; this only deserializes (where `deny_unknown_fields` and
-    /// the [`DatabaseUrl`] parse surface).
+    /// the owner-local config parse surfaces).
     ///
     /// # Errors
     /// Returns [`ConfigError::MissingSection`] when the section is absent, or
     /// [`ConfigError::ParseYaml`] when typed deserialization fails.
     ///
-    /// [`DatabaseUrl`]: crate::DatabaseUrl
     pub fn section<T>(&self, name: &str) -> Result<T, ConfigError>
     where
         T: DeserializeOwned,

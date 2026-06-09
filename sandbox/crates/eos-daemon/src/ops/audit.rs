@@ -4,7 +4,6 @@ use serde_json::Value;
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use crate::response_timings::u64_to_usize_saturating;
 
 /// `api.audit.pull` — drain ring events after a cursor (backs the pull API).
 // Op handlers share the fallible dispatcher ABI even when this handler only
@@ -63,4 +62,8 @@ pub(crate) fn op_audit_reset_floor(
             "audit floor reset is disabled".to_owned(),
         ))
     }
+}
+
+fn u64_to_usize_saturating(value: u64) -> usize {
+    usize::try_from(value).unwrap_or(usize::MAX)
 }

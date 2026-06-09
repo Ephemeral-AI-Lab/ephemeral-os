@@ -1,4 +1,4 @@
-//! Workflow lifecycle and per-Attempt runtime tunables.
+//! Workflow lifecycle and per-attempt runtime tunables.
 //!
 //! `eos-runtime` reads this section at the composition root. The workflow depth
 //! bound feeds the planner deferral hook; the nested attempt section feeds
@@ -6,8 +6,45 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::configs::AttemptConfig;
-use crate::error::ConfigError;
+use eos_types::ConfigError;
+
+/// Per-Attempt run-stage tunables.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct AttemptConfig {
+    /// Per-Attempt cap on concurrently-launched generator/reducer agent runs.
+    /// Range-checked `>= 1` by [`AttemptConfig::validate`].
+    pub max_concurrent_task_runs: usize,
+}
+
+impl Default for AttemptConfig {
+    fn default() -> Self {
+        Self {
+            max_concurrent_task_runs: 8,
+        }
+    }
+}
+
+impl AttemptConfig {
+    /// Enforce numeric-range constraints (call after deserializing a section).
+    ///
+    /// # Errors
+    /// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs < 1`.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        self.validate_with_field("attempt.max_concurrent_task_runs")
+    }
+
+    fn validate_with_field(&self, field: &str) -> Result<(), ConfigError> {
+        if self.max_concurrent_task_runs < 1 {
+            return Err(ConfigError::OutOfRange {
+                field: field.to_owned(),
+                detail: "must be >= 1".to_owned(),
+            });
+        }
+        Ok(())
+    }
+}
 
 /// Default deepest workflow depth still allowed to defer.
 pub const DEFAULT_WORKFLOW_MAX_DEPTH: u32 = 2;
@@ -62,7 +99,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_are_set() {
+    fn attempt_defaults_are_set() {
+        assert_eq!(AttemptConfig::default().max_concurrent_task_runs, 8);
+    }
+
+    #[test]
+    fn workflow_defaults_are_set() {
         let cfg = WorkflowConfig::default();
         assert_eq!(cfg.max_depth, 2);
         assert_eq!(cfg.attempt.max_concurrent_task_runs, 8);

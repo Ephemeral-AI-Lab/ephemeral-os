@@ -7,13 +7,13 @@ use std::sync::Mutex;
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
-use eos_workspace_modes as _;
 use eos_layerstack as _;
 use eos_occ as _;
 use eos_overlay as _;
 use eos_plugin as _;
 use eos_protocol::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use eos_runner as _;
+use eos_workspace_modes as _;
 use serde as _;
 use serde_json::{json, Value};
 use sha2 as _;
@@ -258,12 +258,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     let table = OpTable::with_builtins();
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(std::future::pending::<()>());
-    registry.register(
-        "bg-shell",
-        task.abort_handle(),
-        "caller-a",
-        true,
-    );
+    registry.register("bg-shell", task.abort_handle(), "caller-a", true);
     let context = DispatchContext::with_invocation_registry(&registry);
 
     let count = table.dispatch_with_context(

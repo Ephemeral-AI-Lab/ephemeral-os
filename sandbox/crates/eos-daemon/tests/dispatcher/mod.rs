@@ -155,12 +155,7 @@ fn dispatch_attaches_real_runtime_timings() {
 async fn cancel_waits_for_bounded_cleanup() -> TestResult {
     let registry = Arc::new(InFlightRegistry::new(300.0, 30.0));
     let task = tokio::spawn(future::pending::<()>());
-    registry.register(
-        "cancel-target",
-        task.abort_handle(),
-        "caller-a",
-        true,
-    );
+    registry.register("cancel-target", task.abort_handle(), "caller-a", true);
     let cleanup_registry = Arc::clone(&registry);
     let cleanup_thread = thread::spawn(move || {
         thread::sleep(Duration::from_millis(20));

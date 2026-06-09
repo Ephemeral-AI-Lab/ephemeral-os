@@ -22,7 +22,7 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>7</b><span>modules</span></div>
+  <div><b>9</b><span>modules</span></div>
   <div><b>57</b><span>items</span></div>
   <div><b>27</b><span>fields</span></div>
   <div><b>44</b><span>methods</span></div>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-e2e-test--src-docker-rs.html"><span>docker.rs</span><small>0/22</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li><li><a class="file-link" href="eos-e2e-test--src-tar-rs.html"><span>tar.rs</span><small>0/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="client crates/eos-e2e-test/src/client.rs ProtocolClient impl ProtocolClient envelope_bytes is_success error_kind">
   <div class="module-head">
     <div>
@@ -103,13 +103,13 @@
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref())
     }
 </code></pre>
-</details></td></tr><tr id="method-request-with-token-58"><td>method</td><td>request_with_token</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a> (&amp; self , op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Value &gt;</code><p class="docstring">Issue one op with an explicit auth token override (for auth tests).<br># Errors<br>Returns an error on connect/write/read failure or undecodable response.</p><details class="function-source">
+</details></td></tr><tr id="method-request-with-token-58"><td>method</td><td>request_with_token</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a> (&amp; self , op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Value &gt;</code><p class="docstring">Issue one op with an explicit auth token override (for auth tests).<br># Errors<br>Returns an error on connect/write/read failure or undecodable response.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Issue one op with an explicit auth token override (for auth tests).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error on connect/write/read failure or undecodable response.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a>(
         &amp;<span class="rs-self">self</span>,
         op: &amp;str,
         invocation_id: &amp;str,
@@ -150,22 +150,61 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-e2e-test/src/client.rs:17</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-envelope-bytes-99" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn envelope_bytes pub pub fn envelope_bytes (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt;) -&gt; Vec &lt; u8 &gt; crates/eos-e2e-test/src/client.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-is-success-124" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_success pub pub fn is_success (response : &amp; Value) -&gt; bool crates/eos-e2e-test/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_success</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a> (response : &amp; Value) -&gt; bool</code>
+  <p class="docstring">`true` when a decoded response is a success payload (`success != false`).</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `true` when a decoded response is a success payload (`success != false`).</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+    response.get(&quot;success&quot;) != <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/client.rs:124</p>
+</article><article id="item-fn-error-kind-130" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind pub pub fn error_kind (response : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-e2e-test/src/client.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_kind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-130">error_kind</a> (response : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
+  <p class="docstring">The daemon error `kind` string, if `response` is an error envelope.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The daemon error `kind` string, if `response` is an error envelope.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-130">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+    response.get(&quot;error&quot;)?.get(&quot;kind&quot;)?.as_str()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/client.rs:130</p>
+</article><article id="item-fn-envelope-bytes-99" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn envelope_bytes private fn envelope_bytes (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt;) -&gt; Vec &lt; u8 &gt; crates/eos-e2e-test/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>envelope_bytes</h3>
-    <span class="visibility">pub</span>
+    <span class="visibility">private</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-fn-envelope-bytes-99">envelope_bytes</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt;) -&gt; Vec &lt; u8 &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-fn-envelope-bytes-99">envelope_bytes</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt;) -&gt; Vec &lt; u8 &gt;</code>
   <p class="docstring">Build the wire envelope object bytes (no trailing newline):<br>`{op, invocation_id, args, _eos_daemon_auth_token?}` with the protocol<br>version folded into `args`.</p>
-  <div class="tags"><span>must_use</span></div>
+  <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Build the wire envelope object bytes (no trailing newline):</span>
 <span class="rs-comment">/// `{op, invocation_id, args, _eos_daemon_auth_token?}` with the protocol</span>
 <span class="rs-comment">/// version folded into `args`.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-envelope-bytes-99">envelope_bytes</a>(op: &amp;str, invocation_id: &amp;str, args: &amp;<span class="rs-type">Value</span>, token: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-envelope-bytes-99">envelope_bytes</a>(op: &amp;str, invocation_id: &amp;str, args: &amp;<span class="rs-type">Value</span>, token: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args_obj = <span class="rs-kw">match</span> args {
         <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(map) =&gt; map.clone(),
         _ =&gt; <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
@@ -190,46 +229,6 @@
 </details>
 
   <p class="source">crates/eos-e2e-test/src/client.rs:99</p>
-</article><article id="item-fn-is-success-125" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_success pub pub fn is_success (response : &amp; Value) -&gt; bool crates/eos-e2e-test/src/client.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>is_success</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a> (response : &amp; Value) -&gt; bool</code>
-  <p class="docstring">`true` when a decoded response is a success payload (`success != false`).</p>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `true` when a decoded response is a success payload (`success != false`).</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
-    response.get(&quot;success&quot;) != <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>))
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-e2e-test/src/client.rs:125</p>
-</article><article id="item-fn-error-kind-131" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind pub pub fn error_kind (response : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-e2e-test/src/client.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>error_kind</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-131">error_kind</a> (response : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
-  <p class="docstring">The daemon error `kind` string, if `response` is an error envelope.</p>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-comment">/// The daemon error `kind` string, if `response` is an error envelope.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-131">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
-    response.get(&quot;error&quot;)?.get(&quot;kind&quot;)?.as_str()
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-e2e-test/src/client.rs:131</p>
 </article></div>
 </section></div>
 </main>
@@ -299,7 +298,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error on connect/write/read failure or undecodable response.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-with-token-58">request_with_token</a>(
         &amp;<span class="rs-self">self</span>,
         op: &amp;str,
         invocation_id: &amp;str,
@@ -339,8 +338,7 @@
 <span class="rs-comment">/// Build the wire envelope object bytes (no trailing newline):</span>
 <span class="rs-comment">/// `{op, invocation_id, args, _eos_daemon_auth_token?}` with the protocol</span>
 <span class="rs-comment">/// version folded into `args`.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-envelope-bytes-99">envelope_bytes</a>(op: &amp;str, invocation_id: &amp;str, args: &amp;<span class="rs-type">Value</span>, token: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-envelope-bytes-99">envelope_bytes</a>(op: &amp;str, invocation_id: &amp;str, args: &amp;<span class="rs-type">Value</span>, token: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args_obj = <span class="rs-kw">match</span> args {
         <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(map) =&gt; map.clone(),
         _ =&gt; <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
@@ -364,13 +362,13 @@
 
 <span class="rs-comment">/// `true` when a decoded response is a success payload (`success != false`).</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
     response.get(&quot;success&quot;) != <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>))
 }
 
 <span class="rs-comment">/// The daemon error `kind` string, if `response` is an error envelope.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-131">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-130">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
     response.get(&quot;error&quot;)?.get(&quot;kind&quot;)?.as_str()
 }
 </code></pre>

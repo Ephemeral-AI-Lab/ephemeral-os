@@ -7,7 +7,8 @@
 //! remains inspect-only. The engine background aggregate is the single source for
 //! subagent, delegated-workflow, and background command-session counts.
 
-use eos_tool::{BackgroundSessionCounts, ToolError, ToolName};
+use eos_tool::{ToolError, ToolName};
+use eos_types::BackgroundSessionCounts;
 
 use super::{HookDenial, HookOutcome, ToolCallHooks};
 

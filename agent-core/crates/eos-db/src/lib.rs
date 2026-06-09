@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 
 mod composition;
+mod config;
 mod error;
 mod json_col;
 mod model_registry;
@@ -17,5 +18,6 @@ mod repositories;
 mod rows;
 
 pub use composition::Database;
+pub use config::{DatabaseConfig, DatabaseUrl, DEFAULT_SQLITE_DATABASE_URL};
 pub use error::DbError;
 pub use model_registry::{ModelRegistry, ResolvedModel};

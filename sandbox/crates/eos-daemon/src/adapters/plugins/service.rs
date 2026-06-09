@@ -6,16 +6,16 @@ use eos_layerstack::{manifest_root_hash, LayerStack, Lease};
 use eos_plugin::{PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus};
 use serde_json::Value;
 
-use crate::error::DaemonError;
 #[cfg(all(target_os = "linux", not(test)))]
 use crate::adapters::overlay::overlay_run_dirs;
+use crate::error::DaemonError;
 
 use super::process::PluginServiceOverlay;
-use eos_plugin::host::route::PluginProcessSpec;
 use super::{
     plugin_runtime_config,
     state::{DaemonPluginState, SharedPpcClient},
 };
+use eos_plugin::host::route::PluginProcessSpec;
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginServiceSnapshot {

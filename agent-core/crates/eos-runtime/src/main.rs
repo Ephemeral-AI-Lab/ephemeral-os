@@ -6,9 +6,9 @@
 //! in the library.
 #![forbid(unsafe_code)]
 
-use eos_config::WorkflowConfig;
 use eos_runtime::observability::{init_tracing, LogFormat};
 use eos_runtime::{run_request, RequestRunInput, RuntimeServices};
+use eos_workflow::WorkflowConfig;
 
 fn main() -> anyhow::Result<()> {
     init_tracing(LogFormat::Text).map_err(|err| anyhow::anyhow!(err.to_string()))?;
@@ -73,7 +73,7 @@ async fn build_runtime_services() -> anyhow::Result<RuntimeServices> {
 }
 
 fn load_workflow_config() -> anyhow::Result<WorkflowConfig> {
-    let config = eos_config::load()?;
+    let config = eos_runtime::config::load()?;
     let workflow = config.section::<WorkflowConfig>("workflow")?;
     workflow.validate()?;
     Ok(workflow)

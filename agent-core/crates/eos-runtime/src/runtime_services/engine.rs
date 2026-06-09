@@ -3,8 +3,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use eos_config::RuntimeConfig;
 use eos_llm_client::LlmClient;
+
+use crate::RuntimeConfig;
 
 use super::EventSourceFactory;
 

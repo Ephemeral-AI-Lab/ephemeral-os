@@ -70,7 +70,11 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     let a = start_sleeping(&lease, None, "cancel-owner-a")?;
     let b = start_sleeping(&lease, None, "cancel-owner-b")?;
     let _s = start_sleeping(&lease, Some(&sibling), "cancel-sibling")?;
-    assert_eq!(count_for(&lease, &owner)?, 2, "owner owns two ephemeral runs");
+    assert_eq!(
+        count_for(&lease, &owner)?,
+        2,
+        "owner owns two ephemeral runs"
+    );
     assert_eq!(count_for(&lease, &sibling)?, 1, "sibling owns one run");
 
     let cancelled = lease.call_ok(
@@ -125,7 +129,11 @@ fn cancel_workspace_runs_sweeps_every_caller() -> Result<()> {
 
     start_sleeping(&lease, None, "sweep-a")?;
     start_sleeping(&lease, Some(&other), "sweep-b")?;
-    assert_eq!(count_for(&lease, "")?, 2, "two runs across two callers are live");
+    assert_eq!(
+        count_for(&lease, "")?,
+        2,
+        "two runs across two callers are live"
+    );
 
     let swept = lease.call_ok(ops::API_V1_CANCEL_WORKSPACE_RUNS, json!({}))?;
     assert_eq!(
@@ -134,7 +142,11 @@ fn cancel_workspace_runs_sweeps_every_caller() -> Result<()> {
         "the whole-sandbox sweep tears down every caller's runs: {swept}"
     );
 
-    assert_eq!(count_for(&lease, "")?, 0, "no command session survives the sweep");
+    assert_eq!(
+        count_for(&lease, "")?,
+        0,
+        "no command session survives the sweep"
+    );
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -240,7 +252,10 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
 
     let result = &completion["result"];
     assert!(
-        matches!(as_str(result, "status")?, "timed_out" | "error" | "cancelled"),
+        matches!(
+            as_str(result, "status")?,
+            "timed_out" | "error" | "cancelled"
+        ),
         "deadline kill should surface as a terminal timeout status: {completion}"
     );
     // A re-collect must not redeliver the drained completion.

@@ -15,9 +15,9 @@
 //! commit queue. This module gains no dependency toward the daemon; the daemon
 //! folds [`PpcError`] onto its own `DaemonError`.
 
+pub mod ensure_args;
 mod package;
 mod ppc_client;
-pub mod ensure_args;
 pub mod route;
 
 pub use package::{ensure_package, needs_upload_response, PackageEnsureReport};

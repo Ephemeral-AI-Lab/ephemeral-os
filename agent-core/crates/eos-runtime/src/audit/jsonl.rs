@@ -15,13 +15,13 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TrySendError};
 use std::thread::JoinHandle;
 
-use crate::error::AuditError;
-use crate::event::AuditEvent;
-use crate::sink::AuditSink;
+use super::error::AuditError;
+use super::event::AuditEvent;
+use super::sink::AuditSink;
 
 /// Serialize one event to its normalized `JSONL` row.
 fn event_line(event: &AuditEvent) -> Result<String, AuditError> {
-    Ok(crate::to_jsonl_line(&event.to_obs_envelope())?)
+    Ok(super::to_jsonl_line(&event.to_obs_envelope())?)
 }
 
 /// Open `path` for appending, creating parent directories as needed.
@@ -169,9 +169,11 @@ impl Drop for BufferedAuditShutdown {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
+    use super::super::{
+        from_jsonl_line, AuditNode, AuditSource, ObsSource, AGENT_RUN_COMPLETED,
+        TOOL_CALL_COMPLETED,
+    };
     use super::*;
-    use crate::event::AuditSource;
-    use crate::node::AuditNode;
     use eos_types::{JsonObject, TestClock, UtcDateTime};
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -218,18 +220,18 @@ mod tests {
         let path = dir.path.join("nested/audit.jsonl");
         let sink = JsonlSink::new(&path);
 
-        sink.publish(&event(crate::AGENT_RUN_COMPLETED)).unwrap();
-        sink.publish(&event(crate::TOOL_CALL_COMPLETED)).unwrap();
+        sink.publish(&event(AGENT_RUN_COMPLETED)).unwrap();
+        sink.publish(&event(TOOL_CALL_COMPLETED)).unwrap();
 
         let contents = std::fs::read_to_string(&path).unwrap();
         let lines: Vec<&str> = contents.lines().collect();
         assert_eq!(lines.len(), 2);
-        assert!(lines[0].contains(crate::AGENT_RUN_COMPLETED));
-        assert!(lines[1].contains(crate::TOOL_CALL_COMPLETED));
+        assert!(lines[0].contains(AGENT_RUN_COMPLETED));
+        assert!(lines[1].contains(TOOL_CALL_COMPLETED));
         // Each line is a complete normalized JSON object.
         for line in lines {
-            let row = crate::from_jsonl_line(line).unwrap();
-            assert_eq!(row.source, crate::ObsSource::AgentCore);
+            let row = from_jsonl_line(line).unwrap();
+            assert_eq!(row.source, ObsSource::AgentCore);
         }
     }
 
@@ -243,7 +245,7 @@ mod tests {
 
         const N: usize = 20;
         for _ in 0..N {
-            sink.publish(&event(crate::TOOL_CALL_COMPLETED)).unwrap();
+            sink.publish(&event(TOOL_CALL_COMPLETED)).unwrap();
         }
         shutdown.shutdown();
 
@@ -251,8 +253,8 @@ mod tests {
         let lines: Vec<&str> = contents.lines().collect();
         assert_eq!(lines.len(), N);
         for line in lines {
-            let row = crate::from_jsonl_line(line).unwrap();
-            assert_eq!(row.event_type, crate::TOOL_CALL_COMPLETED);
+            let row = from_jsonl_line(line).unwrap();
+            assert_eq!(row.event_type, TOOL_CALL_COMPLETED);
         }
     }
 }

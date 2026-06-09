@@ -8,15 +8,17 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use eos_config::{DatabaseConfig, DatabaseUrl, ProvidersConfig, WorkflowConfig};
-use eos_db::Database;
+use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
-use eos_llm_client::{ContentBlock, LlmClient, LlmRequest, LlmStream, ProviderError};
+use eos_llm_client::{
+    ContentBlock, LlmClient, LlmRequest, LlmStream, ProviderError, ProvidersConfig,
+};
 use eos_tool::{Hook, ToolName};
 use eos_types::{
     AgentDefinition, AgentRegistry, AgentRunId, AgentType, Page, RequestId, RequestListFilter,
     RequestStatus, Task, TaskRole, TaskStatus, WorkflowStatus,
 };
+use eos_workflow::WorkflowConfig;
 use serde_json::json;
 
 use crate::entry::root_task_id_for;

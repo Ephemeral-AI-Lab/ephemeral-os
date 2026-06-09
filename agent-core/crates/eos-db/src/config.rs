@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::ConfigError;
+use eos_types::ConfigError;
 
 /// The local sqlite database url default.
 pub const DEFAULT_SQLITE_DATABASE_URL: &str = "sqlite:///./.ephemeralos/ephemeralos.db";

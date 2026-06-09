@@ -8,24 +8,24 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eos_workspace_modes::ephemeral::{
-    finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralSnapshot,
-    EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
-};
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_plugin::ServiceMode;
 use eos_protocol::Intent;
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
+use eos_workspace_modes::ephemeral::{
+    finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralSnapshot,
+    EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
+};
 use serde_json::{json, Value};
 
+use crate::adapters::overlay::{
+    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, path_changes_to_wire,
+    run_ns_runner_child, DaemonPublisherPort, RunDirCleanup,
+};
 use crate::error::DaemonError;
 use crate::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
     merge_runner_timings, resource_timings, u64_to_f64_saturating, TreeResourceStats,
-};
-use crate::adapters::overlay::{
-    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, path_changes_to_wire,
-    run_ns_runner_child, DaemonPublisherPort, RunDirCleanup,
 };
 
 use eos_plugin::host::route::PluginOperationRoute;

@@ -33,10 +33,10 @@ use errors::{
 };
 #[cfg(target_os = "linux")]
 use runtime::command_handle_from;
-use state::{ensure_state, lock_state_cell, reset_test_manager_file, with_state};
+pub(crate) use state::configure_isolated_workspace;
 #[cfg(test)]
 use state::default_isolated_workspace_config;
-pub(crate) use state::configure_isolated_workspace;
+use state::{ensure_state, lock_state_cell, reset_test_manager_file, with_state};
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 

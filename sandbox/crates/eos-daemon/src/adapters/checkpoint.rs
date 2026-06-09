@@ -143,9 +143,9 @@ fn raw_commit_paths(args: &Value) -> Result<Vec<String>, DaemonError> {
         Value::Array(items) => items
             .iter()
             .map(|item| {
-                item.as_str().map(str::to_owned).ok_or_else(|| {
-                    DaemonError::InvalidEnvelope("paths must be strings".to_owned())
-                })
+                item.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| DaemonError::InvalidEnvelope("paths must be strings".to_owned()))
             })
             .collect(),
         _ => Err(DaemonError::InvalidEnvelope(

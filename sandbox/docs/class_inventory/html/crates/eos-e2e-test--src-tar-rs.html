@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-e2e-test · src/tar.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-e2e-test File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>9</b><span>modules</span></div>
+  <div><b>57</b><span>items</span></div>
+  <div><b>27</b><span>fields</span></div>
+  <div><b>44</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-e2e-test--src-docker-rs.html"><span>docker.rs</span><small>0/22</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li><li><a class="file-link active" href="eos-e2e-test--src-tar-rs.html"><span>tar.rs</span><small>0/4</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="tar crates/eos-e2e-test/src/tar.rs tar_single_file write_octal write_checksum tar_single_file_builds_executable_ustar_stream">
+  <div class="module-head">
+    <div>
+      <h2>src/tar.rs</h2>
+      <p class="path">module <code>tar</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>4 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-tar-single-file-5" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tar_single_file pub(crate) pub(crate) fn tar_single_file (name : &amp; str , payload : &amp; [u8] , mode : u32) -&gt; Result &lt; Vec &lt; u8 &gt; &gt; crates/eos-e2e-test/src/tar.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>tar_single_file</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-5">tar_single_file</a> (name : &amp; str , payload : &amp; [u8] , mode : u32) -&gt; Result &lt; Vec &lt; u8 &gt; &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-5">tar_single_file</a>(name: &amp;str, payload: &amp;[u8], mode: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt; {
+    <span class="rs-kw">if</span> name.is_empty() || name.starts_with(&#x27;/&#x27;) || name.split(&#x27;/&#x27;).<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(|part| part == &quot;..&quot;) {
+        bail!(&quot;invalid tar entry name {name:?}&quot;);
+    }
+    <span class="rs-kw">let</span> name_bytes = name.as_bytes();
+    <span class="rs-kw">if</span> name_bytes.len() &gt; 100 {
+        bail!(&quot;tar entry name too long: {name}&quot;);
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> header = [0_u8; 512];
+    header[..name_bytes.len()].copy_from_slice(name_bytes);
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[100..108], u64::from(mode))?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[108..116], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[116..124], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[124..136], payload.len() <span class="rs-kw">as</span> u64)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[136..148], 0)?;
+    header[148..156].fill(b&#x27; &#x27;);
+    header[156] = b&#x27;0&#x27;;
+    header[257..263].copy_from_slice(b&quot;ustar\0&quot;);
+    header[263..265].copy_from_slice(b&quot;00&quot;);
+    <span class="rs-kw">let</span> checksum = header.iter().map(|byte| u32::from(*byte)).sum::&lt;u32&gt;();
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-checksum-54">write_checksum</a>(&amp;<span class="rs-kw">mut</span> header[148..156], checksum)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> archive = <span class="rs-type">Vec</span>::with_capacity(512 + payload.len() + 1536);
+    archive.extend_from_slice(&amp;header);
+    archive.extend_from_slice(payload);
+    <span class="rs-kw">let</span> padding = (512 - (payload.len() % 512)) % 512;
+    archive.resize(archive.len() + padding, 0);
+    archive.resize(archive.len() + 1024, 0);
+    <span class="rs-type">Ok</span>(archive)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/tar.rs:5</p>
+</article><article id="item-fn-write-octal-37" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_octal private fn write_octal (field : &amp; mut [u8] , value : u64) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/tar.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_octal</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a> (field : &amp; mut [u8] , value : u64) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u64) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> digits = field
+        .len()
+        .checked_sub(1)
+        .context(&quot;tar octal field too short&quot;)?;
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:0width$o}&quot;, width = digits);
+    <span class="rs-kw">if</span> encoded.len() &gt; digits {
+        bail!(
+            &quot;tar octal value {value} does not fit <span class="rs-kw">in</span> {} bytes&quot;,
+            field.len()
+        );
+    }
+    field[..digits].copy_from_slice(encoded.as_bytes());
+    field[digits] = 0;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/tar.rs:37</p>
+</article><article id="item-fn-write-checksum-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_checksum private fn write_checksum (field : &amp; mut [u8] , value : u32) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/tar.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_checksum</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-tar-rs.html#item-fn-write-checksum-54">write_checksum</a> (field : &amp; mut [u8] , value : u32) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-checksum-54">write_checksum</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u32) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">if</span> field.len() != 8 {
+        bail!(&quot;tar checksum field must be 8 bytes&quot;);
+    }
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:06o}&quot;);
+    <span class="rs-kw">if</span> encoded.len() &gt; 6 {
+        bail!(&quot;tar checksum {value} does not fit&quot;);
+    }
+    field[..6].copy_from_slice(encoded.as_bytes());
+    field[6] = 0;
+    field[7] = b&#x27; &#x27;;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/tar.rs:54</p>
+</article><article id="item-fn-tar-single-file-builds-executable-ustar-stream-72" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tar_single_file_builds_executable_ustar_stream private fn tar_single_file_builds_executable_ustar_stream () crates/eos-e2e-test/src/tar.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>tar_single_file_builds_executable_ustar_stream</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-builds-executable-ustar-stream-72">tar_single_file_builds_executable_ustar_stream</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-builds-executable-ustar-stream-72">tar_single_file_builds_executable_ustar_stream</a>() {
+        <span class="rs-kw">let</span> tar = <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-5">tar_single_file</a>(&quot;eosd&quot;, b&quot;payload&quot;, 0o755).expect(&quot;tar stream&quot;);
+        assert_eq!(&amp;tar[0..4], b&quot;eosd&quot;);
+        assert_eq!(&amp;tar[100..108], b&quot;0000755\0&quot;);
+        assert_eq!(&amp;tar[124..136], b&quot;00000000007\0&quot;);
+        assert_eq!(tar[156], b&#x27;0&#x27;);
+        assert_eq!(&amp;tar[257..263], b&quot;ustar\0&quot;);
+        assert_eq!(tar.len() % 512, 0);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/tar.rs:72</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-e2e-test/src/tar.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Minimal ustar stream builder for Docker archive uploads.</span>
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-5">tar_single_file</a>(name: &amp;str, payload: &amp;[u8], mode: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt; {
+    <span class="rs-kw">if</span> name.is_empty() || name.starts_with(&#x27;/&#x27;) || name.split(&#x27;/&#x27;).<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(|part| part == &quot;..&quot;) {
+        bail!(&quot;invalid tar entry name {name:?}&quot;);
+    }
+    <span class="rs-kw">let</span> name_bytes = name.as_bytes();
+    <span class="rs-kw">if</span> name_bytes.len() &gt; 100 {
+        bail!(&quot;tar entry name too long: {name}&quot;);
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> header = [0_u8; 512];
+    header[..name_bytes.len()].copy_from_slice(name_bytes);
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[100..108], u64::from(mode))?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[108..116], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[116..124], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[124..136], payload.len() <span class="rs-kw">as</span> u64)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[136..148], 0)?;
+    header[148..156].fill(b&#x27; &#x27;);
+    header[156] = b&#x27;0&#x27;;
+    header[257..263].copy_from_slice(b&quot;ustar\0&quot;);
+    header[263..265].copy_from_slice(b&quot;00&quot;);
+    <span class="rs-kw">let</span> checksum = header.iter().map(|byte| u32::from(*byte)).sum::&lt;u32&gt;();
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-checksum-54">write_checksum</a>(&amp;<span class="rs-kw">mut</span> header[148..156], checksum)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> archive = <span class="rs-type">Vec</span>::with_capacity(512 + payload.len() + 1536);
+    archive.extend_from_slice(&amp;header);
+    archive.extend_from_slice(payload);
+    <span class="rs-kw">let</span> padding = (512 - (payload.len() % 512)) % 512;
+    archive.resize(archive.len() + padding, 0);
+    archive.resize(archive.len() + 1024, 0);
+    <span class="rs-type">Ok</span>(archive)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-octal-37">write_octal</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u64) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> digits = field
+        .len()
+        .checked_sub(1)
+        .context(&quot;tar octal field too short&quot;)?;
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:0width$o}&quot;, width = digits);
+    <span class="rs-kw">if</span> encoded.len() &gt; digits {
+        bail!(
+            &quot;tar octal value {value} does not fit <span class="rs-kw">in</span> {} bytes&quot;,
+            field.len()
+        );
+    }
+    field[..digits].copy_from_slice(encoded.as_bytes());
+    field[digits] = 0;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-write-checksum-54">write_checksum</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u32) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">if</span> field.len() != 8 {
+        bail!(&quot;tar checksum field must be 8 bytes&quot;);
+    }
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:06o}&quot;);
+    <span class="rs-kw">if</span> encoded.len() &gt; 6 {
+        bail!(&quot;tar checksum {value} does not fit&quot;);
+    }
+    field[..6].copy_from_slice(encoded.as_bytes());
+    field[6] = 0;
+    field[7] = b&#x27; &#x27;;
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::tar_single_file;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-builds-executable-ustar-stream-72">tar_single_file_builds_executable_ustar_stream</a>() {
+        <span class="rs-kw">let</span> tar = <a class="symbol-link rs-fn" href="eos-e2e-test--src-tar-rs.html#item-fn-tar-single-file-5">tar_single_file</a>(&quot;eosd&quot;, b&quot;payload&quot;, 0o755).expect(&quot;tar stream&quot;);
+        assert_eq!(&amp;tar[0..4], b&quot;eosd&quot;);
+        assert_eq!(&amp;tar[100..108], b&quot;0000755\0&quot;);
+        assert_eq!(&amp;tar[124..136], b&quot;00000000007\0&quot;);
+        assert_eq!(tar[156], b&#x27;0&#x27;);
+        assert_eq!(&amp;tar[257..263], b&quot;ustar\0&quot;);
+        assert_eq!(tar.len() % 512, 0);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

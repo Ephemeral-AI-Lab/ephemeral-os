@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use eos_tool::{BackgroundSessionCounts, ExecutionMetadata, Hook, ToolError, ToolResult};
-use eos_types::{JsonObject, WorkflowId};
+use eos_tool::{ExecutionMetadata, Hook, ToolError, ToolResult};
+use eos_types::{BackgroundSessionCounts, JsonObject, WorkflowId};
 use regex::Regex;
 use serde_json::{json, Value};
 
@@ -63,33 +63,27 @@ impl HookDenial {
 /// Engine-owned state used by tool-call pre-hooks.
 #[derive(Clone, Debug)]
 pub(crate) struct ToolCallHooks {
-    background: Option<BackgroundManagers>,
+    background: BackgroundManagers,
     dependencies: AgentLoopHookDependencies,
 }
 
 impl ToolCallHooks {
     pub(crate) fn new(
-        background: Option<&BackgroundManagers>,
+        background: &BackgroundManagers,
         dependencies: AgentLoopHookDependencies,
     ) -> Self {
         Self {
-            background: background.cloned(),
+            background: background.clone(),
             dependencies,
         }
     }
 
     pub(super) async fn background_counts(&self) -> Result<BackgroundSessionCounts, ToolError> {
-        let background = self.background.as_ref().ok_or_else(|| {
-            ToolError::Internal("background session runtime not initialized".to_owned())
-        })?;
-        Ok(background.count().await)
+        Ok(self.background.count().await)
     }
 
     pub(super) async fn cancel_all_subagents(&self, reason: &str) -> Result<(), ToolError> {
-        let background = self.background.as_ref().ok_or_else(|| {
-            ToolError::Internal("background session runtime not initialized".to_owned())
-        })?;
-        background.cancel_all_subagents(reason).await;
+        self.background.cancel_all_subagents(reason).await;
         Ok(())
     }
 

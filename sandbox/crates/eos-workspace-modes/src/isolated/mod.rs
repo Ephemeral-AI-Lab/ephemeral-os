@@ -40,11 +40,11 @@ pub mod config {
 }
 
 pub use audit::JsonlAuditSink;
+pub use caps::{ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX};
 pub use command::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
     IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
 };
-pub use caps::{ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX};
 pub use error::IsolatedError;
 pub use network::{BRIDGE_PREFIX_LEN, GATEWAY};
 pub use ops::IsolatedWorkspaceOps;

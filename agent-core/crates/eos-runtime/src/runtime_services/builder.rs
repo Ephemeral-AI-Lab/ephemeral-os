@@ -9,14 +9,10 @@ use std::sync::{Arc, Mutex as StdMutex};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use eos_agent_run::AgentMessageRecords;
-use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
-use eos_config::{
-    DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, ProviderKind,
-    ProvidersConfig, RuntimeConfig, SecretConfigValue, WorkflowConfig,
-};
-use eos_db::Database;
+use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_llm_client::{
     Auth, ConfiguredLlmClient, LlmClient, LlmRequest, LlmRequestDefaults, LlmStream, ProviderError,
+    ProviderKind, ProvidersConfig, SecretConfigValue,
 };
 use eos_sandbox_port::{
     DaemonOp, RequestProvisioner, RequestSandboxBinding, SandboxGateway, SandboxPortError,
@@ -25,14 +21,17 @@ use eos_sandbox_port::{
 use eos_tool::{
     build_registry_schema, CallerScope, SkillRegistry, ToolConfigSet, ToolKey, ToolRegistry,
 };
-use eos_types::{AgentRegistry, AgentRegistryBuilder};
+use eos_types::{AgentRegistry, AgentRegistryBuilder, ModelRegistrationConfig, ModelsConfig};
 use eos_types::{JsonObject, RequestId, SandboxId};
+use eos_workflow::WorkflowConfig;
 
 use super::{
     AgentCoreRegistryService, AuditService, DbStoreService, EngineService, EventSourceFactory,
     MessageRecordService, RuntimeServices, SandboxService,
 };
 use crate::agents::load_agents_tree;
+use crate::audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
+use crate::config::{self, RuntimeConfig};
 use crate::plugins::register_plugin_tools;
 
 /// Placeholder client used when no provider is selected and no
@@ -249,7 +248,7 @@ impl RuntimeServicesBuilder {
             .await
             .context("opening the sqlite database")?;
 
-        let config_doc = eos_config::load().context("loading runtime config")?;
+        let config_doc = config::load().context("loading runtime config")?;
         let workflow_config = match self.workflow_config {
             Some(config) => config,
             None => config_doc

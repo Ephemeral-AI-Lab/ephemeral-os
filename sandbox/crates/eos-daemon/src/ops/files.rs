@@ -2,23 +2,23 @@
 
 use std::path::PathBuf;
 
-use eos_workspace_modes::ephemeral::EphemeralWorkspaceOps;
-#[cfg(target_os = "linux")]
-use eos_workspace_modes::isolated::IsolatedWorkspaceOps;
 use eos_protocol::models::{MAX_FILE_BYTES, MAX_READ_BYTES};
 use eos_workspace::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     WorkspaceApiError, WorkspaceConflict, WorkspaceFileOps, WorkspaceMode, WriteFileOutcome,
     WriteFileRequest,
 };
+use eos_workspace_modes::ephemeral::EphemeralWorkspaceOps;
+#[cfg(target_os = "linux")]
+use eos_workspace_modes::isolated::IsolatedWorkspaceOps;
 use serde_json::{json, Value};
 
-use crate::dispatcher::DispatchContext;
-use crate::error::DaemonError;
-use crate::request_args::{require_raw_string, require_string};
 use crate::adapters::workspace::EphemeralFilePorts;
 #[cfg(target_os = "linux")]
 use crate::adapters::workspace::IsolatedFilePorts;
+use crate::dispatcher::DispatchContext;
+use crate::error::DaemonError;
+use crate::request_args::{require_raw_string, require_string};
 
 /// `api.v1.read_file` — shared public read op, routed by active workspace mode.
 pub(crate) fn op_read_file(

@@ -1,21 +1,22 @@
 //! Live Codex access-token smoke test.
 //!
-//! This intentionally reads only the typed `providers` config section loaded by
-//! `eos_config::load()`. Local credentials belong in gitignored
+//! This intentionally reads only the typed `providers` config section from
+//! `agent-core/config/{prd,local}.yml`. Local credentials belong in gitignored
 //! `agent-core/config/local.yml`; this crate does not know about or parse any
 //! credential cache file.
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use eos_config::{ProviderKind, ProvidersConfig};
 use eos_llm_client::{
     Auth, CodexCodingPlanClient, ConfiguredLlmClient, LlmClient, LlmRequest, LlmRequestDefaults,
-    LlmStreamEvent, Message, ProviderError, ToolChoice, ToolSpec,
+    LlmStreamEvent, Message, ProviderError, ProviderKind, ProvidersConfig, ToolChoice, ToolSpec,
 };
 use eos_types::JsonObject;
 use futures::StreamExt;
 use serde_json::{json, Value};
+use serde_yaml::{Mapping, Value as YamlValue};
 
 const SMOKE_TOOL_NAME: &str = "codex_smoke_terminal";
 const PROVIDER_EVENT_TIMEOUT: Duration = Duration::from_secs(60);
@@ -91,15 +92,60 @@ async fn codex_access_token_gets_llm_client_response() -> Result<(), ProviderErr
 }
 
 fn load_codex_provider_config() -> Result<Option<ProvidersConfig>, ProviderError> {
-    let doc = eos_config::load()
-        .map_err(|e| ProviderError::request(format!("loading config failed: {e}")))?;
-    let providers = doc
-        .section::<ProvidersConfig>("providers")
-        .map_err(|e| ProviderError::request(format!("loading providers config failed: {e}")))?;
+    let providers = load_providers_config()?;
     if providers.active != ProviderKind::CodexCodingPlan {
         return Ok(None);
     }
     Ok(Some(providers))
+}
+
+fn load_providers_config() -> Result<ProvidersConfig, ProviderError> {
+    let mut merged = YamlValue::Mapping(Mapping::new());
+    for path in [config_dir().join("prd.yml"), config_dir().join("local.yml")] {
+        if let Some(doc) = read_yaml(&path)? {
+            deep_merge(&mut merged, doc);
+        }
+    }
+    let providers = merged
+        .as_mapping()
+        .and_then(|mapping| mapping.get(YamlValue::String("providers".to_owned())))
+        .ok_or_else(|| ProviderError::request("config section 'providers' is missing"))?;
+    serde_yaml::from_value(providers.clone())
+        .map_err(|e| ProviderError::request(format!("loading providers config failed: {e}")))
+}
+
+fn config_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .map_or_else(|| PathBuf::from("config"), |root| root.join("config"))
+}
+
+fn read_yaml(path: &Path) -> Result<Option<YamlValue>, ProviderError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| ProviderError::request(format!("reading config failed: {e}")))?;
+    let doc: YamlValue = serde_yaml::from_str(&text)
+        .map_err(|e| ProviderError::request(format!("parsing config yaml failed: {e}")))?;
+    Ok((!doc.is_null()).then_some(doc))
+}
+
+fn deep_merge(base: &mut YamlValue, overlay: YamlValue) {
+    match (base, overlay) {
+        (YamlValue::Mapping(base_map), YamlValue::Mapping(overlay_map)) => {
+            for (key, value) in overlay_map {
+                match base_map.get_mut(&key) {
+                    Some(existing) => deep_merge(existing, value),
+                    None => {
+                        base_map.insert(key, value);
+                    }
+                }
+            }
+        }
+        (slot, overlay) => *slot = overlay,
+    }
 }
 
 fn empty_object_schema() -> JsonObject {

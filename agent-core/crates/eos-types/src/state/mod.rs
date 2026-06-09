@@ -11,8 +11,8 @@ pub use model_registry::ModelRegistration;
 pub use runtime::{Page, PageResult, Request, RequestListFilter, RequestStatus};
 pub use runtime::{Task, TaskRole, TaskStatus, TASK_AGENT_ROLES};
 pub use tools::{
-    GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission, PlannerSubmission,
-    ReducerSubmission,
+    BackgroundSessionCounts, GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission,
+    PlannerSubmission, ReducerSubmission,
 };
 pub use workflow::{
     execution_outcome_for_submission, present_status, Attempt, AttemptBudget, AttemptClosure,

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>133</b><span>items</span></div>
+  <div><b>132</b><span>items</span></div>
   <div><b>124</b><span>fields</span></div>
-  <div><b>140</b><span>methods</span></div>
+  <div><b>139</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -56,33 +56,33 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-DagResolution-8" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum DagResolution pub pub enum DagResolution crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-DagResolution-9" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum DagResolution pub pub enum DagResolution crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>DagResolution</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a></code>
   <p class="docstring">Closed scheduler resolution for a persisted plan DAG.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Passed</td><td><code></code></td></tr><tr><td>FailedOrBlocked</td><td><code></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:8</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-ready-pending-plan-ids-19" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ready_pending_plan_ids pub pub fn ready_pending_plan_ids (tasks : &amp; [Task]) -&gt; Result &lt; Vec &lt; TaskId &gt; &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:9</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-ready-pending-plan-ids-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ready_pending_plan_ids pub pub fn ready_pending_plan_ids (tasks : &amp; [Task]) -&gt; Result &lt; Vec &lt; TaskId &gt; &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ready_pending_plan_ids</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a> (tasks : &amp; [Task]) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; TaskId &gt; &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a> (tasks : &amp; [Task]) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; TaskId &gt; &gt;</code>
   <p class="docstring">Pending plan tasks whose needs are all done.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Pending plan tasks whose needs are all done.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">TaskId</span>&gt;&gt; {
-    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a>(tasks);
-    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a>(tasks, &amp;statuses)?;
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">TaskId</span>&gt;&gt; {
+    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a>(tasks);
+    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a>(tasks, &amp;statuses)?;
     <span class="rs-type">Ok</span>(tasks
         .iter()
         .filter(|task| task.status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>)
@@ -97,24 +97,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:19</p>
-</article><article id="item-fn-dag-resolution-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dag_resolution pub(crate) pub(crate) fn dag_resolution (tasks : &amp; [Task]) -&gt; Result &lt; DagResolution &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:20</p>
+</article><article id="item-fn-dag-resolution-36" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dag_resolution pub(crate) pub(crate) fn dag_resolution (tasks : &amp; [Task]) -&gt; Result &lt; DagResolution &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dag_resolution</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a> (tasks : &amp; [Task]) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a> (tasks : &amp; [Task]) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>&gt; {
-    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a>(tasks);
-    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a>(tasks, &amp;statuses)?;
-    <span class="rs-kw">let</span> unreachable = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-85">unreachable_pending_ids</a>(tasks, &amp;statuses)?;
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>&gt; {
+    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a>(tasks);
+    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a>(tasks, &amp;statuses)?;
+    <span class="rs-kw">let</span> unreachable = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-86">unreachable_pending_ids</a>(tasks, &amp;statuses)?;
     <span class="rs-kw">let</span> all_done = statuses.values().all(|s| *s == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>);
     <span class="rs-kw">if</span> all_done {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Passed</span>);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Passed</span>);
     }
     <span class="rs-kw">let</span> all_quiescent = statuses.iter().all(|(task_id, status)| {
         status.is_terminal_generator()
@@ -127,26 +127,26 @@
         )
     });
     <span class="rs-kw">if</span> all_quiescent &amp;&amp; any_failed_or_blocked {
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>)
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>)
     } <span class="rs-kw">else</span> {
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Running</span>)
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Running</span>)
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:35</p>
-</article><article id="item-fn-validate-plan-shape-152" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plan_shape pub(crate) pub(crate) fn validate_plan_shape (plan : &amp; PlannerPlan) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:36</p>
+</article><article id="item-fn-validate-plan-shape-153" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plan_shape pub(crate) pub(crate) fn validate_plan_shape (plan : &amp; PlannerPlan) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_plan_shape</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a> (plan : &amp; PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a> (plan : &amp; PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
     <span class="rs-kw">if</span> plan.reducers.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(
             &quot;plan must contain at least one reducer&quot;,
@@ -157,7 +157,7 @@
     <span class="rs-comment">// generator-vs-generator duplicates, so a reducer&lt;-&gt;reducer (or</span>
     <span class="rs-comment">// generator&lt;-&gt;reducer) collision would otherwise push duplicate task</span>
     <span class="rs-comment">// rows into `reducer_task_ids`/`generator_task_ids`.</span>
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen_ids: <span class="rs-type">BTreeSet</span>&lt;&amp;<span class="rs-type">PlanNodeId</span>&gt; = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen_ids: <span class="rs-type">BTreeSet</span>&lt;&amp;<span class="rs-type">PlanNodeId</span>&gt; = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> id <span class="rs-kw">in</span> plan
         .tasks
         .iter()
@@ -182,7 +182,7 @@
             .collect();
         <span class="rs-kw">if</span> !reducer_needs.is_empty() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;generator task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(s): {reducer_needs:?}&quot;,
+                &quot;generator task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(s): {reducer_needs:?}&quot;,
                 task.id
             )));
         }
@@ -196,7 +196,7 @@
         }
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> downstream_by_generator: <span class="rs-type">BTreeMap</span>&lt;&amp;<span class="rs-type">PlanNodeId</span>, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; =
-        generator_ids.iter().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>())).collect();
+        generator_ids.iter().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>())).collect();
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
         <span class="rs-kw">for</span> need <span class="rs-kw">in</span> &amp;task.needs {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(downstream) = downstream_by_generator.get_mut(need) {
@@ -214,7 +214,7 @@
         <span class="rs-kw">for</span> need <span class="rs-kw">in</span> &amp;reducer.needs {
             <span class="rs-kw">if</span> reducer_ids.contains(need) {
                 <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                    &quot;reducer task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(s)&quot;,
+                    &quot;reducer task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(s)&quot;,
                     reducer.id
                 )));
             }
@@ -238,19 +238,19 @@
             &quot;plan has generator(s) no downstream task needs: {dangling:?}&quot;
         )));
     }
-    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-285">assert_acyclic</a>(plan)
+    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-286">assert_acyclic</a>(plan)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:152</p>
-</article><article id="item-fn-validate-plan-agents-247" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plan_agents pub(crate) pub(crate) fn validate_plan_agents (plan : &amp; PlannerPlan , registry : &amp; AgentRegistry) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:153</p>
+</article><article id="item-fn-validate-plan-agents-248" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plan_agents pub(crate) pub(crate) fn validate_plan_agents (plan : &amp; PlannerPlan , registry : &amp; AgentRegistry) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_plan_agents</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-247">validate_plan_agents</a> (plan : &amp; PlannerPlan , registry : &amp; AgentRegistry) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-248">validate_plan_agents</a> (plan : &amp; PlannerPlan , registry : &amp; AgentRegistry) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
   <p class="docstring">Validate every plan agent before any task row is written: each generator<br>is bound to a registered workflow-launchable profile and has a task spec,<br>and the fixed `reducer` profile is registered. Runs after the pure shape<br>checks and before materialization so a rejected plan leaves no orphan rows.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -259,9 +259,9 @@
 <span class="rs-comment">/// is bound to a registered workflow-launchable profile and has a task spec,</span>
 <span class="rs-comment">/// and the fixed `reducer` profile is registered. Runs after the pure shape</span>
 <span class="rs-comment">/// checks and before materialization so a rejected plan leaves no orphan rows.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-247">validate_plan_agents</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>, registry: &amp;<span class="rs-type">AgentRegistry</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-248">validate_plan_agents</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>, registry: &amp;<span class="rs-type">AgentRegistry</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
-        <span class="rs-kw">let</span> agent_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(task.agent_name.clone())?;
+        <span class="rs-kw">let</span> agent_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(task.agent_name.clone())?;
         <span class="rs-kw">let</span> agent_def = registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;agent_name).ok_or_else(|| {
             <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(format!(
                 &quot;agent definition {:?} is not registered&quot;,
@@ -280,7 +280,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task spec&quot;, task.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()));
         }
     }
-    <span class="rs-kw">let</span> reducer_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(&quot;reducer&quot;)?;
+    <span class="rs-kw">let</span> reducer_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(&quot;reducer&quot;)?;
     <span class="rs-kw">let</span> reducer = registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;reducer_name).ok_or_else(|| {
         <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(&quot;agent definition \&quot;reducer\&quot; is not registered&quot;.to_owned())
     })?;
@@ -295,18 +295,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:247</p>
-</article><article id="item-fn-statuses-by-id-60" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn statuses_by_id private fn statuses_by_id (tasks : &amp; [Task]) -&gt; HashMap &lt; TaskId , TaskStatus &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:248</p>
+</article><article id="item-fn-statuses-by-id-61" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn statuses_by_id private fn statuses_by_id (tasks : &amp; [Task]) -&gt; HashMap &lt; TaskId , TaskStatus &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>statuses_by_id</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a> (tasks : &amp; [Task]) -&gt; HashMap &lt; TaskId , TaskStatus &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a> (tasks : &amp; [Task]) -&gt; HashMap &lt; TaskId , TaskStatus &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt; {
     tasks
         .iter()
         .map(|task| (task.id.clone(), task.status))
@@ -315,18 +315,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:60</p>
-</article><article id="item-fn-validate-persisted-needs-67" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_persisted_needs private fn validate_persisted_needs (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt;) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:61</p>
+</article><article id="item-fn-validate-persisted-needs-68" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_persisted_needs private fn validate_persisted_needs (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt;) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_persisted_needs</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a> (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt;) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a> (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt;) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a>(tasks: &amp;[<span class="rs-type">Task</span>], statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a>(tasks: &amp;[<span class="rs-type">Task</span>], statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> tasks {
         <span class="rs-kw">let</span> missing: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = task
             .needs
@@ -346,28 +346,28 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:67</p>
-</article><article id="item-fn-unreachable-pending-ids-85" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unreachable_pending_ids private fn unreachable_pending_ids (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; ,) -&gt; Result &lt; HashSet &lt; TaskId &gt; &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:68</p>
+</article><article id="item-fn-unreachable-pending-ids-86" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unreachable_pending_ids private fn unreachable_pending_ids (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; ,) -&gt; Result &lt; HashSet &lt; TaskId &gt; &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>unreachable_pending_ids</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-85">unreachable_pending_ids</a> (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; HashSet &lt; TaskId &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-86">unreachable_pending_ids</a> (tasks : &amp; [Task] , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; HashSet &lt; TaskId &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-85">unreachable_pending_ids</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-86">unreachable_pending_ids</a>(
     tasks: &amp;[<span class="rs-type">Task</span>],
     statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">TaskId</span>&gt;&gt; {
     <span class="rs-kw">let</span> by_id: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, &amp;<span class="rs-type">Task</span>&gt; = tasks.iter().map(|task| (task.id.clone(), task)).collect();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> visiting = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> memo = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unreachable = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> visiting = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> memo = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unreachable = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> (task_id, status) <span class="rs-kw">in</span> statuses {
         <span class="rs-kw">if</span> *status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>
-            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a>(task_id, statuses, &amp;by_id, &amp;<span class="rs-kw">mut</span> visiting, &amp;<span class="rs-kw">mut</span> memo)?
+            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a>(task_id, statuses, &amp;by_id, &amp;<span class="rs-kw">mut</span> visiting, &amp;<span class="rs-kw">mut</span> memo)?
         {
             unreachable.insert(task_id.clone());
         }
@@ -377,18 +377,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:85</p>
-</article><article id="item-fn-is-unreachable-103" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_unreachable private fn is_unreachable (task_id : &amp; TaskId , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; , by_id : &amp; HashMap &lt; TaskId , &amp; Task &gt; , visiting : &amp; mut HashSet &lt; TaskId &gt; , memo : &amp; mut HashMap &lt; TaskId , bool &gt; ,) -&gt; Result &lt; bool &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:86</p>
+</article><article id="item-fn-is-unreachable-104" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_unreachable private fn is_unreachable (task_id : &amp; TaskId , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; , by_id : &amp; HashMap &lt; TaskId , &amp; Task &gt; , visiting : &amp; mut HashSet &lt; TaskId &gt; , memo : &amp; mut HashMap &lt; TaskId , bool &gt; ,) -&gt; Result &lt; bool &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_unreachable</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a> (task_id : &amp; TaskId , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; , by_id : &amp; HashMap &lt; TaskId , &amp; Task &gt; , visiting : &amp; mut HashSet &lt; TaskId &gt; , memo : &amp; mut HashMap &lt; TaskId , bool &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; bool &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a> (task_id : &amp; TaskId , statuses : &amp; HashMap &lt; TaskId , TaskStatus &gt; , by_id : &amp; HashMap &lt; TaskId , &amp; Task &gt; , visiting : &amp; mut HashSet &lt; TaskId &gt; , memo : &amp; mut HashMap &lt; TaskId , bool &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; bool &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a>(
     task_id: &amp;<span class="rs-type">TaskId</span>,
     statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;,
     by_id: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, &amp;<span class="rs-type">Task</span>&gt;,
@@ -425,7 +425,7 @@
             dep_status,
             <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Blocked</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>
         ) || (dep_status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>
-            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a>(dep, statuses, by_id, visiting, memo)?)
+            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a>(dep, statuses, by_id, visiting, memo)?)
         {
             visiting.remove(task_id);
             memo.insert(task_id.clone(), <span class="rs-kw">true</span>);
@@ -439,19 +439,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:103</p>
-</article><article id="item-fn-assert-acyclic-285" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_acyclic private fn assert_acyclic (plan : &amp; PlannerPlan) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:104</p>
+</article><article id="item-fn-assert-acyclic-286" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_acyclic private fn assert_acyclic (plan : &amp; PlannerPlan) -&gt; Result &lt; () &gt; crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>assert_acyclic</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-285">assert_acyclic</a> (plan : &amp; PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-286">assert_acyclic</a> (plan : &amp; PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-285">assert_acyclic</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_needs: <span class="rs-type">BTreeMap</span>&lt;&amp;str, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-286">assert_acyclic</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_needs: <span class="rs-type">BTreeMap</span>&lt;&amp;str, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
         by_needs.insert(
             task.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
@@ -469,7 +469,7 @@
         .map(|(id, needs)| (*id, needs.iter().copied().collect::&lt;<span class="rs-type">BTreeSet</span>&lt;_&gt;&gt;()))
         .collect::&lt;<span class="rs-type">BTreeMap</span>&lt;_, _&gt;&gt;();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dependents: <span class="rs-type">BTreeMap</span>&lt;&amp;str, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; =
-        by_needs.keys().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>())).collect();
+        by_needs.keys().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>())).collect();
     <span class="rs-kw">for</span> (id, needs) <span class="rs-kw">in</span> &amp;by_needs {
         <span class="rs-kw">for</span> need <span class="rs-kw">in</span> needs {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entries) = dependents.get_mut(need) {
@@ -481,7 +481,7 @@
         .iter()
         .filter_map(|(id, needs)| needs.is_empty().then_some(*id))
         .collect::&lt;<span class="rs-type">VecDeque</span>&lt;_&gt;&gt;();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> order = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> order = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(id) = ready.pop_front() {
         order.push(id);
         <span class="rs-kw">for</span> dependent <span class="rs-kw">in</span> dependents.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(id).into_iter().flatten() {
@@ -509,37 +509,37 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:285</p>
-</article><article id="item-fn-tid-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tid private fn tid (s : &amp; str) -&gt; TaskId crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:286</p>
+</article><article id="item-fn-tid-348" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tid private fn tid (s : &amp; str) -&gt; TaskId crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tid</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a> (s : &amp; str) -&gt; TaskId</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a> (s : &amp; str) -&gt; TaskId</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(s: &amp;str) -&gt; <span class="rs-type">TaskId</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(s: &amp;str) -&gt; <span class="rs-type">TaskId</span> {
         s.parse().expect(&quot;task id&quot;)
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:347</p>
-</article><article id="item-fn-task-351" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task private fn task (id : &amp; str , status : TaskStatus , needs : &amp; [&amp; str]) -&gt; Task crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:348</p>
+</article><article id="item-fn-task-352" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task private fn task (id : &amp; str , status : TaskStatus , needs : &amp; [&amp; str]) -&gt; Task crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a> (id : &amp; str , status : TaskStatus , needs : &amp; [&amp; str]) -&gt; Task</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a> (id : &amp; str , status : TaskStatus , needs : &amp; [&amp; str]) -&gt; Task</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(id: &amp;str, status: <span class="rs-type">TaskStatus</span>, needs: &amp;[&amp;str]) -&gt; <span class="rs-type">Task</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(id: &amp;str, status: <span class="rs-type">TaskStatus</span>, needs: &amp;[&amp;str]) -&gt; <span class="rs-type">Task</span> {
         <span class="rs-type">Task</span> {
-            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(id),
+            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(id),
             request_id: <span class="rs-type">RequestId</span>::new_v4(),
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
             instruction: &quot;do&quot;.to_owned(),
@@ -548,165 +548,165 @@
             iteration_id: <span class="rs-type">None</span>,
             attempt_id: <span class="rs-type">None</span>,
             agent_name: <span class="rs-type">Some</span>(&quot;coder&quot;.to_owned()),
-            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(n)).collect(),
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(n)).collect(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
             terminal_tool_result: <span class="rs-type">None</span>,
         }
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:351</p>
-</article><article id="item-fn-dag-status-mixed-ready-and-quiescent-368" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dag_status_mixed_ready_and_quiescent private fn dag_status_mixed_ready_and_quiescent () crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:352</p>
+</article><article id="item-fn-dag-status-mixed-ready-and-quiescent-369" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dag_status_mixed_ready_and_quiescent private fn dag_status_mixed_ready_and_quiescent () crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dag_status_mixed_ready_and_quiescent</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-status-mixed-ready-and-quiescent-368">dag_status_mixed_ready_and_quiescent</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-status-mixed-ready-and-quiescent-369">dag_status_mixed_ready_and_quiescent</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-status-mixed-ready-and-quiescent-368">dag_status_mixed_ready_and_quiescent</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-status-mixed-ready-and-quiescent-369">dag_status_mixed_ready_and_quiescent</a>() {
         <span class="rs-kw">let</span> tasks = vec![
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>, &amp;[]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g2&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g2&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>, &amp;[]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g2&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g2&quot;]),
         ];
         assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(&amp;tasks).expect(&quot;ready ids&quot;),
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(&quot;g2&quot;)]
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(&amp;tasks).expect(&quot;ready ids&quot;),
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(&quot;g2&quot;)]
         );
         assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
-            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Running</span>
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
+            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Running</span>
         );
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:368</p>
-</article><article id="item-fn-failed-ancestor-makes-pending-descendant-quiescent-385" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn failed_ancestor_makes_pending_descendant_quiescent private fn failed_ancestor_makes_pending_descendant_quiescent () crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:369</p>
+</article><article id="item-fn-failed-ancestor-makes-pending-descendant-quiescent-386" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn failed_ancestor_makes_pending_descendant_quiescent private fn failed_ancestor_makes_pending_descendant_quiescent () crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>failed_ancestor_makes_pending_descendant_quiescent</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-failed-ancestor-makes-pending-descendant-quiescent-385">failed_ancestor_makes_pending_descendant_quiescent</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-failed-ancestor-makes-pending-descendant-quiescent-386">failed_ancestor_makes_pending_descendant_quiescent</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-failed-ancestor-makes-pending-descendant-quiescent-385">failed_ancestor_makes_pending_descendant_quiescent</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-failed-ancestor-makes-pending-descendant-quiescent-386">failed_ancestor_makes_pending_descendant_quiescent</a>() {
         <span class="rs-kw">let</span> tasks = vec![
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>, &amp;[]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>, &amp;[]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
         ];
         assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
-            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
+            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>
         );
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:385</p>
-</article><article id="item-fn-unknown-need-and-cycle-error-397" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unknown_need_and_cycle_error private fn unknown_need_and_cycle_error () crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:386</p>
+</article><article id="item-fn-unknown-need-and-cycle-error-398" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unknown_need_and_cycle_error private fn unknown_need_and_cycle_error () crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>unknown_need_and_cycle_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unknown-need-and-cycle-error-397">unknown_need_and_cycle_error</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unknown-need-and-cycle-error-398">unknown_need_and_cycle_error</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unknown-need-and-cycle-error-397">unknown_need_and_cycle_error</a>() {
-        <span class="rs-kw">let</span> unknown = vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;missing&quot;])];
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(&amp;unknown).is_err());
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unknown-need-and-cycle-error-398">unknown_need_and_cycle_error</a>() {
+        <span class="rs-kw">let</span> unknown = vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;missing&quot;])];
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(&amp;unknown).is_err());
 
         <span class="rs-kw">let</span> cycle = vec![
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;a&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;b&quot;]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;b&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;a&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;a&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;b&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;b&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;a&quot;]),
         ];
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;cycle).is_err());
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;cycle).is_err());
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:397</p>
-</article><article id="item-fn-pnode-418" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pnode private fn pnode (id : &amp; str) -&gt; PlanNodeId crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:398</p>
+</article><article id="item-fn-pnode-419" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pnode private fn pnode (id : &amp; str) -&gt; PlanNodeId crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>pnode</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a> (id : &amp; str) -&gt; PlanNodeId</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a> (id : &amp; str) -&gt; PlanNodeId</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(id: &amp;str) -&gt; <span class="rs-type">PlanNodeId</span> {
-        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(id).expect(&quot;plan node id&quot;)
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(id: &amp;str) -&gt; <span class="rs-type">PlanNodeId</span> {
+        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(id).expect(&quot;plan node id&quot;)
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:418</p>
-</article><article id="item-fn-gen-422" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gen private fn gen (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanTask crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:419</p>
+</article><article id="item-fn-gen-423" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gen private fn gen (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanTask crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>gen</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanTask</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanTask</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanTask</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanTask</span> {
         eos_types::<span class="rs-type">PlanTask</span> {
-            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(id),
+            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(id),
             agent_name: &quot;coder&quot;.to_owned(),
-            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(n)).collect(),
+            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(n)).collect(),
         }
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:422</p>
-</article><article id="item-fn-red-430" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn red private fn red (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanReducer crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:423</p>
+</article><article id="item-fn-red-431" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn red private fn red (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanReducer crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>red</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanReducer</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a> (id : &amp; str , needs : &amp; [&amp; str]) -&gt; eos_types :: PlanReducer</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanReducer</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanReducer</span> {
         eos_types::<span class="rs-type">PlanReducer</span> {
-            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(id),
-            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(n)).collect(),
+            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(id),
+            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(n)).collect(),
             prompt: &quot;reduce&quot;.to_owned(),
         }
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:430</p>
-</article><article id="item-fn-shape-plan-438" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shape_plan private fn shape_plan (tasks : Vec &lt; eos_types :: PlanTask &gt; , reducers : Vec &lt; eos_types :: PlanReducer &gt; ,) -&gt; PlannerPlan crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:431</p>
+</article><article id="item-fn-shape-plan-439" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shape_plan private fn shape_plan (tasks : Vec &lt; eos_types :: PlanTask &gt; , reducers : Vec &lt; eos_types :: PlanReducer &gt; ,) -&gt; PlannerPlan crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>shape_plan</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a> (tasks : Vec &lt; eos_types :: PlanTask &gt; , reducers : Vec &lt; eos_types :: PlanReducer &gt; ,) -&gt; PlannerPlan</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a> (tasks : Vec &lt; eos_types :: PlanTask &gt; , reducers : Vec &lt; eos_types :: PlanReducer &gt; ,) -&gt; PlannerPlan</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
         tasks: <span class="rs-type">Vec</span>&lt;eos_types::<span class="rs-type">PlanTask</span>&gt;,
         reducers: <span class="rs-type">Vec</span>&lt;eos_types::<span class="rs-type">PlanReducer</span>&gt;,
     ) -&gt; <span class="rs-type">PlannerPlan</span> {
@@ -716,7 +716,7 @@
             .collect();
         <span class="rs-type">PlannerPlan</span> {
             attempt_id: eos_types::<span class="rs-type">AttemptId</span>::new_v4(),
-            planner_task_id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(&quot;planner&quot;),
+            planner_task_id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(&quot;planner&quot;),
             disposition: eos_types::<span class="rs-type">PlanDisposition</span>::<span class="rs-type">Complete</span>,
             tasks,
             task_specs,
@@ -726,76 +726,76 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:438</p>
-</article><article id="item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-456" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plan_shape_accepts_valid_and_rejects_each_malformation private fn validate_plan_shape_accepts_valid_and_rejects_each_malformation () crates/eos-workflow/src/attempt/plan_dag.rs  ">
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:439</p>
+</article><article id="item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-457" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plan_shape_accepts_valid_and_rejects_each_malformation private fn validate_plan_shape_accepts_valid_and_rejects_each_malformation () crates/eos-workflow/src/attempt/plan_dag.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_plan_shape_accepts_valid_and_rejects_each_malformation</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-456">validate_plan_shape_accepts_valid_and_rejects_each_malformation</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-457">validate_plan_shape_accepts_valid_and_rejects_each_malformation</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-456">validate_plan_shape_accepts_valid_and_rejects_each_malformation</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-457">validate_plan_shape_accepts_valid_and_rejects_each_malformation</a>() {
         <span class="rs-comment">// Baseline: one generator feeding one reducer — a well-formed DAG.</span>
-        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])]))
+        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])]))
             .expect(&quot;a well-formed plan validates&quot;);
 
         <span class="rs-comment">// No reducer.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])], vec![])).is_err());
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])], vec![])).is_err());
         <span class="rs-comment">// Duplicate id across the generator/reducer union.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A generator may not depend on a reducer.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[&quot;r1&quot;])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[&quot;r1&quot;])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A generator with an unknown need.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[&quot;ghost&quot;])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[&quot;ghost&quot;])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A reducer with no needs.</span>
         assert!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[])])).is_err()
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[])])).is_err()
         );
         <span class="rs-comment">// A reducer that depends on another reducer.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r2&quot;, &amp;[&quot;r1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r2&quot;, &amp;[&quot;r1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A reducer with an unknown need (alongside a valid one).</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;, &quot;ghost&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;, &quot;ghost&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A dangling generator no downstream task needs.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g2&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g2&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A generator dependency cycle (reaches `assert_acyclic`).</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[&quot;g2&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g2&quot;, &amp;[&quot;g1&quot;])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[&quot;g2&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g2&quot;, &amp;[&quot;g1&quot;])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:456</p>
+  <p class="source">crates/eos-workflow/src/attempt/plan_dag.rs:457</p>
 </article></div>
 </section></div>
 </main>
@@ -806,14 +806,15 @@
   </div>
   <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::{<span class="rs-type">BTreeMap</span>, <span class="rs-type">BTreeSet</span>, <span class="rs-type">HashMap</span>, <span class="rs-type">HashSet</span>, <span class="rs-type">VecDeque</span>};
 
-<span class="rs-kw">use</span> eos_agent_def::{<span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentType</span>};
-<span class="rs-kw">use</span> eos_types::{<span class="rs-type">PlanNodeId</span>, <span class="rs-type">PlannerPlan</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>};
+<span class="rs-kw">use</span> eos_types::{
+    <span class="rs-type">AgentName</span>, <span class="rs-type">AgentRegistry</span>, <span class="rs-type">AgentType</span>, <span class="rs-type">PlanNodeId</span>, <span class="rs-type">PlannerPlan</span>, <span class="rs-type">Task</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>,
+};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
 <span class="rs-comment">/// Closed scheduler resolution for a persisted plan DAG.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a> {
     <span class="rs-comment">/// More work may still be runnable or in flight.</span>
     <span class="rs-type">Running</span>,
     <span class="rs-comment">/// Every persisted plan task is done.</span>
@@ -823,9 +824,9 @@
 }
 
 <span class="rs-comment">/// Pending plan tasks whose needs are all done.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">TaskId</span>&gt;&gt; {
-    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a>(tasks);
-    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a>(tasks, &amp;statuses)?;
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">TaskId</span>&gt;&gt; {
+    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a>(tasks);
+    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a>(tasks, &amp;statuses)?;
     <span class="rs-type">Ok</span>(tasks
         .iter()
         .filter(|task| task.status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>)
@@ -838,13 +839,13 @@
         .collect())
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>&gt; {
-    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a>(tasks);
-    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a>(tasks, &amp;statuses)?;
-    <span class="rs-kw">let</span> unreachable = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-85">unreachable_pending_ids</a>(tasks, &amp;statuses)?;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>&gt; {
+    <span class="rs-kw">let</span> statuses = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a>(tasks);
+    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a>(tasks, &amp;statuses)?;
+    <span class="rs-kw">let</span> unreachable = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-86">unreachable_pending_ids</a>(tasks, &amp;statuses)?;
     <span class="rs-kw">let</span> all_done = statuses.values().all(|s| *s == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>);
     <span class="rs-kw">if</span> all_done {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Passed</span>);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Passed</span>);
     }
     <span class="rs-kw">let</span> all_quiescent = statuses.iter().all(|(task_id, status)| {
         status.is_terminal_generator()
@@ -857,20 +858,20 @@
         )
     });
     <span class="rs-kw">if</span> all_quiescent &amp;&amp; any_failed_or_blocked {
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>)
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>)
     } <span class="rs-kw">else</span> {
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Running</span>)
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Running</span>)
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-60">statuses_by_id</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-statuses-by-id-61">statuses_by_id</a>(tasks: &amp;[<span class="rs-type">Task</span>]) -&gt; <span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt; {
     tasks
         .iter()
         .map(|task| (task.id.clone(), task.status))
         .collect()
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-67">validate_persisted_needs</a>(tasks: &amp;[<span class="rs-type">Task</span>], statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-persisted-needs-68">validate_persisted_needs</a>(tasks: &amp;[<span class="rs-type">Task</span>], statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> tasks {
         <span class="rs-kw">let</span> missing: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = task
             .needs
@@ -888,17 +889,17 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-85">unreachable_pending_ids</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unreachable-pending-ids-86">unreachable_pending_ids</a>(
     tasks: &amp;[<span class="rs-type">Task</span>],
     statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">TaskId</span>&gt;&gt; {
     <span class="rs-kw">let</span> by_id: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, &amp;<span class="rs-type">Task</span>&gt; = tasks.iter().map(|task| (task.id.clone(), task)).collect();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> visiting = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> memo = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unreachable = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> visiting = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> memo = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unreachable = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> (task_id, status) <span class="rs-kw">in</span> statuses {
         <span class="rs-kw">if</span> *status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>
-            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a>(task_id, statuses, &amp;by_id, &amp;<span class="rs-kw">mut</span> visiting, &amp;<span class="rs-kw">mut</span> memo)?
+            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a>(task_id, statuses, &amp;by_id, &amp;<span class="rs-kw">mut</span> visiting, &amp;<span class="rs-kw">mut</span> memo)?
         {
             unreachable.insert(task_id.clone());
         }
@@ -906,7 +907,7 @@
     <span class="rs-type">Ok</span>(unreachable)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a>(
     task_id: &amp;<span class="rs-type">TaskId</span>,
     statuses: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>&gt;,
     by_id: &amp;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">TaskId</span>, &amp;<span class="rs-type">Task</span>&gt;,
@@ -943,7 +944,7 @@
             dep_status,
             <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Blocked</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>
         ) || (dep_status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>
-            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-103">is_unreachable</a>(dep, statuses, by_id, visiting, memo)?)
+            &amp;&amp; <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-is-unreachable-104">is_unreachable</a>(dep, statuses, by_id, visiting, memo)?)
         {
             visiting.remove(task_id);
             memo.insert(task_id.clone(), <span class="rs-kw">true</span>);
@@ -955,7 +956,7 @@
     <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>)
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
     <span class="rs-kw">if</span> plan.reducers.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(
             &quot;plan must contain at least one reducer&quot;,
@@ -966,7 +967,7 @@
     <span class="rs-comment">// generator-vs-generator duplicates, so a reducer&lt;-&gt;reducer (or</span>
     <span class="rs-comment">// generator&lt;-&gt;reducer) collision would otherwise push duplicate task</span>
     <span class="rs-comment">// rows into `reducer_task_ids`/`generator_task_ids`.</span>
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen_ids: <span class="rs-type">BTreeSet</span>&lt;&amp;<span class="rs-type">PlanNodeId</span>&gt; = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen_ids: <span class="rs-type">BTreeSet</span>&lt;&amp;<span class="rs-type">PlanNodeId</span>&gt; = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> id <span class="rs-kw">in</span> plan
         .tasks
         .iter()
@@ -991,7 +992,7 @@
             .collect();
         <span class="rs-kw">if</span> !reducer_needs.is_empty() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                &quot;generator task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(s): {reducer_needs:?}&quot;,
+                &quot;generator task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(s): {reducer_needs:?}&quot;,
                 task.id
             )));
         }
@@ -1005,7 +1006,7 @@
         }
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> downstream_by_generator: <span class="rs-type">BTreeMap</span>&lt;&amp;<span class="rs-type">PlanNodeId</span>, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; =
-        generator_ids.iter().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>())).collect();
+        generator_ids.iter().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>())).collect();
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
         <span class="rs-kw">for</span> need <span class="rs-kw">in</span> &amp;task.needs {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(downstream) = downstream_by_generator.get_mut(need) {
@@ -1023,7 +1024,7 @@
         <span class="rs-kw">for</span> need <span class="rs-kw">in</span> &amp;reducer.needs {
             <span class="rs-kw">if</span> reducer_ids.contains(need) {
                 <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
-                    &quot;reducer task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(s)&quot;,
+                    &quot;reducer task {:?} cannot need reducer <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(s)&quot;,
                     reducer.id
                 )));
             }
@@ -1047,16 +1048,16 @@
             &quot;plan has generator(s) no downstream task needs: {dangling:?}&quot;
         )));
     }
-    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-285">assert_acyclic</a>(plan)
+    <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-286">assert_acyclic</a>(plan)
 }
 
 <span class="rs-comment">/// Validate every plan agent before any task row is written: each generator</span>
 <span class="rs-comment">/// is bound to a registered workflow-launchable profile and has a task spec,</span>
 <span class="rs-comment">/// and the fixed `reducer` profile is registered. Runs after the pure shape</span>
 <span class="rs-comment">/// checks and before materialization so a rejected plan leaves no orphan rows.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-247">validate_plan_agents</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>, registry: &amp;<span class="rs-type">AgentRegistry</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-agents-248">validate_plan_agents</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>, registry: &amp;<span class="rs-type">AgentRegistry</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
-        <span class="rs-kw">let</span> agent_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(task.agent_name.clone())?;
+        <span class="rs-kw">let</span> agent_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(task.agent_name.clone())?;
         <span class="rs-kw">let</span> agent_def = registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;agent_name).ok_or_else(|| {
             <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(format!(
                 &quot;agent definition {:?} is not registered&quot;,
@@ -1075,7 +1076,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task spec&quot;, task.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()));
         }
     }
-    <span class="rs-kw">let</span> reducer_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(&quot;reducer&quot;)?;
+    <span class="rs-kw">let</span> reducer_name = <span class="rs-type">AgentName</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(&quot;reducer&quot;)?;
     <span class="rs-kw">let</span> reducer = registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;reducer_name).ok_or_else(|| {
         <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(&quot;agent definition \&quot;reducer\&quot; is not registered&quot;.to_owned())
     })?;
@@ -1088,8 +1089,8 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-285">assert_acyclic</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_needs: <span class="rs-type">BTreeMap</span>&lt;&amp;str, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-assert-acyclic-286">assert_acyclic</a>(plan: &amp;<span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_needs: <span class="rs-type">BTreeMap</span>&lt;&amp;str, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> task <span class="rs-kw">in</span> &amp;plan.tasks {
         by_needs.insert(
             task.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
@@ -1107,7 +1108,7 @@
         .map(|(id, needs)| (*id, needs.iter().copied().collect::&lt;<span class="rs-type">BTreeSet</span>&lt;_&gt;&gt;()))
         .collect::&lt;<span class="rs-type">BTreeMap</span>&lt;_, _&gt;&gt;();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dependents: <span class="rs-type">BTreeMap</span>&lt;&amp;str, <span class="rs-type">Vec</span>&lt;&amp;str&gt;&gt; =
-        by_needs.keys().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>())).collect();
+        by_needs.keys().map(|id| (*id, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>())).collect();
     <span class="rs-kw">for</span> (id, needs) <span class="rs-kw">in</span> &amp;by_needs {
         <span class="rs-kw">for</span> need <span class="rs-kw">in</span> needs {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entries) = dependents.get_mut(need) {
@@ -1119,7 +1120,7 @@
         .iter()
         .filter_map(|(id, needs)| needs.is_empty().then_some(*id))
         .collect::&lt;<span class="rs-type">VecDeque</span>&lt;_&gt;&gt;();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> order = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> order = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(id) = ready.pop_front() {
         order.push(id);
         <span class="rs-kw">for</span> dependent <span class="rs-kw">in</span> dependents.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(id).into_iter().flatten() {
@@ -1150,13 +1151,13 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
     <span class="rs-kw">use</span> eos_types::{<span class="rs-type">RequestId</span>, <span class="rs-type">TaskRole</span>};
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(s: &amp;str) -&gt; <span class="rs-type">TaskId</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(s: &amp;str) -&gt; <span class="rs-type">TaskId</span> {
         s.parse().expect(&quot;task id&quot;)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(id: &amp;str, status: <span class="rs-type">TaskStatus</span>, needs: &amp;[&amp;str]) -&gt; <span class="rs-type">Task</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(id: &amp;str, status: <span class="rs-type">TaskStatus</span>, needs: &amp;[&amp;str]) -&gt; <span class="rs-type">Task</span> {
         <span class="rs-type">Task</span> {
-            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(id),
+            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(id),
             request_id: <span class="rs-type">RequestId</span>::new_v4(),
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
             instruction: &quot;do&quot;.to_owned(),
@@ -1165,51 +1166,51 @@
             iteration_id: <span class="rs-type">None</span>,
             attempt_id: <span class="rs-type">None</span>,
             agent_name: <span class="rs-type">Some</span>(&quot;coder&quot;.to_owned()),
-            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(n)).collect(),
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(n)).collect(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
             terminal_tool_result: <span class="rs-type">None</span>,
         }
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-status-mixed-ready-and-quiescent-368">dag_status_mixed_ready_and_quiescent</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-status-mixed-ready-and-quiescent-369">dag_status_mixed_ready_and_quiescent</a>() {
         <span class="rs-kw">let</span> tasks = vec![
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>, &amp;[]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g2&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g2&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>, &amp;[]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g2&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g2&quot;]),
         ];
         assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(&amp;tasks).expect(&quot;ready ids&quot;),
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(&quot;g2&quot;)]
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(&amp;tasks).expect(&quot;ready ids&quot;),
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(&quot;g2&quot;)]
         );
         assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
-            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Running</span>
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
+            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Running</span>
         );
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-failed-ancestor-makes-pending-descendant-quiescent-385">failed_ancestor_makes_pending_descendant_quiescent</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-failed-ancestor-makes-pending-descendant-quiescent-386">failed_ancestor_makes_pending_descendant_quiescent</a>() {
         <span class="rs-kw">let</span> tasks = vec![
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>, &amp;[]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>, &amp;[]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;r1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;g1&quot;]),
         ];
         assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
-            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;tasks).expect(&quot;dag resolution&quot;),
+            <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span>
         );
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unknown-need-and-cycle-error-397">unknown_need_and_cycle_error</a>() {
-        <span class="rs-kw">let</span> unknown = vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;missing&quot;])];
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(&amp;unknown).is_err());
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-unknown-need-and-cycle-error-398">unknown_need_and_cycle_error</a>() {
+        <span class="rs-kw">let</span> unknown = vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;g1&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;missing&quot;])];
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(&amp;unknown).is_err());
 
         <span class="rs-kw">let</span> cycle = vec![
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;a&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;b&quot;]),
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&quot;b&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;a&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;a&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;b&quot;]),
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&quot;b&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span>, &amp;[&quot;a&quot;]),
         ];
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;cycle).is_err());
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;cycle).is_err());
     }
 
     <span class="rs-comment">// ---- authoring-time plan-shape validation (`validate_plan_shape`) --------</span>
@@ -1221,27 +1222,27 @@
     <span class="rs-comment">// one rejection and pairs it with the accepted baseline, so the test fails if</span>
     <span class="rs-comment">// a guard is dropped (malformed -&gt; Ok) or the baseline breaks (valid -&gt; Err).</span>
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(id: &amp;str) -&gt; <span class="rs-type">PlanNodeId</span> {
-        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(id).expect(&quot;plan node id&quot;)
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(id: &amp;str) -&gt; <span class="rs-type">PlanNodeId</span> {
+        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(id).expect(&quot;plan node id&quot;)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanTask</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanTask</span> {
         eos_types::<span class="rs-type">PlanTask</span> {
-            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(id),
+            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(id),
             agent_name: &quot;coder&quot;.to_owned(),
-            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(n)).collect(),
+            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(n)).collect(),
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanReducer</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(id: &amp;str, needs: &amp;[&amp;str]) -&gt; eos_types::<span class="rs-type">PlanReducer</span> {
         eos_types::<span class="rs-type">PlanReducer</span> {
-            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(id),
-            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-418">pnode</a>(n)).collect(),
+            id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(id),
+            needs: needs.iter().map(|n| <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-pnode-419">pnode</a>(n)).collect(),
             prompt: &quot;reduce&quot;.to_owned(),
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
         tasks: <span class="rs-type">Vec</span>&lt;eos_types::<span class="rs-type">PlanTask</span>&gt;,
         reducers: <span class="rs-type">Vec</span>&lt;eos_types::<span class="rs-type">PlanReducer</span>&gt;,
     ) -&gt; <span class="rs-type">PlannerPlan</span> {
@@ -1251,7 +1252,7 @@
             .collect();
         <span class="rs-type">PlannerPlan</span> {
             attempt_id: eos_types::<span class="rs-type">AttemptId</span>::new_v4(),
-            planner_task_id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-347">tid</a>(&quot;planner&quot;),
+            planner_task_id: <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-tid-348">tid</a>(&quot;planner&quot;),
             disposition: eos_types::<span class="rs-type">PlanDisposition</span>::<span class="rs-type">Complete</span>,
             tasks,
             task_specs,
@@ -1260,57 +1261,57 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-456">validate_plan_shape_accepts_valid_and_rejects_each_malformation</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-accepts-valid-and-rejects-each-malformation-457">validate_plan_shape_accepts_valid_and_rejects_each_malformation</a>() {
         <span class="rs-comment">// Baseline: one generator feeding one reducer — a well-formed DAG.</span>
-        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])]))
+        <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])]))
             .expect(&quot;a well-formed plan validates&quot;);
 
         <span class="rs-comment">// No reducer.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])], vec![])).is_err());
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])], vec![])).is_err());
         <span class="rs-comment">// Duplicate id across the generator/reducer union.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A generator may not depend on a reducer.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[&quot;r1&quot;])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[&quot;r1&quot;])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A generator with an unknown need.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[&quot;ghost&quot;])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[&quot;ghost&quot;])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A reducer with no needs.</span>
         assert!(
-            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[])])).is_err()
+            <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])], vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[])])).is_err()
         );
         <span class="rs-comment">// A reducer that depends on another reducer.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r2&quot;, &amp;[&quot;r1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r2&quot;, &amp;[&quot;r1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A reducer with an unknown need (alongside a valid one).</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;, &quot;ghost&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;, &quot;ghost&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A dangling generator no downstream task needs.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g2&quot;, &amp;[])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g2&quot;, &amp;[])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
         <span class="rs-comment">// A generator dependency cycle (reaches `assert_acyclic`).</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-152">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-438">shape_plan</a>(
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g1&quot;, &amp;[&quot;g2&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-422">gen</a>(&quot;g2&quot;, &amp;[&quot;g1&quot;])],
-            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-430">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
+        assert!(<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-validate-plan-shape-153">validate_plan_shape</a>(&amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-shape-plan-439">shape_plan</a>(
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g1&quot;, &amp;[&quot;g2&quot;]), <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-gen-423">gen</a>(&quot;g2&quot;, &amp;[&quot;g1&quot;])],
+            vec![<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-red-431">red</a>(&quot;r1&quot;, &amp;[&quot;g1&quot;])],
         ))
         .is_err());
     }

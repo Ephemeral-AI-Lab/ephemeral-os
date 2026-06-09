@@ -15,9 +15,11 @@ use eos_protocol::{LayerChange, LayerPath};
 use crate::config::LayerStackConfig;
 use crate::error::DaemonError;
 
-pub(crate) use eos_occ_layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
 #[cfg(test)]
-pub(crate) use eos_occ_layerstack::{hash_bytes, LayerStackCommitTransaction, LayerStackRouteProvider};
+pub(crate) use eos_occ_layerstack::{
+    hash_bytes, LayerStackCommitTransaction, LayerStackRouteProvider,
+};
+pub(crate) use eos_occ_layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
 pub(crate) use service_cache::occ_service_cache_snapshot;
 #[cfg(test)]
 pub(crate) use service_cache::{normalize_root_key, OccServiceCache, OCC_SERVICE_CACHE_MAX};

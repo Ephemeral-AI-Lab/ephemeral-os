@@ -439,32 +439,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-audit"
-version = "0.1.0"
-dependencies = [
- "eos-types",
- "schemars",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "eos-config"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror",
-]
-
-[[package]]
 name = "eos-db"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "eos-config",
  "eos-types",
  "serde",
  "serde_json",
@@ -503,7 +481,6 @@ dependencies = [
  "async-trait",
  "base64 0.22.1",
  "bytes",
- "eos-config",
  "eos-types",
  "futures",
  "proptest",
@@ -512,6 +489,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror",
  "tokio",
  "tracing",
@@ -526,8 +504,6 @@ dependencies = [
  "async-trait",
  "console-subscriber",
  "eos-agent-run",
- "eos-audit",
- "eos-config",
  "eos-db",
  "eos-engine",
  "eos-llm-client",
@@ -621,6 +597,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror",
  "tokio",
  "tracing",

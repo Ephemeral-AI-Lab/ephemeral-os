@@ -23,6 +23,11 @@ use eos_command_session::{
     CommandSessionError, CommandSessionSpec, KillReason, ReadCommandProgress, ReapedCommand,
     RunningCommandSessionParts, StartCommandSession, WaitOutcome, WriteStdin,
 };
+use eos_layerstack::LayerStack;
+use eos_overlay::overlay_writable_root;
+use eos_workspace::{
+    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
+};
 use eos_workspace_modes::ephemeral::{
     discard_ephemeral_command, prepare_ephemeral_command, EphemeralCommandPrepareContext,
     EphemeralSnapshot, PreparedEphemeralCommand,
@@ -30,11 +35,6 @@ use eos_workspace_modes::ephemeral::{
 use eos_workspace_modes::isolated::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
     IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
-};
-use eos_layerstack::LayerStack;
-use eos_overlay::overlay_writable_root;
-use eos_workspace::{
-    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 
 use crate::ports::WorkspaceRunHostPorts;
@@ -150,7 +150,10 @@ impl WorkspaceRunManager {
                 return Err(error.into());
             }
         };
-        let PreparedEphemeralCommand { prepared, workspace } = prepared;
+        let PreparedEphemeralCommand {
+            prepared,
+            workspace,
+        } = prepared;
         let session = match self.spawn_session(spec, prepared) {
             Ok(session) => session,
             Err(error) => {
@@ -159,9 +162,11 @@ impl WorkspaceRunManager {
                 return Err(error);
             }
         };
-        Ok(self.register_and_wait(session, yield_time_ms, move |session| {
-            WorkspaceRun::Ephemeral(EphemeralRun { session, workspace })
-        }))
+        Ok(
+            self.register_and_wait(session, yield_time_ms, move |session| {
+                WorkspaceRun::Ephemeral(EphemeralRun { session, workspace })
+            }),
+        )
     }
 
     fn start_isolated(
@@ -184,9 +189,11 @@ impl WorkspaceRunManager {
         let prepared = prepare_isolated_command(context, prepare_request)?;
         let session = self.spawn_session(spec, prepared)?;
         let handle = *handle;
-        Ok(self.register_and_wait(session, yield_time_ms, move |session| {
-            WorkspaceRun::Isolated(IsolatedRun { session, handle })
-        }))
+        Ok(
+            self.register_and_wait(session, yield_time_ms, move |session| {
+                WorkspaceRun::Isolated(IsolatedRun { session, handle })
+            }),
+        )
     }
 
     fn spawn_session(
@@ -250,9 +257,16 @@ impl WorkspaceRunManager {
         let command_session_id = request.command_session_id.clone();
         let start_offset = run.session().transcript_len();
         run.session().write_process_stdin(&request.chars)?;
-        match wait_for_yield(run.session(), &self.config, request.yield_time_ms, start_offset) {
+        match wait_for_yield(
+            run.session(),
+            &self.config,
+            request.yield_time_ms,
+            start_offset,
+        ) {
             WaitOutcome::Completed(reaped) => Ok(self.finish_reaped(run, reaped, false)),
-            WaitOutcome::Running(stdout) => Ok(CommandResponse::running(command_session_id, stdout)),
+            WaitOutcome::Running(stdout) => {
+                Ok(CommandResponse::running(command_session_id, stdout))
+            }
         }
     }
 
@@ -411,7 +425,10 @@ impl WorkspaceRunManager {
     /// stuck Running forever. Only a caller-initiated cancel parks nothing.
     pub fn sweep_expired(&self, now: Instant) {
         for run in self.registry.live() {
-            if run.session().is_past_deadline(now, self.config.max_session_s) {
+            if run
+                .session()
+                .is_past_deadline(now, self.config.max_session_s)
+            {
                 run.session().time_out_process();
             }
             if let Some(reaped) = run.session().reap() {
@@ -457,7 +474,9 @@ impl WorkspaceRunManager {
             WorkspaceRun::Ephemeral(ephemeral) => {
                 settle_ephemeral(ports, ephemeral, request, cancelled)
             }
-            WorkspaceRun::Isolated(isolated) => settle_isolated(ports, isolated, request, cancelled),
+            WorkspaceRun::Isolated(isolated) => {
+                settle_isolated(ports, isolated, request, cancelled)
+            }
         };
         let response = match outcome {
             Ok(outcome) => CommandResponse::from_workspace_outcome(outcome),
@@ -540,7 +559,8 @@ fn settle_isolated(
 }
 
 fn release_lease(root: &Path, lease_id: &str) {
-    let _ = LayerStack::open(root.to_path_buf()).and_then(|mut stack| stack.release_lease(lease_id));
+    let _ =
+        LayerStack::open(root.to_path_buf()).and_then(|mut stack| stack.release_lease(lease_id));
 }
 
 fn layerstack_error(error: impl std::fmt::Display) -> CommandSessionError {

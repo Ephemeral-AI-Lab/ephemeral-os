@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>133</b><span>items</span></div>
+  <div><b>132</b><span>items</span></div>
   <div><b>124</b><span>fields</span></div>
-  <div><b>140</b><span>methods</span></div>
+  <div><b>139</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -70,7 +70,7 @@
   <pre><code><span class="rs-comment">/// Build a single-key [`JsonObject`] (the `terminal_tool_result` markers the</span>
 <span class="rs-comment">/// orchestrator / scheduler / cancel paths stamp, e.g. `{"fail_reason": ...}`).</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-util-rs.html#item-fn-json-object-6">json_object</a>(key: &amp;str, value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">JsonObject</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     object.insert(key.to_owned(), value.into());
     object
 }
@@ -94,7 +94,7 @@
 <span class="rs-comment">/// Build a single-key [`JsonObject`] (the `terminal_tool_result` markers the</span>
 <span class="rs-comment">/// orchestrator / scheduler / cancel paths stamp, e.g. `{"fail_reason": ...}`).</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-util-rs.html#item-fn-json-object-6">json_object</a>(key: &amp;str, value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">JsonObject</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     object.insert(key.to_owned(), value.into());
     object
 }

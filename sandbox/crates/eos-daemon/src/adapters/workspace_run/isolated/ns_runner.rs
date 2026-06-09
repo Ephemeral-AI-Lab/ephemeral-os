@@ -12,8 +12,8 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use eos_workspace_modes::isolated::IsolatedError;
 use eos_runner::{Fd, NsFds, RunRequest, RunResult};
+use eos_workspace_modes::isolated::IsolatedError;
 use nix::errno::Errno;
 use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};
 use nix::unistd::read;
@@ -26,14 +26,16 @@ fn holder_children() -> &'static Mutex<HashMap<i32, Child>> {
     CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-pub(super) fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, IsolatedError>
-{
+pub(super) fn lock_holder_children(
+) -> Result<MutexGuard<'static, HashMap<i32, Child>>, IsolatedError> {
     holder_children()
         .lock()
         .map_err(|_| setup_error("ns-holder child registry lock poisoned"))
 }
 
-pub(super) fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<RawFd, IsolatedError> {
+pub(super) fn open_inheritable_fd(
+    path: impl AsRef<std::path::Path>,
+) -> Result<RawFd, IsolatedError> {
     let file = File::open(path.as_ref()).map_err(setup_error)?;
     clear_cloexec(file.as_raw_fd())?;
     Ok(file.into_raw_fd())
@@ -139,7 +141,9 @@ pub(super) fn run_ns_runner_mount_overlay_child(request: &RunRequest) -> Result<
     })
 }
 
-pub(super) fn run_ns_runner_configure_dns_child(request: &RunRequest) -> Result<bool, IsolatedError> {
+pub(super) fn run_ns_runner_configure_dns_child(
+    request: &RunRequest,
+) -> Result<bool, IsolatedError> {
     let payload = serde_json::to_vec(request).map_err(setup_error)?;
     let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
         .arg("ns-runner")

@@ -124,7 +124,10 @@ pub fn prepare_ephemeral_command(
         snapshot,
         dirs,
     };
-    Ok(PreparedEphemeralCommand { prepared, workspace })
+    Ok(PreparedEphemeralCommand {
+        prepared,
+        workspace,
+    })
 }
 
 /// Capture the command's upperdir, publish it through `publisher`, and shape the
@@ -141,11 +144,8 @@ pub fn finalize_ephemeral_command(
     request: FinalizeCommandRequest,
 ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
     let run_dir = workspace.dirs.run_dir.clone();
-    let finalize = finalize_publishable_workspace(
-        publisher,
-        FinalizeRequest { workspace },
-    )
-    .map_err(finalize_error)?;
+    let finalize = finalize_publishable_workspace(publisher, FinalizeRequest { workspace })
+        .map_err(finalize_error)?;
     let files = publish_files(&finalize.publish)?;
     let path_kinds = path_changes_to_wire(&finalize.capture.path_kinds);
     let changed_path_kinds = path_kinds.into_iter().collect::<ChangedPathKinds>();
@@ -254,9 +254,9 @@ fn publish_files(outcome: &PublishOutcome) -> Result<Vec<PublishFile>, Workspace
     files
         .iter()
         .map(|file| {
-            let object = file.as_object().ok_or_else(|| {
-                finalize_error("publish file result must be an object")
-            })?;
+            let object = file
+                .as_object()
+                .ok_or_else(|| finalize_error("publish file result must be an object"))?;
             let path = object
                 .get("path")
                 .and_then(Value::as_str)
@@ -334,7 +334,11 @@ fn insert_tree_resource_timings(
 ) {
     let file_entries = stats.files.saturating_add(stats.symlinks);
     let entry_count = file_entries.saturating_add(stats.dirs);
-    insert_resource_timing(timings, &format!("{prefix}_tree_exists"), entry_count.min(1));
+    insert_resource_timing(
+        timings,
+        &format!("{prefix}_tree_exists"),
+        entry_count.min(1),
+    );
     insert_resource_timing(timings, &format!("{prefix}_tree_bytes"), stats.bytes);
     insert_resource_timing(timings, &format!("{prefix}_tree_file_count"), file_entries);
     insert_resource_timing(timings, &format!("{prefix}_tree_dir_count"), stats.dirs);
@@ -461,7 +465,8 @@ mod tests {
         );
         assert_eq!(prepared.prepared.run_request["layer_paths"][0], "/lower/a");
         assert_eq!(prepared.workspace.snapshot.lease_id, "lease-1");
-        let metadata = std::fs::read_to_string(prepared.prepared.session_dir.join("metadata.json"))?;
+        let metadata =
+            std::fs::read_to_string(prepared.prepared.session_dir.join("metadata.json"))?;
         assert!(metadata.contains("\"workspace\": \"ephemeral\""));
 
         let _ = std::fs::remove_dir_all(writable_root);

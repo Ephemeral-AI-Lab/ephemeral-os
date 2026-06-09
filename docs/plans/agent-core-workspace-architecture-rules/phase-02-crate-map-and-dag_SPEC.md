@@ -82,7 +82,7 @@ agent-core/crates/
 | `eos-plugin-catalog` | `eos-agent-core/src/runtime/plugins.rs` | fold plugin package catalog into the composition root that consumes it (decision committed; no longer "or eos-tool") |
 | `eos-agent-def` | DTOs → `eos-types/src/agent.rs`; loader → `eos-agent-core/src/agents.rs` | passive definitions are shared, so they sink to types; only filesystem loading/validation stays in the facade |
 | `eos-config` | structs → owners; loader → split | see [Config and loader disposition](#config-and-loader-disposition) |
-| `eos-audit` | `eos-agent-core/src/runtime/audit.rs` | file sink impl in the facade; `AuditSink` trait + audit DTOs → `eos-types` if any engine/run code emits audit |
+| `eos-audit` | `eos-agent-core/src/runtime/audit.rs` | file sink impl and current audit surface fold into the facade; sink trait + DTOs only sink to `eos-types` if a lower crate starts emitting audit |
 
 ## Target Dependency DAG
 
@@ -131,7 +131,7 @@ preference, forces these placements:
 | neutral LLM DTOs: `Message`, `ContentBlock`, `MessageRole`, `ToolSpec` | `eos-llm-client` | consumed by tool, engine, records, testkit; sinking them severs `tool -> llm-client` and `records -> llm-client` |
 | agent DTOs: `AgentName`, `AgentDefinition`, `AgentType`, read-only `AgentRegistry` + in-memory builder | `eos-agent-def` | consumed by workflow + tool + agent-run; none can reach the facade |
 | `parse_markdown_frontmatter` (pure parser) | `eos-config/markdown.rs` | shared by tool (skills) and the agent-def/plugin loaders; pure, no I/O |
-| `AuditSink` trait + audit event/node DTOs | `eos-audit` | only if engine/run code emits audit; the file sink impl stays in the facade |
+| `AuditSink` trait + audit event/node DTOs | `eos-audit` | runtime-owned for the current staged graph; sink to `eos-types` only if engine/run code emits audit |
 
 `eos-types` stays behavior-free: no `load()`, no filesystem registry builder, no
 provider encoders, no I/O. A passive in-memory `AgentRegistryBuilder` is allowed
@@ -195,10 +195,11 @@ section structs. The structs scatter to owners; the machinery splits by nature:
 
 | Item | Target | Note |
 | --- | --- | --- |
-| `DatabaseConfig`, `DatabaseUrl`, `ModelsConfig`, `ModelRegistrationConfig` | `eos-db/src/config.rs` | db already deserializes these |
+| `DatabaseConfig`, `DatabaseUrl` | `eos-db/src/config.rs` | db owns SQLite connection policy and URL validation |
+| `ModelsConfig`, `ModelRegistrationConfig` | `eos-types/src/models.rs` | shared passive DTOs consumed by provider config, runtime, and db without creating `llm-client -> db` |
 | `ProvidersConfig`, `RetryConfig`, provider api configs | `eos-llm-client/src/config.rs` | |
-| `WorkflowConfig` | `eos-workflow` | |
-| `RuntimeConfig`, `AttemptConfig` | `eos-agent-core/src/runtime/config.rs` | |
+| `WorkflowConfig`, `AttemptConfig` | `eos-workflow/src/config.rs` | |
+| `RuntimeConfig` | `eos-agent-core/src/runtime/config.rs` | runtime-local command-session heartbeat tunables |
 | passive shared config DTO (only if unavoidable) | `eos-types` | |
 | `parse_markdown_frontmatter` (pure) | `eos-types/src/frontmatter.rs` | shared by tool/skills and the agent-def/plugin loaders with no mid-DAG config edge |
 | `load()` / `load_with_override()` / `ConfigDocument` (file merge, I/O) | `eos-agent-core/src/runtime/config.rs` | startup composition; the facade reads files and hands typed sections to each crate |
@@ -327,7 +328,7 @@ agent-core/crates/
 │       ├── runtime.rs
 │       └── runtime/
 │           ├── builder.rs · database.rs · engine.rs · sandbox.rs   # renamed from runtime_services/
-│           ├── audit.rs             # from eos-audit (sink impl; AuditSink trait is in eos-types)
+│           ├── audit.rs             # from eos-audit (sink impl + current runtime-owned audit surface)
 │           ├── plugins.rs           # from eos-plugin-catalog
 │           └── config.rs            # from eos-config loader + RuntimeConfig/AttemptConfig
 └── eos-testkit/                     # dev-only; edges retargeted to types/engine/agent-run/llm-client/sandbox-port/tool
@@ -365,9 +366,9 @@ budget guard must confirm no logic lands there.
 | Fold `eos-skills` into `eos-tool/src/tools/skills.rs` | Done (2026-06-09; folded into `eos-tool::tools::skills`) |
 | Fold `eos-plugin-catalog` into `eos-agent-core/src/runtime/plugins.rs` | Done (2026-06-09; folded into current `eos-runtime::plugins` pending the separate `eos-runtime` → `eos-agent-core` fold) |
 | Fold `eos-agent-def`: DTOs → `eos-types`, loader → `eos-agent-core/src/agents.rs` | Done (2026-06-09; DTOs/passive registry live in `eos-types`, loader/validation moved into the current `eos-runtime::agents` facade staging module, bundled-profile loader coverage moved with it, and the standalone crate was removed from the active workspace) |
-| Dissolve `eos-config`: structs to owners, parser → types, loader → facade | In progress (2026-06-09; pure parser moved, config structs/loader still local) |
-| Fold `eos-audit`: sink → facade, `AuditSink` trait → `eos-types` | Not started |
-| Update workspace dependencies and internal imports | In progress (2026-06-09; staged imports updated for completed sinks, DTO direct-import cleanup, message-record fold, skills fold, plugin-catalog fold, agent-definition loader fold, `eos-tool` rename, `eos-agent-run` rename, and full `eos-tool-ports`/`eos-agent-ports` retirement from the active workspace) |
+| Dissolve `eos-config`: structs to owners, parser → types, loader → facade | Done (2026-06-09; DB config moved to `eos-db`, provider/retry config to `eos-llm-client`, workflow/attempt config to `eos-workflow`, shared model config + `ConfigError` to `eos-types`, and file loader/document/runtime config to current `eos-runtime::config`; standalone crate removed) |
+| Fold `eos-audit`: sink + current audit surface → facade | Done (2026-06-09; audit event/node/obs DTOs, `AuditSink`, no-op sink, and JSONL sinks moved into current `eos-runtime::audit` facade staging module; no `eos-types` sink was needed because no lower crate emits audit) |
+| Update workspace dependencies and internal imports | In progress (2026-06-09; staged imports updated for completed sinks, DTO direct-import cleanup, message-record fold, skills fold, plugin-catalog fold, agent-definition loader fold, config split, audit fold, `eos-tool` rename, `eos-agent-run` rename, and full `eos-tool-ports`/`eos-agent-ports` retirement from the active workspace) |
 | Update dependency DAG guard to the target edge set | Done (2026-06-09; staged legacy graph remains active until the final crate map is present) |
 | Update `index.md` Progress Tracker with Phase 02 result and exit artifact | Not started |
 

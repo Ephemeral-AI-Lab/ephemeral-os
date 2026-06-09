@@ -7,12 +7,11 @@
 
 use std::sync::Arc;
 
-use eos_config::RetryConfig;
-
 use crate::auth::Auth;
 use crate::client::{LlmClient, LlmStream};
 use crate::error::ProviderError;
 use crate::types::LlmRequest;
+use crate::RetryConfig;
 
 use super::openai_api_client::OpenAiApiClient;
 

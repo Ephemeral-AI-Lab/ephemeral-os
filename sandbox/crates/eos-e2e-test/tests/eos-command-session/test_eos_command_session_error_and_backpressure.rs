@@ -24,7 +24,8 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
     )?;
     // Under emulation a slow ns-runner spawn can outlast the yield, so the
     // command returns "running"; settle it to its terminal outcome first.
-    let failed = settle_foreground_command(&lease, failed, Instant::now() + Duration::from_secs(20))?;
+    let failed =
+        settle_foreground_command(&lease, failed, Instant::now() + Duration::from_secs(20))?;
     ensure!(
         as_str(&failed, "status")? == "error",
         "nonzero command should return an error status: {failed}"

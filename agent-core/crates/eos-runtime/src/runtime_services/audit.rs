@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex as StdMutex};
 
-use eos_audit::{AuditSink, BufferedAuditShutdown};
+use crate::audit::{AuditSink, BufferedAuditShutdown};
 
 /// Audit sink and buffered-writer shutdown lifecycle.
 #[derive(Clone)]

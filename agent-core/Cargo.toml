@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-  "crates/eos-types", "crates/eos-config",
+  "crates/eos-types",
   "crates/eos-agent-run",
-  "crates/eos-db", "crates/eos-audit", "crates/eos-llm-client",
+  "crates/eos-db", "crates/eos-llm-client",
   "crates/eos-sandbox-port",
   "crates/eos-tool", "crates/eos-engine", "crates/eos-workflow",
   "crates/eos-runtime",
@@ -64,10 +64,8 @@ loom              = "0.7"
 tempfile          = "3"
 # internal crates — these path edges ARE the dependency DAG
 eos-types          = { path = "crates/eos-types" }
-eos-config         = { path = "crates/eos-config" }
 eos-agent-run         = { path = "crates/eos-agent-run" }
 eos-db             = { path = "crates/eos-db" }
-eos-audit          = { path = "crates/eos-audit" }
 eos-llm-client     = { path = "crates/eos-llm-client" }
 eos-sandbox-port   = { path = "crates/eos-sandbox-port" }
 eos-tool           = { path = "crates/eos-tool" }

@@ -13,7 +13,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use eos_config::RetryConfig;
 use eos_types::ToolUseId;
 use futures::future::BoxFuture;
 use futures::{Stream, StreamExt};
@@ -28,6 +27,7 @@ use crate::message::{ContentBlock, Message, MessageRole};
 use crate::retry::retry_stream;
 use crate::sse::{json_str, json_u32, parse_sse_value, parse_tool_args};
 use crate::types::{LlmRequest, ToolChoice, ToolSpec, UsageSnapshot};
+use crate::RetryConfig;
 
 /// The Responses streaming endpoint path.
 const RESPONSES_PATH: &str = "/v1/responses";

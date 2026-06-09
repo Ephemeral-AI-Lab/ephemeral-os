@@ -7,12 +7,11 @@ use std::time::Duration;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use sqlx::SqlitePool;
 
-use eos_config::DatabaseConfig;
-
 use crate::error::DbError;
+use crate::DatabaseConfig;
 
 /// Defence-in-depth guard: reject a network database url (GC-eos-db-04). The
-/// primary fail-fast lives in `eos-config::DatabaseUrl::parse`; a `DatabaseConfig`
+/// primary fail-fast lives in [`DatabaseUrl::parse`](crate::DatabaseUrl::parse); a `DatabaseConfig`
 /// therefore cannot normally carry a non-`SQLite` url, but this re-check keeps the
 /// invariant at the pool boundary too.
 pub(crate) fn ensure_sqlite_url(url: &str) -> Result<(), DbError> {

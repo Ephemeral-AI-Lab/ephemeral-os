@@ -25,8 +25,6 @@ use crate::response_timings::u64_to_f64_saturating;
 use super::config::{
     command_session_config, command_session_scratch_root, runtime_command_session_config,
 };
-#[cfg(target_os = "linux")]
-use eos_workspace_run::{StartTarget, WorkspaceRunManager};
 #[cfg(not(target_os = "linux"))]
 use super::wire::command_result;
 #[cfg(target_os = "linux")]
@@ -37,6 +35,8 @@ use super::wire::{
     collect_completed_request, command_response_to_wire, command_session_completion_to_wire,
     command_session_error, strip_session_id,
 };
+#[cfg(target_os = "linux")]
+use eos_workspace_run::{StartTarget, WorkspaceRunManager};
 
 #[cfg(target_os = "linux")]
 fn workspace_run_manager() -> &'static WorkspaceRunManager {
@@ -207,8 +207,7 @@ pub fn op_command_collect_completed(
 ) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     {
-        let response =
-            workspace_run_manager().collect_completed(&collect_completed_request(args));
+        let response = workspace_run_manager().collect_completed(&collect_completed_request(args));
         let completions = response
             .completions
             .into_iter()
@@ -239,8 +238,8 @@ pub fn op_command_session_count(
         .to_owned();
     #[cfg(target_os = "linux")]
     {
-        let count = workspace_run_manager()
-            .count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
+        let count =
+            workspace_run_manager().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
         Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
     }
     #[cfg(not(target_os = "linux"))]

@@ -21,10 +21,10 @@ use eos_workspace::{
 };
 use serde_json::json;
 
+use crate::adapters::occ::{apply_occ_changeset, hash_current, manifest_version_u64};
 #[cfg(target_os = "linux")]
 use crate::response_timings::usize_to_f64_saturating;
 use crate::response_timings::{resource_timings, timing_map};
-use crate::adapters::occ::{apply_occ_changeset, hash_current, manifest_version_u64};
 
 fn api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
     WorkspaceApiError::new("daemon_workspace_error", error.to_string())

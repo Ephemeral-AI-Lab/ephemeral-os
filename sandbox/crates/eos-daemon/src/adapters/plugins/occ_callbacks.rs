@@ -13,8 +13,8 @@ use eos_protocol::{LayerChange, LayerPath};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::error::DaemonError;
 use crate::adapters::occ::apply_occ_changeset;
+use crate::error::DaemonError;
 
 pub(super) const OCC_APPLY_CHANGESET_OP: &str = "daemon.occ.apply_changeset";
 

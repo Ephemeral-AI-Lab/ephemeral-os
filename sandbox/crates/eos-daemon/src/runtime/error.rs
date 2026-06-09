@@ -100,9 +100,7 @@ impl From<eos_plugin::host::PpcError> for DaemonError {
             PpcError::Protocol(source) => Self::Protocol(source),
             PpcError::Io(source) => Self::Io(source),
             PpcError::LockPoisoned(what) => Self::StateLockPoisoned(what),
-            PpcError::Callback(message) => {
-                Self::Plugin(eos_plugin::PluginError::Ppc(message))
-            }
+            PpcError::Callback(message) => Self::Plugin(eos_plugin::PluginError::Ppc(message)),
         }
     }
 }

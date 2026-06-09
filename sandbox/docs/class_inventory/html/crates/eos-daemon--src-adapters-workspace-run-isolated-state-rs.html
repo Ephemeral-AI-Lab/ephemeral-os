@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/adapters/workspace_run/isolated/state.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>54</b><span>modules</span></div>
+  <div><b>445</b><span>items</span></div>
+  <div><b>168</b><span>fields</span></div>
+  <div><b>83</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">adapters</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>checkpoint.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">occ</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-occ-mod-rs.html"><span>mod.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html"><span>service_cache.rs</span><small>3/5</small></a></li></ul></li><li><span class="folder">overlay</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-overlay-convert-rs.html"><span>convert.rs</span><small>0/11</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-overlay-mod-rs.html"><span>mod.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">plugins</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-plugins-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-mod-rs.html"><span>mod.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-process-rs.html"><span>process.rs</span><small>2/18</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-setup-rs.html"><span>setup.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-plugins-state-rs.html"><span>state.rs</span><small>2/13</small></a></li></ul></li><li><span class="folder">workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html"><span>file_ports.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html"><span>cancel.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html"><span>commands.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-config-rs.html"><span>config.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html"><span>host_ports.rs</span><small>1/1</small></a></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-errors-rs.html"><span>errors.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html"><span>ns_runner.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html"><span>runtime.rs</span><small>2/1</small></a></li><li><a class="file-link active" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html"><span>state.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-adapters-workspace-run-wire-rs.html"><span>wire.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><span class="folder">audit</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-audit-buffer-rs.html"><span>buffer.rs</span><small>4/19</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-events-rs.html"><span>events.rs</span><small>1/28</small></a></li><li><a class="file-link" href="eos-daemon--src-audit-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-audit-rs.html"><span>audit.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-sessions-rs.html"><span>command_sessions.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolated-workspace-rs.html"><span>isolated_workspace.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugins-rs.html"><span>plugins.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-registry-rs.html"><span>registry.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-timings-rs.html"><span>response_timings.rs</span><small>1/12</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-tool-call-events-rs.html"><span>tool_call_events.rs</span><small>0/2</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="adapters::workspace_run::isolated::state crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs DaemonSession DaemonIsolatedState configure_isolated_workspace ensure_state normalized_root isolated_workspace_config isolated_workspace_config_cell default_isolated_workspace_config resource_caps_from_config with_state state_cell lock_state_cell reset_test_manager_file">
+  <div class="module-head">
+    <div>
+      <h2>src/adapters/workspace_run/isolated/state.rs</h2>
+      <p class="path">module <code>adapters::workspace_run::isolated::state</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>11 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-DaemonIsolatedState-20" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct DaemonIsolatedState pub(super) pub(super) struct DaemonIsolatedState crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs layer_stack_root PathBuf session DaemonSession ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DaemonIsolatedState</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>layer_stack_root</td><td><code>PathBuf</code></td></tr><tr><td>pub(super)</td><td>session</td><td><code><a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-type-DaemonSession-18">DaemonSession</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:20</p>
+</article><div class="group-label">Aliases</div><article id="item-type-DaemonSession-18" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type DaemonSession private type DaemonSession = IsolatedSession &lt; DaemonLayerStackPort , DaemonNamespaceRuntime , JsonlAuditSink &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>DaemonSession</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-type-DaemonSession-18">DaemonSession</a> = IsolatedSession &lt; <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonLayerStackPort-40">DaemonLayerStackPort</a> , <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonNamespaceRuntime-79">DaemonNamespaceRuntime</a> , JsonlAuditSink &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:18</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-configure-isolated-workspace-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_isolated_workspace pub(crate) pub(crate) fn configure_isolated_workspace (config : &amp; IsolatedWorkspaceConfig) crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>configure_isolated_workspace</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-configure-isolated-workspace-26">configure_isolated_workspace</a> (config : &amp; IsolatedWorkspaceConfig)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-configure-isolated-workspace-26">configure_isolated_workspace</a>(config: &amp;<span class="rs-type">IsolatedWorkspaceConfig</span>) {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a>()
+        .write()
+        .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+    *guard = config.clone();
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:26</p>
+</article><article id="item-fn-ensure-state-33" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_state pub(super) pub(super) fn ensure_state (root : &amp; Path) -&gt; Result &lt; () , IsolatedError &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_state</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-ensure-state-33">ensure_state</a> (root : &amp; Path) -&gt; Result &lt; () , IsolatedError &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-ensure-state-33">ensure_state</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-normalized-root-88">normalized_root</a>(root);
+    {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>();
+        #[cfg(target_os = &quot;linux&quot;)]
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(state) = guard.as_mut() {
+            <span class="rs-kw">if</span> state.layer_stack_root != root {
+                <span class="rs-comment">// Block rebinding to a new root only while an isolated workspace</span>
+                <span class="rs-comment">// is open: those handles pin leases/namespaces on the old root.</span>
+                <span class="rs-comment">// (Isolated command sessions belong to an open caller, so this</span>
+                <span class="rs-comment">// already covers them; ephemeral command sessions are unrelated</span>
+                <span class="rs-comment">// to the isolated manager's binding and must not block a rebind.)</span>
+                <span class="rs-kw">let</span> open_callers = state.session.list_open_callers();
+                <span class="rs-kw">if</span> !open_callers.is_empty() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">IsolatedError</span>::<span class="rs-type">SetupFailed</span> {
+                        step: format!(
+                            &quot;isolated workspace manager is bound to {} with active callers&quot;,
+                            state.layer_stack_root.display()
+                        ),
+                    });
+                }
+                state.session.reap_orphan_resources();
+                *guard = <span class="rs-type">None</span>;
+            }
+        }
+        <span class="rs-kw">if</span> guard.is_none() {
+            <span class="rs-kw">let</span> config = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> caps = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-resource-caps-from-config-122">resource_caps_from_config</a>(&amp;config);
+            <span class="rs-kw">if</span> !caps.enabled {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>);
+            }
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(binding) = read_workspace_binding(&amp;root).map_err(setup_error)? {
+                caps.eos_workspace_root = binding.workspace_root;
+            }
+            <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone()).map_err(setup_error)?;
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> session = <span class="rs-type">IsolatedSession</span>::with_scratch_root(
+                caps,
+                <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonLayerStackPort-40">DaemonLayerStackPort</a> {
+                    stack: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(stack)),
+                },
+                <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonNamespaceRuntime-79">DaemonNamespaceRuntime</a>,
+                <span class="rs-type">JsonlAuditSink</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(&amp;config.audit_jsonl_path),
+                config.scratch_root,
+            );
+            session.initialize()?;
+            *guard = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a> {
+                #[cfg(target_os = &quot;linux&quot;)]
+                layer_stack_root: root,
+                session,
+            });
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:33</p>
+</article><article id="item-fn-isolated-workspace-config-92" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn isolated_workspace_config pub(super) pub(super) fn isolated_workspace_config () -&gt; IsolatedWorkspaceConfig crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>isolated_workspace_config</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a> () -&gt; IsolatedWorkspaceConfig</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a>() -&gt; <span class="rs-type">IsolatedWorkspaceConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a>()
+        .read()
+        .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+        .clone()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:92</p>
+</article><article id="item-fn-default-isolated-workspace-config-104" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_isolated_workspace_config pub(super) pub(super) fn default_isolated_workspace_config () -&gt; IsolatedWorkspaceConfig crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_isolated_workspace_config</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-default-isolated-workspace-config-104">default_isolated_workspace_config</a> () -&gt; IsolatedWorkspaceConfig</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-default-isolated-workspace-config-104">default_isolated_workspace_config</a>() -&gt; <span class="rs-type">IsolatedWorkspaceConfig</span> {
+    <span class="rs-type">IsolatedWorkspaceConfig</span> {
+        enabled: <span class="rs-kw">false</span>,
+        scratch_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/eos/scratch/isolated&quot;),
+        audit_jsonl_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/eos/scratch/isolated/audit.jsonl&quot;),
+        ttl_s: 1800.0,
+        total_cap: 5,
+        upperdir_bytes: 1_073_741_824,
+        memavail_fraction: 0.5,
+        setup_timeout_s: 30.0,
+        exit_grace_s: 0.25,
+        rfc1918_egress: <span class="rs-type">ConfigRfc1918Egress</span>::<span class="rs-type">Allow</span>,
+        fallback_dns: &quot;1.1.1.1&quot;.to_owned(),
+        workspace_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/testbed&quot;),
+        sample_interval_s: 0.5,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:104</p>
+</article><article id="item-fn-with-state-141" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn with_state pub(super) pub(super) fn with_state &lt; T &gt; (f : impl FnOnce (&amp; mut DaemonIsolatedState) -&gt; Result &lt; T , IsolatedError &gt; ,) -&gt; Result &lt; T , IsolatedError &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>with_state</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-with-state-141">with_state</a> &lt; T &gt; (f : impl FnOnce (&amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>) -&gt; Result &lt; T , IsolatedError &gt; ,) -&gt; Result &lt; T , IsolatedError &gt;</code>
+  <div class="tags"><span>constructor</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> with_state&lt;<span class="rs-type">T</span>&gt;(
+    f: <span class="rs-kw">impl</span> <span class="rs-type">FnOnce</span>(&amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>()
+        .as_mut()
+        .ok_or(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>)
+        .and_then(f)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:141</p>
+</article><article id="item-fn-lock-state-cell-155" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_state_cell pub(super) pub(super) fn lock_state_cell () -&gt; MutexGuard &lt; 'static , Option &lt; DaemonIsolatedState &gt; &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock_state_cell</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a> () -&gt; MutexGuard &lt; &#x27;static , Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a> &gt; &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>() -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>&gt;&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a>().lock().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:155</p>
+</article><article id="item-fn-reset-test-manager-file-159" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reset_test_manager_file pub(super) pub(super) fn reset_test_manager_file () crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reset_test_manager_file</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-reset-test-manager-file-159">reset_test_manager_file</a> ()</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-reset-test-manager-file-159">reset_test_manager_file</a>() {
+    <span class="rs-kw">let</span> session_root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a>().scratch_root;
+    <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;session_root);
+    <span class="rs-kw">if</span> std::fs::create_dir_all(&amp;session_root).is_err() {
+        <span class="rs-kw">return</span>;
+    }
+    <span class="rs-kw">let</span> _ = std::fs::write(
+        session_root.join(&quot;manager.json&quot;),
+        br#&quot;{&quot;schema_version&quot;:1,&quot;handles&quot;:[]}&quot;#,
+    );
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:159</p>
+</article><article id="item-fn-normalized-root-88" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalized_root private fn normalized_root (root : &amp; Path) -&gt; PathBuf crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>normalized_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-normalized-root-88">normalized_root</a> (root : &amp; Path) -&gt; PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-normalized-root-88">normalized_root</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    root.canonicalize().unwrap_or_else(|_| root.to_path_buf())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:88</p>
+</article><article id="item-fn-isolated-workspace-config-cell-99" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn isolated_workspace_config_cell private fn isolated_workspace_config_cell () -&gt; &amp; 'static std :: sync :: RwLock &lt; IsolatedWorkspaceConfig &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>isolated_workspace_config_cell</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a> () -&gt; &amp; &#x27;static std :: sync :: RwLock &lt; IsolatedWorkspaceConfig &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> std::sync::<span class="rs-type">RwLock</span>&lt;<span class="rs-type">IsolatedWorkspaceConfig</span>&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">CONFIG</span>: <span class="rs-type">OnceLock</span>&lt;std::sync::<span class="rs-type">RwLock</span>&lt;<span class="rs-type">IsolatedWorkspaceConfig</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>();
+    <span class="rs-type">CONFIG</span>.get_or_init(|| std::sync::<span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-default-isolated-workspace-config-104">default_isolated_workspace_config</a>()))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:99</p>
+</article><article id="item-fn-resource-caps-from-config-122" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resource_caps_from_config private fn resource_caps_from_config (config : &amp; IsolatedWorkspaceConfig) -&gt; ResourceCaps crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resource_caps_from_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-resource-caps-from-config-122">resource_caps_from_config</a> (config : &amp; IsolatedWorkspaceConfig) -&gt; ResourceCaps</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-resource-caps-from-config-122">resource_caps_from_config</a>(config: &amp;<span class="rs-type">IsolatedWorkspaceConfig</span>) -&gt; <span class="rs-type">ResourceCaps</span> {
+    <span class="rs-type">ResourceCaps</span> {
+        enabled: config.enabled,
+        ttl_s: config.ttl_s,
+        total_cap: config.total_cap,
+        upperdir_bytes: config.upperdir_bytes,
+        memavail_fraction: config.memavail_fraction,
+        setup_timeout_s: config.setup_timeout_s,
+        exit_grace_s: config.exit_grace_s,
+        rfc1918_egress: <span class="rs-kw">match</span> config.rfc1918_egress {
+            <span class="rs-type">ConfigRfc1918Egress</span>::<span class="rs-type">Allow</span> =&gt; <span class="rs-type">RuntimeRfc1918Egress</span>::<span class="rs-type">Allow</span>,
+            <span class="rs-type">ConfigRfc1918Egress</span>::<span class="rs-type">Deny</span> =&gt; <span class="rs-type">RuntimeRfc1918Egress</span>::<span class="rs-type">Deny</span>,
+        },
+        fallback_dns: config.fallback_dns.clone(),
+        eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
+        sample_interval_s: config.sample_interval_s,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:122</p>
+</article><article id="item-fn-state-cell-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn state_cell private fn state_cell () -&gt; &amp; 'static Mutex &lt; Option &lt; DaemonIsolatedState &gt; &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>state_cell</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a> () -&gt; &amp; &#x27;static Mutex &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a> &gt; &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>&gt;&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">STATE</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>();
+    <span class="rs-type">STATE</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<span class="rs-type">None</span>))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs:150</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/adapters/workspace_run/isolated/state.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon-local isolated-workspace session state.</span>
+
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">OnceLock</span>, <span class="rs-type">PoisonError</span>};
+
+<span class="rs-kw">use</span> eos_config::configs::isolated_workspace::{
+    <span class="rs-type">IsolatedWorkspaceConfig</span>, <span class="rs-type">Rfc1918Egress</span> <span class="rs-kw">as</span> <span class="rs-type">ConfigRfc1918Egress</span>,
+};
+<span class="rs-kw">use</span> eos_layerstack::{read_workspace_binding, <span class="rs-type">LayerStack</span>};
+<span class="rs-kw">use</span> eos_workspace_modes::isolated::{
+    <span class="rs-type">IsolatedError</span>, <span class="rs-type">IsolatedSession</span>, <span class="rs-type">JsonlAuditSink</span>, <span class="rs-type">ResourceCaps</span>,
+    <span class="rs-type">Rfc1918Egress</span> <span class="rs-kw">as</span> <span class="rs-type">RuntimeRfc1918Egress</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::errors::setup_error;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::runtime::{<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonLayerStackPort-40">DaemonLayerStackPort</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonNamespaceRuntime-79">DaemonNamespaceRuntime</a>};
+
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-type-DaemonSession-18">DaemonSession</a> = <span class="rs-type">IsolatedSession</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonLayerStackPort-40">DaemonLayerStackPort</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonNamespaceRuntime-79">DaemonNamespaceRuntime</a>, <span class="rs-type">JsonlAuditSink</span>&gt;;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a> {
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) layer_stack_root: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) session: <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-type-DaemonSession-18">DaemonSession</a>,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-configure-isolated-workspace-26">configure_isolated_workspace</a>(config: &amp;<span class="rs-type">IsolatedWorkspaceConfig</span>) {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a>()
+        .write()
+        .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+    *guard = config.clone();
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-ensure-state-33">ensure_state</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-normalized-root-88">normalized_root</a>(root);
+    {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>();
+        #[cfg(target_os = &quot;linux&quot;)]
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(state) = guard.as_mut() {
+            <span class="rs-kw">if</span> state.layer_stack_root != root {
+                <span class="rs-comment">// Block rebinding to a new root only while an isolated workspace</span>
+                <span class="rs-comment">// is open: those handles pin leases/namespaces on the old root.</span>
+                <span class="rs-comment">// (Isolated command sessions belong to an open caller, so this</span>
+                <span class="rs-comment">// already covers them; ephemeral command sessions are unrelated</span>
+                <span class="rs-comment">// to the isolated manager's binding and must not block a rebind.)</span>
+                <span class="rs-kw">let</span> open_callers = state.session.list_open_callers();
+                <span class="rs-kw">if</span> !open_callers.is_empty() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">IsolatedError</span>::<span class="rs-type">SetupFailed</span> {
+                        step: format!(
+                            &quot;isolated workspace manager is bound to {} with active callers&quot;,
+                            state.layer_stack_root.display()
+                        ),
+                    });
+                }
+                state.session.reap_orphan_resources();
+                *guard = <span class="rs-type">None</span>;
+            }
+        }
+        <span class="rs-kw">if</span> guard.is_none() {
+            <span class="rs-kw">let</span> config = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a>();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> caps = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-resource-caps-from-config-122">resource_caps_from_config</a>(&amp;config);
+            <span class="rs-kw">if</span> !caps.enabled {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>);
+            }
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(binding) = read_workspace_binding(&amp;root).map_err(setup_error)? {
+                caps.eos_workspace_root = binding.workspace_root;
+            }
+            <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone()).map_err(setup_error)?;
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> session = <span class="rs-type">IsolatedSession</span>::with_scratch_root(
+                caps,
+                <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonLayerStackPort-40">DaemonLayerStackPort</a> {
+                    stack: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(stack)),
+                },
+                <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-struct-DaemonNamespaceRuntime-79">DaemonNamespaceRuntime</a>,
+                <span class="rs-type">JsonlAuditSink</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(&amp;config.audit_jsonl_path),
+                config.scratch_root,
+            );
+            session.initialize()?;
+            *guard = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a> {
+                #[cfg(target_os = &quot;linux&quot;)]
+                layer_stack_root: root,
+                session,
+            });
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-normalized-root-88">normalized_root</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    root.canonicalize().unwrap_or_else(|_| root.to_path_buf())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a>() -&gt; <span class="rs-type">IsolatedWorkspaceConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a>()
+        .read()
+        .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+        .clone()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-cell-99">isolated_workspace_config_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> std::sync::<span class="rs-type">RwLock</span>&lt;<span class="rs-type">IsolatedWorkspaceConfig</span>&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">CONFIG</span>: <span class="rs-type">OnceLock</span>&lt;std::sync::<span class="rs-type">RwLock</span>&lt;<span class="rs-type">IsolatedWorkspaceConfig</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>();
+    <span class="rs-type">CONFIG</span>.get_or_init(|| std::sync::<span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-default-isolated-workspace-config-104">default_isolated_workspace_config</a>()))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-default-isolated-workspace-config-104">default_isolated_workspace_config</a>() -&gt; <span class="rs-type">IsolatedWorkspaceConfig</span> {
+    <span class="rs-type">IsolatedWorkspaceConfig</span> {
+        enabled: <span class="rs-kw">false</span>,
+        scratch_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/eos/scratch/isolated&quot;),
+        audit_jsonl_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/eos/scratch/isolated/audit.jsonl&quot;),
+        ttl_s: 1800.0,
+        total_cap: 5,
+        upperdir_bytes: 1_073_741_824,
+        memavail_fraction: 0.5,
+        setup_timeout_s: 30.0,
+        exit_grace_s: 0.25,
+        rfc1918_egress: <span class="rs-type">ConfigRfc1918Egress</span>::<span class="rs-type">Allow</span>,
+        fallback_dns: &quot;1.1.1.1&quot;.to_owned(),
+        workspace_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/testbed&quot;),
+        sample_interval_s: 0.5,
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-resource-caps-from-config-122">resource_caps_from_config</a>(config: &amp;<span class="rs-type">IsolatedWorkspaceConfig</span>) -&gt; <span class="rs-type">ResourceCaps</span> {
+    <span class="rs-type">ResourceCaps</span> {
+        enabled: config.enabled,
+        ttl_s: config.ttl_s,
+        total_cap: config.total_cap,
+        upperdir_bytes: config.upperdir_bytes,
+        memavail_fraction: config.memavail_fraction,
+        setup_timeout_s: config.setup_timeout_s,
+        exit_grace_s: config.exit_grace_s,
+        rfc1918_egress: <span class="rs-kw">match</span> config.rfc1918_egress {
+            <span class="rs-type">ConfigRfc1918Egress</span>::<span class="rs-type">Allow</span> =&gt; <span class="rs-type">RuntimeRfc1918Egress</span>::<span class="rs-type">Allow</span>,
+            <span class="rs-type">ConfigRfc1918Egress</span>::<span class="rs-type">Deny</span> =&gt; <span class="rs-type">RuntimeRfc1918Egress</span>::<span class="rs-type">Deny</span>,
+        },
+        fallback_dns: config.fallback_dns.clone(),
+        eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
+        sample_interval_s: config.sample_interval_s,
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> with_state&lt;<span class="rs-type">T</span>&gt;(
+    f: <span class="rs-kw">impl</span> <span class="rs-type">FnOnce</span>(&amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>()
+        .as_mut()
+        .ok_or(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>)
+        .and_then(f)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>&gt;&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">STATE</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>();
+    <span class="rs-type">STATE</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<span class="rs-type">None</span>))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>() -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-struct-DaemonIsolatedState-20">DaemonIsolatedState</a>&gt;&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a>().lock().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-reset-test-manager-file-159">reset_test_manager_file</a>() {
+    <span class="rs-kw">let</span> session_root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-isolated-workspace-config-92">isolated_workspace_config</a>().scratch_root;
+    <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;session_root);
+    <span class="rs-kw">if</span> std::fs::create_dir_all(&amp;session_root).is_err() {
+        <span class="rs-kw">return</span>;
+    }
+    <span class="rs-kw">let</span> _ = std::fs::write(
+        session_root.join(&quot;manager.json&quot;),
+        br#&quot;{&quot;schema_version&quot;:1,&quot;handles&quot;:[]}&quot;#,
+    );
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

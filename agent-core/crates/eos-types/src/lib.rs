@@ -13,12 +13,14 @@
 #![warn(missing_docs)]
 
 mod agent;
+mod config;
 mod contracts;
 mod error;
 mod frontmatter;
 mod ids;
 mod json;
 mod llm;
+mod models;
 pub mod ports;
 pub mod state;
 mod time;
@@ -26,6 +28,7 @@ mod time;
 pub use agent::{
     AgentDefinition, AgentName, AgentNameError, AgentRegistry, AgentRegistryBuilder, AgentType,
 };
+pub use config::ConfigError;
 pub use contracts::{
     AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus,
     AgentState, AttemptSubmissionPort, CancelError, CancelPort, OutstandingWorkflow, PlanReducer,
@@ -40,17 +43,19 @@ pub use ids::{
 };
 pub use json::JsonObject;
 pub use llm::{ContentBlock, Message, MessageRole, ToolSpec};
+pub use models::{ModelRegistrationConfig, ModelsConfig};
 pub use ports::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
     TaskStore, WorkflowStore,
 };
 pub use state::{
     execution_outcome_for_submission, present_status, AgentRun, Attempt, AttemptBudget,
-    AttemptClosure, AttemptFailReason, AttemptStage, AttemptState, AttemptStatus, DeferredGoal,
-    ExecutionRole, ExecutionTaskOutcome, GeneratorSubmission, Iteration, IterationCreationReason,
-    IterationOutcome, IterationStatus, MaterializedPlan, ModelRegistration, Page, PageResult,
-    PlanDisposition, PlanNodeId, PlannerFailReason, PlannerFailureSubmission, PlannerSubmission,
-    ReducerSubmission, Request, RequestListFilter, RequestStatus, Task, TaskOutcomeStatus,
-    TaskRole, TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
+    AttemptClosure, AttemptFailReason, AttemptStage, AttemptState, AttemptStatus,
+    BackgroundSessionCounts, DeferredGoal, ExecutionRole, ExecutionTaskOutcome,
+    GeneratorSubmission, Iteration, IterationCreationReason, IterationOutcome, IterationStatus,
+    MaterializedPlan, ModelRegistration, Page, PageResult, PlanDisposition, PlanNodeId,
+    PlannerFailReason, PlannerFailureSubmission, PlannerSubmission, ReducerSubmission, Request,
+    RequestListFilter, RequestStatus, Task, TaskOutcomeStatus, TaskRole, TaskStatus, Workflow,
+    WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

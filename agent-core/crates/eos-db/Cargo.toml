@@ -6,7 +6,6 @@ rust-version.workspace = true
 
 [dependencies]
 eos-types.workspace = true
-eos-config.workspace = true
 sqlx = { workspace = true, features = ["time"] }
 thiserror.workspace = true
 async-trait.workspace = true

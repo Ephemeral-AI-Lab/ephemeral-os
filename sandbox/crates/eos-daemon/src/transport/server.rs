@@ -108,9 +108,7 @@ impl DaemonServer {
         daemon_config: &DaemonConfig,
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
-        crate::adapters::workspace_run::configure_command_sessions(
-            &daemon_config.command_sessions,
-        );
+        crate::adapters::workspace_run::configure_command_sessions(&daemon_config.command_sessions);
         crate::adapters::workspace_run::isolated::configure_isolated_workspace(isolated_config);
         crate::adapters::plugins::configure_plugin_runtime(&daemon_config.plugin);
         crate::adapters::occ::configure_layer_stack(&daemon_config.layer_stack);

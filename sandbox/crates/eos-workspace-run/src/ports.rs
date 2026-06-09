@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use eos_workspace_modes::ephemeral::EphemeralWorkspace;
 use eos_workspace::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
+use eos_workspace_modes::ephemeral::EphemeralWorkspace;
 use serde_json::Value;
 
 /// Daemon-provided services the run lifecycle depends on but that must stay in

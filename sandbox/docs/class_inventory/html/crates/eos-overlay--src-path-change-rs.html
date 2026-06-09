@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>5</b><span>modules</span></div>
-  <div><b>56</b><span>items</span></div>
+  <div><b>55</b><span>items</span></div>
   <div><b>24</b><span>fields</span></div>
-  <div><b>9</b><span>methods</span></div>
+  <div><b>8</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -177,9 +177,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-475"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a> (label : &amp; str) -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a> &lt; Self &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-475"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a> (label : &amp; str) -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a> &lt; Self &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
             <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(0);
             <span class="rs-kw">let</span> base = std::env::temp_dir().join(format!(
                 &quot;eos-overlay-{label}-{}-{}&quot;,
@@ -191,9 +191,9 @@
             <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { base })
         }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a></code></summary><table><tbody><tr id="method-drop-489"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#method-drop-70">drop</a> (&amp; mut self)</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a></code></summary><table><tbody><tr id="method-drop-489"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#method-drop-66">drop</a> (&amp; mut self)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-drop-70">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-drop-66">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
             <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;<span class="rs-self">self</span>.base);
         }
 </code></pre>
@@ -206,7 +206,7 @@
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt; T = () &gt; = std :: result :: <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt; T = () &gt; = std :: result :: <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:421</p>
@@ -721,12 +721,12 @@
     <h3>captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a> () -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a> () -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a> {
         <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;capture_upperdir&quot;)?;
         std::fs::create_dir_all(fixture.base.join(&quot;dir&quot;))?;
         std::fs::write(fixture.base.join(&quot;dir/file.txt&quot;), b&quot;hello&quot;)?;
@@ -1184,7 +1184,7 @@
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
 
     #[test]
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-validates-overlay-path-change-fields-423">validates_overlay_path_change_fields</a>() {
@@ -1206,7 +1206,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a> {
         <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;capture_upperdir&quot;)?;
         std::fs::create_dir_all(fixture.base.join(&quot;dir&quot;))?;
         std::fs::write(fixture.base.join(&quot;dir/file.txt&quot;), b&quot;hello&quot;)?;
@@ -1238,7 +1238,7 @@
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
             <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(0);
             <span class="rs-kw">let</span> base = std::env::temp_dir().join(format!(
                 &quot;eos-overlay-{label}-{}-{}&quot;,
@@ -1252,7 +1252,7 @@
     }
 
     <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-drop-70">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-drop-66">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
             <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;<span class="rs-self">self</span>.base);
         }
     }

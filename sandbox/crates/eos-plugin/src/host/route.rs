@@ -107,7 +107,10 @@ impl PluginProcessSpec {
                 ENV_PLUGIN_PPC_SOCKET,
                 self.socket_path.to_string_lossy().into_owned(),
             ),
-            (ENV_PLUGIN_LAYER_STACK_ROOT, self.key.layer_stack_root.clone()),
+            (
+                ENV_PLUGIN_LAYER_STACK_ROOT,
+                self.key.layer_stack_root.clone(),
+            ),
             (ENV_PLUGIN_WORKSPACE_ROOT, self.key.workspace_root.clone()),
             (
                 ENV_PLUGIN_PACKAGE_ROOT,

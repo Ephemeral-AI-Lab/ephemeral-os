@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 mod attempt;
+mod config;
 mod context;
 mod error;
 mod ids;
@@ -32,6 +33,7 @@ pub use attempt::{
     AgentLaunch, AgentRunReport, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
     ExecutionLaunch, PlannerLaunch,
 };
+pub use config::{AttemptConfig, WorkflowConfig, DEFAULT_WORKFLOW_MAX_DEPTH};
 pub use context::{
     render_context_xml, render_task_guidance, AgentContext, AgentEntryComposer, AgentEntryMessages,
     ContextEngine, ContextEngineDeps, ContextRole, ContextScope, ContextSection,

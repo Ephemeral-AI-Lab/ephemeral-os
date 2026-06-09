@@ -10,8 +10,9 @@ use std::path::{Path, PathBuf};
 
 use serde_yaml::Value;
 
-use crate::document::ConfigDocument;
-use crate::error::ConfigError;
+use eos_types::ConfigError;
+
+use super::document::ConfigDocument;
 
 /// Load the merged config document from the committed baseline
 /// `agent-core/config/prd.yml` overlaid by the gitignored
@@ -42,7 +43,7 @@ fn local_override_path() -> PathBuf {
 }
 
 /// `agent-core/config` resolved from the crate layout (this crate lives at
-/// `agent-core/crates/eos-config`).
+/// `agent-core/crates/eos-runtime`).
 fn config_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
@@ -94,7 +95,7 @@ fn deep_merge(base: &mut Value, overlay: Value) {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use crate::DatabaseConfig;
+    use eos_db::DatabaseConfig;
 
     /// Write a uniquely-named temp YAML file (no external tempfile dep).
     fn temp_yaml(name: &str, content: &str) -> PathBuf {

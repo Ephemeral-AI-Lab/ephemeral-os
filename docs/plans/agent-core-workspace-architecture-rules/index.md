@@ -340,8 +340,8 @@ verification command or evidence used for that phase.
 | --- | --- | --- |
 | 0. Architecture lock | Accepted | final 10-crate map and vocabulary are approved |
 | 1. Workspace guardrails | Implemented | `cargo test -p workspace-guard` enforces staged naming, layout, DAG, public-surface, and budget rules |
-| 2. Crate map and DAG | Not started | target crate list builds with expected internal edges |
-| 3. `eos-tool` | Not started | no `eos-tool-ports`; tool modules collapsed |
+| 2. Crate map and DAG | In progress | staged crate folds are landing; `eos-tool-ports` / `eos-agent-ports` are retired from active imports, but the `eos-runtime` → `eos-agent-core` fold remains |
+| 3. `eos-tool` | Implemented | `eos-tool-ports` is gone; tool modules collapsed; hook execution is engine-owned |
 | 3B. Execution lineage/materialization | Not started | DB lineage supports task/run/workflow/message-record materialization |
 | 4. `eos-engine` and `eos-agent-run` | Not started | engine is execution-only; run lifecycle is isolated over established lineage |
 | 5. Agent core/workflow/types | Not started | `eos-agent-core` owns hidden runtime wiring |

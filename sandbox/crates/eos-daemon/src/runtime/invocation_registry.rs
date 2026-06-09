@@ -258,12 +258,7 @@ mod tests {
     async fn cancel_heartbeat_and_count_track_background_task() -> TestResult {
         let registry = InFlightRegistry::new(300.0, 30.0);
         let task = tokio::spawn(future::pending::<()>());
-        registry.register(
-            "bg-1",
-            task.abort_handle(),
-            "caller-a",
-            true,
-        );
+        registry.register("bg-1", task.abort_handle(), "caller-a", true);
 
         assert_eq!(registry.count_by_caller("caller-a"), 1);
         assert_eq!(
@@ -296,12 +291,7 @@ mod tests {
         }
 
         let task = tokio::spawn(future::pending::<()>());
-        registry.register(
-            "bg-poisoned",
-            task.abort_handle(),
-            "caller-a",
-            true,
-        );
+        registry.register("bg-poisoned", task.abort_handle(), "caller-a", true);
 
         assert_eq!(registry.count_by_caller("caller-a"), 1);
         assert_eq!(registry.heartbeat(&["bg-poisoned".to_owned()]), 1);
@@ -317,12 +307,7 @@ mod tests {
     async fn ttl_sweep_reaps_active_background_task() -> TestResult {
         let registry = InFlightRegistry::new(0.001, 30.0);
         let task = tokio::spawn(future::pending::<()>());
-        registry.register(
-            "bg-ttl",
-            task.abort_handle(),
-            "caller-a",
-            true,
-        );
+        registry.register("bg-ttl", task.abort_handle(), "caller-a", true);
 
         thread::sleep(Duration::from_millis(3));
         registry.ttl_sweep();

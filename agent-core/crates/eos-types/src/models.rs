@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::error::ConfigError;
+use crate::config::ConfigError;
 
 /// Model-registry seed configuration.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

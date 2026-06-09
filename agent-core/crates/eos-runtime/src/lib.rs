@@ -24,7 +24,9 @@
 
 mod agent_runner;
 mod agents;
+pub mod audit;
 mod cancel;
+pub mod config;
 mod entry;
 pub mod observability;
 mod plugins;
@@ -35,7 +37,14 @@ mod runtime_services;
 #[path = "../tests/unit/mod.rs"]
 mod tests;
 
+pub use audit::{
+    canonical_event_type, from_jsonl_line, to_jsonl_line, AuditError, AuditEvent, AuditNode,
+    AuditNodeBuilder, AuditSink, AuditSource, BufferedAuditShutdown, BufferedJsonlSink, JsonObject,
+    JsonlSink, NoopAuditSink, ObsEnvelope, ObsIds, ObsSource, AGENT_RUN_COMPLETED,
+    OS_RESOURCE_SAMPLED, SCHEMA, SCHEMA_VERSION, TOOL_CALL_COMPLETED,
+};
 pub use cancel::{cancel_agent_core_user_request, CancelReport};
+pub use config::RuntimeConfig;
 pub use entry::{run_request, RequestOutcome};
 pub use request_input::RequestRunInput;
 pub use runtime_services::{

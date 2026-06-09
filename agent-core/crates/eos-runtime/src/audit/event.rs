@@ -9,8 +9,8 @@ use eos_types::{Clock, JsonObject, UtcDateTime};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::node::AuditNode;
-use crate::{ObsEnvelope, ObsIds, ObsSource};
+use super::node::AuditNode;
+use super::{ObsEnvelope, ObsIds, ObsSource};
 
 /// The serialized-row schema version. Bumped only on a wire-shape change.
 pub const SCHEMA_VERSION: u32 = 1;

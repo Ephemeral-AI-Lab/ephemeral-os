@@ -9,8 +9,9 @@ use serde_json::{Map, Value};
 use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
-use eos_config::ModelsConfig;
-use eos_types::{CoreError, JsonObject, ModelRegistration, ModelStore, Sealed, UtcDateTime};
+use eos_types::{
+    CoreError, JsonObject, ModelRegistration, ModelStore, ModelsConfig, Sealed, UtcDateTime,
+};
 
 use crate::error::DbError;
 use crate::json_col;
@@ -341,9 +342,8 @@ mod tests {
     async fn registry() -> (tempfile::TempDir, ModelRegistry) {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = dir.path().join("models.db");
-        let mut cfg = eos_config::DatabaseConfig::default();
-        cfg.url =
-            eos_config::DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url");
+        let mut cfg = crate::DatabaseConfig::default();
+        cfg.url = crate::DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url");
         let pool = crate::pool::open_pool(&cfg).await.expect("pool");
         (dir, ModelRegistry::new(pool))
     }

@@ -23,7 +23,7 @@ use crate::error::LayerStackError;
 
 /// One active snapshot lease: an id bound to the frozen manifest it pins.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LayerStackLeaseRecord {
+pub(crate) struct LayerStackLeaseRecord {
     pub lease_id: String,
     pub manifest: Manifest,
 }
@@ -34,7 +34,7 @@ pub struct LayerStackLeaseRecord {
 /// serialized by the surrounding `SharedLeaseRegistry` (`Arc<Mutex<…>>`),
 /// not by this struct itself.
 #[derive(Debug, Default)]
-pub struct LeaseRegistry {
+pub(crate) struct LeaseRegistry {
     leases: HashMap<String, LayerStackLeaseRecord>,
     refcounts: BTreeMap<LayerRefKey, usize>,
 }

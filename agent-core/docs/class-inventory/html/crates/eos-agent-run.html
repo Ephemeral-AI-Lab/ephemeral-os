@@ -215,9 +215,9 @@
 <span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
-<span class="rs-kw">use</span> eos_agent_ports::{<span class="rs-type">AgentLoopCancelHandle</span>, <span class="rs-type">AgentRunError</span>, <span class="rs-type">AgentRunOutcome</span>};
 <span class="rs-kw">use</span> eos_engine::records::<span class="rs-type">AgentRunRecordHandle</span>;
-<span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
+<span class="rs-kw">use</span> eos_engine::<span class="rs-type">AgentLoopCancelHandle</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunError</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>};
 <span class="rs-kw">use</span> tokio::sync::{watch, <span class="rs-type">Mutex</span>};
 
 <span class="rs-comment">/// Registry of active in-process agent runs.</span>

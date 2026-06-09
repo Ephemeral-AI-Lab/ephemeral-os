@@ -201,13 +201,15 @@ to the crate that owns its behavior or to an owner-neutral contract module.
 | `PlannerPlan`, `PlanTask`, `PlanReducer`, `SubmissionAck` | owner-neutral workflow submission contracts, not concrete tool behavior |
 | `AttemptSubmissionPort` | workflow submission contract implemented by `eos-workflow`; consumed by `eos-tool` |
 | `CancelPort` | cancellation contract owned by the lifecycle/cancellation phase, not by concrete tools |
-| `SystemNotification`, `NotificationSink`, background-session count/status DTOs | engine/background contracts unless a passive DTO must move to `eos-types` |
+| `SystemNotification`, `NotificationSink` | engine/background contracts |
+| `BackgroundSessionCounts` | passive background accounting DTO in `eos-types`; produced and consumed by engine/background hook execution |
+| `SubagentSessionStatus` | removed; stale public DTO with no live consumer |
 
 The agent-launch contracts (`AgentType`, `AgentName`, `AgentRunApi`,
 `SpawnAgentRequest`, `AgentRunRecordKind`, `TaskRole`) are **not**
 `eos-tool-ports` items; they arrive from `eos-types` via the Phase 02 contract
-floor (the `eos-agent-ports` split). `tools/subagent.rs` consumes them to build
-spawn requests and select the record kind. `eos-tool` adds no launch-class types
+floor that retired the `eos-agent-ports` crate. `tools/subagent.rs` consumes
+them to build spawn requests and select the record kind. `eos-tool` adds no launch-class types
 of its own, performs no `AgentType` validation, and references the `AgentType`
 launch axis only — it does not consume the `AgentRole` behavioral axis, which
 Phase 02 retires. (`TaskRole` is the lineage-row workflow role from Phase 00,
@@ -538,7 +540,9 @@ Implementation verification (2026-06-09):
   `eos-tool` solely to avoid dependency-DAG decisions.
 - `cargo test -p eos-tool` passes.
 - `cargo check -p eos-engine --all-targets` and
-  `cargo check -p eos-agent-core --all-targets` pass after import updates.
+  `cargo check -p eos-runtime --all-targets` pass after import updates; replace
+  the second command with `cargo check -p eos-agent-core --all-targets` only
+  after the Phase 02 runtime facade fold lands.
 - `eos-tool` final module count is 14: the Phase 00 locked 13-module tree
   (`lib`, `error`, `model`, `registry`, `hooks`, `tools`, plus the seven flat
   `tools/` family files) plus the deliberate `tools/ask_advisor.rs` family. No

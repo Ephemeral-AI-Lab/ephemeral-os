@@ -6,8 +6,8 @@
 //! single-method write surface (ISP) and is deliberately **not** sealed —
 //! external sinks are first-class implementors.
 
-use crate::error::AuditError;
-use crate::event::AuditEvent;
+use super::error::AuditError;
+use super::event::AuditEvent;
 
 /// Write-only audit side channel.
 ///

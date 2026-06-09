@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>133</b><span>items</span></div>
+  <div><b>132</b><span>items</span></div>
   <div><b>124</b><span>fields</span></div>
-  <div><b>140</b><span>methods</span></div>
+  <div><b>139</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -65,11 +65,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a></code>
   <p class="docstring">Single-writer RUN-stage scheduler for one Attempt.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>orchestrator</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-30"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (orchestrator : Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt;) -&gt; Self</code><p class="docstring">Create a scheduler for an orchestrator.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>orchestrator</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-30"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-263">new</a> (orchestrator : Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt;) -&gt; Self</code><p class="docstring">Create a scheduler for an orchestrator.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a scheduler for an orchestrator.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { orchestrator }
     }
 </code></pre>
@@ -87,14 +87,14 @@
                 &quot;max_concurrent_task_runs must be at least 1&quot;,
             ));
         }
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> set = <span class="rs-type">JoinSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> set = <span class="rs-type">JoinSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
         loop {
             <span class="rs-kw">let</span> attempt = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-fresh-attempt-572">fresh_attempt</a>().<span class="rs-kw">await</span>?;
             <span class="rs-kw">if</span> attempt.is_closed() || attempt.stage() != eos_types::<span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span> {
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
             }
             <span class="rs-kw">let</span> tasks = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-plan-task-records-554">plan_task_records</a>(&amp;attempt).<span class="rs-kw">await</span>?;
-            <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(&amp;tasks)? {
+            <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(&amp;tasks)? {
                 <span class="rs-kw">if</span> set.len() &gt;= deps.max_concurrent_task_runs {
                     <span class="rs-kw">break</span>;
                 }
@@ -146,22 +146,22 @@
                 };
                 <span class="rs-kw">let</span> runner = deps.runner.clone();
                 set.spawn(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
-                    <span class="rs-kw">let</span> result = runner.<a class="symbol-link rs-fn" href="eos-workflow.html#method-run-52">run</a>(launch.clone()).<span class="rs-kw">await</span>;
+                    <span class="rs-kw">let</span> result = runner.<a class="symbol-link rs-fn" href="eos-workflow.html#method-run-51">run</a>(launch.clone()).<span class="rs-kw">await</span>;
                     (launch, result)
                 });
             }
 
             <span class="rs-kw">let</span> refreshed = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-fresh-attempt-572">fresh_attempt</a>().<span class="rs-kw">await</span>?;
             <span class="rs-kw">let</span> refreshed_tasks = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-plan-task-records-554">plan_task_records</a>(&amp;refreshed).<span class="rs-kw">await</span>?;
-            <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;refreshed_tasks)? {
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span> =&gt; {
+            <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;refreshed_tasks)? {
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span> =&gt; {
                     <span class="rs-kw">return</span> <span class="rs-self">self</span>
                         .orchestrator
                         .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-close-attempt-failed-507">close_attempt_failed</a>(eos_types::<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>)
                         .<span class="rs-kw">await</span>;
                 }
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Passed</span> =&gt; <span class="rs-kw">return</span> <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-close-attempt-passed-499">close_attempt_passed</a>().<span class="rs-kw">await</span>,
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Running</span> =&gt; {}
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Passed</span> =&gt; <span class="rs-kw">return</span> <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-close-attempt-passed-499">close_attempt_passed</a>().<span class="rs-kw">await</span>,
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Running</span> =&gt; {}
             }
             <span class="rs-kw">if</span> set.is_empty() {
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
@@ -177,17 +177,17 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-build-launch-138"><td>method</td><td>build_launch</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#method-build-launch-138">build_launch</a> (&amp; self , deps : &amp; <a class="symbol-link" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a> , attempt : &amp; Attempt , task : &amp; Task ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-build-launch-138"><td>method</td><td>build_launch</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#method-build-launch-138">build_launch</a> (&amp; self , deps : &amp; <a class="symbol-link" href="eos-workflow.html#item-struct-AttemptDeps-222">AttemptDeps</a> , attempt : &amp; Attempt , task : &amp; Task ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-build-launch-138">build_launch</a>(
         &amp;<span class="rs-self">self</span>,
-        deps: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>,
+        deps: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-222">AttemptDeps</a>,
         attempt: &amp;<span class="rs-type">Attempt</span>,
         task: &amp;<span class="rs-type">Task</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>&gt; {
         <span class="rs-kw">if</span> task.role == <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span> {
-            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps.clone())
-                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-reducer-430">for_reducer</a>(attempt, task)
+            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-344">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps.clone())
+                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-reducer-429">for_reducer</a>(attempt, task)
                 .<span class="rs-kw">await</span>
         } <span class="rs-kw">else</span> {
             <span class="rs-kw">let</span> agent_name = task.agent_name.clone().ok_or_else(|| {
@@ -196,8 +196,8 @@
                     task.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 ))
             })?;
-            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps.clone())
-                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-generator-399">for_generator</a>(attempt, task, &amp;agent_name)
+            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-344">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps.clone())
+                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-generator-398">for_generator</a>(attempt, task, &amp;agent_name)
                 .<span class="rs-kw">await</span>
         }
     }
@@ -266,7 +266,7 @@
     <span class="rs-comment">/// are reconstructable from task state, so runner correctness must come from</span>
     <span class="rs-comment">/// state/transcript, not from this trace.</span>
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-emit-task-event-217">emit_task_event</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str, task: &amp;<span class="rs-type">Task</span>, extra: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
         payload.insert(&quot;request_id&quot;.to_owned(), json!(task.request_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()));
         payload.insert(
             &quot;attempt_id&quot;.to_owned(),
@@ -302,7 +302,7 @@
         );
     }
 </code></pre>
-</details></td></tr><tr id="method-settle-run-task-257"><td>method</td><td>settle_run_task</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#method-settle-run-task-257">settle_run_task</a> (&amp; self , launch : <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a> , report : <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Settle a RUN-stage task after its run resolves (Path A-recording). The<br>submit tool already recorded the agent's outcome (task Done/Failed) via<br>the recording port *during* the run, so the loop's only post-join job is<br>Rust's still-RUNNING exhaustion guard: a task still `Running` means the<br>agent died without submitting -&gt; synthesize `run_exhausted`. A recorded<br>task is a no-op (the tool already wrote it).</p><details class="function-source">
+</details></td></tr><tr id="method-settle-run-task-257"><td>method</td><td>settle_run_task</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#method-settle-run-task-257">settle_run_task</a> (&amp; self , launch : <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a> , report : <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow.html#item-struct-AgentRunReport-16">AgentRunReport</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Settle a RUN-stage task after its run resolves (Path A-recording). The<br>submit tool already recorded the agent's outcome (task Done/Failed) via<br>the recording port *during* the run, so the loop's only post-join job is<br>Rust's still-RUNNING exhaustion guard: a task still `Running` means the<br>agent died without submitting -&gt; synthesize `run_exhausted`. A recorded<br>task is a no-op (the tool already wrote it).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Settle a RUN-stage task after its run resolves (Path A-recording). The</span>
     <span class="rs-comment">/// submit tool already recorded the agent's outcome (task Done/Failed) via</span>
@@ -312,14 +312,14 @@
     <span class="rs-comment">/// task is a no-op (the tool already wrote it).</span>
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-settle-run-task-257">settle_run_task</a>(
         &amp;<span class="rs-self">self</span>,
-        launch: <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>,
-        report: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a>&gt;,
+        launch: <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>,
+        report: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-16">AgentRunReport</a>&gt;,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> task = <span class="rs-self">self</span>
             .orchestrator
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>()
             .task_store
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>())
             .<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> matches!(task, <span class="rs-type">Some</span>(<span class="rs-kw">ref</span> task) <span class="rs-kw">if</span> task.status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
             <span class="rs-kw">let</span> summary = <span class="rs-kw">match</span> report {
@@ -334,17 +334,17 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-synthesize-failure-287"><td>method</td><td>synthesize_failure</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#method-synthesize-failure-287">synthesize_failure</a> (&amp; self , launch : &amp; <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a> , summary : &amp; str) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-synthesize-failure-287"><td>method</td><td>synthesize_failure</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-run-stage-rs.html#method-synthesize-failure-287">synthesize_failure</a> (&amp; self , launch : &amp; <a class="symbol-link" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a> , summary : &amp; str) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-synthesize-failure-287">synthesize_failure</a>(&amp;<span class="rs-self">self</span>, launch: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>, summary: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> attempt_id = launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-150">attempt_id</a>().clone();
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-synthesize-failure-287">synthesize_failure</a>(&amp;<span class="rs-self">self</span>, launch: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>, summary: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+        <span class="rs-kw">let</span> attempt_id = launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-149">attempt_id</a>().clone();
         <span class="rs-kw">let</span> exhausted = <a class="symbol-link rs-fn" href="eos-workflow--src-util-rs.html#item-fn-json-object-6">json_object</a>(&quot;fail_reason&quot;, &quot;run_exhausted&quot;);
-        <span class="rs-kw">match</span> launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>() {
+        <span class="rs-kw">match</span> launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>() {
             <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span> =&gt; {
                 <span class="rs-self">self</span>.orchestrator
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-apply-planner-failure-357">apply_planner_failure</a>(<span class="rs-type">PlannerFailureSubmission</span> {
                         attempt_id,
-                        planner_task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>().clone(),
+                        planner_task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>().clone(),
                         fail_reason: <span class="rs-type">PlannerFailReason</span>::<span class="rs-type">RunExhausted</span>,
                     })
                     .<span class="rs-kw">await</span>
@@ -353,7 +353,7 @@
                 <span class="rs-self">self</span>.orchestrator
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-generator-submission-388">record_generator_submission</a>(<span class="rs-type">GeneratorSubmission</span> {
                         attempt_id,
-                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>().clone(),
+                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>().clone(),
                         status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
                         outcome: summary.to_owned(),
                         terminal_tool_result: exhausted,
@@ -364,7 +364,7 @@
                 <span class="rs-self">self</span>.orchestrator
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-reducer-submission-415">record_reducer_submission</a>(<span class="rs-type">ReducerSubmission</span> {
                         attempt_id,
-                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>().clone(),
+                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>().clone(),
                         status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
                         outcome: summary.to_owned(),
                         terminal_tool_result: exhausted,
@@ -373,7 +373,7 @@
             }
             <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;no exhaustion reporter <span class="rs-kw">for</span> role {:?}&quot;,
-                launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>()
+                launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>()
             ))),
         }
     }
@@ -429,7 +429,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-359">node</a>(id: &amp;str) -&gt; <span class="rs-type">PlanNodeId</span> {
-        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(id).unwrap()
+        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(id).unwrap()
     }
 </code></pre>
 </details>
@@ -447,14 +447,14 @@
   <summary>code</summary>
   <pre><code>    #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-injected-runner-double-366">injected_runner_double</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         runner.bind(&amp;deps.orchestrator_registry);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -480,11 +480,11 @@
 
         <span class="rs-kw">let</span> launches = runner.launches();
         assert_eq!(launches.len(), 3);
-        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
-        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>);
-        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>(), &amp;generator_id);
-        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-150">attempt_id</a>(), &amp;started.attempt_id);
-        assert_eq!(launches[2].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
+        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
+        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>);
+        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>(), &amp;generator_id);
+        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-149">attempt_id</a>(), &amp;started.attempt_id);
+        assert_eq!(launches[2].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
     }
 </code></pre>
 </details>
@@ -502,14 +502,14 @@
   <summary>code</summary>
   <pre><code>    #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-dead-agent-synthesizes-failure-411">dead_agent_synthesizes_failure</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         runner.bind(&amp;deps.orchestrator_registry);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -523,7 +523,7 @@
         assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> generator_id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;started.attempt_id, &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-359">node</a>(&quot;g1&quot;)).unwrap();
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&amp;generator_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&amp;generator_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
@@ -554,13 +554,13 @@
   <summary>code</summary>
   <pre><code>    #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-dead-planner-synthesizes-failure-452">dead_planner_synthesizes_failure</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -573,7 +573,7 @@
         assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> planner_task = stores
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
             .unwrap();
         assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
@@ -600,15 +600,15 @@
   <summary>code</summary>
   <pre><code>    #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-fanout-respects-concurrency-cap-489">fanout_respects_concurrency_cap</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">ScriptedRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(10, <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>, 0, &quot;&quot;);
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">ScriptedRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(10, <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>, 0, &quot;&quot;);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         deps.max_concurrent_task_runs = 3;
         runner.bind(&amp;deps.orchestrator_registry);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -634,11 +634,11 @@
         <span class="rs-kw">let</span> launches = runner.launches();
         <span class="rs-comment">// planner + 10 generators + 1 reducer.</span>
         assert_eq!(launches.len(), 12);
-        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
-        assert_eq!(launches.last().unwrap().<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
+        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
+        assert_eq!(launches.last().unwrap().<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
         <span class="rs-kw">let</span> generators = launches[1..11]
             .iter()
-            .filter(|l| l.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>() == <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>)
+            .filter(|l| l.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>() == <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>)
             .count();
         assert_eq!(generators, 10, &quot;all generators ran before the reducer&quot;);
     }
@@ -658,13 +658,13 @@
   <summary>code</summary>
   <pre><code>    #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-launch-failure-marks-task-failed-536">launch_failure_marks_task_failed</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner);
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps.clone())
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps.clone())
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -680,8 +680,8 @@
             iteration_id: <span class="rs-type">Some</span>(started.iteration_id.clone()),
             attempt_id: <span class="rs-type">Some</span>(started.attempt_id.clone()),
             agent_name: <span class="rs-type">None</span>,
-            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
             terminal_tool_result: <span class="rs-type">None</span>,
         });
         eos_types::<span class="rs-type">AttemptStore</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-plan-204">record_plan</a>(
@@ -691,19 +691,19 @@
                 planner_task_id: <span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap(),
                 disposition: <span class="rs-type">PlanDisposition</span>::<span class="rs-type">Complete</span>,
                 generator_task_ids: vec![task_id.clone()],
-                reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+                reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
             },
         )
         .<span class="rs-kw">await</span>
         .unwrap();
 
         <span class="rs-kw">let</span> orchestrator = deps.orchestrator_registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;started.attempt_id).unwrap();
-        <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(orchestrator)
+        <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(orchestrator)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-advance-run-stage-36">advance_run_stage</a>()
             .<span class="rs-kw">await</span>
             .unwrap();
 
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&amp;task_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&amp;task_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
@@ -740,8 +740,8 @@
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 <span class="rs-kw">use</span> tokio::task::<span class="rs-type">JoinSet</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::plan_dag::{dag_resolution, ready_pending_plan_ids, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::plan_dag::{dag_resolution, ready_pending_plan_ids, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-344">AgentLaunchFactory</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-16">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-222">AttemptDeps</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::util::json_object;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
@@ -761,7 +761,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a> {
     <span class="rs-comment">/// Create a scheduler for an orchestrator.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { orchestrator }
     }
 
@@ -777,14 +777,14 @@
                 &quot;max_concurrent_task_runs must be at least 1&quot;,
             ));
         }
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> set = <span class="rs-type">JoinSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> set = <span class="rs-type">JoinSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
         loop {
             <span class="rs-kw">let</span> attempt = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-fresh-attempt-572">fresh_attempt</a>().<span class="rs-kw">await</span>?;
             <span class="rs-kw">if</span> attempt.is_closed() || attempt.stage() != eos_types::<span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span> {
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
             }
             <span class="rs-kw">let</span> tasks = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-plan-task-records-554">plan_task_records</a>(&amp;attempt).<span class="rs-kw">await</span>?;
-            <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-19">ready_pending_plan_ids</a>(&amp;tasks)? {
+            <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-ready-pending-plan-ids-20">ready_pending_plan_ids</a>(&amp;tasks)? {
                 <span class="rs-kw">if</span> set.len() &gt;= deps.max_concurrent_task_runs {
                     <span class="rs-kw">break</span>;
                 }
@@ -836,22 +836,22 @@
                 };
                 <span class="rs-kw">let</span> runner = deps.runner.clone();
                 set.spawn(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
-                    <span class="rs-kw">let</span> result = runner.<a class="symbol-link rs-fn" href="eos-workflow.html#method-run-52">run</a>(launch.clone()).<span class="rs-kw">await</span>;
+                    <span class="rs-kw">let</span> result = runner.<a class="symbol-link rs-fn" href="eos-workflow.html#method-run-51">run</a>(launch.clone()).<span class="rs-kw">await</span>;
                     (launch, result)
                 });
             }
 
             <span class="rs-kw">let</span> refreshed = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-fresh-attempt-572">fresh_attempt</a>().<span class="rs-kw">await</span>?;
             <span class="rs-kw">let</span> refreshed_tasks = <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-plan-task-records-554">plan_task_records</a>(&amp;refreshed).<span class="rs-kw">await</span>?;
-            <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-35">dag_resolution</a>(&amp;refreshed_tasks)? {
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span> =&gt; {
+            <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-dag-resolution-36">dag_resolution</a>(&amp;refreshed_tasks)? {
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">FailedOrBlocked</span> =&gt; {
                     <span class="rs-kw">return</span> <span class="rs-self">self</span>
                         .orchestrator
                         .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-close-attempt-failed-507">close_attempt_failed</a>(eos_types::<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>)
                         .<span class="rs-kw">await</span>;
                 }
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Passed</span> =&gt; <span class="rs-kw">return</span> <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-close-attempt-passed-499">close_attempt_passed</a>().<span class="rs-kw">await</span>,
-                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-8">DagResolution</a>::<span class="rs-type">Running</span> =&gt; {}
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Passed</span> =&gt; <span class="rs-kw">return</span> <span class="rs-self">self</span>.orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-close-attempt-passed-499">close_attempt_passed</a>().<span class="rs-kw">await</span>,
+                <a class="symbol-link rs-type" href="eos-workflow--src-attempt-plan-dag-rs.html#item-enum-DagResolution-9">DagResolution</a>::<span class="rs-type">Running</span> =&gt; {}
             }
             <span class="rs-kw">if</span> set.is_empty() {
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
@@ -869,13 +869,13 @@
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-build-launch-138">build_launch</a>(
         &amp;<span class="rs-self">self</span>,
-        deps: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>,
+        deps: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-222">AttemptDeps</a>,
         attempt: &amp;<span class="rs-type">Attempt</span>,
         task: &amp;<span class="rs-type">Task</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>&gt; {
         <span class="rs-kw">if</span> task.role == <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span> {
-            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps.clone())
-                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-reducer-430">for_reducer</a>(attempt, task)
+            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-344">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps.clone())
+                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-reducer-429">for_reducer</a>(attempt, task)
                 .<span class="rs-kw">await</span>
         } <span class="rs-kw">else</span> {
             <span class="rs-kw">let</span> agent_name = task.agent_name.clone().ok_or_else(|| {
@@ -884,8 +884,8 @@
                     task.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 ))
             })?;
-            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-345">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps.clone())
-                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-generator-399">for_generator</a>(attempt, task, &amp;agent_name)
+            <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentLaunchFactory-344">AgentLaunchFactory</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps.clone())
+                .<a class="symbol-link rs-fn" href="eos-workflow.html#method-for-generator-398">for_generator</a>(attempt, task, &amp;agent_name)
                 .<span class="rs-kw">await</span>
         }
     }
@@ -950,7 +950,7 @@
     <span class="rs-comment">/// are reconstructable from task state, so runner correctness must come from</span>
     <span class="rs-comment">/// state/transcript, not from this trace.</span>
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-emit-task-event-217">emit_task_event</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str, task: &amp;<span class="rs-type">Task</span>, extra: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
         payload.insert(&quot;request_id&quot;.to_owned(), json!(task.request_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()));
         payload.insert(
             &quot;attempt_id&quot;.to_owned(),
@@ -994,14 +994,14 @@
     <span class="rs-comment">/// task is a no-op (the tool already wrote it).</span>
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-settle-run-task-257">settle_run_task</a>(
         &amp;<span class="rs-self">self</span>,
-        launch: <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>,
-        report: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a>&gt;,
+        launch: <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>,
+        report: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-16">AgentRunReport</a>&gt;,
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> task = <span class="rs-self">self</span>
             .orchestrator
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>()
             .task_store
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>())
             .<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> matches!(task, <span class="rs-type">Some</span>(<span class="rs-kw">ref</span> task) <span class="rs-kw">if</span> task.status == <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
             <span class="rs-kw">let</span> summary = <span class="rs-kw">match</span> report {
@@ -1016,15 +1016,15 @@
         }
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-synthesize-failure-287">synthesize_failure</a>(&amp;<span class="rs-self">self</span>, launch: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>, summary: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
-        <span class="rs-kw">let</span> attempt_id = launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-150">attempt_id</a>().clone();
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-synthesize-failure-287">synthesize_failure</a>(&amp;<span class="rs-self">self</span>, launch: &amp;<a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-55">AgentLaunch</a>, summary: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+        <span class="rs-kw">let</span> attempt_id = launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-149">attempt_id</a>().clone();
         <span class="rs-kw">let</span> exhausted = <a class="symbol-link rs-fn" href="eos-workflow--src-util-rs.html#item-fn-json-object-6">json_object</a>(&quot;fail_reason&quot;, &quot;run_exhausted&quot;);
-        <span class="rs-kw">match</span> launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>() {
+        <span class="rs-kw">match</span> launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>() {
             <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span> =&gt; {
                 <span class="rs-self">self</span>.orchestrator
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-apply-planner-failure-357">apply_planner_failure</a>(<span class="rs-type">PlannerFailureSubmission</span> {
                         attempt_id,
-                        planner_task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>().clone(),
+                        planner_task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>().clone(),
                         fail_reason: <span class="rs-type">PlannerFailReason</span>::<span class="rs-type">RunExhausted</span>,
                     })
                     .<span class="rs-kw">await</span>
@@ -1033,7 +1033,7 @@
                 <span class="rs-self">self</span>.orchestrator
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-generator-submission-388">record_generator_submission</a>(<span class="rs-type">GeneratorSubmission</span> {
                         attempt_id,
-                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>().clone(),
+                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>().clone(),
                         status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
                         outcome: summary.to_owned(),
                         terminal_tool_result: exhausted,
@@ -1044,7 +1044,7 @@
                 <span class="rs-self">self</span>.orchestrator
                     .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-reducer-submission-415">record_reducer_submission</a>(<span class="rs-type">ReducerSubmission</span> {
                         attempt_id,
-                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>().clone(),
+                        task_id: launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>().clone(),
                         status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
                         outcome: summary.to_owned(),
                         terminal_tool_result: exhausted,
@@ -1053,7 +1053,7 @@
             }
             <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;no exhaustion reporter <span class="rs-kw">for</span> role {:?}&quot;,
-                launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>()
+                launch.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>()
             ))),
         }
     }
@@ -1089,7 +1089,7 @@
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-359">node</a>(id: &amp;str) -&gt; <span class="rs-type">PlanNodeId</span> {
-        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(id).unwrap()
+        <span class="rs-type">PlanNodeId</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(id).unwrap()
     }
 
     <span class="rs-comment">// AC-eos-workflow-08: the run is exercised entirely through the injected</span>
@@ -1097,14 +1097,14 @@
     <span class="rs-comment">// well-formed launch.</span>
     #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-injected-runner-double-366">injected_runner_double</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         runner.bind(&amp;deps.orchestrator_registry);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -1130,11 +1130,11 @@
 
         <span class="rs-kw">let</span> launches = runner.launches();
         assert_eq!(launches.len(), 3);
-        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
-        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>);
-        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-132">task_id</a>(), &amp;generator_id);
-        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-150">attempt_id</a>(), &amp;started.attempt_id);
-        assert_eq!(launches[2].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
+        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
+        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>);
+        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-task-id-131">task_id</a>(), &amp;generator_id);
+        assert_eq!(launches[1].<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-149">attempt_id</a>(), &amp;started.attempt_id);
+        assert_eq!(launches[2].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
     }
 
     <span class="rs-comment">// AC-eos-workflow-07 (liveness): a generator run that ends WITHOUT a terminal</span>
@@ -1142,14 +1142,14 @@
     <span class="rs-comment">// terminal state instead of hanging.</span>
     #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-dead-agent-synthesizes-failure-411">dead_agent_synthesizes_failure</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         runner.bind(&amp;deps.orchestrator_registry);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -1163,7 +1163,7 @@
         assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> generator_id = <a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-generator-task-id-17">generator_task_id</a>(&amp;started.attempt_id, &amp;<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-node-359">node</a>(&quot;g1&quot;)).unwrap();
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&amp;generator_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&amp;generator_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
@@ -1183,13 +1183,13 @@
     <span class="rs-comment">// synthesized into a planner failure (run_exhausted) and the attempt fails.</span>
     #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-dead-planner-synthesizes-failure-452">dead_planner_synthesizes_failure</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -1202,7 +1202,7 @@
         assert_eq!(attempt.status(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(attempt.fail_reason(), <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>));
         <span class="rs-kw">let</span> planner_task = stores
-            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap())
             .unwrap();
         assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
@@ -1220,15 +1220,15 @@
     <span class="rs-comment">// its generator needs are done.</span>
     #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-fanout-respects-concurrency-cap-489">fanout_respects_concurrency_cap</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">ScriptedRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(10, <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>, 0, &quot;&quot;);
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">ScriptedRunner</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(10, <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>, 0, &quot;&quot;);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner.clone());
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         deps.max_concurrent_task_runs = 3;
         runner.bind(&amp;deps.orchestrator_registry);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -1254,11 +1254,11 @@
         <span class="rs-kw">let</span> launches = runner.launches();
         <span class="rs-comment">// planner + 10 generators + 1 reducer.</span>
         assert_eq!(launches.len(), 12);
-        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
-        assert_eq!(launches.last().unwrap().<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
+        assert_eq!(launches[0].<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>);
+        assert_eq!(launches.last().unwrap().<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>(), <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>);
         <span class="rs-kw">let</span> generators = launches[1..11]
             .iter()
-            .filter(|l| l.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-122">role</a>() == <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>)
+            .filter(|l| l.<a class="symbol-link rs-fn" href="eos-workflow.html#method-role-121">role</a>() == <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>)
             .count();
         assert_eq!(generators, 10, &quot;all generators ran before the reducer&quot;);
     }
@@ -1267,13 +1267,13 @@
     <span class="rs-comment">// launch context cannot be built (here: a generator with no agent profile).</span>
     #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-launch-failure-marks-task-failed-536">launch_failure_marks_task_failed</a>() {
-        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
-        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(<span class="rs-type">QueueRunner</span>::default());
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-636">deps</a>(runner);
         deps.lifecycle_config.default_attempt_budget = <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#item-fn-budget-355">budget</a>(1);
         <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
         stores.seed_task(parent.clone());
-        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps.clone())
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(deps.clone())
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
             .<span class="rs-kw">await</span>
             .unwrap();
@@ -1289,8 +1289,8 @@
             iteration_id: <span class="rs-type">Some</span>(started.iteration_id.clone()),
             attempt_id: <span class="rs-type">Some</span>(started.attempt_id.clone()),
             agent_name: <span class="rs-type">None</span>,
-            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
             terminal_tool_result: <span class="rs-type">None</span>,
         });
         eos_types::<span class="rs-type">AttemptStore</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-plan-204">record_plan</a>(
@@ -1300,19 +1300,19 @@
                 planner_task_id: <span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;started.attempt_id).unwrap(),
                 disposition: <span class="rs-type">PlanDisposition</span>::<span class="rs-type">Complete</span>,
                 generator_task_ids: vec![task_id.clone()],
-                reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+                reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(),
             },
         )
         .<span class="rs-kw">await</span>
         .unwrap();
 
         <span class="rs-kw">let</span> orchestrator = deps.orchestrator_registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;started.attempt_id).unwrap();
-        <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(orchestrator)
+        <a class="symbol-link rs-type" href="eos-workflow--src-attempt-run-stage-rs.html#item-struct-AttemptStageAdvancer-23">AttemptStageAdvancer</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>(orchestrator)
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-run-stage-rs.html#method-advance-run-stage-36">advance_run_stage</a>()
             .<span class="rs-kw">await</span>
             .unwrap();
 
-        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-351">task</a>(&amp;task_id).unwrap();
+        <span class="rs-kw">let</span> task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-352">task</a>(&amp;task_id).unwrap();
         assert_eq!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>);
         assert_eq!(
             task.terminal_tool_result.unwrap().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),

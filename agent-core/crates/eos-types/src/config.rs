@@ -1,4 +1,5 @@
-//! The single `ConfigError` enum for this crate.
+//! Shared config error type used by owner-local config structs and the runtime
+//! file loader.
 
 /// Errors raised while loading, parsing, or deserializing config.
 #[derive(Debug, thiserror::Error)]
@@ -37,10 +38,7 @@ pub enum ConfigError {
     /// A config file could not be read from disk.
     #[error("failed to read config file")]
     ReadFile(#[source] std::io::Error),
-    /// A config file or a deserialized section failed to parse (this is where
-    /// `deny_unknown_fields` and the [`DatabaseUrl`] parse surface).
-    ///
-    /// [`DatabaseUrl`]: crate::DatabaseUrl
+    /// A config file or a deserialized section failed to parse.
     #[error("failed to parse config yaml")]
     ParseYaml(#[source] serde_yaml::Error),
 }

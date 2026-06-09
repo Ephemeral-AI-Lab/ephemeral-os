@@ -1,8 +1,7 @@
 //! Cross-store integration tests against a real temp `SQLite` file (AC-eos-db-01..05, 08).
 #![allow(clippy::expect_used)]
 
-use eos_config::{DatabaseConfig, DatabaseUrl};
-use eos_db::Database;
+use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_types::{
     AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus, DeferredGoal,
     ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus, JsonObject,

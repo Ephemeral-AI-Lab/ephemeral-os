@@ -20,7 +20,9 @@ pub(crate) struct TreeResourceStats {
 }
 
 impl TreeResourceStats {
-    pub(crate) fn from_ephemeral(stats: &eos_workspace_modes::ephemeral::TreeResourceStats) -> Self {
+    pub(crate) fn from_ephemeral(
+        stats: &eos_workspace_modes::ephemeral::TreeResourceStats,
+    ) -> Self {
         let file_entries = stats.files.saturating_add(stats.symlinks);
         let entry_count = file_entries.saturating_add(stats.dirs);
         Self {
@@ -282,10 +284,6 @@ fn mutation_source(verb: &str) -> &'static str {
     }
 }
 
-pub(crate) fn usize_to_i64_saturating(value: usize) -> i64 {
-    i64::try_from(value).unwrap_or(i64::MAX)
-}
-
 // Delegate to eos-workspace's converters so daemon-emitted timings/metrics
 // share ONE saturating semantics. The daemon copies used to cap at u32::MAX —
 // correct for small counts (depth, path counts) but wrong on the byte paths
@@ -301,14 +299,6 @@ pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
     eos_workspace::u64_to_f64_saturating(value)
-}
-
-pub(crate) fn u64_to_usize_saturating(value: u64) -> usize {
-    usize::try_from(value).unwrap_or(usize::MAX)
-}
-
-pub(crate) fn f64_to_i64_rounded_saturating(value: f64) -> i64 {
-    value.round() as i64
 }
 
 #[cfg(test)]

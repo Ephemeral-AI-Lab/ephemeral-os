@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>133</b><span>items</span></div>
+  <div><b>132</b><span>items</span></div>
   <div><b>124</b><span>fields</span></div>
-  <div><b>140</b><span>methods</span></div>
+  <div><b>139</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -78,7 +78,7 @@
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(store) = task_store <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(attempt.outcomes().to_vec());
     };
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out: <span class="rs-type">Vec</span>&lt;<span class="rs-type">ExecutionTaskOutcome</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out: <span class="rs-type">Vec</span>&lt;<span class="rs-type">ExecutionTaskOutcome</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> attempt
         .generator_task_ids()
         .iter()
@@ -142,7 +142,7 @@
     task_store: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">ExecutionTaskOutcome</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(final_attempt) = attempts.last() <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>());
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>());
     };
     <span class="rs-kw">let</span> final_outcomes = <a class="symbol-link rs-fn" href="eos-workflow--src-state-projections-rs.html#item-fn-attempt-execution-outcomes-32">attempt_execution_outcomes</a>(final_attempt, task_store).<span class="rs-kw">await</span>?;
     <span class="rs-kw">let</span> filtered = <span class="rs-kw">if</span> final_attempt.status() == <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span> {
@@ -191,7 +191,7 @@
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(store) = task_store <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(attempt.outcomes().to_vec());
     };
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out: <span class="rs-type">Vec</span>&lt;<span class="rs-type">ExecutionTaskOutcome</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out: <span class="rs-type">Vec</span>&lt;<span class="rs-type">ExecutionTaskOutcome</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>();
     <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> attempt
         .generator_task_ids()
         .iter()
@@ -227,7 +227,7 @@
     task_store: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
 ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">ExecutionTaskOutcome</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(final_attempt) = attempts.last() <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>());
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-263">new</a>());
     };
     <span class="rs-kw">let</span> final_outcomes = <a class="symbol-link rs-fn" href="eos-workflow--src-state-projections-rs.html#item-fn-attempt-execution-outcomes-32">attempt_execution_outcomes</a>(final_attempt, task_store).<span class="rs-kw">await</span>?;
     <span class="rs-kw">let</span> filtered = <span class="rs-kw">if</span> final_attempt.status() == <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span> {

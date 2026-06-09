@@ -7,7 +7,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::{PluginError, Result};
-use crate::registry::is_valid_plugin_name;
 
 /// The daemon-managed service mode for long-lived read-only services.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -173,6 +172,16 @@ pub(crate) fn validate_plugin_id(field: &str, value: &str) -> Result<()> {
     }
 }
 
+/// Whether `name` matches the Rust `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).
+fn is_valid_plugin_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(c) if c == '_' || c.is_ascii_alphabetic() => {}
+        _ => return false,
+    }
+    chars.all(|c| c == '_' || c.is_ascii_alphanumeric())
+}
+
 pub(crate) fn require_non_empty(field: &str, value: &str) -> Result<()> {
     if value.trim().is_empty() {
         return Err(PluginError::Manifest(format!("{field} is required")));
@@ -222,6 +231,10 @@ mod tests {
     fn plugin_id_uses_rust_name_rule() {
         assert!(validate_plugin_id("plugin_id", "_ok").is_ok());
         assert!(validate_plugin_id("plugin_id", "Generic").is_ok());
+        assert!(is_valid_plugin_name("_x9"));
+        assert!(!is_valid_plugin_name("9plugin"));
+        assert!(!is_valid_plugin_name(""));
+        assert!(!is_valid_plugin_name("ls-p"));
         assert!(matches!(
             validate_plugin_id("plugin_id", "my-plugin"),
             Err(PluginError::Manifest(message)) if message.contains("must match")

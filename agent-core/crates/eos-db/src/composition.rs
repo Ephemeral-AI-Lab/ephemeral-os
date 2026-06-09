@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use sqlx::SqlitePool;
 
-use eos_config::DatabaseConfig;
 use eos_types::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, TaskStore, WorkflowStore,
 };
@@ -16,6 +15,7 @@ use crate::pool;
 use crate::repositories::{
     SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore, SqlWorkflowStore,
 };
+use crate::DatabaseConfig;
 
 /// Owns the pool and one instance of each store, handed out as `Arc<dyn …Store>`
 /// for DIP at the seam. Cloning is cheap (every field is `Arc`-backed).

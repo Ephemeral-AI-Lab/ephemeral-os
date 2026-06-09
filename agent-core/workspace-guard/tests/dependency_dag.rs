@@ -11,10 +11,8 @@ type Edges = BTreeMap<String, BTreeSet<String>>;
 fn legacy_edges() -> Edges {
     let rows: &[(&str, &[&str])] = &[
         ("eos-types", &[]),
-        ("eos-config", &[]),
-        ("eos-db", &["eos-types", "eos-config"]),
-        ("eos-audit", &["eos-types"]),
-        ("eos-llm-client", &["eos-types", "eos-config"]),
+        ("eos-db", &["eos-types"]),
+        ("eos-llm-client", &["eos-types"]),
         (
             "eos-agent-run",
             &["eos-types", "eos-engine", "eos-llm-client", "eos-tool"],
@@ -38,12 +36,10 @@ fn legacy_edges() -> Edges {
                 "eos-engine",
                 "eos-workflow",
                 "eos-agent-run",
-                "eos-config",
                 "eos-sandbox-port",
                 "eos-types",
                 "eos-llm-client",
                 "eos-tool",
-                "eos-audit",
             ],
         ),
         // Dev-only shared test doubles (TESTING_SPEC). Its reverse edges

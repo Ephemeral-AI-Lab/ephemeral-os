@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, live_pool_or_skip,
-    seed_base_files, settle_foreground_command, strip_transcript_timestamps, stdout,
+    seed_base_files, settle_foreground_command, stdout, strip_transcript_timestamps,
     wait_for_active_leases, wait_for_session_count,
 };
 

@@ -39,7 +39,6 @@ pub mod host;
 pub mod manifest;
 pub mod ppc;
 pub mod refresh;
-pub mod registry;
 pub mod service;
 pub mod service_registry;
 

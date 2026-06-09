@@ -10,12 +10,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use eos_protocol::LayerChange;
 use eos_workspace::{
     usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest, PrepareCommandRequest,
     PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
     WorkspaceTimings,
 };
-use eos_protocol::LayerChange;
 use serde_json::{json, Value};
 
 /// Daemon-supplied facts needed to prepare an isolated command workspace.
@@ -147,7 +147,10 @@ pub fn finalize_isolated_command(
         "resource.command_exec.changed_path_count".to_owned(),
         json!(usize_to_f64_saturating(changed_paths.len())),
     );
-    timings.insert("command_exec.capture_upperdir_s".to_owned(), json!(capture_s));
+    timings.insert(
+        "command_exec.capture_upperdir_s".to_owned(),
+        json!(capture_s),
+    );
     timings.insert("command_exec.occ_apply_s".to_owned(), json!(0.0));
     timings.insert(
         "command_exec.total_s".to_owned(),

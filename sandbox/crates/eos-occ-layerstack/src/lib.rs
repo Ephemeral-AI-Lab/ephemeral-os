@@ -49,7 +49,10 @@ pub fn base_hashes_for_snapshot(
                 return Ok((change.path().clone(), None));
             }
             let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
-            Ok((change.path().clone(), hash_current(bytes.as_deref(), exists)))
+            Ok((
+                change.path().clone(),
+                hash_current(bytes.as_deref(), exists),
+            ))
         })
         .collect()
 }

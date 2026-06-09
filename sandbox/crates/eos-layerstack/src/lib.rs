@@ -35,7 +35,7 @@
 
 pub mod error;
 pub(crate) mod fsutil;
-pub mod lease;
+pub(crate) mod lease;
 mod metrics;
 pub mod squash;
 pub mod stack;
@@ -51,7 +51,6 @@ pub use eos_protocol::{
 };
 
 pub use error::LayerStackError;
-pub use lease::{LayerStackLeaseRecord, LeaseRegistry};
 pub use metrics::LayerStackStorageMetrics;
 pub use squash::{CheckpointSegment, LayerCheckpointSquasher, SquashPlan, SquashPlanEntry};
 pub use stack::{LayerStack, Lease, MergedView};

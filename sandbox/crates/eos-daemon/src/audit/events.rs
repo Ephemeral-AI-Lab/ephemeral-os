@@ -16,8 +16,6 @@ use eos_protocol::{
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::response_timings::{f64_to_i64_rounded_saturating, usize_to_i64_saturating};
-
 const OS_RESOURCE_SAMPLED: &str = "os_resource.sampled";
 
 fn emit_section<T: Serialize>(event_type: &str, section_key: &str, section: &T, lane: Lane) {
@@ -516,6 +514,14 @@ fn timing_ms(response: &Value, key: &str) -> Option<f64> {
 
 fn timing_i64(response: &Value, key: &str) -> Option<i64> {
     timing_f64(response, key).map(f64_to_i64_rounded_saturating)
+}
+
+fn usize_to_i64_saturating(value: usize) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+fn f64_to_i64_rounded_saturating(value: f64) -> i64 {
+    value.round() as i64
 }
 
 fn timing_f64(response: &Value, key: &str) -> Option<f64> {

@@ -23,10 +23,10 @@ use crate::adapters::occ::{
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 
-use convert::{manifest_from_snapshot, overlay_daemon_error, publish_outcome_from_changeset};
 pub(crate) use convert::{
     changeset_from_publish_outcome, ephemeral_daemon_error, path_changes_to_wire,
 };
+use convert::{manifest_from_snapshot, overlay_daemon_error, publish_outcome_from_changeset};
 
 pub(crate) use eos_workspace_modes::ephemeral::RunDirCleanup;
 

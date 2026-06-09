@@ -1,7 +1,7 @@
 //! Request-scoped runtime input.
 
-use eos_config::WorkflowConfig;
 use eos_types::RequestId;
+use eos_workflow::WorkflowConfig;
 
 /// Values that vary per top-level request.
 #[derive(Debug, Clone)]

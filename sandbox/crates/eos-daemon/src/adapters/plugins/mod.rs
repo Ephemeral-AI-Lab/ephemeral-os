@@ -19,9 +19,9 @@ mod state;
 use std::sync::Arc;
 use std::time::Duration;
 
+use eos_plugin::PluginError;
 #[cfg(test)]
 use eos_plugin::PluginServiceState;
-use eos_plugin::PluginError;
 #[cfg(test)]
 use eos_plugin::{PpcDirection, PpcEnvelope};
 use serde_json::{json, Value};
@@ -32,11 +32,12 @@ use crate::error::DaemonError;
 use connected::response_payload_from_reply;
 #[cfg(test)]
 use dispatch::route_for_op;
-use eos_plugin::host::ensure_args::ParsedEnsure;
 #[cfg(test)]
 use eos_plugin::host::ensure_args::validate_plugin_caller_fields;
+use eos_plugin::host::ensure_args::ParsedEnsure;
+#[cfg(test)]
+use eos_plugin::host::ensure_args::MAX_PLUGIN_CALLER_FIELD_CHARS;
 use eos_plugin::host::{ensure_package, needs_upload_response};
-use state::loaded_matches_parsed;
 #[cfg(test)]
 use refresh::WORKSPACE_SNAPSHOT_REFRESH_OP;
 use refresh::{probe_service_health, service_health_probe_targets};
@@ -49,13 +50,12 @@ use service::{
     insert_started_service_processes, reap_exited_processes, running_process_values,
     service_specs_to_start, spawn_service_processes, stop_plugin_service_processes,
 };
+pub(crate) use setup::{configure_plugin_runtime, stop_services_for_layer_stack_root};
 use setup::{
     ensure_plugin_family_allowed, package_report_value, plugin_runtime_config, ppc_socket_root,
     record_setup_failure,
 };
-pub(crate) use setup::{configure_plugin_runtime, stop_services_for_layer_stack_root};
-#[cfg(test)]
-use eos_plugin::host::ensure_args::MAX_PLUGIN_CALLER_FIELD_CHARS;
+use state::loaded_matches_parsed;
 use state::{
     connected_ppc_routes, connected_ppc_services, loaded_plugin_values, lock_state, process_values,
     route_values, setup_failure_key, setup_failure_values, LoadedPluginRuntime,

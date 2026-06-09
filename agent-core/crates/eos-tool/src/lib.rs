@@ -15,8 +15,8 @@ mod support;
 pub use error::ToolError;
 pub use hooks::Hook;
 pub use model::{
-    BackgroundSessionCounts, ExecutionMetadata, OutputShape, SubagentLaunchRejection,
-    SubagentSessionStatus, ToolIntent, ToolKey, ToolName, ToolResult,
+    ExecutionMetadata, OutputShape, SubagentLaunchRejection, ToolIntent, ToolKey, ToolName,
+    ToolResult,
 };
 pub use registry::{
     build_default_registry, build_registry_schema, BackgroundSessions, CallerScope, RegisteredTool,

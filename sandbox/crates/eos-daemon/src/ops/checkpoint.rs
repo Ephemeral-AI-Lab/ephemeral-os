@@ -2,9 +2,9 @@
 
 use serde_json::Value;
 
+use crate::adapters::checkpoint;
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use crate::adapters::checkpoint;
 
 /// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
 pub(crate) fn op_layer_metrics(

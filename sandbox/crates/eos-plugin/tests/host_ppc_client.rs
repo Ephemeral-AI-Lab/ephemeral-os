@@ -5,8 +5,8 @@ use std::sync::{mpsc, Arc};
 use std::thread;
 use std::time::Duration;
 
-use eos_plugin::{PpcDirection, PpcEnvelope};
 use eos_plugin::host::{read_frame, PpcClient};
+use eos_plugin::{PpcDirection, PpcEnvelope};
 
 type TestResult = std::result::Result<(), Box<dyn std::error::Error + Send + Sync>>;
 

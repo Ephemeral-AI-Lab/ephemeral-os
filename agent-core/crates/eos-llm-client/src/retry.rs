@@ -1,6 +1,6 @@
 //! The visible-output retry gate.
 //!
-//! The retry policy is unified onto `eos_config::RetryConfig`; this crate keeps
+//! The retry policy is unified onto [`RetryConfig`](crate::RetryConfig); this crate keeps
 //! no local retry constants. [`retry_stream`] is an outer generator that
 //! re-invokes a per-attempt stream factory across retries while tracking a single
 //! `emitted_visible` flag: once any visible event (`AssistantTextDelta` /
@@ -10,13 +10,13 @@
 
 use std::time::Duration;
 
-use eos_config::RetryConfig;
 use futures::future::BoxFuture;
 use futures::StreamExt;
 
 use crate::client::LlmStream;
 use crate::error::{ProviderError, ProviderErrorKind};
 use crate::events::LlmStreamEvent;
+use crate::RetryConfig;
 
 /// Wrap a per-attempt factory in the retry gate, returning a single linear
 /// [`LlmStream`]. `cfg` is taken **by value**: the returned stream is `'static`

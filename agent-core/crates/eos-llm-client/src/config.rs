@@ -6,8 +6,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::models::{ModelRegistrationConfig, ModelsConfig};
-use crate::error::ConfigError;
+use eos_types::{ConfigError, ModelRegistrationConfig, ModelsConfig};
 
 /// Provider retry policy.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

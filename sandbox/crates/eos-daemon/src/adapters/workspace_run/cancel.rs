@@ -16,9 +16,9 @@
 use eos_workspace_modes::isolated::IsolatedError;
 use serde_json::{json, Value};
 
+use super::isolated;
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use super::isolated;
 
 use super::commands;
 
@@ -36,8 +36,7 @@ pub struct CallerCancel {
 /// session(s), then exit its isolated workspace if open. The order matters —
 /// sessions are cancelled before the isolated namespace/lease teardown.
 pub fn cancel_workspace_runs_by_caller_id(caller_id: &str, grace_s: Option<f64>) -> CallerCancel {
-    let cancelled_sessions =
-        commands::cleanup_command_sessions_for_caller(caller_id, grace_s);
+    let cancelled_sessions = commands::cleanup_command_sessions_for_caller(caller_id, grace_s);
     let isolated = isolated::exit_isolated(caller_id, grace_s);
     CallerCancel {
         cancelled_sessions,

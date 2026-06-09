@@ -11,7 +11,6 @@ use serde_json::Value;
 use crate::host::package::{package_roots, PackageRoots};
 use crate::host::route::{PluginOperationRoute, PluginProcessSpec};
 use crate::host::PpcError;
-use crate::registry::public_op_name;
 use crate::{
     PluginError, PluginManifest, PluginServiceKey, PluginServiceKeyParts, PluginServiceManifest,
     PluginServiceState, PluginServiceStatus, ServiceMode,
@@ -192,6 +191,11 @@ fn operation_routes_for_manifest(
         .collect()
 }
 
+/// Build the public op name the daemon dispatcher registers: `plugin.<plugin>.<op>`.
+fn public_op_name(plugin_name: &str, op_name: &str) -> String {
+    format!("plugin.{plugin_name}.{op_name}")
+}
+
 fn services_for_manifest(
     manifest: &PluginManifest,
     service_keys: &BTreeMap<String, PluginServiceKey>,
@@ -364,5 +368,15 @@ fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginErro
         Err(PluginError::Ensure(format!(
             "{field} contains unsupported characters"
         )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::public_op_name;
+
+    #[test]
+    fn public_op_name_format() {
+        assert_eq!(public_op_name("generic", "hover"), "plugin.generic.hover");
     }
 }

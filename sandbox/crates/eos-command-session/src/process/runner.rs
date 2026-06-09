@@ -405,7 +405,10 @@ mod tests {
             runner.as_ref(),
             Some(KillReason::Cancelled),
         );
-        assert_eq!((cancelled.status(), cancelled.exit_code()), ("cancelled", 130));
+        assert_eq!(
+            (cancelled.status(), cancelled.exit_code()),
+            ("cancelled", 130)
+        );
 
         // A deadline timeout is distinct: timed_out/124, so the parked completion
         // tells the agent the command timed out rather than was cancelled.
@@ -414,6 +417,9 @@ mod tests {
             runner.as_ref(),
             Some(KillReason::TimedOut),
         );
-        assert_eq!((timed_out.status(), timed_out.exit_code()), ("timed_out", 124));
+        assert_eq!(
+            (timed_out.status(), timed_out.exit_code()),
+            ("timed_out", 124)
+        );
     }
 }

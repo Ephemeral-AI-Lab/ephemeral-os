@@ -55,15 +55,11 @@ pub struct OverlayHandle {
 #[derive(Debug)]
 pub struct OverlayMount {
     /// The mountpoint this overlay was moved onto (`move_mount` destination).
+    #[cfg_attr(
+        not(target_os = "linux"),
+        allow(dead_code, reason = "workspace_root is read by linux Drop unmount")
+    )]
     workspace_root: PathBuf,
-}
-
-impl OverlayMount {
-    /// The workspace root this overlay is mounted at.
-    #[must_use]
-    pub fn workspace_root(&self) -> &Path {
-        &self.workspace_root
-    }
 }
 
 impl Drop for OverlayMount {

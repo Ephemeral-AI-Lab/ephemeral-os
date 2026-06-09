@@ -15,6 +15,7 @@
 mod auth;
 mod client;
 mod clients;
+mod config;
 mod error;
 mod events;
 mod message;
@@ -26,6 +27,10 @@ pub use auth::Auth;
 pub use client::{ConfiguredLlmClient, LlmClient, LlmRequestDefaults, LlmStream};
 pub use clients::{
     AnthropicApiClient, ClaudeCodingPlanClient, CodexCodingPlanClient, OpenAiApiClient,
+};
+pub use config::{
+    AnthropicApiConfig, ClaudeCodingPlanConfig, CodexCodingPlanConfig, OpenAiApiConfig,
+    ProviderKind, ProvidersConfig, RetryConfig, SecretConfigValue,
 };
 pub use error::{ProviderError, ProviderErrorKind};
 pub use events::{LlmStreamEvent, StopReason};

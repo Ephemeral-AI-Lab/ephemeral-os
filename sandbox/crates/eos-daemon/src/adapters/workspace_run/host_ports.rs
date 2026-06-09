@@ -8,17 +8,17 @@
 
 use std::path::Path;
 
-use eos_workspace_modes::ephemeral::{finalize_ephemeral_command, EphemeralWorkspace};
 use eos_layerstack::LayerStack;
 use eos_workspace::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
+use eos_workspace_modes::ephemeral::{finalize_ephemeral_command, EphemeralWorkspace};
 use eos_workspace_run::WorkspaceRunHostPorts;
 use serde_json::Value;
 
-use crate::response_timings::{resource_timings, timing_map};
 use crate::adapters::overlay::DaemonPublisherPort;
 use crate::adapters::workspace_run::isolated::record_tool_call;
+use crate::response_timings::{resource_timings, timing_map};
 
 /// Zero-sized: each call resolves its daemon resources (the per-root OCC writer,
 /// the process-global isolated session) freshly, so there is no captured state.
@@ -39,7 +39,12 @@ impl WorkspaceRunHostPorts for DaemonRunHostPorts {
         base_timings: WorkspaceTimings,
         request: FinalizeCommandRequest,
     ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
-        finalize_ephemeral_command(&DaemonPublisherPort::new(root), workspace, base_timings, request)
+        finalize_ephemeral_command(
+            &DaemonPublisherPort::new(root),
+            workspace,
+            base_timings,
+            request,
+        )
     }
 
     fn record_tool_call(&self, caller_id: &str, audit: Value) {

@@ -318,8 +318,10 @@ impl AgentLoopExecutor {
             tool_input: call.input.clone(),
             tool_use_id: call.tool_use_id.clone(),
         });
-        let hooks = self.hook_dependencies.clone().map(|dependencies| {
-            crate::tool_call::ToolCallHooks::new(state.background(), dependencies)
+        let hooks = state.background().and_then(|background| {
+            self.hook_dependencies
+                .clone()
+                .map(|dependencies| crate::tool_call::ToolCallHooks::new(background, dependencies))
         });
         let result = execute_tool_once(tool, &call.input, &metadata, hooks.as_ref()).await?;
         self.emit_event(&StreamEvent::ToolExecutionCompleted {

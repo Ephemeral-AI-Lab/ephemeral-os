@@ -139,9 +139,7 @@ impl PendingCalls {
         }
     }
 
-    fn lock(
-        &self,
-    ) -> Result<std::sync::MutexGuard<'_, HashMap<String, PendingRequest>>, PpcError> {
+    fn lock(&self) -> Result<std::sync::MutexGuard<'_, HashMap<String, PendingRequest>>, PpcError> {
         self.inner
             .lock()
             .map_err(|_| PpcError::LockPoisoned("plugin ppc pending"))

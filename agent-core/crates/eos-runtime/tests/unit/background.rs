@@ -14,7 +14,6 @@ mod command_session_delivery {
     use std::time::Duration;
 
     use async_trait::async_trait;
-    use eos_config::RuntimeConfig;
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
     use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
@@ -26,6 +25,7 @@ mod command_session_delivery {
     use crate::entry::root_task_id_for;
     use crate::runtime_services::support::{FakeGateway, FakeProvisioner};
     use crate::runtime_services::EventSourceFactory;
+    use crate::RuntimeConfig;
     use crate::RuntimeServices;
     use eos_testkit::{agent_def, text_turn, tool_use_turn, ScriptedSource};
 

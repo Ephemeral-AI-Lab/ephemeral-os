@@ -1,7 +1,10 @@
 # sandbox/ Structure & Reduction Review — SPEC
 
-Status: Proposed (Draft 2026-06-09). A workspace-wide aggressive-but-clean pass,
-adversarially verified against the dependency-DAG guards. Baseline: current HEAD
+Status: Implemented (2026-06-09). Structural splits, true deletions, registry
+fold, visibility narrowing, and optional D3 cast-helper relocation landed in the
+sandbox workspace. Verified with scoped crate tests, `cargo check --workspace
+--all-targets`, and `cargo clippy --workspace --all-targets -- -D warnings`;
+live Docker E2E remains a separate not-run gate. Baseline: pre-implementation HEAD
 (the `eos-daemon → eos-sandbox-host` extraction in
 `eos_daemon_sandbox_host_extraction_SPEC.md` is **proposed, not landed**, so the
 daemon is counted at its current 50 modules).

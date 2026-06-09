@@ -7,15 +7,16 @@
 //! `EOS_CLAUDE_CODING_PLAN_PROBE_NO_BETA=1` to also probe whether the normal
 //! Anthropic bearer path works without Claude Code beta headers.
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use eos_config::{ProviderKind, ProvidersConfig, RetryConfig};
 use eos_llm_client::{
     AnthropicApiClient, Auth, ClaudeCodingPlanClient, LlmClient, LlmRequest, LlmStreamEvent,
-    Message, ProviderError,
+    Message, ProviderError, ProviderKind, ProvidersConfig, RetryConfig,
 };
 use futures::StreamExt;
+use serde_yaml::{Mapping, Value as YamlValue};
 
 const TOKEN_ENV: &str = "EOS_CLAUDE_CODING_PLAN_OAUTH_TOKEN";
 const CLAUDE_CODE_TOKEN_ENV: &str = "CLAUDE_CODE_OAUTH_TOKEN";
@@ -76,11 +77,7 @@ struct SmokeConfig {
 }
 
 fn load_smoke_config() -> Result<Option<SmokeConfig>, ProviderError> {
-    let doc = eos_config::load()
-        .map_err(|e| ProviderError::request(format!("loading config failed: {e}")))?;
-    let providers = doc
-        .section::<ProvidersConfig>("providers")
-        .map_err(|e| ProviderError::request(format!("loading providers config failed: {e}")))?;
+    let providers = load_providers_config()?;
 
     let model = optional_env(MODEL_ENV)
         .or_else(|| {
@@ -127,6 +124,55 @@ fn load_smoke_config() -> Result<Option<SmokeConfig>, ProviderError> {
         model,
         retry: providers.retry,
     }))
+}
+
+fn load_providers_config() -> Result<ProvidersConfig, ProviderError> {
+    let mut merged = YamlValue::Mapping(Mapping::new());
+    for path in [config_dir().join("prd.yml"), config_dir().join("local.yml")] {
+        if let Some(doc) = read_yaml(&path)? {
+            deep_merge(&mut merged, doc);
+        }
+    }
+    let providers = merged
+        .as_mapping()
+        .and_then(|mapping| mapping.get(YamlValue::String("providers".to_owned())))
+        .ok_or_else(|| ProviderError::request("config section 'providers' is missing"))?;
+    serde_yaml::from_value(providers.clone())
+        .map_err(|e| ProviderError::request(format!("loading providers config failed: {e}")))
+}
+
+fn config_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .map_or_else(|| PathBuf::from("config"), |root| root.join("config"))
+}
+
+fn read_yaml(path: &Path) -> Result<Option<YamlValue>, ProviderError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| ProviderError::request(format!("reading config failed: {e}")))?;
+    let doc: YamlValue = serde_yaml::from_str(&text)
+        .map_err(|e| ProviderError::request(format!("parsing config yaml failed: {e}")))?;
+    Ok((!doc.is_null()).then_some(doc))
+}
+
+fn deep_merge(base: &mut YamlValue, overlay: YamlValue) {
+    match (base, overlay) {
+        (YamlValue::Mapping(base_map), YamlValue::Mapping(overlay_map)) => {
+            for (key, value) in overlay_map {
+                match base_map.get_mut(&key) {
+                    Some(existing) => deep_merge(existing, value),
+                    None => {
+                        base_map.insert(key, value);
+                    }
+                }
+            }
+        }
+        (slot, overlay) => *slot = overlay,
+    }
 }
 
 fn optional_env(name: &str) -> Option<String> {

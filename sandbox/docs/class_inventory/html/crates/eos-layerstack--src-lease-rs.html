@@ -56,25 +56,25 @@
       <span>8 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-LayerStackLeaseRecord-24" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerStackLeaseRecord pub pub struct LayerStackLeaseRecord crates/eos-layerstack/src/lease.rs lease_id String manifest Manifest ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-LayerStackLeaseRecord-24" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerStackLeaseRecord pub(crate) pub(crate) struct LayerStackLeaseRecord crates/eos-layerstack/src/lease.rs lease_id String manifest Manifest ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LayerStackLeaseRecord</h3>
-    <span class="visibility">pub</span>
+    <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a></code>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a></code>
   <p class="docstring">One active snapshot lease: an id bound to the frozen manifest it pins.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>lease_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>manifest</td><td><code>Manifest</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:24</p>
-</article><article id="item-struct-LeaseRegistry-31" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LeaseRegistry pub pub struct LeaseRegistry crates/eos-layerstack/src/lease.rs leases HashMap &lt; String , LayerStackLeaseRecord &gt; refcounts BTreeMap &lt; LayerRefKey , usize &gt; ">
+</article><article id="item-struct-LeaseRegistry-31" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LeaseRegistry pub(crate) pub(crate) struct LeaseRegistry crates/eos-layerstack/src/lease.rs leases HashMap &lt; String , LayerStackLeaseRecord &gt; refcounts BTreeMap &lt; LayerRefKey , usize &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LeaseRegistry</h3>
-    <span class="visibility">pub</span>
+    <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a></code>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a></code>
   <p class="docstring">Tracks active snapshot leases and the layers they retain on disk.<br>A per-layer `BTreeMap` refcount tracks retention; concurrent access is<br>serialized by the surrounding `SharedLeaseRegistry` (`Arc&lt;Mutex&lt;…&gt;&gt;`),<br>not by this struct itself.</p>
   <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>leases</td><td><code>HashMap &lt; String , <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> &gt;</code></td></tr><tr><td>private</td><td>refcounts</td><td><code>BTreeMap &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-157">LayerRefKey</a> , usize &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-80"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a> () -&gt; Self</code><p class="docstring">Create an empty registry.</p><details class="function-source">
@@ -399,7 +399,7 @@
 
 <span class="rs-comment">/// One active snapshot lease: an id bound to the frozen manifest it pins.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> {
     <span class="rs-kw">pub</span> lease_id: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> manifest: <span class="rs-type">Manifest</span>,
 }
@@ -410,7 +410,7 @@
 <span class="rs-comment">/// serialized by the surrounding `SharedLeaseRegistry` (`Arc&lt;Mutex&lt;…&gt;&gt;`),</span>
 <span class="rs-comment">/// not by this struct itself.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> {
     leases: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>&gt;,
     refcounts: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-157">LayerRefKey</a>, usize&gt;,
 }

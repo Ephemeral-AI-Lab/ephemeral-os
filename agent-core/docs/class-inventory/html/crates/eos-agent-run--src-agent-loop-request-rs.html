@@ -56,27 +56,27 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-build-start-agent-loop-request-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_start_agent_loop_request pub pub fn build_start_agent_loop_request (agent : &amp; AgentDefinition , request : SpawnAgentRequest , agent_run_id : AgentRunId ,) -&gt; StartAgentLoopRequest crates/eos-agent-run/src/agent_loop_request.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-build-start-agent-loop-request-7" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_start_agent_loop_request pub pub fn build_start_agent_loop_request (agent : &amp; AgentDefinition , request : SpawnAgentRequest , agent_run_id : AgentRunId ,) -&gt; StartAgentLoopRequest crates/eos-agent-run/src/agent_loop_request.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_start_agent_loop_request</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-build-start-agent-loop-request-8">build_start_agent_loop_request</a> (agent : &amp; AgentDefinition , request : SpawnAgentRequest , agent_run_id : AgentRunId ,) -&gt; StartAgentLoopRequest</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-build-start-agent-loop-request-7">build_start_agent_loop_request</a> (agent : &amp; AgentDefinition , request : SpawnAgentRequest , agent_run_id : AgentRunId ,) -&gt; StartAgentLoopRequest</code>
   <p class="docstring">Build the thin engine loop request for one resolved agent.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Build the thin engine loop request for one resolved agent.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-build-start-agent-loop-request-8">build_start_agent_loop_request</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-build-start-agent-loop-request-7">build_start_agent_loop_request</a>(
     agent: &amp;<span class="rs-type">AgentDefinition</span>,
     request: <span class="rs-type">SpawnAgentRequest</span>,
     agent_run_id: <span class="rs-type">AgentRunId</span>,
 ) -&gt; <span class="rs-type">StartAgentLoopRequest</span> {
     <span class="rs-type">StartAgentLoopRequest</span> {
         agent_run_id,
-        initial_messages: <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-24">initial_loop_messages</a>(agent, request.initial_messages),
+        initial_messages: <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-23">initial_loop_messages</a>(agent, request.initial_messages),
         model_key: agent.model.clone().unwrap_or_default(),
         max_completion_tokens: <span class="rs-type">DEFAULT_MAX_TOKENS</span>,
         tool_call_limit: agent.tool_call_limit.get(),
@@ -85,18 +85,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/agent_loop_request.rs:8</p>
-</article><article id="item-fn-initial-loop-messages-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn initial_loop_messages private fn initial_loop_messages (agent : &amp; AgentDefinition , initial_messages : Vec &lt; Message &gt; ,) -&gt; Vec &lt; AgentLoopMessage &gt; crates/eos-agent-run/src/agent_loop_request.rs  ">
+  <p class="source">crates/eos-agent-run/src/agent_loop_request.rs:7</p>
+</article><article id="item-fn-initial-loop-messages-23" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn initial_loop_messages private fn initial_loop_messages (agent : &amp; AgentDefinition , initial_messages : Vec &lt; Message &gt; ,) -&gt; Vec &lt; AgentLoopMessage &gt; crates/eos-agent-run/src/agent_loop_request.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>initial_loop_messages</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-24">initial_loop_messages</a> (agent : &amp; AgentDefinition , initial_messages : Vec &lt; Message &gt; ,) -&gt; Vec &lt; AgentLoopMessage &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-23">initial_loop_messages</a> (agent : &amp; AgentDefinition , initial_messages : Vec &lt; Message &gt; ,) -&gt; Vec &lt; AgentLoopMessage &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-24">initial_loop_messages</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-23">initial_loop_messages</a>(
     agent: &amp;<span class="rs-type">AgentDefinition</span>,
     initial_messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentLoopMessage</span>&gt; {
@@ -121,7 +121,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/agent_loop_request.rs:24</p>
+  <p class="source">crates/eos-agent-run/src/agent_loop_request.rs:23</p>
 </article></div>
 </section></div>
 </main>
@@ -132,28 +132,27 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Runner-owned conversion from agent definitions to loop requests.</span>
 
-<span class="rs-kw">use</span> eos_agent_def::<span class="rs-type">AgentDefinition</span>;
-<span class="rs-kw">use</span> eos_agent_ports::{<span class="rs-type">AgentLoopMessage</span>, <span class="rs-type">SpawnAgentRequest</span>, <span class="rs-type">StartAgentLoopRequest</span>};
+<span class="rs-kw">use</span> eos_engine::{<span class="rs-type">AgentLoopMessage</span>, <span class="rs-type">StartAgentLoopRequest</span>};
 <span class="rs-kw">use</span> eos_llm_client::{<span class="rs-type">Message</span>, <span class="rs-type">MessageRole</span>, <span class="rs-type">DEFAULT_MAX_TOKENS</span>};
-<span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentDefinition</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">SpawnAgentRequest</span>};
 
 <span class="rs-comment">/// Build the thin engine loop request for one resolved agent.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-build-start-agent-loop-request-8">build_start_agent_loop_request</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-build-start-agent-loop-request-7">build_start_agent_loop_request</a>(
     agent: &amp;<span class="rs-type">AgentDefinition</span>,
     request: <span class="rs-type">SpawnAgentRequest</span>,
     agent_run_id: <span class="rs-type">AgentRunId</span>,
 ) -&gt; <span class="rs-type">StartAgentLoopRequest</span> {
     <span class="rs-type">StartAgentLoopRequest</span> {
         agent_run_id,
-        initial_messages: <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-24">initial_loop_messages</a>(agent, request.initial_messages),
+        initial_messages: <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-23">initial_loop_messages</a>(agent, request.initial_messages),
         model_key: agent.model.clone().unwrap_or_default(),
         max_completion_tokens: <span class="rs-type">DEFAULT_MAX_TOKENS</span>,
         tool_call_limit: agent.tool_call_limit.get(),
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-24">initial_loop_messages</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-loop-request-rs.html#item-fn-initial-loop-messages-23">initial_loop_messages</a>(
     agent: &amp;<span class="rs-type">AgentDefinition</span>,
     initial_messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt;,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentLoopMessage</span>&gt; {

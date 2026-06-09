@@ -10,10 +10,10 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tool::{BackgroundSessionCounts, BackgroundSessions, ToolError};
+use eos_tool::{BackgroundSessions, ToolError};
 use eos_types::{
-    AgentRunApi, AgentRunError, AgentRunId, AgentRunOutcome, CommandSessionId, SandboxId,
-    SpawnAgentRequest, StartedWorkflow, WorkflowApi,
+    AgentRunApi, AgentRunError, AgentRunId, AgentRunOutcome, BackgroundSessionCounts,
+    CommandSessionId, SandboxId, SpawnAgentRequest, StartedWorkflow, WorkflowApi,
 };
 
 use self::command_session_manager::{CommandSessionManager, CommandSessionMonitor};

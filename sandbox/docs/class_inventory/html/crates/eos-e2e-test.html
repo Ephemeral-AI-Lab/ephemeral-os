@@ -22,7 +22,7 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>7</b><span>modules</span></div>
+  <div><b>9</b><span>modules</span></div>
   <div><b>57</b><span>items</span></div>
   <div><b>27</b><span>fields</span></div>
   <div><b>44</b><span>methods</span></div>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-e2e-test--src-docker-rs.html"><span>docker.rs</span><small>0/22</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li><li><a class="file-link" href="eos-e2e-test--src-tar-rs.html"><span>tar.rs</span><small>0/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="audit crates/eos-e2e-test/src/audit.rs AuditTap impl AuditTap type_of section">
   <div class="module-head">
     <div>
@@ -188,33 +188,13 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-e2e-test/src/audit.rs:15</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-type-of-130" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn type_of pub pub fn type_of (event : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-e2e-test/src/audit.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>type_of</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a> (event : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
-  <p class="docstring">The `type` of a pulled audit event.</p>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-comment">/// The `type` of a pulled audit event.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(event: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
-    event.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-e2e-test/src/audit.rs:130</p>
-</article><article id="item-fn-section-136" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section pub pub fn section &lt; 'a &gt; (event : &amp; 'a Value , section_key : &amp; str) -&gt; Option &lt; &amp; 'a Value &gt; crates/eos-e2e-test/src/audit.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-section-135" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section pub pub fn section &lt; 'a &gt; (event : &amp; 'a Value , section_key : &amp; str) -&gt; Option &lt; &amp; 'a Value &gt; crates/eos-e2e-test/src/audit.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>section</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-section-136">section</a> &lt; &#x27;a &gt; (event : &amp; &#x27;a Value , section_key : &amp; str) -&gt; Option &lt; &amp; &#x27;a Value &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-section-135">section</a> &lt; &#x27;a &gt; (event : &amp; &#x27;a Value , section_key : &amp; str) -&gt; Option &lt; &amp; &#x27;a Value &gt;</code>
   <p class="docstring">The `payload.&lt;section_key&gt;` object of a pulled audit event.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -227,7 +207,26 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/audit.rs:136</p>
+  <p class="source">crates/eos-e2e-test/src/audit.rs:135</p>
+</article><article id="item-fn-type-of-130" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn type_of private fn type_of (event : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-e2e-test/src/audit.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>type_of</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a> (event : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
+  <p class="docstring">The `type` of a pulled audit event.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The `type` of a pulled audit event.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(event: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+    event.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-e2e-test/src/audit.rs:130</p>
 </article></div>
 </section></div>
 </main>
@@ -366,8 +365,7 @@
 }
 
 <span class="rs-comment">/// The `type` of a pulled audit event.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(event: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(event: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
     event.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str)
 }
 

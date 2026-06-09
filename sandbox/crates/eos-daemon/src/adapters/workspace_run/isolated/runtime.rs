@@ -10,16 +10,16 @@ use std::thread;
 #[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
-use eos_workspace_modes::isolated::{
-    IsolatedError, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease, WorkspaceHandle,
-};
 use eos_layerstack::LayerStack;
-#[cfg(target_os = "linux")]
-use eos_workspace_run::CommandHandle;
 #[cfg(target_os = "linux")]
 use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
 use eos_runner::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
+use eos_workspace_modes::isolated::{
+    IsolatedError, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease, WorkspaceHandle,
+};
+#[cfg(target_os = "linux")]
+use eos_workspace_run::CommandHandle;
 #[cfg(target_os = "linux")]
 use nix::fcntl::OFlag;
 #[cfg(target_os = "linux")]

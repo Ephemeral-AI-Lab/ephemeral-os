@@ -7,13 +7,13 @@
 
 use std::sync::Arc;
 
-use eos_config::RetryConfig;
 use reqwest::header::HeaderValue;
 
 use crate::auth::Auth;
 use crate::client::{LlmClient, LlmStream};
 use crate::error::ProviderError;
 use crate::types::LlmRequest;
+use crate::RetryConfig;
 
 use super::anthropic_api_client::AnthropicApiClient;
 

@@ -22,7 +22,7 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>7</b><span>modules</span></div>
+  <div><b>9</b><span>modules</span></div>
   <div><b>57</b><span>items</span></div>
   <div><b>27</b><span>fields</span></div>
   <div><b>44</b><span>methods</span></div>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/26</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link active" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-e2e-test--src-docker-rs.html"><span>docker.rs</span><small>0/22</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link active" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li><li><a class="file-link" href="eos-e2e-test--src-tar-rs.html"><span>tar.rs</span><small>0/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="pool crates/eos-e2e-test/src/pool.rs Node Inner NodePool impl NodePool NodeLease impl NodeLease &lt; 'p &gt; impl Drop for NodeLease &lt; '_ &gt; cap_for reap_stale_containers">
   <div class="module-head">
     <div>
@@ -75,7 +75,7 @@
         }
         <span class="rs-kw">let</span> cap = <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#item-fn-cap-for-311">cap_for</a>(&amp;config);
         <span class="rs-kw">let</span> available: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>&gt; = <span class="rs-kw">if</span> config.keep_container &amp;&amp; config.mode != <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span> {
-            <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-143">adopt_healthy</a>(&amp;config, &amp;config_yaml)
+            <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-144">adopt_healthy</a>(&amp;config, &amp;config_yaml)
                 .into_iter()
                 .take(cap)
                 .map(|container| <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a> {
@@ -150,8 +150,8 @@
             }
             <span class="rs-kw">if</span> inner.created &lt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-cap-69">cap</a>() {
                 inner.created += 1;
-                <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(inner);
-                <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-start-44">start</a>(&amp;<span class="rs-self">self</span>.config, &amp;<span class="rs-self">self</span>.config_yaml) {
+                <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(inner);
+                <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-start-45">start</a>(&amp;<span class="rs-self">self</span>.config, &amp;<span class="rs-self">self</span>.config_yaml) {
                     <span class="rs-type">Ok</span>(container) =&gt; {
                         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a> {
                             container,
@@ -179,8 +179,8 @@
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> inner = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-lock-80">lock</a>();
         <span class="rs-kw">if</span> recycle {
             inner.created -= 1;
-            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(inner);
-            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(node); <span class="rs-comment">// container teardown happens here</span>
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(inner);
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(node); <span class="rs-comment">// container teardown happens here</span>
         } <span class="rs-kw">else</span> {
             inner.available.push(node);
         }
@@ -205,19 +205,19 @@
         <span class="rs-self">self</span>.node.as_ref().expect(&quot;lease node present until drop&quot;)
     }
 </code></pre>
-</details></td></tr><tr id="method-client-212"><td>method</td><td>client</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a></code><p class="docstring">The wire client for this lease's daemon.</p><details class="function-source">
+</details></td></tr><tr id="method-client-212"><td>method</td><td>client</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a></code><p class="docstring">The wire client for this lease's daemon.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The wire client for this lease's daemon.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>()
     }
 </code></pre>
-</details></td></tr><tr id="method-container-218"><td>method</td><td>container</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#method-container-218">container</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a></code><p class="docstring">The container backing this lease (for lifecycle/provisioning exec only).</p><details class="function-source">
+</details></td></tr><tr id="method-container-218"><td>method</td><td>container</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#method-container-218">container</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a></code><p class="docstring">The container backing this lease (for lifecycle/provisioning exec only).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The container backing this lease (for lifecycle/provisioning exec only).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-container-218">container</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-container-218">container</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a> {
         &amp;<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container
     }
 </code></pre>
@@ -266,8 +266,8 @@
             .or_insert_with(|| json!(<span class="rs-self">self</span>.stack_root));
         obj.entry(&quot;caller_id&quot;.to_owned())
             .or_insert_with(|| json!(<span class="rs-self">self</span>.caller_id));
-        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a>();
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(op, &amp;iid, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(obj))
+        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-42">next_invocation_id</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(op, &amp;iid, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(obj))
     }
 </code></pre>
 </details></td></tr><tr id="method-call-ok-265"><td>method</td><td>call_ok</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#method-call-ok-265">call_ok</a> (&amp; self , op : &amp; str , args : Value) -&gt; Result &lt; Value &gt;</code><p class="docstring">Like [`Self::call`] but asserts the response is a success payload.<br># Errors<br>Returns an error on transport failure or a non-success response.</p><details class="function-source">
@@ -278,12 +278,12 @@
     <span class="rs-comment">/// Returns an error on transport failure or a non-success response.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-call-ok-265">call_ok</a>(&amp;<span class="rs-self">self</span>, op: &amp;str, args: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
         <span class="rs-kw">let</span> resp = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-call-242">call</a>(op, args)?;
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(&amp;resp) {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a>(&amp;resp) {
             <span class="rs-type">Ok</span>(resp)
         } <span class="rs-kw">else</span> {
             bail!(
                 &quot;{op} returned error{}: {resp}&quot;,
-                <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-131">error_kind</a>(&amp;resp).map_or(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(), |k| format!(&quot; ({k})&quot;))
+                <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-130">error_kind</a>(&amp;resp).map_or(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(), |k| format!(&quot; ({k})&quot;))
             )
         }
     }
@@ -295,10 +295,10 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error if the baseline pull fails.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-audit-tap-281">audit_tap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>&gt; {
-        <a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>::<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-baseline-25">baseline</a>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>().clone(), <span class="rs-self">self</span>.pool.config.audit_pull_limit)
+        <a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>::<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-baseline-25">baseline</a>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>().clone(), <span class="rs-self">self</span>.pool.config.audit_pull_limit)
     }
 </code></pre>
-</details></td></tr><tr id="method-restart-daemon-289"><td>method</td><td>restart_daemon</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a> (&amp; self) -&gt; Result &lt; () &gt;</code><p class="docstring">Hard-restart this lease's in-container daemon (kill + respawn), exercising<br>startup recovery. The daemon is healthy again on return: in-memory daemon<br>state is reset while on-disk LayerStack and persisted isolated-handle state<br>survive for startup reconciliation.<br># Errors<br>Returns an error if the daemon cannot be restarted or never becomes ready.</p><details class="function-source">
+</details></td></tr><tr id="method-restart-daemon-289"><td>method</td><td>restart_daemon</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-350">restart_daemon</a> (&amp; self) -&gt; Result &lt; () &gt;</code><p class="docstring">Hard-restart this lease's in-container daemon (kill + respawn), exercising<br>startup recovery. The daemon is healthy again on return: in-memory daemon<br>state is reset while on-disk LayerStack and persisted isolated-handle state<br>survive for startup reconciliation.<br># Errors<br>Returns an error if the daemon cannot be restarted or never becomes ready.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Hard-restart this lease's in-container daemon (kill + respawn), exercising</span>
     <span class="rs-comment">/// startup recovery. The daemon is healthy again on return: in-memory daemon</span>
@@ -307,15 +307,15 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error if the daemon cannot be restarted or never becomes ready.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a>(&amp;<span class="rs-self">self</span>.pool.config)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-350">restart_daemon</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-350">restart_daemon</a>(&amp;<span class="rs-self">self</span>.pool.config)
     }
 </code></pre>
 </details></td></tr><tr id="method-open-160"><td>associated-fn</td><td>open</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#method-open-160">open</a> (pool : &amp; &#x27;p <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a> , mut node : <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>) -&gt; Result &lt; Self , Box &lt; (<a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a> , anyhow :: Error) &gt; &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-open-160">open</a>(pool: &amp;&#x27;p <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>, <span class="rs-kw">mut</span> node: <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">Box</span>&lt;(<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>, anyhow::<span class="rs-type">Error</span>)&gt;&gt; {
         node.checkouts += 1;
-        <span class="rs-kw">let</span> id = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>();
+        <span class="rs-kw">let</span> id = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-32">unique_suffix</a>();
         <span class="rs-kw">let</span> base = format!(&quot;{}/{id}&quot;, pool.config.root_dir.to_string_lossy());
         <span class="rs-kw">let</span> stack_root = format!(&quot;{base}/stack&quot;);
         <span class="rs-kw">let</span> workspace_root = pool.config.workspace_root.clone();
@@ -323,20 +323,20 @@
 
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = node
             .container
-            .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &amp;stack_root])
+            .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-338">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &amp;stack_root])
             .and_then(|_| {
                 node.container
-                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;rm&quot;, &quot;-rf&quot;, &quot;--&quot;, workspace_root.as_str()])
+                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-338">exec</a>(&amp;[&quot;rm&quot;, &quot;-rf&quot;, &quot;--&quot;, workspace_root.as_str()])
             })
             .and_then(|_| {
                 node.container
-                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &quot;--&quot;, workspace_root.as_str()])
+                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-338">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &quot;--&quot;, workspace_root.as_str()])
             })
         {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>((node, err)));
         }
-        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a>();
-        <span class="rs-kw">let</span> ensure = node.container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(
+        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-42">next_invocation_id</a>();
+        <span class="rs-kw">let</span> ensure = node.container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(
             ops::<span class="rs-type">API_ENSURE_WORKSPACE_BASE</span>,
             &amp;iid,
             &amp;json!({
@@ -346,7 +346,7 @@
             }),
         );
         <span class="rs-kw">match</span> ensure {
-            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(&amp;resp) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a>(&amp;resp) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
                 pool,
                 node: <span class="rs-type">Some</span>(node),
                 stack_root,
@@ -361,9 +361,9 @@
         }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodeLease-150">NodeLease</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-302"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a> (&amp; mut self)</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodeLease-150">NodeLease</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-302"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a> (&amp; mut self)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(node) = <span class="rs-self">self</span>.node.take() {
             <span class="rs-kw">let</span> recycle = <span class="rs-self">self</span>.pool.config.mode == <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span>
                 || node.checkouts &gt;= <span class="rs-self">self</span>.pool.config.recycle_after;
@@ -382,7 +382,7 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>container</td><td><code><a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a></code></td></tr><tr><td>private</td><td>checkouts</td><td><code>usize</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>container</td><td><code><a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a></code></td></tr><tr><td>private</td><td>checkouts</td><td><code>usize</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-e2e-test/src/pool.rs:22</p>
 </article><article id="item-struct-Inner-27" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Inner private struct Inner crates/eos-e2e-test/src/pool.rs available Vec &lt; Node &gt; created usize ">
@@ -429,7 +429,7 @@
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Remove stale `eos-e2e-*` containers left by prior runs (best effort).</span>
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#item-fn-reap-stale-containers-318">reap_stale_containers</a>() {
-    <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-730">reap_e2e_containers</a>();
+    <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-e2e-test--src-docker-rs.html#item-fn-reap-e2e-containers-270">reap_e2e_containers</a>();
 }
 </code></pre>
 </details>
@@ -461,11 +461,11 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::audit::<a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::{error_kind, is_success, <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::{<span class="rs-type">Config</span>, <span class="rs-type">NodeMode</span>, <span class="rs-type">WorkloadConfig</span>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::container::{reap_e2e_containers, <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::container::{reap_e2e_containers, <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{next_invocation_id, unique_suffix};
 
 <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a> {
-    container: <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a>,
+    container: <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a>,
     checkouts: usize,
 }
 
@@ -491,7 +491,7 @@
         }
         <span class="rs-kw">let</span> cap = <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#item-fn-cap-for-311">cap_for</a>(&amp;config);
         <span class="rs-kw">let</span> available: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>&gt; = <span class="rs-kw">if</span> config.keep_container &amp;&amp; config.mode != <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span> {
-            <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-143">adopt_healthy</a>(&amp;config, &amp;config_yaml)
+            <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-144">adopt_healthy</a>(&amp;config, &amp;config_yaml)
                 .into_iter()
                 .take(cap)
                 .map(|container| <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a> {
@@ -556,8 +556,8 @@
             }
             <span class="rs-kw">if</span> inner.created &lt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-cap-69">cap</a>() {
                 inner.created += 1;
-                <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(inner);
-                <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-start-44">start</a>(&amp;<span class="rs-self">self</span>.config, &amp;<span class="rs-self">self</span>.config_yaml) {
+                <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(inner);
+                <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-start-45">start</a>(&amp;<span class="rs-self">self</span>.config, &amp;<span class="rs-self">self</span>.config_yaml) {
                     <span class="rs-type">Ok</span>(container) =&gt; {
                         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a> {
                             container,
@@ -583,8 +583,8 @@
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> inner = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-lock-80">lock</a>();
         <span class="rs-kw">if</span> recycle {
             inner.created -= 1;
-            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(inner);
-            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(node); <span class="rs-comment">// container teardown happens here</span>
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(inner);
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(node); <span class="rs-comment">// container teardown happens here</span>
         } <span class="rs-kw">else</span> {
             inner.available.push(node);
         }
@@ -604,7 +604,7 @@
 <span class="rs-kw">impl</span>&lt;&#x27;p&gt; <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodeLease-150">NodeLease</a>&lt;&#x27;p&gt; {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-open-160">open</a>(pool: &amp;&#x27;p <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>, <span class="rs-kw">mut</span> node: <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">Box</span>&lt;(<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-Node-22">Node</a>, anyhow::<span class="rs-type">Error</span>)&gt;&gt; {
         node.checkouts += 1;
-        <span class="rs-kw">let</span> id = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>();
+        <span class="rs-kw">let</span> id = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-32">unique_suffix</a>();
         <span class="rs-kw">let</span> base = format!(&quot;{}/{id}&quot;, pool.config.root_dir.to_string_lossy());
         <span class="rs-kw">let</span> stack_root = format!(&quot;{base}/stack&quot;);
         <span class="rs-kw">let</span> workspace_root = pool.config.workspace_root.clone();
@@ -612,20 +612,20 @@
 
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = node
             .container
-            .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &amp;stack_root])
+            .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-338">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &amp;stack_root])
             .and_then(|_| {
                 node.container
-                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;rm&quot;, &quot;-rf&quot;, &quot;--&quot;, workspace_root.as_str()])
+                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-338">exec</a>(&amp;[&quot;rm&quot;, &quot;-rf&quot;, &quot;--&quot;, workspace_root.as_str()])
             })
             .and_then(|_| {
                 node.container
-                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &quot;--&quot;, workspace_root.as_str()])
+                    .<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-338">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &quot;--&quot;, workspace_root.as_str()])
             })
         {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>((node, err)));
         }
-        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a>();
-        <span class="rs-kw">let</span> ensure = node.container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(
+        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-42">next_invocation_id</a>();
+        <span class="rs-kw">let</span> ensure = node.container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(
             ops::<span class="rs-type">API_ENSURE_WORKSPACE_BASE</span>,
             &amp;iid,
             &amp;json!({
@@ -635,7 +635,7 @@
             }),
         );
         <span class="rs-kw">match</span> ensure {
-            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(&amp;resp) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a>(&amp;resp) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
                 pool,
                 node: <span class="rs-type">Some</span>(node),
                 stack_root,
@@ -656,13 +656,13 @@
 
     <span class="rs-comment">/// The wire client for this lease's daemon.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>()
     }
 
     <span class="rs-comment">/// The container backing this lease (for lifecycle/provisioning exec only).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-container-218">container</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-container-218">container</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-34">DaemonContainer</a> {
         &amp;<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container
     }
 
@@ -703,8 +703,8 @@
             .or_insert_with(|| json!(<span class="rs-self">self</span>.stack_root));
         obj.entry(&quot;caller_id&quot;.to_owned())
             .or_insert_with(|| json!(<span class="rs-self">self</span>.caller_id));
-        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a>();
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(op, &amp;iid, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(obj))
+        <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-42">next_invocation_id</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>().<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(op, &amp;iid, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(obj))
     }
 
     <span class="rs-comment">/// Like [`Self::call`] but asserts the response is a success payload.</span>
@@ -713,12 +713,12 @@
     <span class="rs-comment">/// Returns an error on transport failure or a non-success response.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-call-ok-265">call_ok</a>(&amp;<span class="rs-self">self</span>, op: &amp;str, args: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
         <span class="rs-kw">let</span> resp = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-call-242">call</a>(op, args)?;
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(&amp;resp) {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-124">is_success</a>(&amp;resp) {
             <span class="rs-type">Ok</span>(resp)
         } <span class="rs-kw">else</span> {
             bail!(
                 &quot;{op} returned error{}: {resp}&quot;,
-                <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-131">error_kind</a>(&amp;resp).map_or(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(), |k| format!(&quot; ({k})&quot;))
+                <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-error-kind-130">error_kind</a>(&amp;resp).map_or(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(), |k| format!(&quot; ({k})&quot;))
             )
         }
     }
@@ -728,7 +728,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error if the baseline pull fails.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-audit-tap-281">audit_tap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>&gt; {
-        <a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>::<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-baseline-25">baseline</a>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>().clone(), <span class="rs-self">self</span>.pool.config.audit_pull_limit)
+        <a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a>::<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-baseline-25">baseline</a>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-326">client</a>().clone(), <span class="rs-self">self</span>.pool.config.audit_pull_limit)
     }
 
     <span class="rs-comment">/// Hard-restart this lease's in-container daemon (kill + respawn), exercising</span>
@@ -738,13 +738,13 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error if the daemon cannot be restarted or never becomes ready.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a>(&amp;<span class="rs-self">self</span>.pool.config)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-350">restart_daemon</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-node-208">node</a>().container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-350">restart_daemon</a>(&amp;<span class="rs-self">self</span>.pool.config)
     }
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodeLease-150">NodeLease</a>&lt;&#x27;_&gt; {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-408">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(node) = <span class="rs-self">self</span>.node.take() {
             <span class="rs-kw">let</span> recycle = <span class="rs-self">self</span>.pool.config.mode == <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span>
                 || node.checkouts &gt;= <span class="rs-self">self</span>.pool.config.recycle_after;
@@ -762,7 +762,7 @@
 
 <span class="rs-comment">/// Remove stale `eos-e2e-*` containers left by prior runs (best effort).</span>
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#item-fn-reap-stale-containers-318">reap_stale_containers</a>() {
-    <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-730">reap_e2e_containers</a>();
+    <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-e2e-test--src-docker-rs.html#item-fn-reap-e2e-containers-270">reap_e2e_containers</a>();
 }
 </code></pre>
 </section>
