@@ -8,8 +8,8 @@ use std::sync::{Arc, Mutex as StdMutex};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use eos_engine::records::AgentRecordWriter;
 use eos_db::{Database, DatabaseConfig, DatabaseUrl};
+use eos_engine::records::AgentRecordWriter;
 use eos_llm_client::{
     Auth, ConfiguredLlmClient, LlmClient, LlmRequest, LlmRequestDefaults, LlmStream, ProviderError,
     ProviderKind, ProvidersConfig, SecretConfigValue,
@@ -30,7 +30,7 @@ use super::config::{self, RuntimeConfig};
 use super::plugins::register_plugin_tools;
 use super::{
     AgentCoreRegistryService, AgentCoreRuntime, AuditRuntime, DbStoreService, EngineService,
-    MessageRecordService, ProviderStreamSourceFactory, SandboxService,
+    ProviderStreamSourceFactory, RecordWriterRuntime, SandboxService,
 };
 use crate::agents::load_agents_tree;
 
@@ -107,7 +107,7 @@ pub struct AgentCoreRuntimeBuilder {
     provider_stream_source_factory: Option<ProviderStreamSourceFactory>,
     audit: Option<Arc<dyn AuditSink>>,
     audit_path: Option<PathBuf>,
-    message_records_root: Option<PathBuf>,
+    record_root: Option<PathBuf>,
     agent_registry: Option<Arc<AgentRegistry>>,
     agents_dir: Option<PathBuf>,
     tool_config: Option<Arc<ToolConfigSet>>,
@@ -176,9 +176,9 @@ impl AgentCoreRuntimeBuilder {
     }
 
     /// Write and serve agent-node `messages.jsonl` / `events.jsonl` under this
-    /// message-record root.
-    pub fn message_records_root(mut self, path: impl Into<PathBuf>) -> Self {
-        self.message_records_root = Some(path.into());
+    /// record root.
+    pub fn record_root(mut self, path: impl Into<PathBuf>) -> Self {
+        self.record_root = Some(path.into());
         self
     }
 
@@ -371,8 +371,8 @@ impl AgentCoreRuntimeBuilder {
                 sink: audit,
                 shutdown: Arc::new(StdMutex::new(audit_shutdown)),
             },
-            message_records: MessageRecordService {
-                record_writer: self.message_records_root.map(AgentRecordWriter::new),
+            records: RecordWriterRuntime {
+                record_writer: self.record_root.map(AgentRecordWriter::new),
             },
             agent_state: super::RuntimeAgentStateService::default(),
             cancel_registry: super::RequestCancelRegistry::new(),

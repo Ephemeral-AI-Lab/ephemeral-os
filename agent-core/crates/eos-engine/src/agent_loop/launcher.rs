@@ -41,6 +41,12 @@ impl AgentLoopCancelSignal {
     pub(crate) fn reason(&self) -> Option<String> {
         self.receiver.borrow().clone()
     }
+
+    #[cfg(test)]
+    pub(crate) fn for_test() -> Self {
+        let (_handle, signal) = agent_loop_cancel_pair();
+        signal
+    }
 }
 
 /// Build a cancel handle/signal pair for one loop.

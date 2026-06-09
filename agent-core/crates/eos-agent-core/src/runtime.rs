@@ -11,8 +11,8 @@ mod cancellation;
 pub(crate) mod config;
 mod db_store;
 mod engine;
-mod message_records;
 mod plugins;
+mod records;
 mod sandbox;
 mod state_reader;
 
@@ -28,7 +28,7 @@ pub(crate) use cancellation::RuntimeAgentCoreCancellation;
 pub use config::RuntimeConfig;
 pub(crate) use db_store::DbStoreService;
 pub(crate) use engine::EngineService;
-pub(crate) use message_records::MessageRecordService;
+pub(crate) use records::RecordWriterRuntime;
 pub(crate) use sandbox::SandboxService;
 pub use state_reader::{RequestExecutionTree, StateReader, TaskExecutionNode};
 
@@ -48,7 +48,7 @@ pub struct AgentCoreRuntime {
     pub(crate) engine: EngineService,
     pub(crate) sandbox: SandboxService,
     pub(crate) audit: AuditRuntime,
-    pub(crate) message_records: MessageRecordService,
+    pub(crate) records: RecordWriterRuntime,
     pub(crate) agent_state: RuntimeAgentStateService,
     /// Per-request cancellation APIs, so `cancel_agent_core_user_request` can
     /// reach a live request's recursive `AgentCoreCancellationApi` from another task.
@@ -74,10 +74,10 @@ impl AgentCoreRuntime {
         )
     }
 
-    /// File-backed agent-node message record reader/writer, when configured.
+    /// File-backed agent-node record reader/writer, when configured.
     #[must_use]
-    pub fn message_records(&self) -> Option<AgentRecordWriter> {
-        self.message_records.record_writer.clone()
+    pub fn record_writer(&self) -> Option<AgentRecordWriter> {
+        self.records.record_writer.clone()
     }
 
     /// Flush and join the buffered audit writer thread, if any.

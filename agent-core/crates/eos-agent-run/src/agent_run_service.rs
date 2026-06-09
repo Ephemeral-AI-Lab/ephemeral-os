@@ -492,9 +492,9 @@ mod tests {
     use eos_types::{
         format_record_dir, root_task_id, AgentDefinition, AgentLoopCancellation, AgentName,
         AgentRegistryBuilder, AgentRun, AgentRunRecordIndex, AgentRunRecordTarget, ContentBlock,
-        CoreError, JsonObject, ParentAgentRunAnchor, ParentedRun, RequestId,
-        StartAgentLoopRequest, StartedAgentLoop, TaskAgentRunKind, TaskExecutionIndex, TaskId,
-        TaskRole, TaskRun, ToolUseId, UtcDateTime, WorkflowCoordinates, WorkflowNodeId,
+        CoreError, JsonObject, ParentAgentRunAnchor, ParentedRun, RequestId, StartAgentLoopRequest,
+        StartedAgentLoop, TaskAgentRunKind, TaskExecutionIndex, TaskId, TaskRole, TaskRun,
+        ToolUseId, UtcDateTime, WorkflowCoordinates, WorkflowNodeId,
     };
 
     #[test]

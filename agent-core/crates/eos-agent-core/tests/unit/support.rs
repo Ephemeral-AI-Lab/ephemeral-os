@@ -106,7 +106,7 @@ pub(crate) async fn build_test_state(
     build_test_state_inner(factory, agents, false).await
 }
 
-pub(crate) async fn build_test_state_with_message_records(
+pub(crate) async fn build_test_state_with_record_writer(
     factory: Option<ProviderStreamSourceFactory>,
     agents: Vec<AgentDefinition>,
 ) -> (AgentCoreRuntime, tempfile::TempDir) {
@@ -116,7 +116,7 @@ pub(crate) async fn build_test_state_with_message_records(
 async fn build_test_state_inner(
     factory: Option<ProviderStreamSourceFactory>,
     agents: Vec<AgentDefinition>,
-    message_records: bool,
+    record_writer: bool,
 ) -> (AgentCoreRuntime, tempfile::TempDir) {
     let dir = tempfile::tempdir().expect("tempdir");
     let url = format!("sqlite://{}", dir.path().join("test.db").display());
@@ -132,8 +132,8 @@ async fn build_test_state_inner(
     if let Some(factory) = factory {
         builder = builder.provider_stream_source_factory(factory);
     }
-    if message_records {
-        builder = builder.message_records_root(dir.path().join("message-records"));
+    if record_writer {
+        builder = builder.record_root(dir.path().join("records"));
     }
     let state = builder.build().await.expect("build app state");
     (state, dir)

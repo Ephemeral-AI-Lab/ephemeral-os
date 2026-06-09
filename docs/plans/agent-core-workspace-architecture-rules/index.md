@@ -138,7 +138,7 @@ Retired or folded crates:
 | `eos-runtime` | fold into private `eos-agent-core/src/runtime/` |
 | `eos-agent-ports` | split into `eos-agent-core`, `eos-agent-run`, `eos-engine`, and `eos-types` |
 | `eos-tool-ports` | fold into `eos-tool` |
-| `eos-agent-message-records` | fold into `eos-agent-run::records` |
+| `eos-agent-message-records` | fold into `eos-engine::records` |
 | `eos-tools` | rename/consolidate as singular `eos-tool` |
 | `eos-agent-runner` | rename/consolidate as `eos-agent-run` |
 | `eos-skills` | fold skill registry/package loading into `eos-tool` |
@@ -158,7 +158,7 @@ flowchart LR
     AgentCore --> Db["eos-db stores"]
     AgentCore --> Llm["eos-llm-client client"]
     AgentCore --> Sandbox["eos-sandbox-port"]
-    AgentRun --> Engine["eos-engine services"]
+    AgentCore --> Engine["eos-engine services"]
     Engine --> Tool
     Engine --> Llm
     Engine --> Sandbox
@@ -176,7 +176,9 @@ flowchart LR
 Rules behind the graph:
 
 - `eos-agent-core` owns request entry and hidden runtime composition wiring.
-- `eos-agent-run` owns lifecycle rows and final outcome handoff.
+- `eos-agent-run` owns lifecycle rows and final outcome handoff. It consumes the
+  `AgentLoopLauncher` contract from `eos-types`; `eos-agent-core` wires the
+  concrete `eos-engine` launcher.
 - `eos-engine` owns the loop, turns, event emission, record writing, and
   midflight printing.
 - `eos-tool` owns the tool framework, concrete model-callable tools, and skills.
@@ -342,7 +344,7 @@ verification command or evidence used for that phase.
 | 2. Crate map and DAG | Implemented | final 10-crate agent-core map is active; `eos-runtime` folded into `eos-agent-core`; verified with `CARGO_TARGET_DIR=/tmp/eos-agent-core-check-runtime-fold cargo check --workspace --all-targets`, `cargo test -p eos-agent-core --all-targets`, and `cargo test -p workspace-guard` |
 | 3. `eos-tool` | Implemented | `eos-tool-ports` is gone; tool modules collapsed; hook execution is engine-owned |
 | 3B. Execution lineage/materialization | Implemented (bridge-compatible v1) | normalized `task_runs`/`parented_runs`, workflow launch lineage, request-rooted record dirs, and bounded execution-tree reader are active; verified with `cargo test -p eos-db`, `cargo test -p eos-agent-run`, `cargo test -p eos-workflow`, and `cargo test -p eos-agent-core` |
-| 4. `eos-engine` and `eos-agent-run` | In progress | source boundary pass complete: loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`; verified with `cargo test -p eos-engine --all-targets`, `cargo test -p eos-agent-run --all-targets`, and depth-1 `cargo tree` edge checks |
+| 4. `eos-engine` and `eos-agent-run` | In progress | records moved to `eos-engine::records`, loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`; verified with `cargo test -p eos-engine --all-targets`, `cargo test -p eos-agent-run --all-targets`, `cargo test -p eos-agent-core root_run_writes_engine_owned_records --all-targets`, `cargo check -p eos-agent-core --all-targets`, changed-crate clippy, `cargo fmt --all --check`, and depth-1 `cargo tree` edge checks |
 | 5. Agent core/workflow/types | Not started | `eos-agent-core` owns request entry and hidden runtime wiring |
 | 6. Verification and budget | Not started | module count is 150-170 and full checks pass |
 

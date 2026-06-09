@@ -547,15 +547,15 @@ literal file name `messages.jsonl` is unchanged.
 | Rename private active-run wrapper to `ActiveAgentRunRegistry` and keep map/watch mechanics encapsulated | Done |
 | Add execution invariants for stream/tool/terminal behavior | Done |
 | Add `BackgroundSessionRuntime` aggregate contract | Done |
-| Move records into engine internals | Not started |
+| Move records into engine internals | Done |
 | Add engine event printer/sink | Done |
 | Remove concrete tool ownership from engine | Done |
 | Rename private `*Service` internals where needed | Done |
 | Rename `eos-agent-runner` to `eos-agent-run` | Done |
 | Keep active run map in run crate | Done |
 | Keep finalization persistence in run crate | Done |
-| Add exactly-once completion handoff tests | Not started |
-| Add cancellation race tests | Not started |
+| Add exactly-once completion handoff tests | Done |
+| Add cancellation race tests | Done |
 | Add background-session accounting tests | Done |
 | Update `eos-agent-core` runtime wiring | Done |
 | Update `index.md` Progress Tracker with Phase 04 result and exit artifact | Done |
@@ -564,9 +564,14 @@ Latest verification:
 
 - `cargo test -p eos-engine --all-targets`
 - `cargo test -p eos-agent-run --all-targets`
+- `cargo test -p eos-agent-core root_run_writes_engine_owned_records --all-targets`
 - `cargo tree -p eos-agent-run --edges normal --depth 1`
 - `cargo tree -p eos-engine --edges normal --depth 1`
 - `cargo check -p eos-agent-core --all-targets`
+- `cargo clippy -p eos-agent-run --all-targets -- -D warnings`
+- `cargo clippy -p eos-engine --all-targets -- -D warnings`
+- `cargo clippy -p eos-agent-core --all-targets -- -D warnings`
+- `cargo fmt --all --check`
 
 ## Acceptance Criteria
 

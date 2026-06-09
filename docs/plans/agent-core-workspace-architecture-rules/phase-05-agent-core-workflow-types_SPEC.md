@@ -38,8 +38,10 @@ flowchart LR
     Service --> WorkflowStores["WorkflowStore\nIterationStore\nAttemptStore"]
     Service --> SandboxGateway["SandboxGateway"]
     Service --> AgentRunService["eos-agent-run\nAgentRunService"]
-    AgentRunService --> ActiveAgentRuns["ActiveAgentRuns\nowned by eos-agent-run"]
-    AgentRunService --> Engine["eos-engine agent loop"]
+    Service --> EngineLauncher["eos-engine\nTokioAgentLoopLauncher"]
+    AgentRunService --> ActiveAgentRunRegistry["ActiveAgentRunRegistry\nowned by eos-agent-run"]
+    AgentRunService --> AgentLoopContract["eos-types\nAgentLoopLauncher"]
+    EngineLauncher --> AgentLoopContract
 ```
 
 | Layer | Owns | Must not own |
@@ -72,14 +74,13 @@ The following routes do not belong to `AgentCoreService` in this phase:
 | `GET /api/user-requests/{request_id}/events` | `GET /api/agent-core/requests/{request_id}/events` | backend event log/SSE layer |
 | `GET /api/user-requests/{request_id}/stream` | `GET /api/agent-core/requests/{request_id}/stream` | backend event log/SSE layer |
 | `GET /api/tasks/{task_id}` | `GET /api/agent-core/tasks/{task_id}` | task read handler over store rows |
-| `GET /api/tasks/{task_id}/transcript` | `GET /api/agent-core/tasks/{task_id}/transcript` | `eos-agent-run::AgentMessageRecords` read path |
-| `GET /api/agent-runs/{agent_run_id}/messages` | `GET /api/agent-core/agent-runs/{agent_run_id}/messages` | `eos-agent-run::AgentMessageRecords` read path |
-| `GET /api/agent-runs/{agent_run_id}/events` | `GET /api/agent-core/agent-runs/{agent_run_id}/events` | `eos-agent-run::AgentMessageRecords` read path |
+| `GET /api/tasks/{task_id}/transcript` | `GET /api/agent-core/tasks/{task_id}/transcript` | `eos-engine::records::AgentRecordWriter` read path |
+| `GET /api/agent-runs/{agent_run_id}/messages` | `GET /api/agent-core/agent-runs/{agent_run_id}/messages` | `eos-engine::records::AgentRecordWriter` read path |
+| `GET /api/agent-runs/{agent_run_id}/events` | `GET /api/agent-core/agent-runs/{agent_run_id}/events` | `eos-engine::records::AgentRecordWriter` read path |
 | `GET /api/agent-runs/{agent_run_id}/stream` | `GET /api/agent-core/agent-runs/{agent_run_id}/stream` | backend SSE layer over agent-run records |
 
-Do not pull transcript/message-record routes into `eos-agent-core-server` just
-to reduce backend fields. Message records are already an `eos-agent-run`
-responsibility.
+Do not pull transcript/record routes into `eos-agent-core-server` just to reduce
+backend fields. Agent-run records are already an `eos-engine` responsibility.
 
 Do not add bare resource operations directly on `/api/agent-core`, such as
 `POST /api/agent-core` or `GET /api/agent-core/{request_id}`. The namespace
@@ -505,7 +506,7 @@ Required behavior:
 7. Return the number of cancelled agent runs.
 
 Do not add `active_requests` to `AgentCoreService`. In-process active handles
-belong inside `eos-agent-run::ActiveAgentRuns`.
+belong inside `eos-agent-run::ActiveAgentRunRegistry`.
 
 ## Required Store Contract Additions
 
@@ -574,8 +575,8 @@ respectively, not on `AgentCoreService` as ad hoc SQL.
 | task list method | `list_user_request_tasks` |
 | implementation folder | `user_request/` |
 | backend agent-core namespace | `/api/agent-core` |
-| active agent-run owner | `eos-agent-run::ActiveAgentRuns` |
-| message records owner | `eos-agent-run::AgentMessageRecords` |
+| active agent-run owner | `eos-agent-run::ActiveAgentRunRegistry` |
+| record writer owner | `eos-engine::records::AgentRecordWriter` |
 
 Forbidden target names:
 
@@ -587,7 +588,6 @@ AgentCoreReads
 RunControl
 reads
 active_requests
-message_records
 Runtime
 Host
 Context
@@ -617,7 +617,7 @@ references during migration. They must not appear in the final target.
 | 7 | Remove `RunControl` from backend API state | Not started |
 | 8 | Remove `AgentCoreReads` from backend API state | Not started |
 | 9 | Remove top-level agent-core cancellation registry/handler from public exports | Not started |
-| 10 | Keep message/transcript routes backed by `eos-agent-run::AgentMessageRecords` | Not started |
+| 10 | Keep message/transcript routes backed by `eos-engine::records::AgentRecordWriter` | Not started |
 | 11 | Update backend OpenAPI and API contract tests for `/api/agent-core/*` paths | Not started |
 | 12 | Update `agent-core/Cargo.toml` workspace members and workspace dependencies | Not started |
 | 13 | Update phase index and architecture docs after compile gates pass | Not started |

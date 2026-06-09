@@ -5,7 +5,7 @@ use std::sync::Arc;
 use eos_llm_client::{ContentBlock, LlmRequest, Message, UsageSnapshot};
 use eos_tool::{RegisteredTool, ToolName, ToolResult};
 use eos_types::{AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, JsonObject, ToolUseId};
-use futures::StreamExt;
+use futures::{stream, StreamExt};
 
 use super::{
     AgentLoopCancelSignal, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind,
@@ -23,6 +23,8 @@ use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
 };
 use crate::{stamp_identity, EngineError, StreamEvent};
+
+const MAX_FOREGROUND_TOOL_CONCURRENCY: usize = 8;
 
 /// Executes a full agent loop from request to terminal outcome.
 pub(crate) struct AgentLoopExecutor {
@@ -130,8 +132,7 @@ impl AgentLoopExecutor {
                 state
                     .teardown_background(&format!("agent loop cancelled: {reason}"))
                     .await;
-                let outcome =
-                    state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
+                let outcome = state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
                 return self.finish_agent_run_record(record, outcome).await;
             }
             if state.turn_limit_reached() {
@@ -179,8 +180,9 @@ impl AgentLoopExecutor {
         let Some(record_writer) = &self.record_writer else {
             return Ok(None);
         };
-        let record_kind =
-            AgentRunRecordKind::from_task_agent_run_kind(&request.record_target.task_agent_run_kind);
+        let record_kind = AgentRunRecordKind::from_task_agent_run_kind(
+            &request.record_target.task_agent_run_kind,
+        );
         let (system_prompt, initial_messages) =
             split_record_initial_messages(&request.initial_messages);
         let handle = record_writer
@@ -221,7 +223,11 @@ impl AgentLoopExecutor {
         {
             return record_write_failed(outcome, error);
         }
-        if let Err(error) = record.handle.finish(node_finish_status(&outcome.kind)).await {
+        if let Err(error) = record
+            .handle
+            .finish(node_finish_status(&outcome.kind))
+            .await
+        {
             return record_write_failed(outcome, error);
         }
         outcome
@@ -324,40 +330,65 @@ impl AgentLoopExecutor {
         }
 
         let lifecycle = lifecycle_batch_decision(&dispatch_calls, &state.tool_registry);
-        let dispatched: std::collections::BTreeSet<&str> =
-            lifecycle.dispatched.iter().map(String::as_str).collect();
-        let rejected: std::collections::BTreeMap<String, ToolResult> = lifecycle
-            .rejected
-            .into_iter()
-            .map(|rejection| (rejection.tool_use_id, rejection_result(&rejection.message)))
-            .collect();
+        let dispatched: Arc<std::collections::BTreeSet<String>> =
+            Arc::new(lifecycle.dispatched.into_iter().collect());
+        let rejected: Arc<std::collections::BTreeMap<String, ToolResult>> = Arc::new(
+            lifecycle
+                .rejected
+                .into_iter()
+                .map(|rejection| (rejection.tool_use_id, rejection_result(&rejection.message)))
+                .collect(),
+        );
+
+        let conversation: Arc<[Message]> =
+            Arc::from(loop_messages_to_llm_messages(&state.conversation_messages));
+        let dispatch_outcomes = stream::iter(calls.iter().cloned().map(|call| {
+            let conversation = conversation.clone();
+            let dispatched = dispatched.clone();
+            let rejected = rejected.clone();
+            async move {
+                if let Some(result) = rejected.get(call.tool_use_id.as_str()) {
+                    return Ok(Some(DispatchedToolCallOutcome {
+                        tool_use_id: call.tool_use_id.clone(),
+                        result: result.clone(),
+                        is_terminal_submission: false,
+                    }));
+                }
+                if !dispatched.contains(call.tool_use_id.as_str()) {
+                    return Ok(None);
+                }
+                let Some(tool) = state.tool_registry.get_wire(&call.name).cloned() else {
+                    return Ok(Some(DispatchedToolCallOutcome {
+                        tool_use_id: call.tool_use_id.clone(),
+                        result: rejection_result(&format!("Unknown tool `{}`.", call.name)),
+                        is_terminal_submission: false,
+                    }));
+                };
+
+                let result = self
+                    .execute_registered_tool(state, &call, &tool, conversation)
+                    .await?;
+                Ok(Some(DispatchedToolCallOutcome {
+                    tool_use_id: call.tool_use_id.clone(),
+                    is_terminal_submission: tool.is_terminal && result.is_terminal,
+                    result,
+                }))
+            }
+        }))
+        .buffered(MAX_FOREGROUND_TOOL_CONCURRENCY)
+        .collect::<Vec<Result<Option<DispatchedToolCallOutcome>, EngineError>>>()
+        .await;
 
         let mut tool_results = Vec::new();
         let mut submission_outcome = None;
-        let conversation = Arc::from(loop_messages_to_llm_messages(&state.conversation_messages));
-
-        for call in calls {
-            if let Some(result) = rejected.get(call.tool_use_id.as_str()) {
-                tool_results.push(result_block(&call.tool_use_id, result));
-                continue;
-            }
-            if !dispatched.contains(call.tool_use_id.as_str()) {
-                continue;
-            }
-
-            let Some(tool) = state.tool_registry.get_wire(&call.name).cloned() else {
-                let result = rejection_result(&format!("Unknown tool `{}`.", call.name));
-                tool_results.push(result_block(&call.tool_use_id, &result));
+        for outcome in dispatch_outcomes {
+            let Some(outcome) = outcome? else {
                 continue;
             };
-
-            let result = self
-                .execute_registered_tool(state, call, &tool, Arc::clone(&conversation))
-                .await?;
-            if tool.is_terminal && result.is_terminal {
-                submission_outcome = Some(result.clone());
+            if outcome.is_terminal_submission {
+                submission_outcome = Some(outcome.result.clone());
             }
-            tool_results.push(result_block(&call.tool_use_id, &result));
+            tool_results.push(result_block(&outcome.tool_use_id, &outcome.result));
         }
 
         Ok(LoopToolDispatchOutcome {
@@ -475,6 +506,12 @@ struct LoopToolDispatchOutcome {
     submission_outcome: Option<ToolResult>,
 }
 
+struct DispatchedToolCallOutcome {
+    tool_use_id: ToolUseId,
+    result: ToolResult,
+    is_terminal_submission: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ToolUseRequest {
     tool_use_id: ToolUseId,
@@ -587,5 +624,301 @@ fn rejection_result(message: &str) -> ToolResult {
         is_error: true,
         metadata: JsonObject::new(),
         is_terminal: false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::sync::{Mutex as StdMutex, MutexGuard};
+
+    use async_trait::async_trait;
+    use eos_llm_client::ToolSpec;
+    use eos_tool::{
+        ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolIntent,
+        ToolRegistry,
+    };
+    use eos_types::{
+        AgentRunError, AgentRunOutcome, AgentRunRecordDir, AgentRunRecordTarget, AgentRunStatus,
+        RequestId, SpawnAgentRequest, TaskAgentRunKind, TaskId,
+    };
+    use tokio::sync::Notify;
+    use tokio::time::{timeout, Duration};
+
+    use super::*;
+    use crate::provider_stream::EngineStream;
+    use crate::AgentLoopToolRegistryBuildInput;
+
+    #[tokio::test]
+    async fn foreground_tool_batch_uses_bounded_fan_out_and_ordered_fan_in() {
+        let gate = Arc::new(TwoToolGate::default());
+        let registry_factory = FixedRegistryFactory::new(registry_with_coordinated_tools(&gate));
+        let state = AgentLoopState::from_request(
+            test_start_request(),
+            &registry_factory,
+            AgentLoopRunServices::inert(),
+            Arc::new(UnusedAgentRunApi),
+        )
+        .expect("state builds");
+        let executor = test_executor();
+        let calls = vec![
+            ToolUseRequest {
+                tool_use_id: "toolu_read".parse().expect("valid tool use id"),
+                name: ToolName::ReadFile.as_str().to_owned(),
+                input: JsonObject::new(),
+            },
+            ToolUseRequest {
+                tool_use_id: "toolu_edit".parse().expect("valid tool use id"),
+                name: ToolName::EditFile.as_str().to_owned(),
+                input: JsonObject::new(),
+            },
+        ];
+
+        let outcome = timeout(
+            Duration::from_secs(1),
+            executor.dispatch_tool_batch(&state, &calls),
+        )
+        .await
+        .expect("both tools start before either completes")
+        .expect("dispatch succeeds");
+
+        assert_eq!(gate.started.load(Ordering::SeqCst), 2);
+        assert_eq!(outcome.tool_results.len(), 2);
+        assert_eq!(
+            outcome.tool_results[0],
+            result_block(&calls[0].tool_use_id, &ToolResult::ok("toolu_read"))
+        );
+        assert_eq!(
+            outcome.tool_results[1],
+            result_block(&calls[1].tool_use_id, &ToolResult::ok("toolu_edit"))
+        );
+    }
+
+    fn test_executor() -> AgentLoopExecutor {
+        AgentLoopExecutor {
+            provider_stream_source: AgentLoopProviderStream::Static(Arc::new(EmptyStreamSource)),
+            tool_registry_factory: Arc::new(UnusedRegistryFactory),
+            metadata_reader: Arc::new(TestMetadataReader),
+            cancel_signal: AgentLoopCancelSignal::for_test(),
+            background_inputs: None,
+            hook_stores: None,
+            event_sink: None,
+            record_writer: None,
+            agent_run_api: Arc::new(UnusedAgentRunApi),
+        }
+    }
+
+    fn registry_with_coordinated_tools(gate: &Arc<TwoToolGate>) -> ToolRegistry {
+        let mut registry = ToolRegistry::new();
+        for name in [ToolName::ReadFile, ToolName::EditFile] {
+            registry.register(RegisteredTool::new(
+                name,
+                ToolIntent::ReadOnly,
+                false,
+                ToolSpec::new(
+                    name.as_str(),
+                    "coordinated test tool",
+                    JsonObject::new(),
+                    None,
+                ),
+                OutputShape::Text,
+                Arc::new(CoordinatedTool { gate: gate.clone() }),
+            ));
+        }
+        registry
+    }
+
+    fn test_start_request() -> StartAgentLoopRequest {
+        let request_id = RequestId::new_v4();
+        let agent_run_id = AgentRunId::new_v4();
+        let task_id = TaskId::new_v4();
+        StartAgentLoopRequest {
+            record_target: AgentRunRecordTarget {
+                request_id,
+                agent_run_id,
+                task_id,
+                task_agent_run_kind: TaskAgentRunKind::Root,
+                record_dir: AgentRunRecordDir::new("requests/test/root-task-test/agent-run-test"),
+            },
+            initial_messages: vec![AgentLoopMessage::UserMessage(Message::from_user_text(
+                "run both tools",
+            ))],
+            model_key: "test-model".to_owned(),
+            max_completion_tokens: 100,
+            tool_call_limit: 8,
+        }
+    }
+
+    struct FixedRegistryFactory {
+        registry: StdMutex<Option<ToolRegistry>>,
+    }
+
+    impl FixedRegistryFactory {
+        fn new(registry: ToolRegistry) -> Self {
+            Self {
+                registry: StdMutex::new(Some(registry)),
+            }
+        }
+    }
+
+    impl AgentLoopToolRegistryFactory for FixedRegistryFactory {
+        fn build_tool_registry(
+            &self,
+            _input: AgentLoopToolRegistryBuildInput,
+        ) -> Result<ToolRegistry, EngineError> {
+            lock(&self.registry).take().ok_or_else(|| {
+                EngineError::Internal("registry factory called more than once".to_owned())
+            })
+        }
+    }
+
+    #[derive(Default)]
+    struct TwoToolGate {
+        started: AtomicUsize,
+        notify: Notify,
+    }
+
+    struct CoordinatedTool {
+        gate: Arc<TwoToolGate>,
+    }
+
+    #[async_trait]
+    impl ToolExecutor for CoordinatedTool {
+        async fn execute(
+            &self,
+            _input: &JsonObject,
+            ctx: &ExecutionMetadata,
+        ) -> Result<ToolResult, ToolError> {
+            self.gate.started.fetch_add(1, Ordering::SeqCst);
+            self.gate.notify.notify_waiters();
+            loop {
+                if self.gate.started.load(Ordering::SeqCst) >= 2 {
+                    break;
+                }
+                self.gate.notify.notified().await;
+            }
+            Ok(ToolResult::ok(
+                ctx.tool_use_id
+                    .as_ref()
+                    .expect("tool use id")
+                    .as_str()
+                    .to_owned(),
+            ))
+        }
+    }
+
+    struct TestMetadataReader;
+
+    #[async_trait]
+    impl ToolExecutionMetadataReader for TestMetadataReader {
+        async fn agent_run_snapshot(
+            &self,
+            agent_run_id: &AgentRunId,
+        ) -> Result<AgentRunRuntimeSnapshot, EngineError> {
+            Ok(AgentRunRuntimeSnapshot {
+                agent_run_id: agent_run_id.clone(),
+                agent_name: "root".to_owned(),
+                request_id: None,
+                task_id: None,
+                workflow_id: None,
+                iteration_id: None,
+                attempt_id: None,
+                sandbox_id: None,
+                workspace_root: String::new(),
+                is_isolated_workspace_mode: false,
+            })
+        }
+
+        async fn build_execution_metadata(
+            &self,
+            input: ExecutionMetadataBuildInput,
+        ) -> Result<ExecutionMetadata, EngineError> {
+            Ok(ExecutionMetadata {
+                agent_name: "root".to_owned(),
+                agent_run_id: Some(input.agent_run_id),
+                request_id: None,
+                task_id: None,
+                attempt_id: None,
+                workflow_id: None,
+                tool_use_id: Some(input.tool_use_id),
+                sandbox_invocation_id: None,
+                sandbox_id: None,
+                is_isolated_workspace_mode: false,
+                workspace_root: String::new(),
+                conversation: input.conversation,
+            })
+        }
+    }
+
+    struct EmptyStreamSource;
+
+    #[async_trait]
+    impl ProviderStreamSource for EmptyStreamSource {
+        async fn stream(&self, _request: &LlmRequest) -> Result<EngineStream, EngineError> {
+            Ok(Box::pin(stream::empty()))
+        }
+    }
+
+    struct UnusedRegistryFactory;
+
+    impl AgentLoopToolRegistryFactory for UnusedRegistryFactory {
+        fn build_tool_registry(
+            &self,
+            _input: AgentLoopToolRegistryBuildInput,
+        ) -> Result<ToolRegistry, EngineError> {
+            Err(EngineError::Internal(
+                "registry factory not used by dispatch test".to_owned(),
+            ))
+        }
+    }
+
+    struct UnusedAgentRunApi;
+
+    #[async_trait]
+    impl AgentRunApi for UnusedAgentRunApi {
+        async fn spawn_agent(
+            &self,
+            _request: SpawnAgentRequest,
+        ) -> Result<AgentRunId, AgentRunError> {
+            Err(AgentRunError::Internal(
+                "agent API not used by dispatch test".to_owned(),
+            ))
+        }
+
+        async fn wait_for_agent_outcome(
+            &self,
+            agent_run_id: &AgentRunId,
+        ) -> Result<AgentRunOutcome, AgentRunError> {
+            Ok(AgentRunOutcome {
+                agent_run_id: agent_run_id.clone(),
+                status: AgentRunStatus::Failed,
+                submission_payload: None,
+                message_history: Vec::new(),
+                token_count: None,
+                error: Some("unused".to_owned()),
+            })
+        }
+
+        async fn poll_agent_run_outcome(
+            &self,
+            _agent_run_id: &AgentRunId,
+        ) -> Result<Option<AgentRunOutcome>, AgentRunError> {
+            Ok(None)
+        }
+
+        async fn cancel_agent_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _reason: &str,
+        ) -> Result<(), AgentRunError> {
+            Ok(())
+        }
+    }
+
+    fn lock<T>(mutex: &StdMutex<T>) -> MutexGuard<'_, T> {
+        mutex
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }

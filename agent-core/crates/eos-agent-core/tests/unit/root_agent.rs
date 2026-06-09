@@ -423,7 +423,7 @@ async fn successful_root_keeps_engine_terminal() {
 }
 
 #[tokio::test]
-async fn root_run_writes_engine_owned_message_records() {
+async fn root_run_writes_engine_owned_records() {
     let payload = json!({"status": "success", "outcome": "recorded"});
     let factory = factory_by_agent(vec![
         (
@@ -450,20 +450,14 @@ async fn root_run_writes_engine_owned_message_records() {
         ),
     ]);
     let (state, _dir) =
-        build_test_state_with_message_records(Some(factory), vec![root_agent(), advisor_agent()])
+        build_test_state_with_record_writer(Some(factory), vec![root_agent(), advisor_agent()])
             .await;
     let request_id = RequestId::new_v4();
     let root_task_id = root_task_id_for(&request_id);
 
-    run_request(
-        &state,
-        &request_id,
-        "message record task",
-        Some("sb-1"),
-        None,
-    )
-    .await
-    .unwrap();
+    run_request(&state, &request_id, "record task", Some("sb-1"), None)
+        .await
+        .unwrap();
 
     let agent_run = state
         .db
@@ -480,7 +474,7 @@ async fn root_run_writes_engine_owned_message_records() {
         .unwrap()
         .expect("root task-agent-run row exists");
     let record_dir = format_record_dir(&record_index);
-    let records = state.message_records().expect("message records configured");
+    let records = state.record_writer().expect("record writer configured");
     let events = records.read_events_at(&record_dir, 0).await.unwrap();
     let event_kinds: Vec<_> = events.iter().map(|event| event.kind.as_str()).collect();
     assert_eq!(event_kinds.first(), Some(&"node_started"));
@@ -521,7 +515,7 @@ async fn root_run_writes_engine_owned_message_records() {
     assert!(rows.iter().any(|row| {
         row.get("type").and_then(|value| value.as_str()) == Some("initial_message")
             && row.get("role").and_then(|value| value.as_str()) == Some("user")
-            && row.to_string().contains("message record task")
+            && row.to_string().contains("record task")
     }));
     assert!(rows.iter().any(|row| {
         row.get("type").and_then(|value| value.as_str()) == Some("message")
