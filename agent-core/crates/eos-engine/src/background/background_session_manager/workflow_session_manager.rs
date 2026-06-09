@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -9,8 +9,6 @@ use tokio::task::JoinHandle;
 
 use super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
-
-pub(in crate::background) type WorkflowServiceCell = Arc<OnceLock<Arc<dyn WorkflowApi>>>;
 
 /// One delegated workflow tracked as background work for the owning agent run,
 /// keyed by its natural [`WorkflowId`].
@@ -72,7 +70,7 @@ pub(in crate::background) struct WorkflowCompletion {
 pub(in crate::background) struct WorkflowSessionManager {
     agent_run_id: AgentRunId,
     sessions: Arc<Mutex<HashMap<WorkflowId, WorkflowSession>>>,
-    workflow_service: WorkflowServiceCell,
+    workflow_service: Arc<dyn WorkflowApi>,
     notification: BackgroundNotificationEmitter,
 }
 
@@ -87,7 +85,7 @@ impl std::fmt::Debug for WorkflowSessionManager {
 impl WorkflowSessionManager {
     pub(in crate::background) fn new(
         agent_run_id: AgentRunId,
-        workflow_service: WorkflowServiceCell,
+        workflow_service: Arc<dyn WorkflowApi>,
         notification: BackgroundNotificationEmitter,
     ) -> Self {
         Self {
@@ -115,17 +113,18 @@ impl WorkflowSessionManager {
     }
 
     pub(in crate::background) async fn cancel_background_sessions(&self, reason: &str) {
-        let workflow_service = self.workflow_service.get().cloned();
         let running = self.running_ids().await;
         for workflow_id in &running {
-            if let Some(service) = &workflow_service {
-                if let Err(err) = service.cancel_workflow(workflow_id, reason).await {
-                    tracing::warn!(
-                        error = %err,
-                        workflow_id = workflow_id.as_str(),
-                        "background workflow cancellation failed"
-                    );
-                }
+            if let Err(err) = self
+                .workflow_service
+                .cancel_workflow(workflow_id, reason)
+                .await
+            {
+                tracing::warn!(
+                    error = %err,
+                    workflow_id = workflow_id.as_str(),
+                    "background workflow cancellation failed"
+                );
             }
             let _ = self.cancel_session(workflow_id).await;
         }
@@ -168,12 +167,10 @@ impl WorkflowSessionManager {
     }
 
     pub(in crate::background) async fn poll_completions(&self) -> Vec<WorkflowCompletion> {
-        let Some(workflow_service) = self.workflow_service.get().cloned() else {
-            return Vec::new();
-        };
         let mut completions = Vec::new();
         for session in self.running_sessions().await {
-            let terminal = match workflow_service
+            let terminal = match self
+                .workflow_service
                 .poll_terminal_workflow(session.workflow_id())
                 .await
             {
@@ -264,7 +261,7 @@ impl BackgroundSessionManager for WorkflowSessionManager {
 mod tests {
     #![allow(clippy::expect_used)]
 
-    use std::sync::{Arc, OnceLock};
+    use std::sync::Arc;
 
     use async_trait::async_trait;
     use eos_types::{
@@ -273,7 +270,7 @@ mod tests {
     };
 
     use crate::background::notification::BackgroundNotificationEmitter;
-    use crate::NotificationService;
+    use crate::EngineNotificationQueue;
 
     use super::*;
 
@@ -327,19 +324,18 @@ mod tests {
         }
     }
 
-    fn manager(notifier: &NotificationService) -> WorkflowSessionManager {
-        let cell: WorkflowServiceCell = Arc::new(OnceLock::new());
-        let _ = cell.set(Arc::new(AlwaysSucceededService));
+    fn manager(notifier: &EngineNotificationQueue) -> WorkflowSessionManager {
+        let workflow_service: Arc<dyn WorkflowApi> = Arc::new(AlwaysSucceededService);
         WorkflowSessionManager::new(
             "owner-run".parse().expect("agent run id"),
-            cell,
+            workflow_service,
             BackgroundNotificationEmitter::new(notifier.clone()),
         )
     }
 
     #[tokio::test]
     async fn poll_push_notification_and_cancel_are_manager_owned() {
-        let notifier = NotificationService::new();
+        let notifier = EngineNotificationQueue::new();
         let manager = manager(&notifier);
         manager
             .register_background_session(&StartedWorkflow {

@@ -97,7 +97,7 @@ mod delegate_workflow {
                     workflow_goal: parsed.goal.clone(),
                 })
                 .await?;
-            sessions.register_workflow(&started).await?;
+            sessions.register_workflow_session(&started).await?;
             let payload = json!({
                 "workflow_id": started.workflow_id.as_str(),
                 "status": "running",

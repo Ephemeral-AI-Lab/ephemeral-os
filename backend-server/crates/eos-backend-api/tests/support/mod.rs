@@ -11,17 +11,17 @@ use async_trait::async_trait;
 use axum::Router;
 use tempfile::TempDir;
 
-use eos_agent_message_records::AgentMessageRecords;
+use eos_agent_run::AgentMessageRecords;
 use eos_backend_api::{AgentCoreReads, AppState, RunControl, SandboxRegistry};
 use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{CancelOutcome, EventBus, LaunchError, SandboxManagerError};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{CreateUserRequest, SandboxState, SandboxView};
-use eos_state::{
+use eos_types::{
     AgentRun, ExecutionTaskOutcome, Page, PageResult, Request, RequestListFilter, RequestStatus,
     Sealed, Task, TaskRole, TaskStatus,
 };
-use eos_types::{AgentRunId, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
+use eos_types::{AgentRunId, AttemptId, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
 
 /// A temp-backed [`BackendStore`]; keep the [`TempDir`] alive for the test's life.
 pub async fn test_store() -> (BackendStore, TempDir) {
@@ -130,7 +130,7 @@ pub fn make_agent_run(task_id: &TaskId, messages: Vec<JsonObject>) -> AgentRun {
     let now = UtcDateTime::now();
     AgentRun {
         id: AgentRunId::new_v4(),
-        task_id: task_id.clone(),
+        task_id: Some(task_id.clone()),
         initial_messages: None,
         agent_name: "planner".to_owned(),
         message_history: Some(messages),
@@ -245,7 +245,7 @@ pub struct FakeRequestStore {
 impl Sealed for FakeRequestStore {}
 
 #[async_trait]
-impl eos_state::RequestStore for FakeRequestStore {
+impl eos_types::RequestStore for FakeRequestStore {
     async fn create_request(
         &self,
         _request_id: &RequestId,
@@ -294,7 +294,7 @@ pub struct FakeTaskStore {
 impl Sealed for FakeTaskStore {}
 
 #[async_trait]
-impl eos_state::TaskStore for FakeTaskStore {
+impl eos_types::TaskStore for FakeTaskStore {
     async fn insert_task(&self, _task: &Task) -> Result<(), eos_types::CoreError> {
         unimplemented!("not used by api tests")
     }
@@ -311,6 +311,14 @@ impl eos_state::TaskStore for FakeTaskStore {
         _outcomes: Option<&[ExecutionTaskOutcome]>,
         _terminal_tool_result: Option<&JsonObject>,
     ) -> Result<Option<Task>, eos_types::CoreError> {
+        unimplemented!("not used by api tests")
+    }
+
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        _attempt_id: &AttemptId,
+        _ids: &[TaskId],
+    ) -> Result<(), eos_types::CoreError> {
         unimplemented!("not used by api tests")
     }
 
@@ -331,11 +339,11 @@ pub struct FakeAgentRunStore {
 impl Sealed for FakeAgentRunStore {}
 
 #[async_trait]
-impl eos_state::AgentRunStore for FakeAgentRunStore {
+impl eos_types::AgentRunStore for FakeAgentRunStore {
     async fn create_run(
         &self,
         _agent_run_id: &AgentRunId,
-        _task_id: &TaskId,
+        _task_id: Option<&TaskId>,
         _agent_name: &str,
         _initial_messages: Option<&[JsonObject]>,
     ) -> Result<AgentRun, eos_types::CoreError> {

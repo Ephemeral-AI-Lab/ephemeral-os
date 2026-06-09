@@ -13,7 +13,7 @@ struct ServiceCandidate {
 #[test]
 fn final_service_named_surfaces_have_sibling_consumers() {
     let workspace = Workspace::load();
-    if !workspace.is_final_crate_map() {
+    if !workspace.final_layout_rules_active() {
         return;
     }
 

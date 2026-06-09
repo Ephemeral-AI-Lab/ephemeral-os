@@ -35,9 +35,9 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use tokio::sync::{broadcast, mpsc};
 
+use eos_agent_core::EventCallback;
 use eos_backend_store::{EventLogRepo, StoreError};
 use eos_backend_types::{EventRecord, EVENT_STREAM_GAP};
-use eos_runtime::EventCallback;
 use eos_types::{RequestId, UtcDateTime};
 
 /// Default bound on the callback→drainer queue (records in flight before overflow
@@ -142,7 +142,10 @@ impl EventBus {
     /// sender in the `StreamEvent` callback; tests drive the same enqueue path with
     /// pre-serialized payloads (a `#[non_exhaustive]` `StreamEvent` cannot be built
     /// outside `eos-engine`).
-    fn open_stream(&self, request_id: &RequestId) -> (mpsc::Sender<PendingMilestone>, Arc<RequestStream>) {
+    fn open_stream(
+        &self,
+        request_id: &RequestId,
+    ) -> (mpsc::Sender<PendingMilestone>, Arc<RequestStream>) {
         let (tx, rx) = mpsc::channel::<PendingMilestone>(self.queue_capacity);
         let (live, _) = broadcast::channel::<EventRecord>(self.live_capacity);
         let stream = Arc::new(RequestStream {
@@ -150,7 +153,9 @@ impl EventBus {
             dropped: AtomicU64::new(0),
             live,
         });
-        self.streams.lock().insert(request_id.clone(), stream.clone());
+        self.streams
+            .lock()
+            .insert(request_id.clone(), stream.clone());
         tokio::spawn(drain(
             rx,
             stream.clone(),
@@ -391,13 +396,19 @@ impl EventSubscription {
                 Err(broadcast::error::RecvError::Lagged(_)) => {
                     // The dropped live records are durable (persist-before-broadcast),
                     // so recover them from the log rather than leaving a gap.
-                    let refill = self.event_log.list_since(&self.request_id, self.last_seq).await?;
+                    let refill = self
+                        .event_log
+                        .list_since(&self.request_id, self.last_seq)
+                        .await?;
                     self.replay.extend(refill);
                 }
                 Err(broadcast::error::RecvError::Closed) => {
                     // Producer gone: one last durable sweep so a record persisted just
                     // before close is never missed, then end the stream.
-                    let refill = self.event_log.list_since(&self.request_id, self.last_seq).await?;
+                    let refill = self
+                        .event_log
+                        .list_since(&self.request_id, self.last_seq)
+                        .await?;
                     if refill.is_empty() {
                         self.live = None;
                         return Ok(None);

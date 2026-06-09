@@ -15,7 +15,7 @@ use eos_types::{
 };
 use parking_lot::Mutex;
 
-use crate::attempt::{AgentRunner, AttemptDeps, AttemptOrchestratorRegistry};
+use crate::attempt::{AgentRunner, AttemptOrchestratorRegistry, AttemptResources};
 use crate::iteration::OpenIterationCoordinatorRegistry;
 
 use super::runners::agent_registry;
@@ -31,9 +31,9 @@ pub(crate) struct MemoryStores {
 }
 
 impl MemoryStores {
-    pub(crate) fn deps(self: &Arc<Self>, runner: Arc<dyn AgentRunner>) -> AttemptDeps {
+    pub(crate) fn deps(self: &Arc<Self>, runner: Arc<dyn AgentRunner>) -> AttemptResources {
         let store = Arc::clone(self);
-        let mut deps = AttemptDeps::new(
+        let mut deps = AttemptResources::new(
             store.clone(),
             store.clone(),
             store.clone(),

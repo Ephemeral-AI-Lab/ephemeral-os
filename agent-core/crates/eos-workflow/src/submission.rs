@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AttemptSubmissionPort, CoreError, GeneratorSubmission, PlannerPlan, ReducerSubmission,
-    SubmissionAck,
+    CoreError, GeneratorSubmission, PlannerPlan, ReducerSubmission, SubmissionAck,
+    WorkflowAttemptSubmissionApi,
 };
 
 use crate::attempt::AttemptOrchestratorRegistry;
@@ -19,7 +19,7 @@ use crate::WorkflowError;
 /// orchestrator's non-advancing `record_*` variants and returns the
 /// orchestrator's real ack; advancing the DAG stays the exclusive job of the
 /// single `advance_run_stage` loop (D4: exactly one writer). This is the wired
-/// implementor of [`AttemptSubmissionPort`], constructed once at the composition
+/// implementor of [`WorkflowAttemptSubmissionApi`], constructed once at the composition
 /// root over the shared attempt registry.
 #[derive(Clone)]
 pub struct AttemptSubmissionAdapter {
@@ -42,7 +42,7 @@ impl AttemptSubmissionAdapter {
 }
 
 #[async_trait]
-impl AttemptSubmissionPort for AttemptSubmissionAdapter {
+impl WorkflowAttemptSubmissionApi for AttemptSubmissionAdapter {
     async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, CoreError> {
         let Some(orchestrator) = self.registry.get(&plan.attempt_id) else {
             return Ok(SubmissionAck::Rejected(format!(

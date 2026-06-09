@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-eos-audit.workspace = true
+eos-agent-core.workspace = true
 eos-protocol.workspace = true
 eos-backend-types.workspace = true
 eos-backend-store.workspace = true

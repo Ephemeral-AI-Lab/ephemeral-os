@@ -1,7 +1,7 @@
 use serde_json::json;
 
 #[cfg(target_os = "linux")]
-use eos_command_session::{
+use eos_workspace_runtime::command_session::{
     CollectCompleted, CommandResponse, CommandSessionCompletion, ReadCommandProgress,
 };
 
@@ -54,7 +54,7 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 #[cfg(target_os = "linux")]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
     let manager = WorkspaceRunManager::new(
-        eos_command_session::CommandSessionConfig::default(),
+        eos_workspace_runtime::command_session::CommandSessionConfig::default(),
         std::sync::Arc::new(NoopRunHostPorts),
     );
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
@@ -161,21 +161,25 @@ fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -
 struct NoopRunHostPorts;
 
 #[cfg(target_os = "linux")]
-impl eos_workspace_run::WorkspaceRunHostPorts for NoopRunHostPorts {
+impl eos_workspace_runtime::WorkspaceRunHostPorts for NoopRunHostPorts {
     fn base_timings(
         &self,
         _root: &std::path::Path,
-    ) -> Result<eos_workspace::WorkspaceTimings, eos_workspace::WorkspaceApiError> {
+    ) -> Result<eos_workspace_contract::WorkspaceTimings, eos_workspace_contract::WorkspaceApiError>
+    {
         unimplemented!("settle path is not exercised by completion-queue unit tests")
     }
 
     fn finalize_ephemeral(
         &self,
         _root: &std::path::Path,
-        _workspace: eos_workspace_modes::ephemeral::EphemeralWorkspace,
-        _base_timings: eos_workspace::WorkspaceTimings,
-        _request: eos_workspace::FinalizeCommandRequest,
-    ) -> Result<eos_workspace::WorkspaceCommandOutcome, eos_workspace::WorkspaceApiError> {
+        _workspace: eos_workspace_runtime::ephemeral::EphemeralWorkspace,
+        _base_timings: eos_workspace_contract::WorkspaceTimings,
+        _request: eos_workspace_contract::FinalizeCommandRequest,
+    ) -> Result<
+        eos_workspace_contract::WorkspaceCommandOutcome,
+        eos_workspace_contract::WorkspaceApiError,
+    > {
         unimplemented!("settle path is not exercised by completion-queue unit tests")
     }
 

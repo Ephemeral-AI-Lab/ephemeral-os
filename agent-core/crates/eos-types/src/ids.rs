@@ -103,7 +103,7 @@ define_id!(
 );
 define_id!(
     /// Identifier for a persisted Task row. Opaque string; the root mint is
-    /// `root-{request_id}` (derived by the owning `eos-runtime` crate from the
+    /// `root-{request_id}` (derived by the owning `eos-agent-core` crate from the
     /// injected request id, not `new_v4`).
     TaskId,
     mint

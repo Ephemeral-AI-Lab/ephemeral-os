@@ -146,10 +146,10 @@
         run
     }
 </code></pre>
-</details></td></tr><tr id="method-count-by-caller-163"><td>method</td><td>count_by_caller</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
+</details></td></tr><tr id="method-count-by-caller-163"><td>method</td><td>count_by_caller</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
         <span class="rs-kw">let</span> runs = <a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-lock-252">lock</a>(&amp;<span class="rs-self">self</span>.runs);
         <span class="rs-kw">match</span> caller_id {
             <span class="rs-type">Some</span>(caller) =&gt; runs.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-get-69">get</a>(caller).map_or(0, <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-CallerRuns-54">CallerRuns</a>::count),
@@ -178,9 +178,9 @@
             .unwrap_or_default()
     }
 </code></pre>
-</details></td></tr><tr id="method-push-completed-189"><td>method</td><td>push_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a> (&amp; self , completion : CommandSessionCompletion)</code><details class="function-source">
+</details></td></tr><tr id="method-push-completed-189"><td>method</td><td>push_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a> (&amp; self , completion : CommandSessionCompletion)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
         <span class="rs-kw">let</span> seq = <span class="rs-self">self</span>.completed_seq.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-lock-252">lock</a>(&amp;<span class="rs-self">self</span>.completed);
         completed.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(
@@ -217,10 +217,10 @@
             .map(|entry| entry.completion.result.clone())
     }
 </code></pre>
-</details></td></tr><tr id="method-collect-completed-222"><td>method</td><td>collect_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a> (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code><details class="function-source">
+</details></td></tr><tr id="method-collect-completed-222"><td>method</td><td>collect_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a> (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
         <span class="rs-kw">let</span> wanted: <span class="rs-type">Option</span>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;&gt; = request
             .command_session_ids
             .as_ref()
@@ -439,17 +439,17 @@
         registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-ephemeral-run-275">ephemeral_run</a>(&quot;cmd_2&quot;, &quot;caller&quot;));
         registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-ephemeral-run-275">ephemeral_run</a>(&quot;cmd_3&quot;, &quot;other&quot;));
 
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 2);
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;other&quot;)), 1);
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">None</span>), 3);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 2);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;other&quot;)), 1);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">None</span>), 3);
         assert!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-get-69">get</a>(&quot;cmd_2&quot;).is_some());
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-caller-sessions-180">caller_sessions</a>(&quot;caller&quot;).len(), 2);
 
         assert!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(&quot;cmd_2&quot;).is_some());
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 1);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 1);
         <span class="rs-comment">// Removing a caller's last session drops the caller entry.</span>
         assert!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(&quot;cmd_1&quot;).is_some());
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 0);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 0);
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>().len(), 1);
     }
 </code></pre>
@@ -471,7 +471,7 @@
         <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-WorkspaceRunRegistry-103">WorkspaceRunRegistry</a>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>();
         <span class="rs-kw">let</span> overflow = 5;
         <span class="rs-kw">for</span> index <span class="rs-kw">in</span> 0..(<span class="rs-type">MAX_COMPLETED_ENTRIES</span> + overflow) {
-            registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-sample-completion-262">sample_completion</a>(&amp;format!(&quot;cmd_{index}&quot;)));
+            registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-sample-completion-262">sample_completion</a>(&amp;format!(&quot;cmd_{index}&quot;)));
         }
         <span class="rs-comment">// The map is bounded at the cap.</span>
         assert_eq!(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-lock-252">lock</a>(&amp;registry.completed).len(), <span class="rs-type">MAX_COMPLETED_ENTRIES</span>);
@@ -660,7 +660,7 @@
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
         <span class="rs-kw">let</span> runs = <a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-lock-252">lock</a>(&amp;<span class="rs-self">self</span>.runs);
         <span class="rs-kw">match</span> caller_id {
             <span class="rs-type">Some</span>(caller) =&gt; runs.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-get-69">get</a>(caller).map_or(0, <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-CallerRuns-54">CallerRuns</a>::count),
@@ -685,7 +685,7 @@
             .unwrap_or_default()
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
         <span class="rs-kw">let</span> seq = <span class="rs-self">self</span>.completed_seq.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-lock-252">lock</a>(&amp;<span class="rs-self">self</span>.completed);
         completed.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(
@@ -719,7 +719,7 @@
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
         <span class="rs-kw">let</span> wanted: <span class="rs-type">Option</span>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;&gt; = request
             .command_session_ids
             .as_ref()
@@ -818,17 +818,17 @@
         registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-ephemeral-run-275">ephemeral_run</a>(&quot;cmd_2&quot;, &quot;caller&quot;));
         registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-ephemeral-run-275">ephemeral_run</a>(&quot;cmd_3&quot;, &quot;other&quot;));
 
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 2);
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;other&quot;)), 1);
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">None</span>), 3);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 2);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;other&quot;)), 1);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">None</span>), 3);
         assert!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-get-69">get</a>(&quot;cmd_2&quot;).is_some());
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-caller-sessions-180">caller_sessions</a>(&quot;caller&quot;).len(), 2);
 
         assert!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(&quot;cmd_2&quot;).is_some());
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 1);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 1);
         <span class="rs-comment">// Removing a caller's last session drops the caller entry.</span>
         assert!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(&quot;cmd_1&quot;).is_some());
-        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 0);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(<span class="rs-type">Some</span>(&quot;caller&quot;)), 0);
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>().len(), 1);
     }
 
@@ -837,7 +837,7 @@
         <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-WorkspaceRunRegistry-103">WorkspaceRunRegistry</a>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>();
         <span class="rs-kw">let</span> overflow = 5;
         <span class="rs-kw">for</span> index <span class="rs-kw">in</span> 0..(<span class="rs-type">MAX_COMPLETED_ENTRIES</span> + overflow) {
-            registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-sample-completion-262">sample_completion</a>(&amp;format!(&quot;cmd_{index}&quot;)));
+            registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-sample-completion-262">sample_completion</a>(&amp;format!(&quot;cmd_{index}&quot;)));
         }
         <span class="rs-comment">// The map is bounded at the cap.</span>
         assert_eq!(<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#item-fn-lock-252">lock</a>(&amp;registry.completed).len(), <span class="rs-type">MAX_COMPLETED_ENTRIES</span>);

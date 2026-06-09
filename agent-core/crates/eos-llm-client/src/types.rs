@@ -4,7 +4,7 @@
 //! Provider-specific wire projection lives under `clients/`, never here.
 
 use eos_types::Message;
-pub use eos_types::ToolSpec;
+pub use eos_types::{ToolSpec, DEFAULT_MAX_TOKENS};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -93,9 +93,6 @@ pub struct LlmRequest {
     /// Optional reasoning-effort hint for providers that support it.
     pub reasoning_effort: Option<ReasoningEffort>,
 }
-
-/// The `max_tokens` default mirrors `MessageRequest.max_tokens = 32768`.
-pub const DEFAULT_MAX_TOKENS: u32 = 32768;
 
 impl LlmRequest {
     /// Start building a request for `model`.

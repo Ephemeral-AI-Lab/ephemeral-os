@@ -5,7 +5,7 @@
 
 use std::collections::BTreeSet;
 
-use eos_audit::{ObsEnvelope, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
+use eos_agent_core::{ObsEnvelope, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

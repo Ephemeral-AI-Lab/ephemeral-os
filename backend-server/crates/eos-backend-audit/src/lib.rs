@@ -3,10 +3,10 @@
 //! This crate owns the reader-side boundary for Rust audit/observability:
 //!
 //! - [`normalization`]/[`gates`]: normalize agent-core JSONL and sandbox audit
-//!   pulls into [`eos_audit::ObsEnvelope`] rows and evaluate the Rust runner
+//!   pulls into [`eos_agent_core::ObsEnvelope`] rows and evaluate the Rust runner
 //!   audit/observability gates. Producers keep their local mechanics (agent-core
 //!   writes normalized JSONL; the daemon exposes a bounded native ring).
-//! - [`PersistingSink`]: the backend [`AuditSink`](eos_audit::AuditSink) that
+//! - [`PersistingSink`]: the backend [`AuditSink`](eos_agent_core::AuditSink) that
 //!   async-drains agent-core audit events into `obs_event` without blocking the
 //!   engine hot path (AC6).
 //! - [`AuditIngestor`]: ingest a daemon `api.audit.pull` response into `obs_event`,

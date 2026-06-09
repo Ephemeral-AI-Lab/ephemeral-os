@@ -245,8 +245,7 @@ mod ask_advisor {
     use async_trait::async_trait;
     use eos_types::JsonObject;
     use eos_types::{
-        AgentName, AgentRunApi, AgentRunError, AgentRunMessageRecordKind, AgentRunOutcome,
-        SpawnAgentRequest,
+        AgentName, AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest, TaskAgentRunKind,
     };
     use schemars::{schema_for, JsonSchema};
     use serde::{Deserialize, Serialize};
@@ -318,11 +317,11 @@ mod ask_advisor {
                     workspace_root: ctx.workspace_root.clone(),
                     is_isolated_workspace_mode: false,
                     persist: true,
-                    record_kind: parent_agent_run_id
-                        .map(|parent_agent_run_id| AgentRunMessageRecordKind::Advisor {
+                    task_agent_run_kind: parent_agent_run_id
+                        .map(|parent_agent_run_id| TaskAgentRunKind::Advisor {
                             parent_agent_run_id,
                         })
-                        .unwrap_or(AgentRunMessageRecordKind::Agent),
+                        .unwrap_or(TaskAgentRunKind::Agent),
                 })
                 .await
             {

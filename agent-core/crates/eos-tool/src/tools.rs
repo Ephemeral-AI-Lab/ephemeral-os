@@ -18,7 +18,8 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::registry::{
-    BackgroundSessions, Submission, ToolConfig, ToolConfigSet, ToolRuntime, WorkspaceMode,
+    BackgroundSessionControl, IsolatedWorkspaceModeControl, TerminalSubmissionRuntime, ToolConfig,
+    ToolConfigSet, ToolRuntime,
 };
 use crate::{
     OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolName, ToolRegistry, ToolResult,
@@ -40,7 +41,7 @@ pub struct CallerScope {
 #[derive(Clone)]
 pub(crate) struct SandboxHandle {
     pub(crate) transport: Arc<dyn SandboxTransport>,
-    workspace_mode: Arc<dyn WorkspaceMode>,
+    workspace_mode: Arc<dyn IsolatedWorkspaceModeControl>,
 }
 
 impl SandboxHandle {
@@ -65,7 +66,7 @@ impl SandboxHandle {
 #[derive(Clone)]
 pub(crate) struct CommandHandle {
     pub(crate) command_service: Arc<dyn SandboxCommandApi>,
-    background: Arc<dyn BackgroundSessions>,
+    background: Arc<dyn BackgroundSessionControl>,
 }
 
 impl CommandHandle {
@@ -76,20 +77,20 @@ impl CommandHandle {
         }
     }
 
-    async fn register_command(
+    async fn register_command_session(
         &self,
         command_session_id: &CommandSessionId,
         sandbox_id: &SandboxId,
     ) -> Result<(), ToolError> {
         self.background
-            .register_command(command_session_id.clone(), sandbox_id.clone())
+            .register_command_session(command_session_id.clone(), sandbox_id.clone())
             .await
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct BackgroundHandle {
-    background: Arc<dyn BackgroundSessions>,
+    background: Arc<dyn BackgroundSessionControl>,
 }
 
 impl BackgroundHandle {
@@ -99,47 +100,49 @@ impl BackgroundHandle {
         }
     }
 
-    async fn register_subagent(&self, agent_run_id: &AgentRunId) -> Result<(), ToolError> {
+    async fn register_subagent_run(&self, agent_run_id: &AgentRunId) -> Result<(), ToolError> {
         self.background
-            .register_subagent(agent_run_id.clone())
+            .register_subagent_run(agent_run_id.clone())
             .await
     }
 
-    async fn cancel_subagent(
+    async fn cancel_subagent_run(
         &self,
         agent_run_id: &AgentRunId,
         reason: &str,
     ) -> Result<bool, ToolError> {
         self.background
-            .cancel_subagent(agent_run_id.clone(), reason)
+            .cancel_subagent_run(agent_run_id.clone(), reason)
             .await
     }
 
-    async fn register_workflow(&self, workflow: &StartedWorkflow) -> Result<(), ToolError> {
-        self.background.register_workflow(workflow.clone()).await
+    async fn register_workflow_session(&self, workflow: &StartedWorkflow) -> Result<(), ToolError> {
+        self.background
+            .register_workflow_session(workflow.clone())
+            .await
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct RootSubmissionHandle {
-    pub(crate) submission: Submission,
+    pub(crate) submission: TerminalSubmissionRuntime,
 }
 
 impl RootSubmissionHandle {
-    fn new(submission: Submission) -> Self {
+    fn new(submission: TerminalSubmissionRuntime) -> Self {
         Self { submission }
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct AttemptSubmissionHandle {
-    pub(crate) port: Arc<dyn eos_types::AttemptSubmissionPort>,
+    pub(crate) api: Arc<dyn eos_types::WorkflowAttemptSubmissionApi>,
 }
 
 impl AttemptSubmissionHandle {
-    fn new(submission: &Submission) -> Self {
+    fn new(submission: &TerminalSubmissionRuntime) -> Self {
         Self {
-            port: submission
+            api: submission
                 .attempt()
                 .expect("live tool runtime has attempt submission"),
         }

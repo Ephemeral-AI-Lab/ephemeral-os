@@ -22,7 +22,7 @@
 pub enum SandboxPortError {
     /// A sandbox RPC failed at the transport. `code` is the daemon-resolved
     /// structured error code (already normalized by the transport implementor;
-    /// see the conflict classifier in `tool_api::parse`), `message` is the
+    /// see the conflict classifier in `tool_dispatch::parse`), `message` is the
     /// user-facing text. The conflict classifier inspects both.
     #[error("sandbox transport error: {message}")]
     Transport {
@@ -30,7 +30,7 @@ pub enum SandboxPortError {
         code: Option<String>,
         /// User-facing error message (already stripped of the daemon
         /// `internal_error:` prefix is the caller's job — see
-        /// `tool_api::parse::user_visible_error_message`).
+        /// `tool_dispatch::parse::user_visible_error_message`).
         message: String,
     },
     /// A daemon JSON envelope failed to decode into the expected typed result

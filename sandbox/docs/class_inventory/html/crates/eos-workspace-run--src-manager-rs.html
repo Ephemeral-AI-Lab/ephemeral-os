@@ -110,14 +110,14 @@
                 yield_time_ms,
             ),
             <a class="symbol-link rs-type" href="eos-workspace-run--src-manager-rs.html#item-enum-StartTarget-44">StartTarget</a>::<span class="rs-type">Isolated</span> { handle } =&gt; {
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-167">start_isolated</a>(spec, prepare_request, handle, yield_time_ms)
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-172">start_isolated</a>(spec, prepare_request, handle, yield_time_ms)
             }
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-286"><td>method</td><td>cancel</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cancel-286">cancel</a> (&amp; self , request : CancelCommandSession ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-300"><td>method</td><td>cancel</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cancel-300">cancel</a> (&amp; self , request : CancelCommandSession ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-286">cancel</a>(
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-300">cancel</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">CancelCommandSession</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
@@ -135,7 +135,7 @@
             <span class="rs-self">self</span>.config.cancel_wait_ms,
             start_offset,
         ) {
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
             <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::cancelled(stdout)),
         }
     }
@@ -176,27 +176,32 @@
         <span class="rs-kw">let</span> prepared = <span class="rs-kw">match</span> prepare_ephemeral_command(context, snapshot, prepare_request) {
             <span class="rs-type">Ok</span>(prepared) =&gt; prepared,
             <span class="rs-type">Err</span>(error) =&gt; {
-                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(&amp;root, &amp;lease_id);
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(&amp;root, &amp;lease_id);
                 <span class="rs-kw">return</span> <span class="rs-type">Err</span>(error.into());
             }
         };
-        <span class="rs-kw">let</span> <span class="rs-type">PreparedEphemeralCommand</span> { prepared, workspace } = prepared;
-        <span class="rs-kw">let</span> session = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a>(spec, prepared) {
+        <span class="rs-kw">let</span> <span class="rs-type">PreparedEphemeralCommand</span> {
+            prepared,
+            workspace,
+        } = prepared;
+        <span class="rs-kw">let</span> session = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a>(spec, prepared) {
             <span class="rs-type">Ok</span>(session) =&gt; session,
             <span class="rs-type">Err</span>(error) =&gt; {
                 discard_ephemeral_command(&amp;workspace.dirs);
-                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(&amp;root, &amp;lease_id);
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(&amp;root, &amp;lease_id);
                 <span class="rs-kw">return</span> <span class="rs-type">Err</span>(error);
             }
         };
-        <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
-            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a> { session, workspace })
-        }))
+        <span class="rs-type">Ok</span>(
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
+                <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a> { session, workspace })
+            }),
+        )
     }
 </code></pre>
-</details></td></tr><tr id="method-start-isolated-167"><td>method</td><td>start_isolated</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-167">start_isolated</a> (&amp; self , spec : CommandSessionSpec , prepare_request : eos_workspace :: PrepareCommandRequest , handle : Box &lt; <a class="symbol-link" href="eos-workspace-run.html#item-struct-CommandHandle-4">CommandHandle</a> &gt; , yield_time_ms : u64 ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-start-isolated-172"><td>method</td><td>start_isolated</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-172">start_isolated</a> (&amp; self , spec : CommandSessionSpec , prepare_request : eos_workspace :: PrepareCommandRequest , handle : Box &lt; <a class="symbol-link" href="eos-workspace-run.html#item-struct-CommandHandle-4">CommandHandle</a> &gt; , yield_time_ms : u64 ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-167">start_isolated</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-172">start_isolated</a>(
         &amp;<span class="rs-self">self</span>,
         spec: <span class="rs-type">CommandSessionSpec</span>,
         prepare_request: eos_workspace::<span class="rs-type">PrepareCommandRequest</span>,
@@ -214,16 +219,18 @@
             cgroup_path: handle.cgroup_path.clone(),
         };
         <span class="rs-kw">let</span> prepared = prepare_isolated_command(context, prepare_request)?;
-        <span class="rs-kw">let</span> session = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a>(spec, prepared)?;
+        <span class="rs-kw">let</span> session = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a>(spec, prepared)?;
         <span class="rs-kw">let</span> handle = *handle;
-        <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
-            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a> { session, handle })
-        }))
+        <span class="rs-type">Ok</span>(
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
+                <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a> { session, handle })
+            }),
+        )
     }
 </code></pre>
-</details></td></tr><tr id="method-spawn-session-192"><td>method</td><td>spawn_session</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a> (&amp; self , spec : CommandSessionSpec , prepared : eos_workspace :: PreparedCommandWorkspace ,) -&gt; Result &lt; CommandSession , CommandSessionError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-spawn-session-199"><td>method</td><td>spawn_session</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a> (&amp; self , spec : CommandSessionSpec , prepared : eos_workspace :: PreparedCommandWorkspace ,) -&gt; Result &lt; CommandSession , CommandSessionError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a>(
         &amp;<span class="rs-self">self</span>,
         spec: <span class="rs-type">CommandSessionSpec</span>,
         prepared: eos_workspace::<span class="rs-type">PreparedCommandWorkspace</span>,
@@ -247,9 +254,9 @@
         ))
     }
 </code></pre>
-</details></td></tr><tr id="method-register-and-wait-216"><td>method</td><td>register_and_wait</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a> (&amp; self , session : CommandSession , yield_time_ms : u64 , make_run : impl FnOnce (CommandSession) -&gt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> ,) -&gt; CommandResponse</code><details class="function-source">
+</details></td></tr><tr id="method-register-and-wait-223"><td>method</td><td>register_and_wait</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a> (&amp; self , session : CommandSession , yield_time_ms : u64 , make_run : impl FnOnce (CommandSession) -&gt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> ,) -&gt; CommandResponse</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a>(
         &amp;<span class="rs-self">self</span>,
         session: <span class="rs-type">CommandSession</span>,
         yield_time_ms: u64,
@@ -259,20 +266,20 @@
         <span class="rs-kw">let</span> run = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>(make_run(session));
         <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(<span class="rs-type">Arc</span>::clone(&amp;run));
         <span class="rs-kw">match</span> wait_for_yield(run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>(), &amp;<span class="rs-self">self</span>.config, yield_time_ms, 0) {
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>),
             <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">CommandResponse</span>::running(id, stdout),
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-write-stdin-231"><td>method</td><td>write_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-write-stdin-231">write_stdin</a> (&amp; self , request : WriteStdin) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-write-stdin-238"><td>method</td><td>write_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-write-stdin-238">write_stdin</a> (&amp; self , request : WriteStdin) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-write-stdin-231">write_stdin</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">WriteStdin</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-557">is_teardown_control</a>(&amp;request.chars) {
-            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-286">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-write-stdin-238">write_stdin</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">WriteStdin</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-577">is_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-300">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
                 command_session_id: request.command_session_id,
             });
         }
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-561">contains_teardown_control</a>(&amp;request.chars) {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-581">contains_teardown_control</a>(&amp;request.chars) {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
                 &quot;<span class="rs-type">Ctrl</span>-<span class="rs-type">C</span>/<span class="rs-type">Ctrl</span>-<span class="rs-type">D</span> must be sent alone to cancel command session&quot;.to_owned(),
             ));
@@ -288,15 +295,22 @@
         <span class="rs-kw">let</span> command_session_id = request.command_session_id.clone();
         <span class="rs-kw">let</span> start_offset = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().transcript_len();
         run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().write_process_stdin(&amp;request.chars)?;
-        <span class="rs-kw">match</span> wait_for_yield(run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>(), &amp;<span class="rs-self">self</span>.config, request.yield_time_ms, start_offset) {
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(command_session_id, stdout)),
+        <span class="rs-kw">match</span> wait_for_yield(
+            run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>(),
+            &amp;<span class="rs-self">self</span>.config,
+            request.yield_time_ms,
+            start_offset,
+        ) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; {
+                <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(command_session_id, stdout))
+            }
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-read-progress-259"><td>method</td><td>read_progress</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-read-progress-259">read_progress</a> (&amp; self , request : ReadCommandProgress ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-read-progress-273"><td>method</td><td>read_progress</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-read-progress-273">read_progress</a> (&amp; self , request : ReadCommandProgress ,) -&gt; Result &lt; CommandResponse , CommandSessionError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-read-progress-259">read_progress</a>(
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-read-progress-273">read_progress</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">ReadCommandProgress</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
@@ -314,7 +328,7 @@
         };
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
-                .<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)
+                .<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)
                 .with_last_lines(request.last_n_lines));
         }
         <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(
@@ -323,55 +337,55 @@
         ))
     }
 </code></pre>
-</details></td></tr><tr id="method-count-by-caller-309"><td>method</td><td>count_by_caller</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
+</details></td></tr><tr id="method-count-by-caller-323"><td>method</td><td>count_by_caller</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
-        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(caller_id)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(caller_id)
     }
 </code></pre>
-</details></td></tr><tr id="method-collect-completed-314"><td>method</td><td>collect_completed</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a> (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code><details class="function-source">
+</details></td></tr><tr id="method-collect-completed-328"><td>method</td><td>collect_completed</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a> (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
-        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a>(request)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a>(request)
     }
 </code></pre>
-</details></td></tr><tr id="method-push-completed-319"><td>method</td><td>push_completed</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a> (&amp; self , completion : CommandSessionCompletion)</code><details class="function-source">
+</details></td></tr><tr id="method-push-completed-333"><td>method</td><td>push_completed</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a> (&amp; self , completion : CommandSessionCompletion)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
-        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(completion);
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(completion);
     }
 </code></pre>
-</details></td></tr><tr id="method-cleanup-caller-323"><td>method</td><td>cleanup_caller</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cleanup-caller-323">cleanup_caller</a> (&amp; self , caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel and discard every command session owned by `caller_id` (the<br>per-caller workspace-run teardown). Cancelled sessions discard their<br>overlay and push no completion (the caller initiated the cancel).</p><details class="function-source">
+</details></td></tr><tr id="method-cleanup-caller-337"><td>method</td><td>cleanup_caller</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cleanup-caller-337">cleanup_caller</a> (&amp; self , caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel and discard every command session owned by `caller_id` (the<br>per-caller workspace-run teardown). Cancelled sessions discard their<br>overlay and push no completion (the caller initiated the cancel).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel and discard every command session owned by `caller_id` (the</span>
     <span class="rs-comment">/// per-caller workspace-run teardown). Cancelled sessions discard their</span>
     <span class="rs-comment">/// overlay and push no completion (the caller initiated the cancel).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cleanup-caller-323">cleanup_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cleanup-caller-337">cleanup_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
         <span class="rs-kw">let</span> caller_id = caller_id.trim();
         <span class="rs-kw">if</span> caller_id.is_empty() {
             <span class="rs-kw">return</span> 0;
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-caller-sessions-180">caller_sessions</a>(caller_id), grace_s)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-caller-sessions-180">caller_sessions</a>(caller_id), grace_s)
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-all-335"><td>method</td><td>cancel_all</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cancel-all-335">cancel_all</a> (&amp; self , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel and discard every live command session in the sandbox (the<br>whole-sandbox sweep backstop). Cancelled sessions discard and push no<br>completion.</p><details class="function-source">
+</details></td></tr><tr id="method-cancel-all-349"><td>method</td><td>cancel_all</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cancel-all-349">cancel_all</a> (&amp; self , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel and discard every live command session in the sandbox (the<br>whole-sandbox sweep backstop). Cancelled sessions discard and push no<br>completion.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel and discard every live command session in the sandbox (the</span>
     <span class="rs-comment">/// whole-sandbox sweep backstop). Cancelled sessions discard and push no</span>
     <span class="rs-comment">/// completion.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-all-335">cancel_all</a>(&amp;<span class="rs-self">self</span>, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>(), grace_s)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-all-349">cancel_all</a>(&amp;<span class="rs-self">self</span>, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>(), grace_s)
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-and-drain-343"><td>method</td><td>cancel_and_drain</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a> (&amp; self , runs : Vec &lt; Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt; &gt; , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel every run, then reap+discard within `grace`, finalizing any<br>stragglers. Returns the number of runs that were live at entry.</p><details class="function-source">
+</details></td></tr><tr id="method-cancel-and-drain-357"><td>method</td><td>cancel_and_drain</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a> (&amp; self , runs : Vec &lt; Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt; &gt; , grace_s : Option &lt; f64 &gt;) -&gt; usize</code><p class="docstring">Cancel every run, then reap+discard within `grace`, finalizing any<br>stragglers. Returns the number of runs that were live at entry.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel every run, then reap+discard within `grace`, finalizing any</span>
     <span class="rs-comment">/// stragglers. Returns the number of runs that were live at entry.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a>(&amp;<span class="rs-self">self</span>, runs: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;&gt;, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a>(&amp;<span class="rs-self">self</span>, runs: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;&gt;, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
         <span class="rs-kw">if</span> runs.is_empty() {
             <span class="rs-kw">return</span> 0;
         }
@@ -385,7 +399,7 @@
         loop {
             pending.retain(|run| <span class="rs-kw">match</span> run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
                 <span class="rs-type">Some</span>(reaped) =&gt; {
-                    <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(<span class="rs-type">Arc</span>::clone(run), reaped, <span class="rs-kw">false</span>);
+                    <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(<span class="rs-type">Arc</span>::clone(run), reaped, <span class="rs-kw">false</span>);
                     <span class="rs-kw">false</span>
                 }
                 <span class="rs-type">None</span> =&gt; <span class="rs-kw">true</span>,
@@ -397,7 +411,7 @@
         }
         <span class="rs-kw">for</span> run <span class="rs-kw">in</span> pending {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
-                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>);
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>);
             } <span class="rs-kw">else</span> {
                 <span class="rs-comment">// The kill could not reap the child within grace (e.g. an</span>
                 <span class="rs-comment">// uninterruptible D-state task). Teardown must NOT depend on a</span>
@@ -405,34 +419,34 @@
                 <span class="rs-comment">// and release its overlay lease + dirs, or a stuck process would</span>
                 <span class="rs-comment">// leak the snapshot lease the whole-sandbox assert-no-leases gate</span>
                 <span class="rs-comment">// checks. Never publishes — this is the discard branch.</span>
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-385">force_discard</a>(&amp;run);
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-399">force_discard</a>(&amp;run);
             }
         }
         runs.len()
     }
 </code></pre>
-</details></td></tr><tr id="method-force-discard-385"><td>method</td><td>force_discard</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-force-discard-385">force_discard</a> (&amp; self , run : &amp; Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt;)</code><p class="docstring">Reap-independent teardown for a run the cancel grace could not reap.<br>Releases an ephemeral run's overlay lease + dirs (best-effort: a still-live<br>process may leave its dirs for the orphan reaper, but the lease is freed);<br>an isolated session only needs its registry entry dropped, since the<br>namespace + lease are torn down by `exit_isolated`.</p><details class="function-source">
+</details></td></tr><tr id="method-force-discard-399"><td>method</td><td>force_discard</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-force-discard-399">force_discard</a> (&amp; self , run : &amp; Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt;)</code><p class="docstring">Reap-independent teardown for a run the cancel grace could not reap.<br>Releases an ephemeral run's overlay lease + dirs (best-effort: a still-live<br>process may leave its dirs for the orphan reaper, but the lease is freed);<br>an isolated session only needs its registry entry dropped, since the<br>namespace + lease are torn down by `exit_isolated`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Reap-independent teardown for a run the cancel grace could not reap.</span>
     <span class="rs-comment">/// Releases an ephemeral run's overlay lease + dirs (best-effort: a still-live</span>
     <span class="rs-comment">/// process may leave its dirs for the orphan reaper, but the lease is freed);</span>
     <span class="rs-comment">/// an isolated session only needs its registry entry dropped, since the</span>
     <span class="rs-comment">/// namespace + lease are torn down by `exit_isolated`.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-385">force_discard</a>(&amp;<span class="rs-self">self</span>, run: &amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-399">force_discard</a>(&amp;<span class="rs-self">self</span>, run: &amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;) {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().id()).is_none() {
             <span class="rs-comment">// A concurrent reap already finalized + discarded it.</span>
             <span class="rs-kw">return</span>;
         }
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) = &amp;**run {
             discard_ephemeral_command(&amp;ephemeral.workspace.dirs);
-            <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(
+            <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(
                 &amp;ephemeral.workspace.layer_stack_root.0,
                 &amp;ephemeral.workspace.snapshot.lease_id,
             );
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-sweep-expired-404"><td>method</td><td>sweep_expired</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-sweep-expired-404">sweep_expired</a> (&amp; self , now : Instant)</code><p class="docstring">Periodic reaper: enforce the per-session timeout backstop and finalize any<br>session whose child has exited without a live poller, parking the<br>completion for the heartbeat.<br>A past-deadline session is killed as a **timeout** (not a user cancel), so<br>its completion is still parked — a fire-and-forget session that hits its<br>timeout must reach the heartbeat, or its agent-core background session is<br>stuck Running forever. Only a caller-initiated cancel parks nothing.</p><details class="function-source">
+</details></td></tr><tr id="method-sweep-expired-418"><td>method</td><td>sweep_expired</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-sweep-expired-418">sweep_expired</a> (&amp; self , now : Instant)</code><p class="docstring">Periodic reaper: enforce the per-session timeout backstop and finalize any<br>session whose child has exited without a live poller, parking the<br>completion for the heartbeat.<br>A past-deadline session is killed as a **timeout** (not a user cancel), so<br>its completion is still parked — a fire-and-forget session that hits its<br>timeout must reach the heartbeat, or its agent-core background session is<br>stuck Running forever. Only a caller-initiated cancel parks nothing.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Periodic reaper: enforce the per-session timeout backstop and finalize any</span>
     <span class="rs-comment">/// session whose child has exited without a live poller, parking the</span>
@@ -442,25 +456,28 @@
     <span class="rs-comment">/// its completion is still parked — a fire-and-forget session that hits its</span>
     <span class="rs-comment">/// timeout must reach the heartbeat, or its agent-core background session is</span>
     <span class="rs-comment">/// stuck Running forever. Only a caller-initiated cancel parks nothing.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-sweep-expired-404">sweep_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-sweep-expired-418">sweep_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) {
         <span class="rs-kw">for</span> run <span class="rs-kw">in</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>() {
-            <span class="rs-kw">if</span> run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().is_past_deadline(now, <span class="rs-self">self</span>.config.max_session_s) {
+            <span class="rs-kw">if</span> run
+                .<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>()
+                .is_past_deadline(now, <span class="rs-self">self</span>.config.max_session_s)
+            {
                 run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().time_out_process();
             }
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
                 <span class="rs-kw">let</span> publish_completion = reaped.kill != <span class="rs-type">Some</span>(<span class="rs-type">KillReason</span>::<span class="rs-type">Cancelled</span>);
-                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, publish_completion);
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, publish_completion);
             }
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-finish-reaped-424"><td>method</td><td>finish_reaped</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt; , reaped : ReapedCommand , publish_completion : bool ,) -&gt; CommandResponse</code><p class="docstring">Turn a reaped command into its final response: the run publishes (normal<br>completion) or discards (cancel) via the workspace lifecycle helpers, then<br>persists the final response. Routing cancel to the discard branch is the<br>structural guarantee that a cancelled command never reaches the OCC merge.</p><details class="function-source">
+</details></td></tr><tr id="method-finish-reaped-441"><td>method</td><td>finish_reaped</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt; , reaped : ReapedCommand , publish_completion : bool ,) -&gt; CommandResponse</code><p class="docstring">Turn a reaped command into its final response: the run publishes (normal<br>completion) or discards (cancel) via the workspace lifecycle helpers, then<br>persists the final response. Routing cancel to the discard branch is the<br>structural guarantee that a cancelled command never reaches the OCC merge.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Turn a reaped command into its final response: the run publishes (normal</span>
     <span class="rs-comment">/// completion) or discards (cancel) via the workspace lifecycle helpers, then</span>
     <span class="rs-comment">/// persists the final response. Routing cancel to the discard branch is the</span>
     <span class="rs-comment">/// structural guarantee that a cancelled command never reaches the OCC merge.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(
         &amp;<span class="rs-self">self</span>,
         run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;,
         reaped: <span class="rs-type">ReapedCommand</span>,
@@ -477,12 +494,12 @@
         };
         <span class="rs-comment">// A kill of EITHER reason (cancel or timeout) DISCARDS — only a natural</span>
         <span class="rs-comment">// exit (`kill == None`) takes the publish branch in `settle_*`.</span>
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-448">finalize_run</a>(run, request, reaped.kill.is_some(), publish_completion)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-465">finalize_run</a>(run, request, reaped.kill.is_some(), publish_completion)
     }
 </code></pre>
-</details></td></tr><tr id="method-finalize-run-448"><td>method</td><td>finalize_run</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-448">finalize_run</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt; , request : FinalizeCommandRequest , cancelled : bool , publish_completion : bool ,) -&gt; CommandResponse</code><details class="function-source">
+</details></td></tr><tr id="method-finalize-run-465"><td>method</td><td>finalize_run</td><td><code>fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-465">finalize_run</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a> &gt; , request : FinalizeCommandRequest , cancelled : bool , publish_completion : bool ,) -&gt; CommandResponse</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-448">finalize_run</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-465">finalize_run</a>(
         &amp;<span class="rs-self">self</span>,
         run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;,
         request: <span class="rs-type">FinalizeCommandRequest</span>,
@@ -492,9 +509,11 @@
         <span class="rs-kw">let</span> ports = &amp;*<span class="rs-self">self</span>.ports;
         <span class="rs-kw">let</span> outcome = <span class="rs-kw">match</span> &amp;*run {
             <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) =&gt; {
-                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-483">settle_ephemeral</a>(ports, ephemeral, request, cancelled)
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-502">settle_ephemeral</a>(ports, ephemeral, request, cancelled)
             }
-            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(isolated) =&gt; <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-512">settle_isolated</a>(ports, isolated, request, cancelled),
+            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(isolated) =&gt; {
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-531">settle_isolated</a>(ports, isolated, request, cancelled)
+            }
         };
         <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> outcome {
             <span class="rs-type">Ok</span>(outcome) =&gt; <span class="rs-type">CommandResponse</span>::from_workspace_outcome(outcome),
@@ -506,7 +525,7 @@
         <span class="rs-kw">let</span> command = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().command().to_owned();
         <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(&amp;command_session_id);
         <span class="rs-kw">if</span> publish_completion {
-            <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(<span class="rs-type">CommandSessionCompletion</span> {
+            <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(<span class="rs-type">CommandSessionCompletion</span> {
                 command_session_id,
                 caller_id,
                 command,
@@ -531,13 +550,13 @@
   <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code>root: PathBuf, workspace_root: PathBuf, scratch_root: PathBuf</code></td></tr><tr><td>Isolated</td><td><code>handle: Box &lt; <a class="symbol-link" href="eos-workspace-run.html#item-struct-CommandHandle-4">CommandHandle</a> &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-workspace-run/src/manager.rs:44</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-settle-ephemeral-483" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_ephemeral private fn settle_ephemeral (ports : &amp; dyn WorkspaceRunHostPorts , run : &amp; EphemeralRun , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-workspace-run/src/manager.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-settle-ephemeral-502" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_ephemeral private fn settle_ephemeral (ports : &amp; dyn WorkspaceRunHostPorts , run : &amp; EphemeralRun , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>settle_ephemeral</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-483">settle_ephemeral</a> (ports : &amp; dyn <a class="symbol-link" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a> , run : &amp; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a> , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-502">settle_ephemeral</a> (ports : &amp; dyn <a class="symbol-link" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a> , run : &amp; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a> , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
   <p class="docstring">Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths<br>remove the run dirs and release the snapshot lease; only the complete path<br>captures + publishes the upperdir, so a cancelled command never OCC-merges.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -545,7 +564,7 @@
   <pre><code><span class="rs-comment">/// Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths</span>
 <span class="rs-comment">/// remove the run dirs and release the snapshot lease; only the complete path</span>
 <span class="rs-comment">/// captures + publishes the upperdir, so a cancelled command never OCC-merges.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-483">settle_ephemeral</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-502">settle_ephemeral</a>(
     ports: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a>,
     run: &amp;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a>,
     request: <span class="rs-type">FinalizeCommandRequest</span>,
@@ -567,20 +586,20 @@
         })
     };
     discard_ephemeral_command(&amp;run.workspace.dirs);
-    <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(&amp;root, &amp;lease_id);
+    <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(&amp;root, &amp;lease_id);
     outcome
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:483</p>
-</article><article id="item-fn-settle-isolated-512" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_isolated private fn settle_isolated (ports : &amp; dyn WorkspaceRunHostPorts , run : &amp; IsolatedRun , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-workspace-run/src/manager.rs  ">
+  <p class="source">crates/eos-workspace-run/src/manager.rs:502</p>
+</article><article id="item-fn-settle-isolated-531" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_isolated private fn settle_isolated (ports : &amp; dyn WorkspaceRunHostPorts , run : &amp; IsolatedRun , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>settle_isolated</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-512">settle_isolated</a> (ports : &amp; dyn <a class="symbol-link" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a> , run : &amp; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a> , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-531">settle_isolated</a> (ports : &amp; dyn <a class="symbol-link" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a> , run : &amp; <a class="symbol-link" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a> , request : FinalizeCommandRequest , cancelled : bool ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
   <p class="docstring">Complete (capture for audit) or discard (cancel) one isolated command<br>session. Isolated writes are never published; the upperdir is torn down with<br>the namespace on exit, so discard is a no-op beyond the cancelled outcome.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -588,7 +607,7 @@
   <pre><code><span class="rs-comment">/// Complete (capture for audit) or discard (cancel) one isolated command</span>
 <span class="rs-comment">/// session. Isolated writes are never published; the upperdir is torn down with</span>
 <span class="rs-comment">/// the namespace on exit, so discard is a no-op beyond the cancelled outcome.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-512">settle_isolated</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-531">settle_isolated</a>(
     ports: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a>,
     run: &amp;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a>,
     request: <span class="rs-type">FinalizeCommandRequest</span>,
@@ -617,35 +636,36 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:512</p>
-</article><article id="item-fn-release-lease-542" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn release_lease private fn release_lease (root : &amp; Path , lease_id : &amp; str) crates/eos-workspace-run/src/manager.rs  ">
+  <p class="source">crates/eos-workspace-run/src/manager.rs:531</p>
+</article><article id="item-fn-release-lease-561" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn release_lease private fn release_lease (root : &amp; Path , lease_id : &amp; str) crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>release_lease</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a> (root : &amp; Path , lease_id : &amp; str)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a> (root : &amp; Path , lease_id : &amp; str)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(root: &amp;<span class="rs-type">Path</span>, lease_id: &amp;str) {
-    <span class="rs-kw">let</span> _ = <span class="rs-type">LayerStack</span>::open(root.to_path_buf()).and_then(|<span class="rs-kw">mut</span> stack| stack.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(lease_id));
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(root: &amp;<span class="rs-type">Path</span>, lease_id: &amp;str) {
+    <span class="rs-kw">let</span> _ =
+        <span class="rs-type">LayerStack</span>::open(root.to_path_buf()).and_then(|<span class="rs-kw">mut</span> stack| stack.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(lease_id));
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:542</p>
-</article><article id="item-fn-layerstack-error-546" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layerstack_error private fn layerstack_error (error : impl std :: fmt :: Display) -&gt; CommandSessionError crates/eos-workspace-run/src/manager.rs  ">
+  <p class="source">crates/eos-workspace-run/src/manager.rs:561</p>
+</article><article id="item-fn-layerstack-error-566" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layerstack_error private fn layerstack_error (error : impl std :: fmt :: Display) -&gt; CommandSessionError crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>layerstack_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-layerstack-error-546">layerstack_error</a> (error : impl std :: fmt :: Display) -&gt; CommandSessionError</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-layerstack-error-566">layerstack_error</a> (error : impl std :: fmt :: Display) -&gt; CommandSessionError</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-layerstack-error-546">layerstack_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">CommandSessionError</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-layerstack-error-566">layerstack_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">CommandSessionError</span> {
     <span class="rs-type">CommandSessionError</span>::<span class="rs-type">Workspace</span>(<span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>(
         &quot;snapshot_acquire_failed&quot;,
         error.to_string(),
@@ -654,58 +674,58 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:546</p>
-</article><article id="item-fn-workspace-api-error-553" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error private fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-workspace-run/src/manager.rs  ">
+  <p class="source">crates/eos-workspace-run/src/manager.rs:566</p>
+</article><article id="item-fn-workspace-api-error-573" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error private fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_api_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-workspace-api-error-553">workspace_api_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-workspace-api-error-573">workspace_api_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-workspace-api-error-553">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-workspace-api-error-573">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
     <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:553</p>
-</article><article id="item-fn-is-teardown-control-557" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_teardown_control private fn is_teardown_control (chars : &amp; str) -&gt; bool crates/eos-workspace-run/src/manager.rs  ">
+  <p class="source">crates/eos-workspace-run/src/manager.rs:573</p>
+</article><article id="item-fn-is-teardown-control-577" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_teardown_control private fn is_teardown_control (chars : &amp; str) -&gt; bool crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_teardown_control</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-557">is_teardown_control</a> (chars : &amp; str) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-577">is_teardown_control</a> (chars : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-557">is_teardown_control</a>(chars: &amp;str) -&gt; bool {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-577">is_teardown_control</a>(chars: &amp;str) -&gt; bool {
     matches!(chars, &quot;\u{3}&quot; | &quot;\u{4}&quot;)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:557</p>
-</article><article id="item-fn-contains-teardown-control-561" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn contains_teardown_control private fn contains_teardown_control (chars : &amp; str) -&gt; bool crates/eos-workspace-run/src/manager.rs  ">
+  <p class="source">crates/eos-workspace-run/src/manager.rs:577</p>
+</article><article id="item-fn-contains-teardown-control-581" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn contains_teardown_control private fn contains_teardown_control (chars : &amp; str) -&gt; bool crates/eos-workspace-run/src/manager.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>contains_teardown_control</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-561">contains_teardown_control</a> (chars : &amp; str) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-581">contains_teardown_control</a> (chars : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-561">contains_teardown_control</a>(chars: &amp;str) -&gt; bool {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-581">contains_teardown_control</a>(chars: &amp;str) -&gt; bool {
     chars.contains(&#x27;\u{3}&#x27;) || chars.contains(&#x27;\u{4}&#x27;)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-run/src/manager.rs:561</p>
+  <p class="source">crates/eos-workspace-run/src/manager.rs:581</p>
 </article></div>
 </section></div>
 </main>
@@ -739,6 +759,11 @@
     <span class="rs-type">CommandSessionError</span>, <span class="rs-type">CommandSessionSpec</span>, <span class="rs-type">KillReason</span>, <span class="rs-type">ReadCommandProgress</span>, <span class="rs-type">ReapedCommand</span>,
     <span class="rs-type">RunningCommandSessionParts</span>, <span class="rs-type">StartCommandSession</span>, <span class="rs-type">WaitOutcome</span>, <span class="rs-type">WriteStdin</span>,
 };
+<span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
+<span class="rs-kw">use</span> eos_overlay::overlay_writable_root;
+<span class="rs-kw">use</span> eos_workspace::{
+    <span class="rs-type">FinalizeCommandRequest</span>, <span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceMode</span>,
+};
 <span class="rs-kw">use</span> eos_workspace_modes::ephemeral::{
     discard_ephemeral_command, prepare_ephemeral_command, <span class="rs-type">EphemeralCommandPrepareContext</span>,
     <span class="rs-type">EphemeralSnapshot</span>, <span class="rs-type">PreparedEphemeralCommand</span>,
@@ -746,11 +771,6 @@
 <span class="rs-kw">use</span> eos_workspace_modes::isolated::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
     <span class="rs-type">IsolatedCommandFinalizeContext</span>, <span class="rs-type">IsolatedCommandPrepareContext</span>,
-};
-<span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
-<span class="rs-kw">use</span> eos_overlay::overlay_writable_root;
-<span class="rs-kw">use</span> eos_workspace::{
-    <span class="rs-type">FinalizeCommandRequest</span>, <span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceMode</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a>;
@@ -823,7 +843,7 @@
                 yield_time_ms,
             ),
             <a class="symbol-link rs-type" href="eos-workspace-run--src-manager-rs.html#item-enum-StartTarget-44">StartTarget</a>::<span class="rs-type">Isolated</span> { handle } =&gt; {
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-167">start_isolated</a>(spec, prepare_request, handle, yield_time_ms)
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-172">start_isolated</a>(spec, prepare_request, handle, yield_time_ms)
             }
         }
     }
@@ -862,25 +882,30 @@
         <span class="rs-kw">let</span> prepared = <span class="rs-kw">match</span> prepare_ephemeral_command(context, snapshot, prepare_request) {
             <span class="rs-type">Ok</span>(prepared) =&gt; prepared,
             <span class="rs-type">Err</span>(error) =&gt; {
-                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(&amp;root, &amp;lease_id);
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(&amp;root, &amp;lease_id);
                 <span class="rs-kw">return</span> <span class="rs-type">Err</span>(error.into());
             }
         };
-        <span class="rs-kw">let</span> <span class="rs-type">PreparedEphemeralCommand</span> { prepared, workspace } = prepared;
-        <span class="rs-kw">let</span> session = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a>(spec, prepared) {
+        <span class="rs-kw">let</span> <span class="rs-type">PreparedEphemeralCommand</span> {
+            prepared,
+            workspace,
+        } = prepared;
+        <span class="rs-kw">let</span> session = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a>(spec, prepared) {
             <span class="rs-type">Ok</span>(session) =&gt; session,
             <span class="rs-type">Err</span>(error) =&gt; {
                 discard_ephemeral_command(&amp;workspace.dirs);
-                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(&amp;root, &amp;lease_id);
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(&amp;root, &amp;lease_id);
                 <span class="rs-kw">return</span> <span class="rs-type">Err</span>(error);
             }
         };
-        <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
-            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a> { session, workspace })
-        }))
+        <span class="rs-type">Ok</span>(
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
+                <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a> { session, workspace })
+            }),
+        )
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-167">start_isolated</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-start-isolated-172">start_isolated</a>(
         &amp;<span class="rs-self">self</span>,
         spec: <span class="rs-type">CommandSessionSpec</span>,
         prepare_request: eos_workspace::<span class="rs-type">PrepareCommandRequest</span>,
@@ -898,14 +923,16 @@
             cgroup_path: handle.cgroup_path.clone(),
         };
         <span class="rs-kw">let</span> prepared = prepare_isolated_command(context, prepare_request)?;
-        <span class="rs-kw">let</span> session = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a>(spec, prepared)?;
+        <span class="rs-kw">let</span> session = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a>(spec, prepared)?;
         <span class="rs-kw">let</span> handle = *handle;
-        <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
-            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a> { session, handle })
-        }))
+        <span class="rs-type">Ok</span>(
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a>(session, yield_time_ms, <span class="rs-kw">move</span> |session| {
+                <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a> { session, handle })
+            }),
+        )
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-192">spawn_session</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-spawn-session-199">spawn_session</a>(
         &amp;<span class="rs-self">self</span>,
         spec: <span class="rs-type">CommandSessionSpec</span>,
         prepared: eos_workspace::<span class="rs-type">PreparedCommandWorkspace</span>,
@@ -929,7 +956,7 @@
         ))
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-216">register_and_wait</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-register-and-wait-223">register_and_wait</a>(
         &amp;<span class="rs-self">self</span>,
         session: <span class="rs-type">CommandSession</span>,
         yield_time_ms: u64,
@@ -939,18 +966,18 @@
         <span class="rs-kw">let</span> run = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>(make_run(session));
         <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-insert-77">insert</a>(<span class="rs-type">Arc</span>::clone(&amp;run));
         <span class="rs-kw">match</span> wait_for_yield(run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>(), &amp;<span class="rs-self">self</span>.config, yield_time_ms, 0) {
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>),
             <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">CommandResponse</span>::running(id, stdout),
         }
     }
 
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-write-stdin-231">write_stdin</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">WriteStdin</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-557">is_teardown_control</a>(&amp;request.chars) {
-            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-286">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-write-stdin-238">write_stdin</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">WriteStdin</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-577">is_teardown_control</a>(&amp;request.chars) {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-300">cancel</a>(<span class="rs-type">CancelCommandSession</span> {
                 command_session_id: request.command_session_id,
             });
         }
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-561">contains_teardown_control</a>(&amp;request.chars) {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-581">contains_teardown_control</a>(&amp;request.chars) {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">InvalidRequest</span>(
                 &quot;<span class="rs-type">Ctrl</span>-<span class="rs-type">C</span>/<span class="rs-type">Ctrl</span>-<span class="rs-type">D</span> must be sent alone to cancel command session&quot;.to_owned(),
             ));
@@ -966,13 +993,20 @@
         <span class="rs-kw">let</span> command_session_id = request.command_session_id.clone();
         <span class="rs-kw">let</span> start_offset = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().transcript_len();
         run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().write_process_stdin(&amp;request.chars)?;
-        <span class="rs-kw">match</span> wait_for_yield(run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>(), &amp;<span class="rs-self">self</span>.config, request.yield_time_ms, start_offset) {
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(command_session_id, stdout)),
+        <span class="rs-kw">match</span> wait_for_yield(
+            run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>(),
+            &amp;<span class="rs-self">self</span>.config,
+            request.yield_time_ms,
+            start_offset,
+        ) {
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; {
+                <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(command_session_id, stdout))
+            }
         }
     }
 
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-read-progress-259">read_progress</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-read-progress-273">read_progress</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">ReadCommandProgress</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
@@ -990,7 +1024,7 @@
         };
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>
-                .<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)
+                .<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)
                 .with_last_lines(request.last_n_lines));
         }
         <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::running(
@@ -999,7 +1033,7 @@
         ))
     }
 
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-286">cancel</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-300">cancel</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">CancelCommandSession</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt; {
@@ -1017,48 +1051,48 @@
             <span class="rs-self">self</span>.config.cancel_wait_ms,
             start_offset,
         ) {
-            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
+            <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Completed</span>(reaped) =&gt; <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>)),
             <span class="rs-type">WaitOutcome</span>::<span class="rs-type">Running</span>(stdout) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">CommandResponse</span>::cancelled(stdout)),
         }
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
-        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-309">count_by_caller</a>(caller_id)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-count-by-caller-323">count_by_caller</a>(caller_id)
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
-        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-314">collect_completed</a>(request)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">CollectCompleted</span>) -&gt; <span class="rs-type">CollectCompletedResponse</span> {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-collect-completed-328">collect_completed</a>(request)
     }
 
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
-        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(completion);
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-type">CommandSessionCompletion</span>) {
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(completion);
     }
 
     <span class="rs-comment">/// Cancel and discard every command session owned by `caller_id` (the</span>
     <span class="rs-comment">/// per-caller workspace-run teardown). Cancelled sessions discard their</span>
     <span class="rs-comment">/// overlay and push no completion (the caller initiated the cancel).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cleanup-caller-323">cleanup_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cleanup-caller-337">cleanup_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
         <span class="rs-kw">let</span> caller_id = caller_id.trim();
         <span class="rs-kw">if</span> caller_id.is_empty() {
             <span class="rs-kw">return</span> 0;
         }
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-caller-sessions-180">caller_sessions</a>(caller_id), grace_s)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-caller-sessions-180">caller_sessions</a>(caller_id), grace_s)
     }
 
     <span class="rs-comment">/// Cancel and discard every live command session in the sandbox (the</span>
     <span class="rs-comment">/// whole-sandbox sweep backstop). Cancelled sessions discard and push no</span>
     <span class="rs-comment">/// completion.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-all-335">cancel_all</a>(&amp;<span class="rs-self">self</span>, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>(), grace_s)
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-all-349">cancel_all</a>(&amp;<span class="rs-self">self</span>, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a>(<span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>(), grace_s)
     }
 
     <span class="rs-comment">/// Cancel every run, then reap+discard within `grace`, finalizing any</span>
     <span class="rs-comment">/// stragglers. Returns the number of runs that were live at entry.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-343">cancel_and_drain</a>(&amp;<span class="rs-self">self</span>, runs: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;&gt;, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-cancel-and-drain-357">cancel_and_drain</a>(&amp;<span class="rs-self">self</span>, runs: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;&gt;, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; usize {
         <span class="rs-kw">if</span> runs.is_empty() {
             <span class="rs-kw">return</span> 0;
         }
@@ -1072,7 +1106,7 @@
         loop {
             pending.retain(|run| <span class="rs-kw">match</span> run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
                 <span class="rs-type">Some</span>(reaped) =&gt; {
-                    <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(<span class="rs-type">Arc</span>::clone(run), reaped, <span class="rs-kw">false</span>);
+                    <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(<span class="rs-type">Arc</span>::clone(run), reaped, <span class="rs-kw">false</span>);
                     <span class="rs-kw">false</span>
                 }
                 <span class="rs-type">None</span> =&gt; <span class="rs-kw">true</span>,
@@ -1084,7 +1118,7 @@
         }
         <span class="rs-kw">for</span> run <span class="rs-kw">in</span> pending {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
-                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>);
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, <span class="rs-kw">false</span>);
             } <span class="rs-kw">else</span> {
                 <span class="rs-comment">// The kill could not reap the child within grace (e.g. an</span>
                 <span class="rs-comment">// uninterruptible D-state task). Teardown must NOT depend on a</span>
@@ -1092,7 +1126,7 @@
                 <span class="rs-comment">// and release its overlay lease + dirs, or a stuck process would</span>
                 <span class="rs-comment">// leak the snapshot lease the whole-sandbox assert-no-leases gate</span>
                 <span class="rs-comment">// checks. Never publishes — this is the discard branch.</span>
-                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-385">force_discard</a>(&amp;run);
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-399">force_discard</a>(&amp;run);
             }
         }
         runs.len()
@@ -1103,14 +1137,14 @@
     <span class="rs-comment">/// process may leave its dirs for the orphan reaper, but the lease is freed);</span>
     <span class="rs-comment">/// an isolated session only needs its registry entry dropped, since the</span>
     <span class="rs-comment">/// namespace + lease are torn down by `exit_isolated`.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-385">force_discard</a>(&amp;<span class="rs-self">self</span>, run: &amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-force-discard-399">force_discard</a>(&amp;<span class="rs-self">self</span>, run: &amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;) {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().id()).is_none() {
             <span class="rs-comment">// A concurrent reap already finalized + discarded it.</span>
             <span class="rs-kw">return</span>;
         }
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) = &amp;**run {
             discard_ephemeral_command(&amp;ephemeral.workspace.dirs);
-            <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(
+            <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(
                 &amp;ephemeral.workspace.layer_stack_root.0,
                 &amp;ephemeral.workspace.snapshot.lease_id,
             );
@@ -1125,14 +1159,17 @@
     <span class="rs-comment">/// its completion is still parked — a fire-and-forget session that hits its</span>
     <span class="rs-comment">/// timeout must reach the heartbeat, or its agent-core background session is</span>
     <span class="rs-comment">/// stuck Running forever. Only a caller-initiated cancel parks nothing.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-sweep-expired-404">sweep_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-sweep-expired-418">sweep_expired</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>) {
         <span class="rs-kw">for</span> run <span class="rs-kw">in</span> <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-live-172">live</a>() {
-            <span class="rs-kw">if</span> run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().is_past_deadline(now, <span class="rs-self">self</span>.config.max_session_s) {
+            <span class="rs-kw">if</span> run
+                .<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>()
+                .is_past_deadline(now, <span class="rs-self">self</span>.config.max_session_s)
+            {
                 run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().time_out_process();
             }
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reaped) = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().reap() {
                 <span class="rs-kw">let</span> publish_completion = reaped.kill != <span class="rs-type">Some</span>(<span class="rs-type">KillReason</span>::<span class="rs-type">Cancelled</span>);
-                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(run, reaped, publish_completion);
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(run, reaped, publish_completion);
             }
         }
     }
@@ -1141,7 +1178,7 @@
     <span class="rs-comment">/// completion) or discards (cancel) via the workspace lifecycle helpers, then</span>
     <span class="rs-comment">/// persists the final response. Routing cancel to the discard branch is the</span>
     <span class="rs-comment">/// structural guarantee that a cancelled command never reaches the OCC merge.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-424">finish_reaped</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finish-reaped-441">finish_reaped</a>(
         &amp;<span class="rs-self">self</span>,
         run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;,
         reaped: <span class="rs-type">ReapedCommand</span>,
@@ -1158,10 +1195,10 @@
         };
         <span class="rs-comment">// A kill of EITHER reason (cancel or timeout) DISCARDS — only a natural</span>
         <span class="rs-comment">// exit (`kill == None`) takes the publish branch in `settle_*`.</span>
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-448">finalize_run</a>(run, request, reaped.kill.is_some(), publish_completion)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-465">finalize_run</a>(run, request, reaped.kill.is_some(), publish_completion)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-448">finalize_run</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-finalize-run-465">finalize_run</a>(
         &amp;<span class="rs-self">self</span>,
         run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>&gt;,
         request: <span class="rs-type">FinalizeCommandRequest</span>,
@@ -1171,9 +1208,11 @@
         <span class="rs-kw">let</span> ports = &amp;*<span class="rs-self">self</span>.ports;
         <span class="rs-kw">let</span> outcome = <span class="rs-kw">match</span> &amp;*run {
             <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) =&gt; {
-                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-483">settle_ephemeral</a>(ports, ephemeral, request, cancelled)
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-502">settle_ephemeral</a>(ports, ephemeral, request, cancelled)
             }
-            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(isolated) =&gt; <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-512">settle_isolated</a>(ports, isolated, request, cancelled),
+            <a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-enum-WorkspaceRun-37">WorkspaceRun</a>::<span class="rs-type">Isolated</span>(isolated) =&gt; {
+                <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-531">settle_isolated</a>(ports, isolated, request, cancelled)
+            }
         };
         <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> outcome {
             <span class="rs-type">Ok</span>(outcome) =&gt; <span class="rs-type">CommandResponse</span>::from_workspace_outcome(outcome),
@@ -1185,7 +1224,7 @@
         <span class="rs-kw">let</span> command = run.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-session-46">session</a>().command().to_owned();
         <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-registry-rs.html#method-remove-147">remove</a>(&amp;command_session_id);
         <span class="rs-kw">if</span> publish_completion {
-            <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-319">push_completed</a>(<span class="rs-type">CommandSessionCompletion</span> {
+            <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-push-completed-333">push_completed</a>(<span class="rs-type">CommandSessionCompletion</span> {
                 command_session_id,
                 caller_id,
                 command,
@@ -1199,7 +1238,7 @@
 <span class="rs-comment">/// Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths</span>
 <span class="rs-comment">/// remove the run dirs and release the snapshot lease; only the complete path</span>
 <span class="rs-comment">/// captures + publishes the upperdir, so a cancelled command never OCC-merges.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-483">settle_ephemeral</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-ephemeral-502">settle_ephemeral</a>(
     ports: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a>,
     run: &amp;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-EphemeralRun-18">EphemeralRun</a>,
     request: <span class="rs-type">FinalizeCommandRequest</span>,
@@ -1221,14 +1260,14 @@
         })
     };
     discard_ephemeral_command(&amp;run.workspace.dirs);
-    <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(&amp;root, &amp;lease_id);
+    <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(&amp;root, &amp;lease_id);
     outcome
 }
 
 <span class="rs-comment">/// Complete (capture for audit) or discard (cancel) one isolated command</span>
 <span class="rs-comment">/// session. Isolated writes are never published; the upperdir is torn down with</span>
 <span class="rs-comment">/// the namespace on exit, so discard is a no-op beyond the cancelled outcome.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-512">settle_isolated</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-settle-isolated-531">settle_isolated</a>(
     ports: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-run--src-ports-rs.html#item-trait-WorkspaceRunHostPorts-9">WorkspaceRunHostPorts</a>,
     run: &amp;<a class="symbol-link rs-type" href="eos-workspace-run--src-registry-rs.html#item-struct-IsolatedRun-27">IsolatedRun</a>,
     request: <span class="rs-type">FinalizeCommandRequest</span>,
@@ -1255,26 +1294,27 @@
     <span class="rs-type">Ok</span>(outcome)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(root: &amp;<span class="rs-type">Path</span>, lease_id: &amp;str) {
-    <span class="rs-kw">let</span> _ = <span class="rs-type">LayerStack</span>::open(root.to_path_buf()).and_then(|<span class="rs-kw">mut</span> stack| stack.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-542">release_lease</a>(lease_id));
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(root: &amp;<span class="rs-type">Path</span>, lease_id: &amp;str) {
+    <span class="rs-kw">let</span> _ =
+        <span class="rs-type">LayerStack</span>::open(root.to_path_buf()).and_then(|<span class="rs-kw">mut</span> stack| stack.<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-release-lease-561">release_lease</a>(lease_id));
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-layerstack-error-546">layerstack_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">CommandSessionError</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-layerstack-error-566">layerstack_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">CommandSessionError</span> {
     <span class="rs-type">CommandSessionError</span>::<span class="rs-type">Workspace</span>(<span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>(
         &quot;snapshot_acquire_failed&quot;,
         error.to_string(),
     ))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-workspace-api-error-553">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-workspace-api-error-573">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
     <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#method-new-68">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-557">is_teardown_control</a>(chars: &amp;str) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-is-teardown-control-577">is_teardown_control</a>(chars: &amp;str) -&gt; bool {
     matches!(chars, &quot;\u{3}&quot; | &quot;\u{4}&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-561">contains_teardown_control</a>(chars: &amp;str) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-run--src-manager-rs.html#item-fn-contains-teardown-control-581">contains_teardown_control</a>(chars: &amp;str) -&gt; bool {
     chars.contains(&#x27;\u{3}&#x27;) || chars.contains(&#x27;\u{4}&#x27;)
 }
 </code></pre>

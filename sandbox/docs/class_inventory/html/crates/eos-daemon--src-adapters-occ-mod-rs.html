@@ -56,34 +56,34 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-configure-layer-stack-25" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_layer_stack pub(crate) pub(crate) fn configure_layer_stack (config : &amp; LayerStackConfig) crates/eos-daemon/src/adapters/occ/mod.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-configure-layer-stack-27" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_layer_stack pub(crate) pub(crate) fn configure_layer_stack (config : &amp; LayerStackConfig) crates/eos-daemon/src/adapters/occ/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>configure_layer_stack</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-configure-layer-stack-25">configure_layer_stack</a> (config : &amp; LayerStackConfig)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-configure-layer-stack-27">configure_layer_stack</a> (config : &amp; LayerStackConfig)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-configure-layer-stack-25">configure_layer_stack</a>(config: &amp;<span class="rs-type">LayerStackConfig</span>) {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-configure-layer-stack-27">configure_layer_stack</a>(config: &amp;<span class="rs-type">LayerStackConfig</span>) {
     eos_occ_layerstack::configure_auto_squash_max_depth(config.auto_squash_max_depth);
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:25</p>
-</article><article id="item-fn-apply-occ-changeset-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_occ_changeset pub(crate) pub(crate) fn apply_occ_changeset (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [LayerChange] , base_hashes : &amp; [(LayerPath , Option &lt; String &gt;)] ,) -&gt; Result &lt; ChangesetResult , DaemonError &gt; crates/eos-daemon/src/adapters/occ/mod.rs  ">
+  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:27</p>
+</article><article id="item-fn-apply-occ-changeset-31" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_occ_changeset pub(crate) pub(crate) fn apply_occ_changeset (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [LayerChange] , base_hashes : &amp; [(LayerPath , Option &lt; String &gt;)] ,) -&gt; Result &lt; ChangesetResult , DaemonError &gt; crates/eos-daemon/src/adapters/occ/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>apply_occ_changeset</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a> (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [LayerChange] , base_hashes : &amp; [(LayerPath , Option &lt; String &gt;)] ,) -&gt; Result &lt; ChangesetResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a> (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [LayerChange] , base_hashes : &amp; [(LayerPath , Option &lt; String &gt;)] ,) -&gt; Result &lt; ChangesetResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
     root: &amp;<span class="rs-type">Path</span>,
     snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
@@ -102,41 +102,41 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:29</p>
-</article><article id="item-fn-base-hashes-for-snapshot-46" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_hashes_for_snapshot pub(crate) pub(crate) fn base_hashes_for_snapshot (root : &amp; Path , manifest : &amp; eos_layerstack :: Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , DaemonError &gt; crates/eos-daemon/src/adapters/occ/mod.rs  ">
+  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:31</p>
+</article><article id="item-fn-base-hashes-for-snapshot-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_hashes_for_snapshot pub(crate) pub(crate) fn base_hashes_for_snapshot (root : &amp; Path , manifest : &amp; eos_layerstack :: Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , DaemonError &gt; crates/eos-daemon/src/adapters/occ/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>base_hashes_for_snapshot</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a> (root : &amp; Path , manifest : &amp; eos_layerstack :: Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a> (root : &amp; Path , manifest : &amp; eos_layerstack :: Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a>(
     root: &amp;<span class="rs-type">Path</span>,
     manifest: &amp;eos_layerstack::<span class="rs-type">Manifest</span>,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
-    <span class="rs-type">Ok</span>(eos_occ_layerstack::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(
+    <span class="rs-type">Ok</span>(eos_occ_layerstack::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a>(
         root, manifest, changes,
     )?)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:46</p>
-</article><article id="item-fn-manifest-version-u64-56" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_version_u64 pub(crate) pub(crate) fn manifest_version_u64 (version : i64) -&gt; Result &lt; u64 , DaemonError &gt; crates/eos-daemon/src/adapters/occ/mod.rs  ">
+  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:48</p>
+</article><article id="item-fn-manifest-version-u64-58" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_version_u64 pub(crate) pub(crate) fn manifest_version_u64 (version : i64) -&gt; Result &lt; u64 , DaemonError &gt; crates/eos-daemon/src/adapters/occ/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>manifest_version_u64</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a> (version : i64) -&gt; Result &lt; u64 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-58">manifest_version_u64</a> (version : i64) -&gt; Result &lt; u64 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-58">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     u64::try_from(version).map_err(|_| {
         <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">LayerStack</span>(eos_layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">Manifest</span>(format!(
             &quot;manifest version must be non-negative: {version}&quot;
@@ -146,7 +146,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:56</p>
+  <p class="source">crates/eos-daemon/src/adapters/occ/mod.rs:58</p>
 </article></div>
 </section></div>
 </main>
@@ -172,18 +172,20 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::<span class="rs-type">LayerStackConfig</span>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_occ_layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
 #[cfg(test)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_occ_layerstack::{hash_bytes, <span class="rs-type">LayerStackCommitTransaction</span>, <span class="rs-type">LayerStackRouteProvider</span>};
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_occ_layerstack::{
+    hash_bytes, <span class="rs-type">LayerStackCommitTransaction</span>, <span class="rs-type">LayerStackRouteProvider</span>,
+};
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_occ_layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> service_cache::occ_service_cache_snapshot;
 #[cfg(test)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> service_cache::{normalize_root_key, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a>, <span class="rs-type">OCC_SERVICE_CACHE_MAX</span>};
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-configure-layer-stack-25">configure_layer_stack</a>(config: &amp;<span class="rs-type">LayerStackConfig</span>) {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-configure-layer-stack-27">configure_layer_stack</a>(config: &amp;<span class="rs-type">LayerStackConfig</span>) {
     eos_occ_layerstack::configure_auto_squash_max_depth(config.auto_squash_max_depth);
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
     root: &amp;<span class="rs-type">Path</span>,
     snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
@@ -200,17 +202,17 @@
     <span class="rs-type">Ok</span>(result)
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a>(
     root: &amp;<span class="rs-type">Path</span>,
     manifest: &amp;eos_layerstack::<span class="rs-type">Manifest</span>,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
-    <span class="rs-type">Ok</span>(eos_occ_layerstack::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(
+    <span class="rs-type">Ok</span>(eos_occ_layerstack::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a>(
         root, manifest, changes,
     )?)
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-58">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     u64::try_from(version).map_err(|_| {
         <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">LayerStack</span>(eos_layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">Manifest</span>(format!(
             &quot;manifest version must be non-negative: {version}&quot;

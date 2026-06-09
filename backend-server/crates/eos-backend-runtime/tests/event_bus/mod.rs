@@ -33,9 +33,20 @@ fn milestone(seq: i64, request: &RequestId, kind: &str) -> EventRecord {
     }
 }
 
-async fn await_persisted(store: &eos_backend_store::BackendStore, request: &RequestId, target: i64) {
+async fn await_persisted(
+    store: &eos_backend_store::BackendStore,
+    request: &RequestId,
+    target: i64,
+) {
     for _ in 0..500 {
-        if store.event_log().max_seq(request).await.unwrap().unwrap_or(0) >= target {
+        if store
+            .event_log()
+            .max_seq(request)
+            .await
+            .unwrap()
+            .unwrap_or(0)
+            >= target
+        {
             return;
         }
         tokio::time::sleep(Duration::from_millis(2)).await;
@@ -123,10 +134,16 @@ async fn drainer_sequences_in_persist_order_so_a_gap_never_leapfrogs() {
         .filter(|r| r.kind == EVENT_STREAM_GAP)
         .map(|r| r.seq)
         .collect();
-    assert_eq!(gap_seqs, vec![2], "one gap, sequenced in place — not leapfrogged");
+    assert_eq!(
+        gap_seqs,
+        vec![2],
+        "one gap, sequenced in place — not leapfrogged"
+    );
     let gap = rows.iter().find(|r| r.kind == EVENT_STREAM_GAP).unwrap();
     assert_eq!(
-        gap.payload.get("dropped").and_then(serde_json::Value::as_u64),
+        gap.payload
+            .get("dropped")
+            .and_then(serde_json::Value::as_u64),
         Some(2)
     );
 
@@ -136,7 +153,11 @@ async fn drainer_sequences_in_persist_order_so_a_gap_never_leapfrogs() {
     while let Ok(record) = live_rx.try_recv() {
         live_seqs.push(record.seq);
     }
-    assert_eq!(live_seqs, vec![1, 2, 3, 4], "live broadcast matches seq order");
+    assert_eq!(
+        live_seqs,
+        vec![1, 2, 3, 4],
+        "live broadcast matches seq order"
+    );
 }
 
 // --- drainer + handoff -------------------------------------------------------
@@ -150,7 +171,11 @@ async fn drainer_persists_before_broadcasting() {
 
     // Subscribe to live before any event exists (replay empty).
     let mut sub = bus.subscribe(&request, 0).await.unwrap();
-    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "assistant_message_complete" }));
+    classify_and_enqueue(
+        &tx,
+        &stream,
+        serde_json::json!({ "type": "assistant_message_complete" }),
+    );
 
     // Receiving the broadcast implies it was persisted first (persist-before-
     // broadcast), so the durable row is already present.
@@ -169,15 +194,27 @@ async fn reconnect_replays_then_joins_live_with_no_gap() {
     let (tx, stream) = bus.open_stream(&request);
 
     // Two milestones persisted before the client connects.
-    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "tool_execution_started" }));
-    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "tool_execution_completed" }));
+    classify_and_enqueue(
+        &tx,
+        &stream,
+        serde_json::json!({ "type": "tool_execution_started" }),
+    );
+    classify_and_enqueue(
+        &tx,
+        &stream,
+        serde_json::json!({ "type": "tool_execution_completed" }),
+    );
     await_persisted(&store, &request, 2).await;
 
     // Connect: replay 1,2 then join live.
     let mut sub = bus.subscribe(&request, 0).await.unwrap();
     // A third milestone arrives after the replay snapshot — it must not fall in the
     // handoff.
-    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "system_notification" }));
+    classify_and_enqueue(
+        &tx,
+        &stream,
+        serde_json::json!({ "type": "system_notification" }),
+    );
 
     let mut seen = Vec::new();
     for _ in 0..3 {
@@ -195,7 +232,10 @@ async fn subscription_recovers_broadcast_lag_from_the_durable_log() {
     let event_log = store.event_log().clone();
     let request = rid("req-lag");
     for seq in 1..=5 {
-        event_log.append(&milestone(seq, &request, "tool_execution_completed")).await.unwrap();
+        event_log
+            .append(&milestone(seq, &request, "tool_execution_completed"))
+            .await
+            .unwrap();
     }
 
     // Broadcast capacity 2, then push 5 with no receiver draining ⇒ the receiver
@@ -217,7 +257,11 @@ async fn subscription_recovers_broadcast_lag_from_the_durable_log() {
     while let Some(record) = sub.recv().await.unwrap() {
         seen.push(record.seq);
     }
-    assert_eq!(seen, vec![1, 2, 3, 4, 5], "lag must be recovered, not skipped");
+    assert_eq!(
+        seen,
+        vec![1, 2, 3, 4, 5],
+        "lag must be recovered, not skipped"
+    );
 }
 
 // --- bounded overflow --------------------------------------------------------
@@ -255,5 +299,10 @@ async fn bounded_queue_overflow_drops_and_emits_a_visible_gap_marker() {
     assert_eq!(reals, 1, "exactly the one buffered milestone persisted");
     assert_eq!(gaps, 1, "loss surfaces as exactly one gap marker");
     let gap = rows.iter().find(|r| r.kind == EVENT_STREAM_GAP).unwrap();
-    assert_eq!(gap.payload.get("dropped").and_then(serde_json::Value::as_u64), Some(4));
+    assert_eq!(
+        gap.payload
+            .get("dropped")
+            .and_then(serde_json::Value::as_u64),
+        Some(4)
+    );
 }

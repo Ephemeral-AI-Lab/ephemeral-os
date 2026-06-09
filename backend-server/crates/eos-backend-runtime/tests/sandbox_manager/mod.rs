@@ -508,7 +508,7 @@ async fn acquire_rejects_destroying_sandbox() {
 #[tokio::test]
 async fn gateway_provisioner_and_manager_share_state() {
     let h = harness(4, false);
-    // Acquire through the gateway provisioner — the exact path eos-runtime drives
+    // Acquire through the gateway provisioner — the exact path eos-agent-core drives
     // after `build()` calls `provisioner()` once and drops the gateway handle.
     let provisioner = h.manager.provisioner();
     let binding = provisioner

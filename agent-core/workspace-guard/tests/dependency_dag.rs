@@ -101,7 +101,6 @@ fn target_edges() -> Edges {
         (
             "eos-testkit",
             &[
-                "eos-agent-run",
                 "eos-engine",
                 "eos-tool",
                 "eos-types",

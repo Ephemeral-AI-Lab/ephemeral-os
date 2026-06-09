@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used)]
-use eos_audit::to_jsonl_line;
-use eos_audit::{JsonObject, ObsIds, ObsSource};
+use eos_agent_core::to_jsonl_line;
+use eos_agent_core::{JsonObject, ObsIds, ObsSource};
 use serde_json::json;
 
 use super::*;

@@ -328,7 +328,7 @@
     <p class="path">crates/eos-daemon/src/adapters/workspace_run/wire.rs</p>
   </div>
   <pre class="file-source"><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">use</span> eos_command_session::{
+<span class="rs-kw">use</span> eos_workspace_runtime::command_session::{
     <span class="rs-type">CollectCompleted</span>, <span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionCompletion</span>, <span class="rs-type">CommandSessionError</span>,
 };
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};

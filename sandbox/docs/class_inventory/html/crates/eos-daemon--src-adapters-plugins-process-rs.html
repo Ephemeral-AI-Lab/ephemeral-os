@@ -620,7 +620,7 @@
         <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
     }
     <span class="rs-kw">let</span> listener = <span class="rs-type">UnixListener</span>::bind(socket_path)?;
-    listener.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(<span class="rs-kw">true</span>)?;
+    listener.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-49">set_nonblocking</a>(<span class="rs-kw">true</span>)?;
     <span class="rs-type">Ok</span>(listener)
 }
 </code></pre>
@@ -646,7 +646,7 @@
     loop {
         <span class="rs-kw">match</span> listener.accept() {
             <span class="rs-type">Ok</span>((stream, _addr)) =&gt; {
-                stream.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(<span class="rs-kw">false</span>)?;
+                stream.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-49">set_nonblocking</a>(<span class="rs-kw">false</span>)?;
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">PpcClient</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(stream)?);
             }
             <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
@@ -1082,7 +1082,7 @@
         <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
     }
     <span class="rs-kw">let</span> listener = <span class="rs-type">UnixListener</span>::bind(socket_path)?;
-    listener.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(<span class="rs-kw">true</span>)?;
+    listener.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-49">set_nonblocking</a>(<span class="rs-kw">true</span>)?;
     <span class="rs-type">Ok</span>(listener)
 }
 
@@ -1095,7 +1095,7 @@
     loop {
         <span class="rs-kw">match</span> listener.accept() {
             <span class="rs-type">Ok</span>((stream, _addr)) =&gt; {
-                stream.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(<span class="rs-kw">false</span>)?;
+                stream.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-49">set_nonblocking</a>(<span class="rs-kw">false</span>)?;
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">PpcClient</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(stream)?);
             }
             <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}

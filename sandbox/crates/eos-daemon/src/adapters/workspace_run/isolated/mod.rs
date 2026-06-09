@@ -19,9 +19,9 @@ use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
-use eos_workspace_modes::isolated::{CallerId, IsolatedError};
+use eos_workspace_runtime::isolated::{CallerId, IsolatedError};
 #[cfg(target_os = "linux")]
-pub(crate) use eos_workspace_run::CommandHandle;
+pub(crate) use eos_workspace_runtime::CommandHandle;
 use serde_json::{json, Value};
 
 use crate::adapters::workspace_run;

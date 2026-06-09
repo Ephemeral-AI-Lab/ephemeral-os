@@ -11,7 +11,7 @@ use eos_backend_types::{
     BackendRunStatus, CreateUserRequest, CreateUserRequestResponse, EventRecord, PageResult,
     RunMeta, RunRecord, UserRequestDetail,
 };
-use eos_state::RequestStatus;
+use eos_types::RequestStatus;
 use eos_types::{RequestId, UtcDateTime};
 
 use super::{parse_id, Pagination, ValidatedJson};

@@ -12,9 +12,9 @@ use async_trait::async_trait;
 use parking_lot::Mutex;
 use tokio::sync::Notify;
 
+use eos_agent_core::EventCallback;
 use eos_backend_store::BackendStore;
 use eos_backend_types::RunMeta;
-use eos_runtime::EventCallback;
 use eos_sandbox_port::{
     DaemonOp, RequestProvisioner, RequestSandboxBinding, SandboxPortError, SandboxProvisionError,
     SandboxTransport,
@@ -132,7 +132,14 @@ pub fn failing_manager(
     max_owned: usize,
     destroy_on_finish: bool,
 ) -> (Arc<SandboxManager>, Arc<FakeTeardown>) {
-    manager_with(FakeProvisioner { fail: true, gate: None }, max_owned, destroy_on_finish)
+    manager_with(
+        FakeProvisioner {
+            fail: true,
+            gate: None,
+        },
+        max_owned,
+        destroy_on_finish,
+    )
 }
 
 fn manager_with(
@@ -230,7 +237,9 @@ impl RunHost for FakeRunHost {
 /// A temp-backed [`BackendStore`]; keep the returned `TempDir` alive for the test.
 pub async fn temp_store() -> (BackendStore, tempfile::TempDir) {
     let tmp = tempfile::tempdir().unwrap();
-    let store = BackendStore::open(tmp.path().join("backend.db")).await.unwrap();
+    let store = BackendStore::open(tmp.path().join("backend.db"))
+        .await
+        .unwrap();
     (store, tmp)
 }
 

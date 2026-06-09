@@ -65,7 +65,7 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a></code>
   <p class="docstring">Failures surfaced by the daemon server, dispatcher, audit ring, and the<br>injected port implementations.</p>
   <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Protocol</td><td><code>0: eos_protocol :: ProtocolError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>InvalidEnvelope</td><td><code>0: String</code></td></tr><tr><td>RequestTooLarge</td><td><code>limit: usize</code></td></tr><tr><td>Unauthorized</td><td><code></code></td></tr><tr><td>Forbidden</td><td><code>0: String</code></td></tr><tr><td>StateLockPoisoned</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>LayerStack</td><td><code>0: eos_layerstack :: LayerStackError</code></td></tr><tr><td>Occ</td><td><code>0: eos_occ :: OccError</code></td></tr><tr><td>OverlayPipeline</td><td><code>0: String</code></td></tr><tr><td>Plugin</td><td><code>0: eos_plugin :: PluginError</code></td></tr><tr><td>Isolated</td><td><code>0: eos_workspace_modes :: isolated :: IsolatedError</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-wire-kind-69"><td>method</td><td>wire_kind</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-69">wire_kind</a> (&amp; self) -&gt; eos_protocol :: ErrorKind</code><p class="docstring">Map this error onto the wire error `kind`.<br>The dispatcher uses this to build the structured error envelope; an<br>otherwise-unclassified handler failure becomes<br>[`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Protocol</td><td><code>0: eos_protocol :: ProtocolError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>InvalidEnvelope</td><td><code>0: String</code></td></tr><tr><td>RequestTooLarge</td><td><code>limit: usize</code></td></tr><tr><td>Unauthorized</td><td><code></code></td></tr><tr><td>Forbidden</td><td><code>0: String</code></td></tr><tr><td>StateLockPoisoned</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>LayerStack</td><td><code>0: eos_layerstack :: LayerStackError</code></td></tr><tr><td>Occ</td><td><code>0: eos_occ :: OccError</code></td></tr><tr><td>OverlayPipeline</td><td><code>0: String</code></td></tr><tr><td>Plugin</td><td><code>0: eos_plugin :: PluginError</code></td></tr><tr><td>Isolated</td><td><code>0: eos_workspace_runtime :: isolated :: IsolatedError</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-wire-kind-69"><td>method</td><td>wire_kind</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-69">wire_kind</a> (&amp; self) -&gt; eos_protocol :: ErrorKind</code><p class="docstring">Map this error onto the wire error `kind`.<br>The dispatcher uses this to build the structured error envelope; an<br>otherwise-unclassified handler failure becomes<br>[`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Map this error onto the wire error `kind`.</span>
     <span class="rs-comment">///</span>
@@ -101,13 +101,11 @@
             <span class="rs-type">PpcError</span>::<span class="rs-type">Protocol</span>(source) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Protocol</span>(source),
             <span class="rs-type">PpcError</span>::<span class="rs-type">Io</span>(source) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Io</span>(source),
             <span class="rs-type">PpcError</span>::<span class="rs-type">LockPoisoned</span>(what) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">StateLockPoisoned</span>(what),
-            <span class="rs-type">PpcError</span>::<span class="rs-type">Callback</span>(message) =&gt; {
-                <span class="rs-self">Self</span>::<span class="rs-type">Plugin</span>(eos_plugin::<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(message))
-            }
+            <span class="rs-type">PpcError</span>::<span class="rs-type">Callback</span>(message) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Plugin</span>(eos_plugin::<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(message)),
         }
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; eos_checkpoint :: CheckpointError &gt; for <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a></code></summary><table><tbody><tr id="method-from-111"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a> (err : eos_checkpoint :: CheckpointError) -&gt; Self</code><p class="docstring">Fold a host checkpoint failure onto the matching daemon variant,<br>preserving variant identity (so `wire_kind` classifies `Forbidden`<br>correctly) and the original message text.</p><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; eos_checkpoint :: CheckpointError &gt; for <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a></code></summary><table><tbody><tr id="method-from-109"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a> (err : eos_checkpoint :: CheckpointError) -&gt; Self</code><p class="docstring">Fold a host checkpoint failure onto the matching daemon variant,<br>preserving variant identity (so `wire_kind` classifies `Forbidden`<br>correctly) and the original message text.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Fold a host checkpoint failure onto the matching daemon variant,</span>
     <span class="rs-comment">/// preserving variant identity (so `wire_kind` classifies `Forbidden`</span>
@@ -198,7 +196,7 @@
 
     <span class="rs-comment">/// The isolated-workspace lifecycle failed.</span>
     #[error(transparent)]
-    <span class="rs-type">Isolated</span>(#[from] eos_workspace_modes::isolated::<span class="rs-type">IsolatedError</span>),
+    <span class="rs-type">Isolated</span>(#[from] eos_workspace_runtime::isolated::<span class="rs-type">IsolatedError</span>),
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
@@ -236,9 +234,7 @@
             <span class="rs-type">PpcError</span>::<span class="rs-type">Protocol</span>(source) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Protocol</span>(source),
             <span class="rs-type">PpcError</span>::<span class="rs-type">Io</span>(source) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Io</span>(source),
             <span class="rs-type">PpcError</span>::<span class="rs-type">LockPoisoned</span>(what) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">StateLockPoisoned</span>(what),
-            <span class="rs-type">PpcError</span>::<span class="rs-type">Callback</span>(message) =&gt; {
-                <span class="rs-self">Self</span>::<span class="rs-type">Plugin</span>(eos_plugin::<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(message))
-            }
+            <span class="rs-type">PpcError</span>::<span class="rs-type">Callback</span>(message) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Plugin</span>(eos_plugin::<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(message)),
         }
     }
 }

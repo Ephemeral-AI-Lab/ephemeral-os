@@ -66,14 +66,15 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Caller-keyed workspace-run service.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! The run container and lifecycle orchestration live in the `eos-workspace-run`</span>
-<span class="rs-comment">//! crate (the `eos-occ`-free composition tier); this module is the daemon half:</span>
+<span class="rs-comment">//! The run container and lifecycle orchestration live in the</span>
+<span class="rs-comment">//! `eos-workspace-runtime` crate (the `eos-occ`-free composition tier); this</span>
+<span class="rs-comment">//! module is the daemon half:</span>
 <span class="rs-comment">//! it owns the `WorkspaceRunManager` singleton ([`commands`]), injects the</span>
 <span class="rs-comment">//! daemon-resident seams (the OCC publish, resource telemetry, and isolated-audit</span>
 <span class="rs-comment">//! sink) via [`host_ports`], and exposes the RPC/op facade plus the per-caller /</span>
 <span class="rs-comment">//! whole-sandbox cancel surface ([`cancel`]). A run composes the</span>
-<span class="rs-comment">//! `eos-command-session` PTY substrate with the overlay (ephemeral) / namespace</span>
-<span class="rs-comment">//! (isolated) state it owns directly; completion publishes the captured upperdir</span>
+<span class="rs-comment">//! runtime PTY substrate with the overlay (ephemeral) / namespace (isolated)</span>
+<span class="rs-comment">//! state it owns directly; completion publishes the captured upperdir</span>
 <span class="rs-comment">//! (ephemeral) or records it for audit (isolated), cancellation discards it, so</span>
 <span class="rs-comment">//! "cancel never publishes" stays structural.</span>
 <span class="rs-comment">//!</span>

@@ -363,12 +363,7 @@
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-cancel-heartbeat-and-count-track-background-task-257">cancel_heartbeat_and_count_track_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(300.0, 30.0);
         <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(future::pending::&lt;()&gt;());
-        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
-            &quot;bg-1&quot;,
-            task.abort_handle(),
-            &quot;caller-a&quot;,
-            <span class="rs-kw">true</span>,
-        );
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&quot;bg-1&quot;, task.abort_handle(), &quot;caller-a&quot;, <span class="rs-kw">true</span>);
 
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 1);
         assert_eq!(
@@ -376,7 +371,7 @@
             1
         );
         assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-131">cancel</a>(&quot;bg-1&quot;));
-        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 0);
 
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-121">deregister</a>(&quot;bg-1&quot;);
@@ -387,18 +382,18 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:257</p>
-</article><article id="item-fn-control-paths-recover-poisoned-registry-lock-282" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn control_paths_recover_poisoned_registry_lock private async fn control_paths_recover_poisoned_registry_lock () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-control-paths-recover-poisoned-registry-lock-277" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn control_paths_recover_poisoned_registry_lock private async fn control_paths_recover_poisoned_registry_lock () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>control_paths_recover_poisoned_registry_lock</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-282">control_paths_recover_poisoned_registry_lock</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a></code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-277">control_paths_recover_poisoned_registry_lock</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a></code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-282">control_paths_recover_poisoned_registry_lock</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-277">control_paths_recover_poisoned_registry_lock</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">let</span> registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(300.0, 30.0));
         <span class="rs-kw">let</span> poisoned = registry.clone();
         <span class="rs-kw">let</span> poison_result = thread::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(<span class="rs-kw">move</span> || {
@@ -414,18 +409,13 @@
         }
 
         <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(future::pending::&lt;()&gt;());
-        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
-            &quot;bg-poisoned&quot;,
-            task.abort_handle(),
-            &quot;caller-a&quot;,
-            <span class="rs-kw">true</span>,
-        );
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&quot;bg-poisoned&quot;, task.abort_handle(), &quot;caller-a&quot;, <span class="rs-kw">true</span>);
 
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 1);
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-161">heartbeat</a>(&amp;[&quot;bg-poisoned&quot;.to_owned()]), 1);
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ttl-sweep-226">ttl_sweep</a>();
         assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-131">cancel</a>(&quot;bg-poisoned&quot;));
-        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-121">deregister</a>(&quot;bg-poisoned&quot;);
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-207">metrics</a>(), (0, 0));
         <span class="rs-type">Ok</span>(())
@@ -433,52 +423,47 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:282</p>
-</article><article id="item-fn-ttl-sweep-reaps-active-background-task-316" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ttl_sweep_reaps_active_background_task private async fn ttl_sweep_reaps_active_background_task () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+  <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:277</p>
+</article><article id="item-fn-ttl-sweep-reaps-active-background-task-306" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ttl_sweep_reaps_active_background_task private async fn ttl_sweep_reaps_active_background_task () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ttl_sweep_reaps_active_background_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-316">ttl_sweep_reaps_active_background_task</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a></code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-306">ttl_sweep_reaps_active_background_task</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a></code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-316">ttl_sweep_reaps_active_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-306">ttl_sweep_reaps_active_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(0.001, 30.0);
         <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(future::pending::&lt;()&gt;());
-        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
-            &quot;bg-ttl&quot;,
-            task.abort_handle(),
-            &quot;caller-a&quot;,
-            <span class="rs-kw">true</span>,
-        );
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&quot;bg-ttl&quot;, task.abort_handle(), &quot;caller-a&quot;, <span class="rs-kw">true</span>);
 
         thread::sleep(<span class="rs-type">Duration</span>::from_millis(3));
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ttl-sweep-226">ttl_sweep</a>();
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-207">metrics</a>(), (1, 1));
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 0);
 
-        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 0);
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:316</p>
-</article><article id="item-fn-assert-task-cancelled-337" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_task_cancelled private async fn assert_task_cancelled (task : JoinHandle &lt; () &gt;) -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+  <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:306</p>
+</article><article id="item-fn-assert-task-cancelled-322" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_task_cancelled private async fn assert_task_cancelled (task : JoinHandle &lt; () &gt;) -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>assert_task_cancelled</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a> (task : JoinHandle &lt; () &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a></code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a> (task : JoinHandle &lt; () &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a></code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task: <span class="rs-type">JoinHandle</span>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task: <span class="rs-type">JoinHandle</span>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">match</span> task.<span class="rs-kw">await</span> {
             <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Err</span>(&quot;expected task cancellation, but task completed&quot;.into()),
             <span class="rs-type">Err</span>(error) <span class="rs-kw">if</span> error.is_cancelled() =&gt; <span class="rs-type">Ok</span>(()),
@@ -488,7 +473,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:337</p>
+  <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:322</p>
 </article></div>
 </section></div>
 </main>
@@ -757,12 +742,7 @@
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-cancel-heartbeat-and-count-track-background-task-257">cancel_heartbeat_and_count_track_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(300.0, 30.0);
         <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(future::pending::&lt;()&gt;());
-        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
-            &quot;bg-1&quot;,
-            task.abort_handle(),
-            &quot;caller-a&quot;,
-            <span class="rs-kw">true</span>,
-        );
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&quot;bg-1&quot;, task.abort_handle(), &quot;caller-a&quot;, <span class="rs-kw">true</span>);
 
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 1);
         assert_eq!(
@@ -770,7 +750,7 @@
             1
         );
         assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-131">cancel</a>(&quot;bg-1&quot;));
-        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 0);
 
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-121">deregister</a>(&quot;bg-1&quot;);
@@ -779,7 +759,7 @@
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-282">control_paths_recover_poisoned_registry_lock</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-277">control_paths_recover_poisoned_registry_lock</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">let</span> registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(300.0, 30.0));
         <span class="rs-kw">let</span> poisoned = registry.clone();
         <span class="rs-kw">let</span> poison_result = thread::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(<span class="rs-kw">move</span> || {
@@ -795,45 +775,35 @@
         }
 
         <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(future::pending::&lt;()&gt;());
-        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
-            &quot;bg-poisoned&quot;,
-            task.abort_handle(),
-            &quot;caller-a&quot;,
-            <span class="rs-kw">true</span>,
-        );
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&quot;bg-poisoned&quot;, task.abort_handle(), &quot;caller-a&quot;, <span class="rs-kw">true</span>);
 
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 1);
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-161">heartbeat</a>(&amp;[&quot;bg-poisoned&quot;.to_owned()]), 1);
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ttl-sweep-226">ttl_sweep</a>();
         assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-131">cancel</a>(&quot;bg-poisoned&quot;));
-        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-121">deregister</a>(&quot;bg-poisoned&quot;);
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-207">metrics</a>(), (0, 0));
         <span class="rs-type">Ok</span>(())
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-316">ttl_sweep_reaps_active_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-306">ttl_sweep_reaps_active_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(0.001, 30.0);
         <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(future::pending::&lt;()&gt;());
-        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
-            &quot;bg-ttl&quot;,
-            task.abort_handle(),
-            &quot;caller-a&quot;,
-            <span class="rs-kw">true</span>,
-        );
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&quot;bg-ttl&quot;, task.abort_handle(), &quot;caller-a&quot;, <span class="rs-kw">true</span>);
 
         thread::sleep(<span class="rs-type">Duration</span>::from_millis(3));
         registry.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ttl-sweep-226">ttl_sweep</a>();
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-207">metrics</a>(), (1, 1));
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 0);
 
-        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
         assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-176">count_by_caller</a>(&quot;caller-a&quot;), 0);
         <span class="rs-type">Ok</span>(())
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-337">assert_task_cancelled</a>(task: <span class="rs-type">JoinHandle</span>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-322">assert_task_cancelled</a>(task: <span class="rs-type">JoinHandle</span>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
         <span class="rs-kw">match</span> task.<span class="rs-kw">await</span> {
             <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Err</span>(&quot;expected task cancellation, but task completed&quot;.into()),
             <span class="rs-type">Err</span>(error) <span class="rs-kw">if</span> error.is_cancelled() =&gt; <span class="rs-type">Ok</span>(()),

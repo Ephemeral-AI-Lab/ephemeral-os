@@ -219,7 +219,7 @@ mod tests {
 
     fn engine() -> ContextEngine {
         let stores = Arc::new(crate::support::MemoryStores::default());
-        ContextEngine::new(crate::context::ContextEngineDeps {
+        ContextEngine::new(crate::context::ContextEngineStores {
             workflow_store: stores.clone(),
             iteration_store: stores.clone(),
             attempt_store: stores.clone(),

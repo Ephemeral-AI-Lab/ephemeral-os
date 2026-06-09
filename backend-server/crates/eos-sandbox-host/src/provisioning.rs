@@ -3,7 +3,7 @@
 //! request_id=<id>`.
 //!
 //! The production path uses typed calls into [`SandboxLifecycle`] wired by
-//! `eos-runtime`; test substitutability comes from the `#[cfg(test)]` mock
+//! `eos-agent-core`; test substitutability comes from the `#[cfg(test)]` mock
 //! adapter. A created sandbox always has a valid id because
 //! [`SandboxInfo::id`](crate::SandboxInfo) is a non-empty `SandboxId`
 //! (parse-don't-validate).

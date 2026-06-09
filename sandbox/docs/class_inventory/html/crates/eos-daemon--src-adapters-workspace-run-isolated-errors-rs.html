@@ -218,7 +218,7 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Structured isolated-workspace error helpers.</span>
 
-<span class="rs-kw">use</span> eos_workspace_modes::isolated::<span class="rs-type">IsolatedError</span>;
+<span class="rs-kw">use</span> eos_workspace_runtime::isolated::<span class="rs-type">IsolatedError</span>;
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-errors-rs.html#item-fn-require-arg-6">require_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {

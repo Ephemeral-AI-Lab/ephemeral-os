@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use eos_types::{AttemptClosure, AttemptFailReason, AttemptId, TaskId, TaskStatus, WorkflowStatus};
 
-use crate::attempt::{AttemptDeps, AttemptOrchestratorRegistry};
+use crate::attempt::{AttemptOrchestratorRegistry, AttemptResources};
 use crate::lifecycle::WorkflowLifecycle;
 use crate::{Result, WorkflowError};
 
@@ -24,7 +24,7 @@ pub struct StartedWorkflow {
 /// Single safe entry point from a running task to a delegated workflow.
 #[derive(Clone)]
 pub struct WorkflowStarter {
-    deps: AttemptDeps,
+    deps: AttemptResources,
 }
 
 impl std::fmt::Debug for WorkflowStarter {
@@ -36,7 +36,7 @@ impl std::fmt::Debug for WorkflowStarter {
 impl WorkflowStarter {
     /// Create a starter.
     #[must_use]
-    pub fn new(deps: AttemptDeps) -> Self {
+    pub fn new(deps: AttemptResources) -> Self {
         Self { deps }
     }
 

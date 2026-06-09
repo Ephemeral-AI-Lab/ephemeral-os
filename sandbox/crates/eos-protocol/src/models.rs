@@ -3,8 +3,8 @@
 //! [`Intent`] is the single verb-classification enum (serialized as its
 //! snake_case `.value`); the byte caps bound `read_file`/`write_file`/`edit_file`
 //! payloads. The typed request/response DTOs that used to live here were
-//! superseded by the daemon decoding raw `Value` into `eos-workspace` and
-//! `eos-command-session` types, and were removed as dead duplicates.
+//! superseded by the daemon decoding raw `Value` into `eos-workspace-contract`
+//! and `eos-workspace-runtime` types, and were removed as dead duplicates.
 
 use serde::{Deserialize, Serialize};
 

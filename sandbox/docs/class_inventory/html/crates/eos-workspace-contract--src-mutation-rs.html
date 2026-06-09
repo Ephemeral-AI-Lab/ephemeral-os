@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace-contract · src/mutation.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-contract File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>46</b><span>items</span></div>
+  <div><b>99</b><span>fields</span></div>
+  <div><b>17</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-contract.html"><span>command.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-workspace-contract--src-file-ops-rs.html"><span>file_ops.rs</span><small>9/9</small></a></li><li><a class="file-link" href="eos-workspace-contract--src-lease-rs.html"><span>lease.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-contract--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-contract--src-mode-rs.html"><span>mode.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-workspace-contract--src-mutation-rs.html"><span>mutation.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-workspace-contract--src-read-view-rs.html"><span>read_view.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workspace-contract--src-response-rs.html"><span>response.rs</span><small>2/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="mutation crates/eos-workspace-contract/src/mutation.rs WorkspaceMutationKind impl WorkspaceMutationKind WorkspaceMutationRequest WorkspaceMutationOutcome WorkspaceMutationSink">
+  <div class="module-head">
+    <div>
+      <h2>src/mutation.rs</h2>
+      <p class="path">module <code>mutation</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>1 impls</span>
+      <span>0 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceMutationRequest-26" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceMutationRequest pub pub struct WorkspaceMutationRequest crates/eos-workspace-contract/src/mutation.rs kind WorkspaceMutationKind path ResolvedWorkspacePath content Vec &lt; u8 &gt; base WorkspaceReadBytes ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceMutationRequest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a></code>
+  <p class="docstring">Mutation request passed to a mode-specific sink.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a></code></td></tr><tr><td>pub</td><td>path</td><td><code><a class="symbol-link" href="eos-workspace-contract--src-read-view-rs.html#item-struct-ResolvedWorkspacePath-5">ResolvedWorkspacePath</a></code></td></tr><tr><td>pub</td><td>content</td><td><code>Vec &lt; u8 &gt;</code></td></tr><tr><td>pub</td><td>base</td><td><code><a class="symbol-link" href="eos-workspace-contract--src-read-view-rs.html#item-struct-WorkspaceReadBytes-18">WorkspaceReadBytes</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-contract/src/mutation.rs:26</p>
+</article><article id="item-struct-WorkspaceMutationOutcome-35" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceMutationOutcome pub pub struct WorkspaceMutationOutcome crates/eos-workspace-contract/src/mutation.rs mode WorkspaceMode success bool published bool status String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String error Option &lt; Value &gt; timings WorkspaceTimings ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceMutationOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a></code>
+  <p class="docstring">Normalized mutation outcome before daemon JSON conversion.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code><a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a></code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-contract/src/mutation.rs:35</p>
+</article><article id="item-enum-WorkspaceMutationKind-8" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum WorkspaceMutationKind pub pub enum WorkspaceMutationKind crates/eos-workspace-contract/src/mutation.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>WorkspaceMutationKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a></code>
+  <p class="docstring">Direct mutation kind produced by a file operation.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Edit</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-verb-17"><td>method</td><td>verb</td><td><code>pub const fn <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#method-verb-17">verb</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-mutation-rs.html#method-verb-17">verb</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Edit</span> =&gt; &quot;edit&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-contract/src/mutation.rs:8</p>
+</article><article id="item-trait-WorkspaceMutationSink-59" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait WorkspaceMutationSink pub pub trait WorkspaceMutationSink crates/eos-workspace-contract/src/mutation.rs  commit_or_record fn commit_or_record (&amp; self , request : WorkspaceMutationRequest ,) -&gt; Result &lt; WorkspaceMutationOutcome , WorkspaceApiError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>WorkspaceMutationSink</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a></code>
+  <p class="docstring">Write/capture result sink. Ephemeral implementations publish; isolated<br>implementations record audit-only state and return `published: false`<br>metadata without linking a publish-capable dependency.</p>
+  <div class="tags"></div>
+  <h4>Methods</h4><table><tbody><tr id="method-commit-or-record-63"><td>required</td><td>commit_or_record</td><td><code>fn <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#method-commit-or-record-63">commit_or_record</a> (&amp; self , request : <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a> , <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-mutation-rs.html#method-commit-or-record-63">commit_or_record</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-contract/src/mutation.rs:59</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-contract/src/mutation.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::mode::<a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::read_view::{<a class="symbol-link rs-type" href="eos-workspace-contract--src-read-view-rs.html#item-struct-ResolvedWorkspacePath-5">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-workspace-contract--src-read-view-rs.html#item-struct-WorkspaceReadBytes-18">WorkspaceReadBytes</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response::{<a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>, <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>, <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>, <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>};
+
+<span class="rs-comment">/// Direct mutation kind produced by a file operation.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a> {
+    <span class="rs-type">Write</span>,
+    <span class="rs-type">Edit</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-mutation-rs.html#method-verb-17">verb</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Edit</span> =&gt; &quot;edit&quot;,
+        }
+    }
+}
+
+<span class="rs-comment">/// Mutation request passed to a mode-specific sink.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a> {
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a>,
+    <span class="rs-kw">pub</span> path: <a class="symbol-link rs-type" href="eos-workspace-contract--src-read-view-rs.html#item-struct-ResolvedWorkspacePath-5">ResolvedWorkspacePath</a>,
+    <span class="rs-kw">pub</span> content: <span class="rs-type">Vec</span>&lt;u8&gt;,
+    <span class="rs-kw">pub</span> base: <a class="symbol-link rs-type" href="eos-workspace-contract--src-read-view-rs.html#item-struct-WorkspaceReadBytes-18">WorkspaceReadBytes</a>,
+}
+
+<span class="rs-comment">/// Normalized mutation outcome before daemon JSON conversion.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a> {
+    <span class="rs-kw">pub</span> mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
+    <span class="rs-kw">pub</span> success: bool,
+    <span class="rs-comment">/// True only when the mutation reached shared workspace truth.</span>
+    <span class="rs-kw">pub</span> published: bool,
+    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> mutation_source: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> error: <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
+}
+
+<span class="rs-comment">/// Write/capture result sink. Ephemeral implementations publish; isolated</span>
+<span class="rs-comment">/// implementations record audit-only state and return `published: false`</span>
+<span class="rs-comment">/// metadata without linking a publish-capable dependency.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-mutation-rs.html#method-commit-or-record-63">commit_or_record</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-contract--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

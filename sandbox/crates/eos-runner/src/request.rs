@@ -5,8 +5,8 @@
 //! request file, and the setns stdin payload. The verb-specific `args`
 //! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim
 //! to the in-namespace tool primitive); the typed per-verb args/results are the
-//! daemon's concern (decoded into `eos-workspace` / `eos-command-session` types),
-//! not modeled here.
+//! daemon's concern (decoded into `eos-workspace-contract` /
+//! `eos-workspace-runtime` types), not modeled here.
 
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;

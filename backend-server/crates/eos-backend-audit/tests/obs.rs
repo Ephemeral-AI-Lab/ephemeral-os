@@ -10,7 +10,7 @@
 //!   and reboot loss.
 #![allow(clippy::unwrap_used)] // unwrap is permitted in tests
 
-use eos_audit::{
+use eos_agent_core::{
     AuditEvent, AuditNode, AuditSink, AuditSource, AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED,
     TOOL_CALL_COMPLETED,
 };
@@ -153,13 +153,20 @@ async fn sink_async_drains_engine_events_with_distinct_ids() {
     // The drainer (not `publish`) performs the async SQLite write; await it.
     shutdown.shutdown().await;
 
-    let rows = store.obs_events().list_for_request(&rid("r-1")).await.unwrap();
+    let rows = store
+        .obs_events()
+        .list_for_request(&rid("r-1"))
+        .await
+        .unwrap();
     assert_eq!(rows.len(), 1);
     let row = &rows[0];
     assert_eq!(row.source, ObsSource::Engine);
     assert_eq!(row.kind, TOOL_CALL_COMPLETED);
     // Model id from the node; the engine path carries no daemon invocation id.
-    assert_eq!(row.tool_use_id.as_ref().map(ToolUseId::as_str), Some("toolu_model"));
+    assert_eq!(
+        row.tool_use_id.as_ref().map(ToolUseId::as_str),
+        Some("toolu_model")
+    );
     assert!(row.sandbox_invocation_id.is_none());
     assert_eq!(row.sandbox_id.as_ref().map(SandboxId::as_str), Some("sb-1"));
     // The node's tool_name was folded into the payload.
@@ -176,7 +183,10 @@ async fn sink_publish_overflow_returns_backpressure_and_counts_drops() {
     // deterministically: 2 accepted, the next 3 rejected with backpressure.
     let mut backpressure = 0u64;
     for i in 0..5 {
-        if sink.publish(&engine_tool_call(&format!("toolu-{i}"))).is_err() {
+        if sink
+            .publish(&engine_tool_call(&format!("toolu-{i}")))
+            .is_err()
+        {
             backpressure += 1;
         }
     }
@@ -241,13 +251,20 @@ async fn ingest_matches_daemon_event_through_bridge_without_id_collapse() {
     let report = ingestor(&store).ingest_pull(&sandbox, &pull).await.unwrap();
     assert_eq!((report.matched, report.unmatched), (1, 0));
 
-    let rows = store.obs_events().list_for_request(&rid("r-1")).await.unwrap();
+    let rows = store
+        .obs_events()
+        .list_for_request(&rid("r-1"))
+        .await
+        .unwrap();
     assert_eq!(rows.len(), 1);
     let row = &rows[0];
     assert_eq!(row.source, ObsSource::Daemon);
     // Model id comes ONLY from the bridge; the daemon invocation stays in the
     // invocation slot; the two are never reused as one another (AC7).
-    assert_eq!(row.tool_use_id.as_ref().map(ToolUseId::as_str), Some("toolu_model"));
+    assert_eq!(
+        row.tool_use_id.as_ref().map(ToolUseId::as_str),
+        Some("toolu_model")
+    );
     assert_eq!(
         row.sandbox_invocation_id.as_ref().map(InvocationId::as_str),
         Some("inv-1")
@@ -290,7 +307,10 @@ async fn ingest_unmatched_daemon_event_persists_null_model_ids_and_marker() {
     );
     assert_eq!(row.payload.get(UNMATCHED_MARKER), Some(&json!(true)));
 
-    assert_eq!(stats(&store).correctness().await.unwrap().audit_unmatched, 1);
+    assert_eq!(
+        stats(&store).correctness().await.unwrap().audit_unmatched,
+        1
+    );
 }
 
 #[tokio::test]
@@ -361,7 +381,13 @@ async fn ingest_same_epoch_ring_eviction_records_loss_without_resetting_cursor()
     // new cursor (not reset), the loss boundary is recorded, and dropped_count tracks
     // the daemon's cumulative ring counter via max — exercising the else-branch of
     // next_cursor that the reboot test never reaches.
-    let pull2 = daemon_pull(1, vec![daemon_tool_call(5, "inv-b", "c", 1.0)], 5, Some(3), 2);
+    let pull2 = daemon_pull(
+        1,
+        vec![daemon_tool_call(5, "inv-b", "c", 1.0)],
+        5,
+        Some(3),
+        2,
+    );
     let second = ingestor.ingest_pull(&sandbox, &pull2).await.unwrap();
     assert!(!second.epoch_reset);
     assert_eq!(second.cursor.boot_epoch_id, 1);
@@ -386,14 +412,27 @@ async fn stats_performance_and_agent_runs_from_obs_rows() {
     let (sink, shutdown) = PersistingSink::new(store.obs_events().clone());
 
     let run = |kind: &str, payload: Value| {
-        engine_event(kind, AuditNode::builder().agent_run_id(arid("ar-1")).build(), payload)
+        engine_event(
+            kind,
+            AuditNode::builder().agent_run_id(arid("ar-1")).build(),
+            payload,
+        )
     };
-    sink.publish(&run(TOOL_CALL_COMPLETED, json!({ "tool_call": { "duration_ms": 10.0 } })))
-        .unwrap();
-    sink.publish(&run(TOOL_CALL_COMPLETED, json!({ "tool_call": { "duration_ms": 30.0 } })))
-        .unwrap();
-    sink.publish(&run(OS_RESOURCE_SAMPLED, json!({ "os_resource": { "rss_bytes": 2048 } })))
-        .unwrap();
+    sink.publish(&run(
+        TOOL_CALL_COMPLETED,
+        json!({ "tool_call": { "duration_ms": 10.0 } }),
+    ))
+    .unwrap();
+    sink.publish(&run(
+        TOOL_CALL_COMPLETED,
+        json!({ "tool_call": { "duration_ms": 30.0 } }),
+    ))
+    .unwrap();
+    sink.publish(&run(
+        OS_RESOURCE_SAMPLED,
+        json!({ "os_resource": { "rss_bytes": 2048 } }),
+    ))
+    .unwrap();
     sink.publish(&run(AGENT_RUN_COMPLETED, json!({}))).unwrap();
     shutdown.shutdown().await;
 
@@ -409,7 +448,10 @@ async fn stats_performance_and_agent_runs_from_obs_rows() {
     let correctness = stats.correctness().await.unwrap();
     assert_eq!(correctness.agent_runs_observed, 1);
     assert_eq!(correctness.tool_calls_observed, 2);
-    assert_eq!((correctness.audit_matched, correctness.audit_unmatched), (0, 0));
+    assert_eq!(
+        (correctness.audit_matched, correctness.audit_unmatched),
+        (0, 0)
+    );
 
     let runs = stats.agent_runs().await.unwrap();
     assert_eq!(runs.len(), 1);

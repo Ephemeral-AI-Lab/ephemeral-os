@@ -99,7 +99,7 @@
         <span class="rs-kw">let</span> (bytes, exists) = stack
             .read_bytes(path.as_str())
             .map_err(|err| eos_occ::<span class="rs-type">OccError</span>::<span class="rs-type">RoutePreparation</span>(err.to_string()))?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(bytes.as_deref(), exists))
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-60">hash_current</a>(bytes.as_deref(), exists))
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
@@ -165,11 +165,11 @@
         (&quot;occ.commit.total_s&quot;, occ_s),
         (
             &quot;occ.commit.gated_path_count&quot;,
-            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(metrics.gated_path_count),
+            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-91">usize_to_f64_saturating</a>(metrics.gated_path_count),
         ),
         (
             &quot;occ.commit.direct_path_count&quot;,
-            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(metrics.direct_path_count),
+            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-91">usize_to_f64_saturating</a>(metrics.direct_path_count),
         ),
     ] {
         timings.insert(key.to_owned(), json!(value));
@@ -439,7 +439,7 @@
         <span class="rs-kw">let</span> (bytes, exists) = stack
             .read_bytes(path.as_str())
             .map_err(|err| eos_occ::<span class="rs-type">OccError</span>::<span class="rs-type">RoutePreparation</span>(err.to_string()))?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-57">hash_current</a>(bytes.as_deref(), exists))
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-hash-current-60">hash_current</a>(bytes.as_deref(), exists))
     }
 }
 
@@ -479,11 +479,11 @@
         (&quot;occ.commit.total_s&quot;, occ_s),
         (
             &quot;occ.commit.gated_path_count&quot;,
-            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(metrics.gated_path_count),
+            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-91">usize_to_f64_saturating</a>(metrics.gated_path_count),
         ),
         (
             &quot;occ.commit.direct_path_count&quot;,
-            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-88">usize_to_f64_saturating</a>(metrics.direct_path_count),
+            <a class="symbol-link rs-fn" href="eos-occ-layerstack.html#item-fn-usize-to-f64-saturating-91">usize_to_f64_saturating</a>(metrics.direct_path_count),
         ),
     ] {
         timings.insert(key.to_owned(), json!(value));

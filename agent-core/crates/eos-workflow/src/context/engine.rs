@@ -14,7 +14,7 @@ use super::{AgentContext, ContextRole, ContextScope, ContextSection};
 
 /// Store bundle consumed by context builders.
 #[derive(Clone)]
-pub struct ContextEngineDeps {
+pub struct ContextEngineStores {
     /// Workflow store.
     pub workflow_store: Arc<dyn WorkflowStore>,
     /// Iteration store.
@@ -25,16 +25,17 @@ pub struct ContextEngineDeps {
     pub task_store: Arc<dyn TaskStore>,
 }
 
-impl std::fmt::Debug for ContextEngineDeps {
+impl std::fmt::Debug for ContextEngineStores {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ContextEngineDeps").finish_non_exhaustive()
+        f.debug_struct("ContextEngineStores")
+            .finish_non_exhaustive()
     }
 }
 
 /// Role-scoped context packet builder.
 #[derive(Clone)]
 pub struct ContextEngine {
-    deps: ContextEngineDeps,
+    deps: ContextEngineStores,
 }
 
 impl std::fmt::Debug for ContextEngine {
@@ -46,7 +47,7 @@ impl std::fmt::Debug for ContextEngine {
 impl ContextEngine {
     /// Create a context engine.
     #[must_use]
-    pub fn new(deps: ContextEngineDeps) -> Self {
+    pub fn new(deps: ContextEngineStores) -> Self {
         Self { deps }
     }
 

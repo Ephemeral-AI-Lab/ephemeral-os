@@ -134,8 +134,8 @@
             <span class="rs-kw">let</span> (control_read, control_write) = pipe2(<span class="rs-type">OFlag</span>::<span class="rs-type">O_CLOEXEC</span>).map_err(setup_error)?;
             <span class="rs-kw">let</span> readiness_child_fd = readiness_write.as_raw_fd();
             <span class="rs-kw">let</span> control_child_fd = control_read.as_raw_fd();
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(readiness_child_fd)?;
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(control_child_fd)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-44">clear_cloexec</a>(readiness_child_fd)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-44">clear_cloexec</a>(control_child_fd)?;
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(std::env::current_exe().map_err(setup_error)?)
                 .arg(&quot;ns-holder&quot;)
                 .arg(readiness_child_fd.to_string())
@@ -151,8 +151,8 @@
             <span class="rs-kw">let</span> control_fd = control_write.into_raw_fd();
             handle.readiness_fd = readiness_fd;
             handle.control_fd = control_fd;
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(readiness_fd)
-                .and_then(|()| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(readiness_fd, b&quot;ns-up&quot;, setup_timeout_s))
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-49">set_nonblocking</a>(readiness_fd)
+                .and_then(|()| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-56">expect_line</a>(readiness_fd, b&quot;ns-up&quot;, setup_timeout_s))
             {
                 <span class="rs-kw">let</span> _ = child.kill();
                 <span class="rs-kw">let</span> _ = child.wait();
@@ -231,11 +231,11 @@
                 layer_paths: layer_paths.to_vec(),
                 upperdir: <span class="rs-type">Some</span>(handle.upperdir.clone()),
                 workdir: <span class="rs-type">Some</span>(handle.workdir.clone()),
-                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-99">ns_fds_from_map</a>(&amp;handle.ns_fds),
+                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-101">ns_fds_from_map</a>(&amp;handle.ns_fds),
                 cgroup_path: handle.cgroup_path.clone(),
                 timeout_seconds: <span class="rs-type">None</span>,
             };
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a>(&amp;request)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-113">run_ns_runner_mount_overlay_child</a>(&amp;request)?;
         }
         <span class="rs-type">Ok</span>(())
     }
@@ -274,11 +274,11 @@
                 layer_paths: vec![],
                 upperdir: <span class="rs-type">Some</span>(handle.upperdir.clone()),
                 workdir: <span class="rs-type">Some</span>(handle.workdir.clone()),
-                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-99">ns_fds_from_map</a>(&amp;handle.ns_fds),
+                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-101">ns_fds_from_map</a>(&amp;handle.ns_fds),
                 cgroup_path: handle.cgroup_path.clone(),
                 timeout_seconds: <span class="rs-type">None</span>,
             };
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a>(&amp;request)
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-144">run_ns_runner_configure_dns_child</a>(&amp;request)
         }
     }
 </code></pre>
@@ -305,13 +305,13 @@
                         &quot;net-ready {} {} {} {}\n&quot;,
                         veth.ns_name,
                         veth.ns_ip,
-                        eos_workspace_modes::isolated::<span class="rs-type">BRIDGE_PREFIX_LEN</span>,
-                        eos_workspace_modes::isolated::<span class="rs-type">GATEWAY</span>
+                        eos_workspace_runtime::isolated::<span class="rs-type">BRIDGE_PREFIX_LEN</span>,
+                        eos_workspace_runtime::isolated::<span class="rs-type">GATEWAY</span>
                     )
                 },
             );
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a>(handle.control_fd, payload.as_bytes())?;
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(handle.readiness_fd, b&quot;ready&quot;, setup_timeout_s)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-93">write_all_fd</a>(handle.control_fd, payload.as_bytes())?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-56">expect_line</a>(handle.readiness_fd, b&quot;ready&quot;, setup_timeout_s)?;
         }
         <span class="rs-type">Ok</span>(())
     }
@@ -322,9 +322,9 @@
         <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-errors-rs.html#item-fn-test-runtime-stub-enabled-76">test_runtime_stub_enabled</a>() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>());
         }
-        <span class="rs-kw">let</span> path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(eos_workspace_modes::isolated::<span class="rs-type">CGROUP_ROOT</span>).join(format!(
+        <span class="rs-kw">let</span> path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(eos_workspace_runtime::isolated::<span class="rs-type">CGROUP_ROOT</span>).join(format!(
             &quot;{}{}&quot;,
-            eos_workspace_modes::isolated::<span class="rs-type">HANDLE_PREFIX</span>,
+            eos_workspace_runtime::isolated::<span class="rs-type">HANDLE_PREFIX</span>,
             handle.workspace_handle_id.0
         ));
         std::fs::create_dir_all(&amp;path).map_err(setup_error)?;
@@ -420,16 +420,16 @@
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
 
-<span class="rs-kw">use</span> eos_workspace_modes::isolated::{
-    <span class="rs-type">IsolatedError</span>, <span class="rs-type">LayerStackSnapshotPort</span>, <span class="rs-type">NamespaceRuntimePort</span>, <span class="rs-type">SnapshotLease</span>, <span class="rs-type">WorkspaceHandle</span>,
-};
 <span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
-#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">use</span> eos_workspace_run::<span class="rs-type">CommandHandle</span>;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> eos_runner::{<span class="rs-type">RunMode</span>, <span class="rs-type">RunRequest</span>, <span class="rs-type">ToolCall</span>, <span class="rs-type">WorkspaceRoot</span>};
+<span class="rs-kw">use</span> eos_workspace_runtime::isolated::{
+    <span class="rs-type">IsolatedError</span>, <span class="rs-type">LayerStackSnapshotPort</span>, <span class="rs-type">NamespaceRuntimePort</span>, <span class="rs-type">SnapshotLease</span>, <span class="rs-type">WorkspaceHandle</span>,
+};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_workspace_runtime::<span class="rs-type">CommandHandle</span>;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> nix::fcntl::<span class="rs-type">OFlag</span>;
 #[cfg(target_os = &quot;linux&quot;)]
@@ -509,8 +509,8 @@
             <span class="rs-kw">let</span> (control_read, control_write) = pipe2(<span class="rs-type">OFlag</span>::<span class="rs-type">O_CLOEXEC</span>).map_err(setup_error)?;
             <span class="rs-kw">let</span> readiness_child_fd = readiness_write.as_raw_fd();
             <span class="rs-kw">let</span> control_child_fd = control_read.as_raw_fd();
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(readiness_child_fd)?;
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(control_child_fd)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-44">clear_cloexec</a>(readiness_child_fd)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-44">clear_cloexec</a>(control_child_fd)?;
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(std::env::current_exe().map_err(setup_error)?)
                 .arg(&quot;ns-holder&quot;)
                 .arg(readiness_child_fd.to_string())
@@ -526,8 +526,8 @@
             <span class="rs-kw">let</span> control_fd = control_write.into_raw_fd();
             handle.readiness_fd = readiness_fd;
             handle.control_fd = control_fd;
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(readiness_fd)
-                .and_then(|()| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(readiness_fd, b&quot;ns-up&quot;, setup_timeout_s))
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-49">set_nonblocking</a>(readiness_fd)
+                .and_then(|()| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-56">expect_line</a>(readiness_fd, b&quot;ns-up&quot;, setup_timeout_s))
             {
                 <span class="rs-kw">let</span> _ = child.kill();
                 <span class="rs-kw">let</span> _ = child.wait();
@@ -602,11 +602,11 @@
                 layer_paths: layer_paths.to_vec(),
                 upperdir: <span class="rs-type">Some</span>(handle.upperdir.clone()),
                 workdir: <span class="rs-type">Some</span>(handle.workdir.clone()),
-                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-99">ns_fds_from_map</a>(&amp;handle.ns_fds),
+                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-101">ns_fds_from_map</a>(&amp;handle.ns_fds),
                 cgroup_path: handle.cgroup_path.clone(),
                 timeout_seconds: <span class="rs-type">None</span>,
             };
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a>(&amp;request)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-113">run_ns_runner_mount_overlay_child</a>(&amp;request)?;
         }
         <span class="rs-type">Ok</span>(())
     }
@@ -643,11 +643,11 @@
                 layer_paths: vec![],
                 upperdir: <span class="rs-type">Some</span>(handle.upperdir.clone()),
                 workdir: <span class="rs-type">Some</span>(handle.workdir.clone()),
-                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-99">ns_fds_from_map</a>(&amp;handle.ns_fds),
+                ns_fds: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-ns-fds-from-map-101">ns_fds_from_map</a>(&amp;handle.ns_fds),
                 cgroup_path: handle.cgroup_path.clone(),
                 timeout_seconds: <span class="rs-type">None</span>,
             };
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a>(&amp;request)
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-144">run_ns_runner_configure_dns_child</a>(&amp;request)
         }
     }
 
@@ -672,13 +672,13 @@
                         &quot;net-ready {} {} {} {}\n&quot;,
                         veth.ns_name,
                         veth.ns_ip,
-                        eos_workspace_modes::isolated::<span class="rs-type">BRIDGE_PREFIX_LEN</span>,
-                        eos_workspace_modes::isolated::<span class="rs-type">GATEWAY</span>
+                        eos_workspace_runtime::isolated::<span class="rs-type">BRIDGE_PREFIX_LEN</span>,
+                        eos_workspace_runtime::isolated::<span class="rs-type">GATEWAY</span>
                     )
                 },
             );
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a>(handle.control_fd, payload.as_bytes())?;
-            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(handle.readiness_fd, b&quot;ready&quot;, setup_timeout_s)?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-93">write_all_fd</a>(handle.control_fd, payload.as_bytes())?;
+            <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-56">expect_line</a>(handle.readiness_fd, b&quot;ready&quot;, setup_timeout_s)?;
         }
         <span class="rs-type">Ok</span>(())
     }
@@ -687,9 +687,9 @@
         <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-errors-rs.html#item-fn-test-runtime-stub-enabled-76">test_runtime_stub_enabled</a>() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>());
         }
-        <span class="rs-kw">let</span> path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(eos_workspace_modes::isolated::<span class="rs-type">CGROUP_ROOT</span>).join(format!(
+        <span class="rs-kw">let</span> path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(eos_workspace_runtime::isolated::<span class="rs-type">CGROUP_ROOT</span>).join(format!(
             &quot;{}{}&quot;,
-            eos_workspace_modes::isolated::<span class="rs-type">HANDLE_PREFIX</span>,
+            eos_workspace_runtime::isolated::<span class="rs-type">HANDLE_PREFIX</span>,
             handle.workspace_handle_id.0
         ));
         std::fs::create_dir_all(&amp;path).map_err(setup_error)?;

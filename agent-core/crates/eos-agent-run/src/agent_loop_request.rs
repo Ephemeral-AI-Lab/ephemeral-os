@@ -1,8 +1,9 @@
 //! Runner-owned conversion from agent definitions to loop requests.
 
 use eos_engine::{AgentLoopMessage, StartAgentLoopRequest};
-use eos_llm_client::{Message, MessageRole, DEFAULT_MAX_TOKENS};
-use eos_types::{AgentDefinition, AgentRunId, SpawnAgentRequest};
+use eos_types::{
+    AgentDefinition, AgentRunId, Message, MessageRole, SpawnAgentRequest, DEFAULT_MAX_TOKENS,
+};
 
 /// Build the thin engine loop request for one resolved agent.
 #[must_use]

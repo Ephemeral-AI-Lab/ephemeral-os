@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace-runtime · src/isolated/session/gc.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-runtime File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>47</b><span>modules</span></div>
+  <div><b>293</b><span>items</span></div>
+  <div><b>236</b><span>fields</span></div>
+  <div><b>178</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html"><span>runner.rs</span><small>6/9</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li><li><span class="folder">ephemeral</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-capture-rs.html"><span>capture.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-command-rs.html"><span>command.rs</span><small>4/20</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-audit-rs.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-command-rs.html"><span>command.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link active" href="eos-workspace-runtime--src-isolated-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">run</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-run-command-handle-rs.html"><span>command_handle.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-manager-rs.html"><span>manager.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-registry-rs.html"><span>registry.rs</span><small>6/5</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="isolated::session::gc crates/eos-workspace-runtime/src/isolated/session/gc.rs impl IsolatedSession &lt; S , R , A &gt; persisted_string persisted_i32 persisted_ipv4 persisted_path path_identifier kill_cgroup_pids">
+  <div class="module-head">
+    <div>
+      <h2>src/isolated/session/gc.rs</h2>
+      <p class="path">module <code>isolated::session::gc</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>1 impls</span>
+      <span>6 fns</span>
+      <span>11 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-persisted-string-211" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_string private fn persisted_string (row : &amp; Value , key : &amp; str) -&gt; Option &lt; String &gt; crates/eos-workspace-runtime/src/isolated/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a> (row : &amp; Value , key : &amp; str) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> value = row.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(key)?.as_str()?.trim();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+    }
+    <span class="rs-type">Some</span>(value.to_owned())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:211</p>
+</article><article id="item-fn-persisted-i32-219" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_i32 private fn persisted_i32 (row : &amp; Value , key : &amp; str) -&gt; Option &lt; i32 &gt; crates/eos-workspace-runtime/src/isolated/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_i32</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-i32-219">persisted_i32</a> (row : &amp; Value , key : &amp; str) -&gt; Option &lt; i32 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-i32-219">persisted_i32</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;i32&gt; {
+    <span class="rs-kw">let</span> value = row.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(key)?.as_i64()?;
+    i32::try_from(value).ok()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:219</p>
+</article><article id="item-fn-persisted-ipv4-224" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_ipv4 private fn persisted_ipv4 (row : &amp; Value , key : &amp; str) -&gt; Option &lt; Ipv4Addr &gt; crates/eos-workspace-runtime/src/isolated/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_ipv4</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a> (row : &amp; Value , key : &amp; str) -&gt; Option &lt; Ipv4Addr &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Ipv4Addr</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, key)?.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-transcript-rs.html#method-parse-15">parse</a>().ok()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:224</p>
+</article><article id="item-fn-persisted-path-228" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn persisted_path private fn persisted_path (row : &amp; Value , key : &amp; str) -&gt; Option &lt; PathBuf &gt; crates/eos-workspace-runtime/src/isolated/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>persisted_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a> (row : &amp; Value , key : &amp; str) -&gt; Option &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, key).map(<span class="rs-type">PathBuf</span>::from)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:228</p>
+</article><article id="item-fn-path-identifier-232" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_identifier private fn path_identifier (path : &amp; Path) -&gt; String crates/eos-workspace-runtime/src/isolated/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_identifier</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a> (path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .map_or_else(|| path.to_string_lossy().into_owned(), <span class="rs-type">ToOwned</span>::to_owned)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:232</p>
+</article><article id="item-fn-kill-cgroup-pids-239" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn kill_cgroup_pids private fn kill_cgroup_pids (cgroup_path : &amp; Path) crates/eos-workspace-runtime/src/isolated/session/gc.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>kill_cgroup_pids</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a> (cgroup_path : &amp; Path)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(cgroup_path: &amp;<span class="rs-type">Path</span>) {
+    <span class="rs-kw">let</span> kill_file = cgroup_path.join(&quot;cgroup.kill&quot;);
+    <span class="rs-kw">if</span> kill_file.exists() {
+        <span class="rs-kw">let</span> _ = std::fs::write(kill_file, &quot;1\n&quot;);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:239</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-IsolatedSession---S---R---A---13" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-workspace-runtime/src/isolated/session/gc.rs  reap_startup_orphans pub(super) fn reap_startup_orphans (&amp; mut self) -&gt; Result &lt; () , IsolatedError &gt; reap_persisted_lease fn reap_persisted_lease (&amp; self , row : &amp; Value) reap_persisted_holder fn reap_persisted_holder (&amp; self , row : &amp; Value) reap_persisted_veth fn reap_persisted_veth (&amp; mut self , row : &amp; Value) reap_persisted_cgroup fn reap_persisted_cgroup (&amp; self , row : &amp; Value) reap_persisted_scratch fn reap_persisted_scratch (&amp; self , row : &amp; Value) reap_named_orphans pub(super) fn reap_named_orphans (&amp; mut self) reap_named_veth_orphans fn reap_named_veth_orphans (&amp; mut self) reap_named_cgroup_orphans fn reap_named_cgroup_orphans (&amp; self) reap_named_scratch_orphans fn reap_named_scratch_orphans (&amp; self) emit_gc_orphan fn emit_gc_orphan (&amp; self , kind : &amp; str , identifier : String , timer : Instant , extra : &amp; [(&amp; str , Value)] ,)">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl IsolatedSession &lt; S , R , A &gt;</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a> &lt; S , R , A &gt;</code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-reap-startup-orphans-19"><td>method</td><td>reap_startup_orphans</td><td><code>pub(super) fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-startup-orphans-19">reap_startup_orphans</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-startup-orphans-19">reap_startup_orphans</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> rows = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a>();
+        <span class="rs-self">self</span>.handles.clear();
+        <span class="rs-self">self</span>.by_caller.clear();
+        <span class="rs-kw">for</span> row <span class="rs-kw">in</span> &amp;rows {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(ns_ip) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a>(row, &quot;ns_ip&quot;) {
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-reserve-persisted-ip-271">reserve_persisted_ip</a>(ns_ip);
+            }
+        }
+        <span class="rs-kw">for</span> row <span class="rs-kw">in</span> &amp;rows {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-lease-39">reap_persisted_lease</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-holder-52">reap_persisted_holder</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-veth-70">reap_persisted_veth</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-cgroup-91">reap_persisted_cgroup</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-scratch-108">reap_persisted_scratch</a>(row);
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-orphans-124">reap_named_orphans</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-persisted-lease-39"><td>method</td><td>reap_persisted_lease</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-lease-39">reap_persisted_lease</a> (&amp; self , row : &amp; Value)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-lease-39">reap_persisted_lease</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(lease_id) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, &quot;lease_id&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> result = <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#method-release-lease-23">release_lease</a>(&amp;lease_id);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = vec![(&quot;released&quot;, json!(result.as_ref().copied().unwrap_or(<span class="rs-kw">false</span>)))];
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;lease&quot;, lease_id, timer, &amp;extra);
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-persisted-holder-52"><td>method</td><td>reap_persisted_holder</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-holder-52">reap_persisted_holder</a> (&amp; self , row : &amp; Value)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-holder-52">reap_persisted_holder</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(holder_pid) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-i32-219">persisted_i32</a>(row, &quot;holder_pid&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">if</span> holder_pid &lt;= 0 {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> result = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(holder_pid, <span class="rs-self">self</span>.caps.exit_grace_s.max(0.0));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;holder&quot;, holder_pid.to_string(), timer, &amp;extra);
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-persisted-veth-70"><td>method</td><td>reap_persisted_veth</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-veth-70">reap_persisted_veth</a> (&amp; mut self , row : &amp; Value)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-veth-70">reap_persisted_veth</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(host_name) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, &quot;veth_host_name&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(ns_name) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, &quot;veth_ns_name&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(ns_ip) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a>(row, &quot;ns_ip&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> allocation = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-VethAllocation-59">VethAllocation</a> {
+            host_name: host_name.clone(),
+            ns_name,
+            ns_ip,
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-teardown-veth-241">teardown_veth</a>(&amp;allocation);
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-reserve-persisted-ip-271">reserve_persisted_ip</a>(ns_ip);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;veth&quot;, host_name, timer, &amp;[]);
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-persisted-cgroup-91"><td>method</td><td>reap_persisted_cgroup</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-cgroup-91">reap_persisted_cgroup</a> (&amp; self , row : &amp; Value)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-cgroup-91">reap_persisted_cgroup</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a>(row, &quot;cgroup_path&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">if</span> !cgroup_path.exists() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;cgroup_path);
+        <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;cgroup_path);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;cgroup&quot;, <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a>(&amp;cgroup_path), timer, &amp;extra);
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-persisted-scratch-108"><td>method</td><td>reap_persisted_scratch</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-scratch-108">reap_persisted_scratch</a> (&amp; self , row : &amp; Value)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-scratch-108">reap_persisted_scratch</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(scratch_dir) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a>(row, &quot;scratch_dir&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">if</span> !scratch_dir.exists() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;scratch_dir);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;scratch&quot;, <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a>(&amp;scratch_dir), timer, &amp;extra);
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-named-orphans-124"><td>method</td><td>reap_named_orphans</td><td><code>pub(super) fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-orphans-124">reap_named_orphans</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-orphans-124">reap_named_orphans</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-veth-orphans-130">reap_named_veth_orphans</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-cgroup-orphans-145">reap_named_cgroup_orphans</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-scratch-orphans-166">reap_named_scratch_orphans</a>();
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-named-veth-orphans-130"><td>method</td><td>reap_named_veth_orphans</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-veth-orphans-130">reap_named_veth_orphans</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-veth-orphans-130">reap_named_veth_orphans</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(&quot;/sys/class/net&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+            <span class="rs-kw">let</span> name = entry.file_name().to_string_lossy().into_owned();
+            <span class="rs-kw">if</span> !name.starts_with(<span class="rs-type">HANDLE_PREFIX</span>) {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-teardown-host-veth-247">teardown_host_veth</a>(&amp;name);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;veth&quot;, name, timer, &amp;[]);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-named-cgroup-orphans-145"><td>method</td><td>reap_named_cgroup_orphans</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-cgroup-orphans-145">reap_named_cgroup_orphans</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-cgroup-orphans-145">reap_named_cgroup_orphans</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(&quot;/sys/fs/cgroup&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+            <span class="rs-kw">let</span> path = entry.path();
+            <span class="rs-kw">let</span> name = entry.file_name().to_string_lossy().into_owned();
+            <span class="rs-kw">if</span> !name.starts_with(<span class="rs-type">HANDLE_PREFIX</span>) || !path.is_dir() {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+            <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;path);
+            <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;path);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+                extra.push((&quot;error&quot;, json!(error.to_string())));
+            }
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;cgroup&quot;, name, timer, &amp;extra);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-reap-named-scratch-orphans-166"><td>method</td><td>reap_named_scratch_orphans</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-scratch-orphans-166">reap_named_scratch_orphans</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-scratch-orphans-166">reap_named_scratch_orphans</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>()) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+            <span class="rs-kw">let</span> path = entry.path();
+            <span class="rs-kw">let</span> name = entry.file_name().to_string_lossy().into_owned();
+            <span class="rs-kw">if</span> name == &quot;manager.json&quot; || !path.is_dir() {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+            <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;path);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+                extra.push((&quot;error&quot;, json!(error.to_string())));
+            }
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;scratch&quot;, name, timer, &amp;extra);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-emit-gc-orphan-186"><td>method</td><td>emit_gc_orphan</td><td><code>fn <a class="symbol-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a> (&amp; self , kind : &amp; str , identifier : String , timer : Instant , extra : &amp; [(&amp; str , Value)] ,)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(
+        &amp;<span class="rs-self">self</span>,
+        kind: &amp;str,
+        identifier: <span class="rs-type">String</span>,
+        timer: <span class="rs-type">Instant</span>,
+        extra: &amp;[(&amp;str, <span class="rs-type">Value</span>)],
+    ) {
+        <span class="rs-kw">let</span> total_ms = timer.elapsed().as_secs_f64() * 1000.0;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = json!({
+            &quot;kind&quot;: kind,
+            &quot;identifier&quot;: identifier,
+            &quot;total_ms&quot;: total_ms,
+            &quot;phases_ms&quot;: {&quot;reap&quot;: total_ms},
+        });
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = payload.as_object_mut() {
+            <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> extra {
+                object.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-insert-77">insert</a>((*key).to_owned(), value.clone());
+            }
+        }
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>
+            .audit
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-audit-rs.html#method-emit-21">emit</a>(&quot;sandbox_isolated_workspace_gc_orphan&quot;, payload);
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/isolated/session/gc.rs:13</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-runtime/src/isolated/session/gc.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::net::<span class="rs-type">Ipv4Addr</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated::audit::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-audit-rs.html#item-trait-AuditSink-16">AuditSink</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated::caps::<span class="rs-type">HANDLE_PREFIX</span>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated::error::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated::network::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-VethAllocation-59">VethAllocation</a>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>, <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>};
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>,
+    <span class="rs-type">R</span>: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>,
+    <span class="rs-type">A</span>: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-audit-rs.html#item-trait-AuditSink-16">AuditSink</a>,
+{
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-startup-orphans-19">reap_startup_orphans</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> rows = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a>();
+        <span class="rs-self">self</span>.handles.clear();
+        <span class="rs-self">self</span>.by_caller.clear();
+        <span class="rs-kw">for</span> row <span class="rs-kw">in</span> &amp;rows {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(ns_ip) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a>(row, &quot;ns_ip&quot;) {
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-reserve-persisted-ip-271">reserve_persisted_ip</a>(ns_ip);
+            }
+        }
+        <span class="rs-kw">for</span> row <span class="rs-kw">in</span> &amp;rows {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-lease-39">reap_persisted_lease</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-holder-52">reap_persisted_holder</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-veth-70">reap_persisted_veth</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-cgroup-91">reap_persisted_cgroup</a>(row);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-scratch-108">reap_persisted_scratch</a>(row);
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-orphans-124">reap_named_orphans</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-lease-39">reap_persisted_lease</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(lease_id) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, &quot;lease_id&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> result = <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#method-release-lease-23">release_lease</a>(&amp;lease_id);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = vec![(&quot;released&quot;, json!(result.as_ref().copied().unwrap_or(<span class="rs-kw">false</span>)))];
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;lease&quot;, lease_id, timer, &amp;extra);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-holder-52">reap_persisted_holder</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(holder_pid) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-i32-219">persisted_i32</a>(row, &quot;holder_pid&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">if</span> holder_pid &lt;= 0 {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> result = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(holder_pid, <span class="rs-self">self</span>.caps.exit_grace_s.max(0.0));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;holder&quot;, holder_pid.to_string(), timer, &amp;extra);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-veth-70">reap_persisted_veth</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(host_name) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, &quot;veth_host_name&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(ns_name) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, &quot;veth_ns_name&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(ns_ip) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a>(row, &quot;ns_ip&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> allocation = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-isolated-network-rs.html#item-struct-VethAllocation-59">VethAllocation</a> {
+            host_name: host_name.clone(),
+            ns_name,
+            ns_ip,
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-teardown-veth-241">teardown_veth</a>(&amp;allocation);
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-reserve-persisted-ip-271">reserve_persisted_ip</a>(ns_ip);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;veth&quot;, host_name, timer, &amp;[]);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-cgroup-91">reap_persisted_cgroup</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a>(row, &quot;cgroup_path&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">if</span> !cgroup_path.exists() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;cgroup_path);
+        <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;cgroup_path);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;cgroup&quot;, <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a>(&amp;cgroup_path), timer, &amp;extra);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-persisted-scratch-108">reap_persisted_scratch</a>(&amp;<span class="rs-self">self</span>, row: &amp;<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(scratch_dir) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a>(row, &quot;scratch_dir&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">if</span> !scratch_dir.exists() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;scratch_dir);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+            extra.push((&quot;error&quot;, json!(error.to_string())));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;scratch&quot;, <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a>(&amp;scratch_dir), timer, &amp;extra);
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-orphans-124">reap_named_orphans</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-veth-orphans-130">reap_named_veth_orphans</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-cgroup-orphans-145">reap_named_cgroup_orphans</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-scratch-orphans-166">reap_named_scratch_orphans</a>();
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-veth-orphans-130">reap_named_veth_orphans</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(&quot;/sys/class/net&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+            <span class="rs-kw">let</span> name = entry.file_name().to_string_lossy().into_owned();
+            <span class="rs-kw">if</span> !name.starts_with(<span class="rs-type">HANDLE_PREFIX</span>) {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-network-rs.html#method-teardown-host-veth-247">teardown_host_veth</a>(&amp;name);
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;veth&quot;, name, timer, &amp;[]);
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-cgroup-orphans-145">reap_named_cgroup_orphans</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(&quot;/sys/fs/cgroup&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+            <span class="rs-kw">let</span> path = entry.path();
+            <span class="rs-kw">let</span> name = entry.file_name().to_string_lossy().into_owned();
+            <span class="rs-kw">if</span> !name.starts_with(<span class="rs-type">HANDLE_PREFIX</span>) || !path.is_dir() {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+            <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(&amp;path);
+            <span class="rs-kw">let</span> remove_result = std::fs::remove_dir(&amp;path);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+                extra.push((&quot;error&quot;, json!(error.to_string())));
+            }
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;cgroup&quot;, name, timer, &amp;extra);
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-reap-named-scratch-orphans-166">reap_named_scratch_orphans</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>()) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+            <span class="rs-kw">let</span> path = entry.path();
+            <span class="rs-kw">let</span> name = entry.file_name().to_string_lossy().into_owned();
+            <span class="rs-kw">if</span> name == &quot;manager.json&quot; || !path.is_dir() {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+            <span class="rs-kw">let</span> remove_result = std::fs::remove_dir_all(&amp;path);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>();
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(error) = remove_result {
+                extra.push((&quot;error&quot;, json!(error.to_string())));
+            }
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(&quot;scratch&quot;, name, timer, &amp;extra);
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#method-emit-gc-orphan-186">emit_gc_orphan</a>(
+        &amp;<span class="rs-self">self</span>,
+        kind: &amp;str,
+        identifier: <span class="rs-type">String</span>,
+        timer: <span class="rs-type">Instant</span>,
+        extra: &amp;[(&amp;str, <span class="rs-type">Value</span>)],
+    ) {
+        <span class="rs-kw">let</span> total_ms = timer.elapsed().as_secs_f64() * 1000.0;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = json!({
+            &quot;kind&quot;: kind,
+            &quot;identifier&quot;: identifier,
+            &quot;total_ms&quot;: total_ms,
+            &quot;phases_ms&quot;: {&quot;reap&quot;: total_ms},
+        });
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = payload.as_object_mut() {
+            <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> extra {
+                object.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-insert-77">insert</a>((*key).to_owned(), value.clone());
+            }
+        }
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>
+            .audit
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-audit-rs.html#method-emit-21">emit</a>(&quot;sandbox_isolated_workspace_gc_orphan&quot;, payload);
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> value = row.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(key)?.as_str()?.trim();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+    }
+    <span class="rs-type">Some</span>(value.to_owned())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-i32-219">persisted_i32</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;i32&gt; {
+    <span class="rs-kw">let</span> value = row.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(key)?.as_i64()?;
+    i32::try_from(value).ok()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-ipv4-224">persisted_ipv4</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Ipv4Addr</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, key)?.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-transcript-rs.html#method-parse-15">parse</a>().ok()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-path-228">persisted_path</a>(row: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-persisted-string-211">persisted_string</a>(row, key).map(<span class="rs-type">PathBuf</span>::from)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-path-identifier-232">path_identifier</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .map_or_else(|| path.to_string_lossy().into_owned(), <span class="rs-type">ToOwned</span>::to_owned)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-session-gc-rs.html#item-fn-kill-cgroup-pids-239">kill_cgroup_pids</a>(cgroup_path: &amp;<span class="rs-type">Path</span>) {
+    <span class="rs-kw">let</span> kill_file = cgroup_path.join(&quot;cgroup.kill&quot;);
+    <span class="rs-kw">if</span> kill_file.exists() {
+        <span class="rs-kw">let</span> _ = std::fs::write(kill_file, &quot;1\n&quot;);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

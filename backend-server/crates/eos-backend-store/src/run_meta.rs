@@ -48,10 +48,12 @@ impl RunMetaRepo {
     /// # Errors
     /// [`StoreError`] on a query or decode failure.
     pub async fn get(&self, request_id: &RequestId) -> Result<Option<RunMeta>, StoreError> {
-        let row = sqlx::query(&format!("SELECT {COLUMNS} FROM run_meta WHERE request_id = ?"))
-            .bind(request_id.as_str())
-            .fetch_optional(&self.pool)
-            .await?;
+        let row = sqlx::query(&format!(
+            "SELECT {COLUMNS} FROM run_meta WHERE request_id = ?"
+        ))
+        .bind(request_id.as_str())
+        .fetch_optional(&self.pool)
+        .await?;
         row.as_ref().map(row_to_run_meta).transpose()
     }
 

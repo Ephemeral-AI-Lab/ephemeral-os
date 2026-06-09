@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use eos_llm_client::{ContentBlock, LlmRequest, Message, UsageSnapshot};
 use eos_tool::{RegisteredTool, ToolName, ToolResult};
-use eos_types::{AgentRunId, AgentState, JsonObject, ToolUseId};
+use eos_types::{AgentRunApi, AgentRunId, AgentState, JsonObject, ToolUseId};
 use futures::StreamExt;
 
 use super::{
@@ -13,7 +13,7 @@ use super::{
     AgentLoopOutcome, AgentLoopOutcomeKind, AgentLoopRunServices, AgentLoopState,
     AgentLoopToolRegistryFactory, ExecutionMetadataBuildInput, StartAgentLoopRequest,
 };
-use crate::notifications::NotificationService;
+use crate::notifications::EngineNotificationQueue;
 use crate::query::{provider_messages::build_provider_messages, EventSource};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
@@ -30,6 +30,7 @@ pub(crate) struct AgentLoopExecutor {
     background_dependencies: Option<AgentLoopBackgroundDependencies>,
     hook_dependencies: Option<AgentLoopHookDependencies>,
     event_callback: Option<crate::query::EventCallback>,
+    agent_run_api: Arc<dyn AgentRunApi>,
 }
 
 impl std::fmt::Debug for AgentLoopExecutor {
@@ -48,6 +49,7 @@ impl AgentLoopExecutor {
         background_dependencies: Option<AgentLoopBackgroundDependencies>,
         hook_dependencies: Option<AgentLoopHookDependencies>,
         event_callback: Option<crate::query::EventCallback>,
+        agent_run_api: Arc<dyn AgentRunApi>,
     ) -> Self {
         Self {
             event_source,
@@ -58,6 +60,7 @@ impl AgentLoopExecutor {
             background_dependencies,
             hook_dependencies,
             event_callback,
+            agent_run_api,
         }
     }
 
@@ -83,20 +86,23 @@ impl AgentLoopExecutor {
         };
         let event_source = self.resolve_event_source(&request, &event_identity);
         let run_services = self.build_run_services(&request.agent_run_id);
-        let mut state =
-            match AgentLoopState::from_request(request, &*self.tool_registry_factory, run_services)
-            {
-                Ok(state) => state,
-                Err(error) => {
-                    return AgentLoopOutcome {
-                        kind: AgentLoopOutcomeKind::LoopFailed {
-                            error_summary: error.to_string(),
-                        },
-                        final_conversation_messages: Vec::new(),
-                        total_token_count: None,
-                    };
-                }
-            };
+        let mut state = match AgentLoopState::from_request(
+            request,
+            &*self.tool_registry_factory,
+            run_services,
+            self.agent_run_api.clone(),
+        ) {
+            Ok(state) => state,
+            Err(error) => {
+                return AgentLoopOutcome {
+                    kind: AgentLoopOutcomeKind::LoopFailed {
+                        error_summary: error.to_string(),
+                    },
+                    final_conversation_messages: Vec::new(),
+                    total_token_count: None,
+                };
+            }
+        };
 
         self.loop_hooks.on_start(&state).await;
 
@@ -341,8 +347,12 @@ impl AgentLoopExecutor {
         let Some(dependencies) = &self.background_dependencies else {
             return AgentLoopRunServices::inert();
         };
-        let notifier = NotificationService::new();
-        let background = dependencies.build_managers(agent_run_id.clone(), notifier.clone());
+        let notifier = EngineNotificationQueue::new();
+        let background = dependencies.build_managers(
+            agent_run_id.clone(),
+            self.agent_run_api.clone(),
+            notifier.clone(),
+        );
         AgentLoopRunServices::from_background(&background, notifier)
     }
 

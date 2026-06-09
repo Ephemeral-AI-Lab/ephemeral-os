@@ -4,24 +4,35 @@ Status: Draft
 Date: 2026-06-09
 Owner: eos-engine / eos-agent-run
 
+Revision 2026-06-09 (naming convention pass): aligned the target vocabulary with
+Phase 03B and the current agent-core naming rules. The loop-launch contract lives
+in `eos-types::agent_loop`, not an internal `*ports` crate; record writes consume
+`AgentRunRecordTarget`; run creation uses `spawn.rs` / `spawn_agent`
+vocabulary; provider streaming uses `ProviderStreamSource`; event observation
+uses `EngineEventSink`; printing uses `EngineEventPrinter`; and the names-to-avoid
+table gives concrete replacements for stale `*Service`, callback, hook, and
+dependency-bag names.
+
 ## Scope
 
 This phase makes `eos-engine` execution-only and `eos-agent-run` lifecycle-only.
 
-The engine keeps the agent loop, turn execution, event emission, midflight
+The engine keeps the agent loop, turn execution, event emission, engine event
 printing, records, and background accounting. The run crate keeps
 spawn/wait/poll/cancel/finalization and durable agent-run state updates.
 
 `eos-agent-run` must not depend directly on `eos-engine`. The shared loop launch
-contract stays in `eos-agent-ports`; `eos-engine` implements that contract with a
-concrete launcher, and `eos-agent-core` wires the concrete launcher into
-`AgentRunService` at runtime composition.
+contract lives in `eos-types::agent_loop`; `eos-engine` implements that contract
+with a concrete launcher, and `eos-agent-core` wires the concrete launcher into
+`AgentRunService` at runtime composition. Do not create a new internal port
+crate for this contract; `eos-sandbox-port` remains the explicit port-crate
+exception.
 
 Prerequisite: Phase 03B must define and implement the durable
 request/task/workflow/agent-run lineage contract before this phase moves
 record writing into `eos-engine` or splits run lifecycle from loop
 execution. Phase 04 consumes `AgentRunRecordIndex` and
-`AgentRunRecordTargetFile`; it does not redesign DB materialization.
+`AgentRunRecordTarget`; it does not redesign DB materialization.
 
 ## Local Architecture
 
@@ -35,7 +46,7 @@ execution. Phase 04 consumes `AgentRunRecordIndex` and
 - batch tool dispatch,
 - concrete `AgentLoopLauncher` implementation,
 - engine events,
-- midflight event printing,
+- engine event printing,
 - record writing for loop-visible events,
 - background session accounting and notifications.
 
@@ -74,9 +85,8 @@ execution. Phase 04 consumes `AgentRunRecordIndex` and
 The target dependency shape for this phase is:
 
 ```text
-eos-agent-run   -> eos-types, eos-agent-ports
-eos-engine      -> eos-types, eos-agent-ports, eos-tool-ports,
-                   eos-llm-client, eos-sandbox-port
+eos-agent-run   -> eos-types
+eos-engine      -> eos-types, eos-tool, eos-llm-client, eos-sandbox-port
 eos-agent-core  -> eos-agent-run, eos-engine, eos-tool, eos-workflow,
                    eos-db, eos-llm-client, eos-sandbox-port
 ```
@@ -136,7 +146,7 @@ agent-core/crates/eos-agent-run/
 │   ├── lib.rs
 │   ├── error.rs
 │   ├── service.rs
-│   ├── admission.rs
+│   ├── spawn.rs
 │   ├── active_agent_run.rs
 │   ├── persistence.rs
 │   ├── completion.rs
@@ -161,11 +171,11 @@ logic.
 | --- | --- | --- |
 | `lib.rs` | narrow public exports | implementation logic or compatibility re-export maze |
 | `events.rs` | engine event enum, event severity, event sink input shape | printing, persistence, run finalization |
-| `printer.rs` | midflight event printing/sink behavior | durable record writes |
+| `printer.rs` | engine event printing/sink behavior | durable record writes |
 | `notifications/mod.rs` | loop-local notification queue and rule evaluation | external notification facade or run finalization |
 | `notifications/rules.rs` | notification rules that are local to loop execution | session storage, persistence, or tool behavior |
 | `agent_loop/mod.rs` | loop module routing and public loop-internal exports | full loop implementation |
-| `agent_loop/launcher.rs` | concrete `AgentLoopLauncher` implementation and Tokio task launch | run admission, wait/poll/cancel, durable finalization |
+| `agent_loop/launcher.rs` | concrete `AgentLoopLauncher` implementation and Tokio task launch | run spawning, wait/poll/cancel, durable finalization |
 | `agent_loop/executor.rs` | full loop state machine, provider stream consumption, loop exit decisions | run lifecycle persistence |
 | `agent_loop/state.rs` | in-memory state for one active loop | DB writes, active-run registry |
 | `agent_loop/stream.rs` | provider stream normalization and loop event production | tool dispatch or run finalization |
@@ -193,7 +203,7 @@ reintroduce nested `session_managers/<kind>/...` folders or generic `lane`,
 | --- | --- | --- |
 | `lib.rs` | narrow lifecycle exports | engine or tool implementation exports |
 | `service.rs` | `AgentRunService`, lifecycle orchestration, active-run map ownership | turn execution or concrete engine types |
-| `admission.rs` | run admission, request validation, launch input mapping | provider streaming |
+| `spawn.rs` | `spawn_agent` orchestration, request validation, launch input mapping, and task-agent-run creation handoff | provider streaming |
 | `active_agent_run.rs` | one process-local `ActiveAgentRun` value | durable DB state or map-wide orchestration |
 | `persistence.rs` | durable run state transitions | engine event interpretation |
 | `completion.rs` | exactly-once engine outcome handoff and final-state mapping | event-by-event loop handling |
@@ -205,11 +215,11 @@ Target `AgentRunService` field shape:
 ```rust
 pub struct AgentRunService {
     agent_registry: Arc<AgentRegistry>,
-    run_store: Arc<dyn AgentRunStore>,
+    agent_run_store: Arc<dyn AgentRunStore>,
     loop_launcher: Arc<dyn AgentLoopLauncher>,
     active_agent_runs: RwLock<HashMap<AgentRunId, ActiveAgentRun>>,
-    record_targets: Arc<dyn AgentRunRecordTargetResolver>,
-    runtime_state: Arc<dyn AgentRuntimeStateStore>,
+    record_target_resolver: Arc<dyn AgentRunRecordTargetResolver>,
+    agent_runtime_state: Arc<dyn AgentRuntimeStateStore>,
 }
 ```
 
@@ -235,7 +245,7 @@ when moved into completion or cancellation helpers.
 
 ## Loop Launch Contract and Engine Surface
 
-`eos-agent-ports` owns the shared launch contract consumed by
+`eos-types::agent_loop` owns the shared launch contract consumed by
 `eos-agent-run`:
 
 ```text
@@ -245,7 +255,7 @@ StartedAgentLoop
 AgentLoopOutcome
 AgentLoopCancelHandle
 AgentLoopCancelSignal
-AgentExecutionMetadataService
+ToolExecutionMetadataReader
 ```
 
 `eos-engine` implements this contract and exports only concrete engine
@@ -263,34 +273,34 @@ Allowed exported surface:
 TokioAgentLoopLauncher
 AgentLoopToolRegistryFactory
 AgentLoopToolRegistryBuildInput
-AgentLoopBackgroundDependencies
+BackgroundSessionInputs
 EngineEventSink
-MidflightPrinter
+EngineEventPrinter
 ```
 
 Contract:
 
 | Type | Consumer | Rule |
 | --- | --- | --- |
-| `AgentLoopLauncher` | `eos-agent-run`, test harnesses | lives in `eos-agent-ports`; starts an async loop only through the lifecycle boundary |
-| `StartAgentLoopRequest` | `eos-agent-run` | lives in `eos-agent-ports`; carries run correlation, record target, cancellation, and runtime inputs |
-| `StartedAgentLoop` | `eos-agent-run` | lives in `eos-agent-ports`; carries the only lifecycle completion receiver and the loop cancel handle |
-| `AgentLoopOutcome` | `eos-agent-run` | lives in `eos-agent-ports`; contains terminal status, passive submission facts, record summary, and background-session closure status |
+| `AgentLoopLauncher` | `eos-agent-run`, test harnesses | lives in `eos-types::agent_loop`; starts an async loop only through the lifecycle boundary |
+| `StartAgentLoopRequest` | `eos-agent-run` | lives in `eos-types::agent_loop`; carries run correlation, record target, cancellation, and runtime inputs |
+| `StartedAgentLoop` | `eos-agent-run` | lives in `eos-types::agent_loop`; carries the only lifecycle completion receiver and the loop cancel handle |
+| `AgentLoopOutcome` | `eos-agent-run` | lives in `eos-types::agent_loop`; contains terminal status, passive submission facts, record summary, and background-session closure status |
 | `TokioAgentLoopLauncher` | `eos-agent-core` runtime wiring, tests | concrete engine implementation of `AgentLoopLauncher` |
-| `EngineEventSink` | `eos-agent-core` runtime wiring, tests | receives midflight events without owning finalization |
+| `EngineEventSink` | `eos-agent-core` runtime wiring, tests | receives stream/tool/system events without owning finalization |
 
 The engine may receive a run/correlation ID for records and events. It must not
-own the active-run registry, admission state, or durable lifecycle row.
+own the active-run registry, spawn state, or durable lifecycle row.
 
 Completion and event vocabulary:
 
 | Name | Owns | Must not own |
 | --- | --- | --- |
 | `StartedAgentLoop::outcome_receiver` | lifecycle completion notification from engine task to run service | stream/tool event delivery |
-| `EventSource` | provider stream input for one assistant turn | lifecycle completion or run finalization |
-| `EventSourceFactory` | choosing an `EventSource` per loop request and agent state | run persistence or wait/poll state |
-| `EngineEventSink` | midflight stream/tool/system event observation | final run-state persistence |
-| `MidflightPrinter` | rendering engine events for users/logs | durable record writes or lifecycle finalization |
+| `ProviderStreamSource` | provider stream input for one assistant turn | lifecycle completion or run finalization |
+| `ProviderStreamSourceFactory` | choosing a `ProviderStreamSource` per loop request and agent state | run persistence or wait/poll state |
+| `EngineEventSink` | stream/tool/system event observation during loop execution | final run-state persistence |
+| `EngineEventPrinter` | rendering engine events for users/logs | durable record writes or lifecycle finalization |
 
 Do not use "event hook" to describe agent-run completion. Completion is the
 `StartedAgentLoop::outcome_receiver` lifecycle channel. Events are stream/tool
@@ -299,12 +309,14 @@ observations inside engine execution.
 Names to avoid:
 
 ```text
-NotificationService       # engine-internal queue, rename if private
-BackgroundTeardownService # engine-internal finalizer, rename if private
-RecordService             # avoid for private internals; use only as sibling-consumed facade
-EventPrinterService       # event printer type, not service unless sibling-consumed
+NotificationService       # engine-internal queue; target name is EngineNotificationQueue
+BackgroundTeardownService # engine-internal finalizer; target name is BackgroundSessionTeardown
+RecordService             # avoid for private internals; use AgentRecordWriter or RecordWriter
+EventPrinterService       # target name is EngineEventPrinter
 EventCallback             # too generic; target name is EngineEventSink
 AgentLoopHooks            # remove if no-op; if needed, use AgentLoopObserver for engine-only observation
+AgentLoopBackgroundDependencies # target name is BackgroundSessionInputs
+AgentLoopHookDependencies # target name is WorkflowAncestryStores or ToolCallHookStores
 ```
 
 ## Execution Invariants
@@ -341,7 +353,7 @@ implementation details local, but the aggregate owns cross-family policy.
 The background runtime is allowed to depend on sandbox, workflow, and subagent
 runtime handles. It must not depend on concrete tool family modules or on
 `eos-agent-run` active-run internals. If it needs to spawn/wait/poll subagent
-runs, it consumes `dyn AgentRunApi` from `eos-agent-ports`, never the concrete
+runs, it consumes `dyn AgentRunApi` from `eos-types`, never the concrete
 run crate.
 
 ## Lifecycle Handoff
@@ -352,15 +364,15 @@ Completion flow:
 sequenceDiagram
     participant AgentCore as eos-agent-core
     participant Run as eos-agent-run
-    participant Port as eos-agent-ports::AgentLoopLauncher
+    participant Contract as eos-types::agent_loop::AgentLoopLauncher
     participant Engine as eos-engine
     participant Tool as eos-tool
 
     AgentCore->>Run: spawn_agent(request)
-    Run->>Port: start_agent_loop(StartAgentLoopRequest)
-    Port->>Engine: dynamic dispatch to TokioAgentLoopLauncher
+    Run->>Contract: start_agent_loop(StartAgentLoopRequest)
+    Contract->>Engine: dynamic dispatch to TokioAgentLoopLauncher
     Engine->>Tool: execute model-callable tools
-    Engine->>Engine: print midflight events and write records
+    Engine->>Engine: print engine events and write records
     Engine-->>Run: AgentLoopOutcome through StartedAgentLoop.outcome_receiver
     Run->>Run: persist final agent-run state
     Run-->>AgentCore: AgentRunOutcome
@@ -379,16 +391,16 @@ Handoff rules:
 | background sessions are cancelled or reported before final state is persisted | `eos-engine` reports; `eos-agent-run` persists |
 | final outcome is visible to waiters and pollers after persistence succeeds | `eos-agent-run` |
 | `ActiveAgentRun` is removed from the map before final publication | `eos-agent-run` |
-| midflight event sinks cannot finalize or publish run outcomes | `eos-engine` / `eos-agent-core` |
+| engine event sinks cannot finalize or publish run outcomes | `eos-engine` / `eos-agent-core` |
 
-## Records and Midflight Printing
+## Records and Engine Event Printing
 
 Target ownership:
 
 | Behavior | Owner |
 | --- | --- |
 | event emission during loop | `eos-engine` |
-| midflight printing | `eos-engine/printer.rs` |
+| engine event printing | `eos-engine/printer.rs` |
 | record interpretation | `eos-engine/records/event_mapper.rs` |
 | record writing | `eos-engine/records/writer.rs` |
 | durable run finalization | `eos-agent-run` |
@@ -401,7 +413,7 @@ Record and print rules:
 
 | Rule | Owner |
 | --- | --- |
-| every model-visible stream/tool event can be printed midflight | `printer.rs` |
+| every model-visible stream/tool event can be printed during execution | `printer.rs` |
 | every durable loop-visible event is interpreted once into records | `records/event_mapper.rs` |
 | printing failure cannot corrupt loop state | `printer.rs` reports non-fatal sink errors |
 | record write failure is an engine error and appears in `AgentLoopOutcome` | `records/writer.rs`, `agent_loop/executor.rs` |
@@ -412,17 +424,19 @@ Record and print rules:
 target. It must not derive lineage from DB state or perform final run-status
 transitions while writing records.
 
-Naming rule: target API names must not combine `Message` and `Record`. Use
-`AgentRunRecordKind`, sibling-facing `RecordService`, `records_root`, or
-`record_kind` for temporary compatibility names. Do not introduce
-`AgentRunMessageRecordKind`, `MessageRecordService`, or `message_records` in the
-target engine/run surface. The literal file name `messages.jsonl` is unchanged.
+Naming rule: target API names must not combine `Message` and `Record`. The
+engine/run surface receives `AgentRunRecordTarget`; record layout classification
+stays behind `AgentRunRecordIndex` / `TaskAgentRunKind` and the
+`eos-types::format_record_dir` formatter. Do not pass `AgentRunRecordKind`,
+`AgentRunMessageRecordKind`, `MessageRecordService`, `RecordService`,
+`message_records`, or `record_kind` through the target engine/run surface. The
+literal file name `messages.jsonl` is unchanged.
 
 ## Progress Tracker
 
 | Item | Status |
 | --- | --- |
-| Keep loop launch contract in `eos-agent-ports` | Not started |
+| Move loop launch contract target to `eos-types::agent_loop` | Not started |
 | Export concrete engine launcher only from `eos-engine` | Not started |
 | Add exact engine file ownership contracts | Not started |
 | Add exact run file ownership contracts | Not started |
@@ -433,7 +447,7 @@ target engine/run surface. The literal file name `messages.jsonl` is unchanged.
 | Add execution invariants for stream/tool/terminal behavior | Not started |
 | Add `BackgroundSessionRuntime` aggregate contract | Not started |
 | Move records into engine internals | Not started |
-| Add engine midflight printer/sink | Not started |
+| Add engine event printer/sink | Not started |
 | Remove concrete tool ownership from engine | Not started |
 | Rename private `*Service` internals where needed | Not started |
 | Rename `eos-agent-runner` to `eos-agent-run` | Not started |
@@ -450,25 +464,26 @@ target engine/run surface. The literal file name `messages.jsonl` is unchanged.
 - `eos-engine` has no `tools/` concrete tool family folder.
 - `eos-engine` does not own tool registry definitions or hook contracts.
 - `AgentLoopLauncher`, `StartAgentLoopRequest`, and `AgentLoopOutcome` are
-  consumed from `eos-agent-ports`, not from `eos-engine`.
+  consumed from `eos-types::agent_loop`, not from `eos-engine`.
 - `StartedAgentLoop::outcome_receiver` is the only engine-to-run lifecycle
   completion notification.
 - `eos-engine` exports the concrete `TokioAgentLoopLauncher` and engine
   composition helpers, not a broad service facade.
-- `EventSource` is provider input only; it is not used for completion,
+- `ProviderStreamSource` is provider input only; it is not used for completion,
   finalization, or wait/poll notification.
-- `EngineEventSink` is the target name for midflight stream/tool/system events;
+- `EngineEventSink` is the target name for stream/tool/system events during loop
+  execution;
   there is no target `EventCallback` API.
 - There is no no-op target `AgentLoopHooks`; if engine-only lifecycle
   observation is needed, it is named `AgentLoopObserver` and must not be used by
   `eos-agent-run` for finalization.
 - `eos-engine` has no target `services.rs` file and no first-target
   `services/` folder.
-- Engine records and midflight printing work during loop execution.
+- Engine records and engine event printing work during loop execution.
 - `eos-agent-run` has no normal dependency edge to `eos-engine`.
 - `eos-agent-run` does not import concrete tool modules.
-- `eos-agent-run` has no dependency on `eos-tool`, `eos-tool-ports`, or
-  `ToolResult`; model-facing rendering happens above the lifecycle layer.
+- `eos-agent-run` has no dependency on `eos-tool` or `ToolResult`; model-facing
+  rendering happens above the lifecycle layer.
 - `eos-agent-run` owns `active_agent_runs: HashMap<AgentRunId, ActiveAgentRun>`
   directly; there is no target `ActiveAgentRuns` wrapper.
 - `eos-agent-run` owns spawn/wait/poll/cancel/finalization.
@@ -487,12 +502,12 @@ target engine/run surface. The literal file name `messages.jsonl` is unchanged.
   family and through the aggregate.
 - Midflight printing is tested separately from durable record writing.
 - `cargo tree -p eos-agent-run --edges normal --depth 1` does not show
-  `eos-engine`, `eos-tool`, or `eos-tool-ports`.
+  `eos-engine` or `eos-tool`.
 - `cargo tree -p eos-engine --edges normal --depth 1` does not show
   `eos-agent-run`.
 - `cargo test -p eos-engine` passes.
 - `cargo test -p eos-agent-run` passes.
 - Focused tests cover loop outcome handoff, cancellation races, background
-  accounting, records, and midflight printing.
+  accounting, records, and engine event printing.
 - Final file layout follows the file ownership table above; there is no
   standalone module-count cap for this phase.

@@ -87,15 +87,15 @@
         })?;
         <span class="rs-kw">let</span> route_s = route_start.elapsed().as_secs_f64();
         <span class="rs-kw">let</span> snapshot_manifest = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-convert-rs.html#item-fn-manifest-from-snapshot-15">manifest_from_snapshot</a>(<span class="rs-self">self</span>.root, snapshot)?;
-        <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(<span class="rs-self">self</span>.root, &amp;snapshot_manifest, changes)
+        <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a>(<span class="rs-self">self</span>.root, &amp;snapshot_manifest, changes)
             .map_err(|error| <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
                 reason: error.to_string(),
             })?;
         <span class="rs-kw">let</span> occ_start = std::time::<span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changeset = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changeset = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
             <span class="rs-self">self</span>.root,
             <span class="rs-type">Some</span>(
-                <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(snapshot.manifest_version).map_err(|error| {
+                <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-58">manifest_version_u64</a>(snapshot.manifest_version).map_err(|error| {
                     <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
                         reason: error.to_string(),
                     }
@@ -238,7 +238,7 @@
 <span class="rs-kw">use</span> eos_overlay::overlay_writable_root;
 <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
 <span class="rs-kw">use</span> eos_runner::{<span class="rs-type">RunRequest</span>, <span class="rs-type">RunResult</span>};
-<span class="rs-kw">use</span> eos_workspace_modes::ephemeral::{
+<span class="rs-kw">use</span> eos_workspace_runtime::ephemeral::{
     <span class="rs-type">EphemeralDirAllocator</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralSnapshot</span>, <span class="rs-type">EphemeralWorkspaceError</span>,
     <span class="rs-type">InvocationId</span>, <span class="rs-type">PathChange</span>, <span class="rs-type">PublishOutcome</span>, <span class="rs-type">WorkspacePublisherPort</span>, <span class="rs-type">WorkspaceRoot</span>,
 };
@@ -250,12 +250,12 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::invocation_registry::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-45">InFlightRegistry</a>;
 
-<span class="rs-kw">use</span> convert::{manifest_from_snapshot, overlay_daemon_error, publish_outcome_from_changeset};
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> convert::{
     changeset_from_publish_outcome, ephemeral_daemon_error, path_changes_to_wire,
 };
+<span class="rs-kw">use</span> convert::{manifest_from_snapshot, overlay_daemon_error, publish_outcome_from_changeset};
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_workspace_modes::ephemeral::<span class="rs-type">RunDirCleanup</span>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_workspace_runtime::ephemeral::<span class="rs-type">RunDirCleanup</span>;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>&lt;&#x27;a&gt; {
     root: &amp;&#x27;a <span class="rs-type">Path</span>,
@@ -283,15 +283,15 @@
         })?;
         <span class="rs-kw">let</span> route_s = route_start.elapsed().as_secs_f64();
         <span class="rs-kw">let</span> snapshot_manifest = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-convert-rs.html#item-fn-manifest-from-snapshot-15">manifest_from_snapshot</a>(<span class="rs-self">self</span>.root, snapshot)?;
-        <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(<span class="rs-self">self</span>.root, &amp;snapshot_manifest, changes)
+        <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-48">base_hashes_for_snapshot</a>(<span class="rs-self">self</span>.root, &amp;snapshot_manifest, changes)
             .map_err(|error| <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
                 reason: error.to_string(),
             })?;
         <span class="rs-kw">let</span> occ_start = std::time::<span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changeset = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changeset = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
             <span class="rs-self">self</span>.root,
             <span class="rs-type">Some</span>(
-                <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(snapshot.manifest_version).map_err(|error| {
+                <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-58">manifest_version_u64</a>(snapshot.manifest_version).map_err(|error| {
                     <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
                         reason: error.to_string(),
                     }

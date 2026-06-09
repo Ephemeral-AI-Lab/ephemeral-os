@@ -161,20 +161,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-command-session"
-version = "0.1.0"
-dependencies = [
- "eos-config",
- "eos-workspace",
- "nix 0.29.0",
- "rustix 0.38.44",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "time",
-]
-
-[[package]]
 name = "eos-config"
 version = "0.1.0"
 dependencies = [
@@ -190,7 +176,6 @@ name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
  "eos-checkpoint",
- "eos-command-session",
  "eos-config",
  "eos-layerstack",
  "eos-occ",
@@ -199,9 +184,8 @@ dependencies = [
  "eos-plugin",
  "eos-protocol",
  "eos-runner",
- "eos-workspace",
- "eos-workspace-modes",
- "eos-workspace-run",
+ "eos-workspace-contract",
+ "eos-workspace-runtime",
  "nix 0.29.0",
  "serde",
  "serde_json",
@@ -316,7 +300,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-workspace"
+name = "eos-workspace-contract"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -325,34 +309,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-workspace-modes"
+name = "eos-workspace-runtime"
 version = "0.1.0"
 dependencies = [
  "eos-config",
+ "eos-layerstack",
  "eos-overlay",
  "eos-protocol",
- "eos-workspace",
+ "eos-workspace-contract",
  "futures-util",
  "libc",
  "netlink-sys",
  "nix 0.29.0",
  "rtnetlink",
+ "rustix 0.38.44",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "time",
  "tokio",
-]
-
-[[package]]
-name = "eos-workspace-run"
-version = "0.1.0"
-dependencies = [
- "eos-command-session",
- "eos-layerstack",
- "eos-overlay",
- "eos-workspace",
- "eos-workspace-modes",
- "serde_json",
 ]
 
 [[package]]

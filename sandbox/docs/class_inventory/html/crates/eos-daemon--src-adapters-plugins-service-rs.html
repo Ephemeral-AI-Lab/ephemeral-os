@@ -658,16 +658,16 @@
 <span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginServiceState</span>, <span class="rs-type">PluginServiceStatus</span>};
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 #[cfg(all(target_os = &quot;linux&quot;, not(test)))]
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::overlay::overlay_run_dirs;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::process::<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>;
-<span class="rs-kw">use</span> eos_plugin::host::route::<span class="rs-type">PluginProcessSpec</span>;
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
     plugin_runtime_config,
     state::{<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>},
 };
+<span class="rs-kw">use</span> eos_plugin::host::route::<span class="rs-type">PluginProcessSpec</span>;
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> {

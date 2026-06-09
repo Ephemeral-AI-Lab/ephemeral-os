@@ -75,11 +75,11 @@
   </div>
   <code class="signature">pub(crate :: tools :: workflow) struct <a class="symbol-link" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>workflow_service</td><td><code>Arc &lt; dyn WorkflowApi &gt;</code></td></tr><tr><td>private</td><td>workflow_sessions</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-49"><td>constructor</td><td>new</td><td><code>pub(crate :: tools :: workflow) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (workflow_service : Arc &lt; dyn WorkflowApi &gt; , workflow_sessions : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a> ,) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>workflow_service</td><td><code>Arc &lt; dyn WorkflowApi &gt;</code></td></tr><tr><td>private</td><td>workflow_sessions</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-49"><td>constructor</td><td>new</td><td><code>pub(crate :: tools :: workflow) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (workflow_service : Arc &lt; dyn WorkflowApi &gt; , workflow_sessions : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a> ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::workflow) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(
             workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
-            workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+            workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
         ) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> {
                 workflow_service,
@@ -94,7 +94,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflowInput-38">DelegateWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>, input)
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflowInput-38">DelegateWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>, input)
             {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
@@ -127,7 +127,7 @@
                     workflow_goal: parsed.goal.clone(),
                 })
                 .<span class="rs-kw">await</span>?;
-            sessions.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-922">register_workflow</a>(&amp;started).<span class="rs-kw">await</span>?;
+            sessions.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-session-923">register_workflow_session</a>(&amp;started).<span class="rs-kw">await</span>?;
             <span class="rs-kw">let</span> payload = json!({
                 &quot;workflow_id&quot;: started.workflow_id.<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-as-str-45">as_str</a>(),
                 &quot;status&quot;: &quot;running&quot;,
@@ -186,7 +186,7 @@
             _ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
             <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatusInput-167">CheckWorkflowStatusInput</a> =
-                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>, input) {
+                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>, input) {
                     <span class="rs-type">Ok</span>(v) =&gt; v,
                     <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
                 };
@@ -239,7 +239,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             _ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflowInput-251">CancelWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflowInput-251">CancelWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -287,7 +287,7 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , workflow_service : Arc &lt; dyn WorkflowApi &gt; , workflow_sessions : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a> ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , workflow_service : Arc &lt; dyn WorkflowApi &gt; , workflow_sessions : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -295,10 +295,10 @@
         registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
         config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
-        workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+        workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
     ) {
         <span class="rs-kw">let</span> delegate = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>,
             delegate,
@@ -331,7 +331,7 @@
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
     ) {
         <span class="rs-kw">let</span> check = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>,
             check,
@@ -364,7 +364,7 @@
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
     ) {
         <span class="rs-kw">let</span> cancel = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>,
             cancel,
@@ -387,7 +387,7 @@
     <h3>register</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , workflow : std :: sync :: Arc &lt; dyn eos_types :: WorkflowApi &gt; , background : crate :: tools :: <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a> ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , workflow : std :: sync :: Arc &lt; dyn eos_types :: WorkflowApi &gt; , background : crate :: tools :: <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -395,7 +395,7 @@
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
     workflow: std::sync::<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">WorkflowApi</span>&gt;,
-    background: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+    background: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
 ) {
     delegate_workflow::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, workflow.clone(), background);
     check_workflow_status::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, workflow.clone());
@@ -411,11 +411,11 @@
     <h3>register_schema</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-422">register_schema</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-421">register_schema</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-422">register_schema</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-421">register_schema</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
 ) {
@@ -424,7 +424,7 @@
     <span class="rs-kw">use</span> schemars::schema_for;
 
     <span class="rs-kw">let</span> delegate = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>,
         delegate,
@@ -436,7 +436,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
     <span class="rs-kw">let</span> check = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>,
         check,
@@ -448,7 +448,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
     <span class="rs-kw">let</span> cancel = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>,
         cancel,
@@ -501,7 +501,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::text_spec;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::parse_input;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-ToolExecutor-32">ToolExecutor</a>;
@@ -516,13 +516,13 @@
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::workflow) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a> {
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
-        workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+        workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a> {
         <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::workflow) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(
             workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
-            workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+            workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
         ) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> {
                 workflow_service,
@@ -538,7 +538,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflowInput-38">DelegateWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>, input)
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflowInput-38">DelegateWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>, input)
             {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
@@ -571,7 +571,7 @@
                     workflow_goal: parsed.goal.clone(),
                 })
                 .<span class="rs-kw">await</span>?;
-            sessions.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-922">register_workflow</a>(&amp;started).<span class="rs-kw">await</span>?;
+            sessions.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-session-923">register_workflow_session</a>(&amp;started).<span class="rs-kw">await</span>?;
             <span class="rs-kw">let</span> payload = json!({
                 &quot;workflow_id&quot;: started.workflow_id.<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-as-str-45">as_str</a>(),
                 &quot;status&quot;: &quot;running&quot;,
@@ -599,10 +599,10 @@
         registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
         config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
-        workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+        workflow_sessions: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
     ) {
         <span class="rs-kw">let</span> delegate = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>,
             delegate,
@@ -661,7 +661,7 @@
             _ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
             <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatusInput-167">CheckWorkflowStatusInput</a> =
-                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>, input) {
+                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>, input) {
                     <span class="rs-type">Ok</span>(v) =&gt; v,
                     <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
                 };
@@ -686,7 +686,7 @@
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
     ) {
         <span class="rs-kw">let</span> check = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>,
             check,
@@ -746,7 +746,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             _ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflowInput-251">CancelWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflowInput-251">CancelWorkflowInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -771,7 +771,7 @@
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
     ) {
         <span class="rs-kw">let</span> cancel = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>,
             cancel,
@@ -790,14 +790,14 @@
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
     workflow: std::sync::<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">WorkflowApi</span>&gt;,
-    background: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-90">BackgroundHandle</a>,
+    background: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>,
 ) {
     delegate_workflow::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, workflow.clone(), background);
     check_workflow_status::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, workflow.clone());
     cancel_workflow::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, workflow);
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-422">register_schema</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-421">register_schema</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
 ) {
@@ -806,7 +806,7 @@
     <span class="rs-kw">use</span> schemars::schema_for;
 
     <span class="rs-kw">let</span> delegate = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-DelegateWorkflow-43">DelegateWorkflow</a>,
         delegate,
@@ -818,7 +818,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
     <span class="rs-kw">let</span> check = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CheckWorkflowStatus-172">CheckWorkflowStatus</a>,
         check,
@@ -830,7 +830,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
     <span class="rs-kw">let</span> cancel = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-workflow-rs.html#item-struct-CancelWorkflow-258">CancelWorkflow</a>,
         cancel,

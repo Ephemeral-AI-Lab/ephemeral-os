@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>13</b><span>modules</span></div>
-  <div><b>90</b><span>items</span></div>
-  <div><b>113</b><span>fields</span></div>
-  <div><b>57</b><span>methods</span></div>
+  <div><b>14</b><span>modules</span></div>
+  <div><b>98</b><span>items</span></div>
+  <div><b>119</b><span>fields</span></div>
+  <div><b>62</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>composition.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link active" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>config.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-db--src-database-rs.html"><span>database.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-db--src-repositories-rs.html"><span>repositories.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="rows crates/eos-db/src/rows.rs RequestRow TaskRow WorkflowRow IterationRow AttemptRow AgentRunRow parse_id opt_id parse_enum enum_to_db execution_role normalize_status record_str outcome_from_record normalize_task_outcomes normalize_attempt_outcomes row_to_request row_to_task row_to_workflow row_to_iteration row_to_attempt AttemptLifecycleColumns attempt_state_from_columns row_to_agent_run ids task_outcomes_parity attempt_outcomes_parity attempt_outcomes_roundtrip_typed tid epoch base_cols attempt_state_plan_reconstructs_and_rejects_incoherent_columns attempt_state_run_requires_materialized_plan_and_running_status attempt_state_closed_passed_and_failed_reconstruct_with_required_fields attempt_state_closed_cancelled_reconstructs_without_fail_reason">
   <div class="module-head">
     <div>
@@ -172,7 +172,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> enum_to_db&lt;<span class="rs-type">T</span>: serde::<span class="rs-type">Serialize</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">String</span> {
     serde_json::to_value(value)
         .ok()
-        .and_then(|v| v.as_str().map(str::to_owned))
+        .and_then(|v| v.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>().map(str::to_owned))
         .expect(&quot;status/stage/reason enums serialize to a json string&quot;)
 }
 </code></pre>
@@ -356,7 +356,7 @@
         .transpose()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
             field: &quot;iterations.deferred_goal&quot;,
-            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
         })?;
     <span class="rs-type">Ok</span>(<span class="rs-type">Iteration</span> {
         id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;iterations.id&quot;, &amp;r.id)?,
@@ -407,7 +407,7 @@
         .transpose()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
             field: &quot;attempts.deferred_goal&quot;,
-            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
         })?;
     <span class="rs-kw">let</span> closed_at = r.closed_at.map(<span class="rs-type">UtcDateTime</span>::from_offset);
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a> {
@@ -481,7 +481,7 @@
 <span class="rs-kw">where</span>
     <span class="rs-type">T</span>: std::str::<span class="rs-type">FromStr</span>&lt;<span class="rs-type">Err</span> = <span class="rs-type">CoreError</span>&gt;,
 {
-    raw.parse().map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
+    raw.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
         field,
         value: raw.to_owned(),
     })
@@ -565,7 +565,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> record_str&lt;&#x27;a&gt;(record: &amp;&#x27;a serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">JsonValue</span>&gt;, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a str&gt; {
-    record.<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-208">get</a>(key).and_then(<span class="rs-type">JsonValue</span>::as_str)
+    record.<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-209">get</a>(key).and_then(<span class="rs-type">JsonValue</span>::as_str)
 }
 </code></pre>
 </details>
@@ -599,7 +599,7 @@
     <span class="rs-kw">let</span> task_id_raw = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-record-str-176">record_str</a>(record, &quot;task_id&quot;)
         .filter(|s| !s.is_empty())
         .unwrap_or(fallback_task_id);
-    <span class="rs-kw">let</span> task_id = task_id_raw.parse().ok()?;
+    <span class="rs-kw">let</span> task_id = task_id_raw.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().ok()?;
     <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-record-str-176">record_str</a>(record, &quot;outcome&quot;)
         .filter(|s| !s.is_empty())
         .unwrap_or(<span class="rs-type">NO_OUTCOME</span>)
@@ -700,7 +700,7 @@
                         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(invalid_lifecycle());
                     }
                     <span class="rs-type">AttemptClosure</span>::<span class="rs-type">Cancelled</span> {
-                        reason: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+                        reason: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
                         outcomes,
                         closed_at,
                     }
@@ -737,7 +737,7 @@
         (
             o.status,
             o.role,
-            o.task_id.as_str().to_owned(),
+            o.task_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>().to_owned(),
             o.outcome.clone(),
         )
     }
@@ -864,13 +864,13 @@
             <span class="rs-type">ExecutionTaskOutcome</span> {
                 status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>,
                 role: <span class="rs-type">ExecutionRole</span>::<span class="rs-type">Reducer</span>,
-                task_id: &quot;r1&quot;.parse().expect(&quot;id&quot;),
+                task_id: &quot;r1&quot;.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().expect(&quot;id&quot;),
                 outcome: &quot;done well&quot;.to_owned(),
             },
             <span class="rs-type">ExecutionTaskOutcome</span> {
                 status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
                 role: <span class="rs-type">ExecutionRole</span>::<span class="rs-type">Generator</span>,
-                task_id: &quot;g1&quot;.parse().expect(&quot;id&quot;),
+                task_id: &quot;g1&quot;.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().expect(&quot;id&quot;),
                 outcome: &quot;boom&quot;.to_owned(),
             },
         ];
@@ -893,7 +893,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(raw: &amp;str) -&gt; eos_types::<span class="rs-type">TaskId</span> {
-        raw.parse().expect(&quot;task id&quot;)
+        raw.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().expect(&quot;task id&quot;)
     }
 </code></pre>
 </details>
@@ -931,12 +931,12 @@
             stage,
             status,
             planner_task_id: <span class="rs-type">None</span>,
-            generator_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
-            reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            generator_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
+            reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
             deferred_goal: <span class="rs-type">None</span>,
             fail_reason: <span class="rs-type">None</span>,
             closed_at: <span class="rs-type">None</span>,
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
         }
     }
 </code></pre>
@@ -996,7 +996,7 @@
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_tasks).is_err(),
             &quot;<span class="rs-type">PLAN</span> has no materialized plan tasks&quot;
         );
-        <span class="rs-kw">let</span> deferred = <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(&quot;later&quot;).expect(&quot;deferred goal&quot;);
+        <span class="rs-kw">let</span> deferred = <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(&quot;later&quot;).expect(&quot;deferred goal&quot;);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_deferred = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         with_deferred.deferred_goal = <span class="rs-type">Some</span>(&amp;deferred);
         assert!(
@@ -1041,8 +1041,8 @@
         );
         <span class="rs-comment">// No generator/reducer tasks -&gt; no materialized plan -&gt; reject.</span>
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> no_tasks = valid();
-        no_tasks.generator_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>();
-        no_tasks.reducer_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>();
+        no_tasks.generator_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>();
+        no_tasks.reducer_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>();
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(no_tasks).is_err(),
             &quot;<span class="rs-type">RUN</span> needs materialized plan tasks&quot;
@@ -1311,7 +1311,7 @@
 <span class="rs-kw">where</span>
     <span class="rs-type">T</span>: std::str::<span class="rs-type">FromStr</span>&lt;<span class="rs-type">Err</span> = <span class="rs-type">CoreError</span>&gt;,
 {
-    raw.parse().map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
+    raw.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
         field,
         value: raw.to_owned(),
     })
@@ -1339,7 +1339,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> enum_to_db&lt;<span class="rs-type">T</span>: serde::<span class="rs-type">Serialize</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">String</span> {
     serde_json::to_value(value)
         .ok()
-        .and_then(|v| v.as_str().map(str::to_owned))
+        .and_then(|v| v.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>().map(str::to_owned))
         .expect(&quot;status/stage/reason enums serialize to a json string&quot;)
 }
 
@@ -1363,7 +1363,7 @@
 }
 
 <span class="rs-kw">fn</span> record_str&lt;&#x27;a&gt;(record: &amp;&#x27;a serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">JsonValue</span>&gt;, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a str&gt; {
-    record.<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-208">get</a>(key).and_then(<span class="rs-type">JsonValue</span>::as_str)
+    record.<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-209">get</a>(key).and_then(<span class="rs-type">JsonValue</span>::as_str)
 }
 
 <span class="rs-comment">/// Build one typed outcome from a raw record (Rust `_outcomes_from_record`).</span>
@@ -1383,7 +1383,7 @@
     <span class="rs-kw">let</span> task_id_raw = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-record-str-176">record_str</a>(record, &quot;task_id&quot;)
         .filter(|s| !s.is_empty())
         .unwrap_or(fallback_task_id);
-    <span class="rs-kw">let</span> task_id = task_id_raw.parse().ok()?;
+    <span class="rs-kw">let</span> task_id = task_id_raw.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().ok()?;
     <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-record-str-176">record_str</a>(record, &quot;outcome&quot;)
         .filter(|s| !s.is_empty())
         .unwrap_or(<span class="rs-type">NO_OUTCOME</span>)
@@ -1498,7 +1498,7 @@
         .transpose()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
             field: &quot;iterations.deferred_goal&quot;,
-            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
         })?;
     <span class="rs-type">Ok</span>(<span class="rs-type">Iteration</span> {
         id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;iterations.id&quot;, &amp;r.id)?,
@@ -1536,7 +1536,7 @@
         .transpose()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">InvalidEnum</span> {
             field: &quot;attempts.deferred_goal&quot;,
-            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            value: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
         })?;
     <span class="rs-kw">let</span> closed_at = r.closed_at.map(<span class="rs-type">UtcDateTime</span>::from_offset);
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a> {
@@ -1648,7 +1648,7 @@
                         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(invalid_lifecycle());
                     }
                     <span class="rs-type">AttemptClosure</span>::<span class="rs-type">Cancelled</span> {
-                        reason: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+                        reason: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
                         outcomes,
                         closed_at,
                     }
@@ -1698,7 +1698,7 @@
         (
             o.status,
             o.role,
-            o.task_id.as_str().to_owned(),
+            o.task_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>().to_owned(),
             o.outcome.clone(),
         )
     }
@@ -1792,13 +1792,13 @@
             <span class="rs-type">ExecutionTaskOutcome</span> {
                 status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>,
                 role: <span class="rs-type">ExecutionRole</span>::<span class="rs-type">Reducer</span>,
-                task_id: &quot;r1&quot;.parse().expect(&quot;id&quot;),
+                task_id: &quot;r1&quot;.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().expect(&quot;id&quot;),
                 outcome: &quot;done well&quot;.to_owned(),
             },
             <span class="rs-type">ExecutionTaskOutcome</span> {
                 status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
                 role: <span class="rs-type">ExecutionRole</span>::<span class="rs-type">Generator</span>,
-                task_id: &quot;g1&quot;.parse().expect(&quot;id&quot;),
+                task_id: &quot;g1&quot;.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().expect(&quot;id&quot;),
                 outcome: &quot;boom&quot;.to_owned(),
             },
         ];
@@ -1818,7 +1818,7 @@
     <span class="rs-comment">// (valid → Err).</span>
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(raw: &amp;str) -&gt; eos_types::<span class="rs-type">TaskId</span> {
-        raw.parse().expect(&quot;task id&quot;)
+        raw.<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>().expect(&quot;task id&quot;)
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>() -&gt; <span class="rs-type">UtcDateTime</span> {
@@ -1830,12 +1830,12 @@
             stage,
             status,
             planner_task_id: <span class="rs-type">None</span>,
-            generator_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
-            reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            generator_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
+            reducer_task_ids: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
             deferred_goal: <span class="rs-type">None</span>,
             fail_reason: <span class="rs-type">None</span>,
             closed_at: <span class="rs-type">None</span>,
-            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(),
         }
     }
 
@@ -1882,7 +1882,7 @@
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_tasks).is_err(),
             &quot;<span class="rs-type">PLAN</span> has no materialized plan tasks&quot;
         );
-        <span class="rs-kw">let</span> deferred = <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(&quot;later&quot;).expect(&quot;deferred goal&quot;);
+        <span class="rs-kw">let</span> deferred = <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(&quot;later&quot;).expect(&quot;deferred goal&quot;);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_deferred = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         with_deferred.deferred_goal = <span class="rs-type">Some</span>(&amp;deferred);
         assert!(
@@ -1914,8 +1914,8 @@
         );
         <span class="rs-comment">// No generator/reducer tasks -&gt; no materialized plan -&gt; reject.</span>
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> no_tasks = valid();
-        no_tasks.generator_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>();
-        no_tasks.reducer_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>();
+        no_tasks.generator_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>();
+        no_tasks.reducer_task_ids = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>();
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(no_tasks).is_err(),
             &quot;<span class="rs-type">RUN</span> needs materialized plan tasks&quot;

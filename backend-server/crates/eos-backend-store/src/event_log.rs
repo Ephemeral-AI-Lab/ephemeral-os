@@ -69,10 +69,11 @@ impl EventLogRepo {
     /// # Errors
     /// [`StoreError`] on a query failure.
     pub async fn max_seq(&self, request_id: &RequestId) -> Result<Option<i64>, StoreError> {
-        let max: Option<i64> = sqlx::query_scalar("SELECT MAX(seq) FROM event_log WHERE request_id = ?")
-            .bind(request_id.as_str())
-            .fetch_one(&self.pool)
-            .await?;
+        let max: Option<i64> =
+            sqlx::query_scalar("SELECT MAX(seq) FROM event_log WHERE request_id = ?")
+                .bind(request_id.as_str())
+                .fetch_one(&self.pool)
+                .await?;
         Ok(max)
     }
 }

@@ -151,21 +151,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
-name = "bit-set"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
-dependencies = [
- "bit-vec",
-]
-
-[[package]]
-name = "bit-vec"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
-
-[[package]]
 name = "bitflags"
 version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -424,25 +409,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-agent-def"
+name = "eos-agent-core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
+ "eos-agent-run",
+ "eos-db",
+ "eos-engine",
+ "eos-llm-client",
+ "eos-sandbox-port",
+ "eos-tool",
+ "eos-types",
+ "eos-workflow",
  "schemars 0.8.22",
  "serde",
- "serde_yaml",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-agent-message-records"
-version = "0.1.0"
-dependencies = [
- "eos-llm-client",
- "eos-types",
- "serde",
  "serde_json",
+ "serde_yaml",
+ "sha2",
  "thiserror 2.0.18",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -450,24 +437,11 @@ name = "eos-agent-run"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "eos-agent-def",
- "eos-agent-message-records",
- "eos-llm-client",
- "eos-tools",
+ "eos-engine",
  "eos-types",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "eos-audit"
-version = "0.1.0"
-dependencies = [
- "eos-types",
- "schemars 0.8.22",
- "serde",
  "serde_json",
- "thiserror 2.0.18",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -476,12 +450,11 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
- "eos-agent-message-records",
+ "eos-agent-run",
  "eos-backend-audit",
  "eos-backend-runtime",
  "eos-backend-store",
  "eos-backend-types",
- "eos-state",
  "eos-types",
  "futures",
  "schemars 0.8.22",
@@ -497,7 +470,7 @@ dependencies = [
 name = "eos-backend-audit"
 version = "0.1.0"
 dependencies = [
- "eos-audit",
+ "eos-agent-core",
  "eos-backend-store",
  "eos-backend-types",
  "eos-protocol",
@@ -529,15 +502,14 @@ name = "eos-backend-runtime"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "eos-agent-core",
  "eos-backend-config",
  "eos-backend-store",
  "eos-backend-types",
- "eos-config",
- "eos-runtime",
  "eos-sandbox-host",
  "eos-sandbox-port",
- "eos-state",
  "eos-types",
+ "eos-workflow",
  "parking_lot",
  "serde_json",
  "tempfile",
@@ -554,7 +526,6 @@ dependencies = [
  "eos-backend-types",
  "eos-protocol",
  "eos-types",
- "serde",
  "serde_json",
  "sqlx",
  "tempfile",
@@ -575,21 +546,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-config"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "eos-db"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "eos-config",
  "eos-types",
  "serde",
  "serde_json",
@@ -602,17 +562,13 @@ dependencies = [
 name = "eos-engine"
 version = "0.1.0"
 dependencies = [
- "async-stream",
  "async-trait",
- "eos-agent-def",
- "eos-agent-message-records",
- "eos-agent-run",
- "eos-audit",
  "eos-llm-client",
  "eos-sandbox-port",
- "eos-tools",
+ "eos-tool",
  "eos-types",
  "futures",
+ "regex",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -629,7 +585,6 @@ dependencies = [
  "async-trait",
  "base64",
  "bytes",
- "eos-config",
  "eos-types",
  "futures",
  "reqwest",
@@ -643,20 +598,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-plugin-catalog"
-version = "0.1.0"
-dependencies = [
- "eos-sandbox-port",
- "eos-types",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "eos-protocol"
 version = "0.1.0"
 dependencies = [
@@ -664,31 +605,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-runtime"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "eos-agent-def",
- "eos-agent-message-records",
- "eos-audit",
- "eos-config",
- "eos-db",
- "eos-engine",
- "eos-llm-client",
- "eos-plugin-catalog",
- "eos-sandbox-port",
- "eos-skills",
- "eos-tools",
- "eos-types",
- "eos-workflow",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -703,7 +619,6 @@ dependencies = [
  "eos-types",
  "futures",
  "parking_lot",
- "proptest",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -729,38 +644,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-skills"
-version = "0.1.0"
-dependencies = [
- "eos-config",
- "serde",
- "serde_yaml",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-state"
+name = "eos-tool"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "eos-types",
- "schemars 0.8.22",
- "serde",
-]
-
-[[package]]
-name = "eos-tools"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "eos-agent-def",
- "eos-agent-message-records",
- "eos-config",
- "eos-llm-client",
  "eos-sandbox-port",
- "eos-skills",
  "eos-types",
- "regex",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -776,6 +665,7 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
+ "serde_yaml",
  "thiserror 2.0.18",
  "time",
  "uuid",
@@ -786,8 +676,7 @@ name = "eos-workflow"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "eos-agent-def",
- "eos-tools",
+ "eos-tool",
  "eos-types",
  "parking_lot",
  "schemars 0.8.22",
@@ -868,12 +757,6 @@ dependencies = [
  "futures-sink",
  "spin",
 ]
-
-[[package]]
-name = "fnv"
-version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foldhash"
@@ -1509,15 +1392,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
-name = "matchers"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
-dependencies = [
- "regex-automata",
-]
-
-[[package]]
 name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1553,15 +1427,6 @@ checksum = "02bd0af71c67b473010cbbc60715ee815645a4dc942899111f494b4b737d6fda"
 dependencies = [
  "libc",
  "wasi",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "nu-ansi-term"
-version = "0.50.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
-dependencies = [
  "windows-sys 0.61.2",
 ]
 
@@ -1750,31 +1615,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proptest"
-version = "1.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b45fcc2344c680f5025fe57779faef368840d0bd1f42f216291f0dc4ace4744"
-dependencies = [
- "bit-set",
- "bit-vec",
- "bitflags",
- "num-traits",
- "rand 0.9.4",
- "rand_chacha 0.9.0",
- "rand_xorshift",
- "regex-syntax",
- "rusty-fork",
- "tempfile",
- "unarray",
-]
-
-[[package]]
-name = "quick-error"
-version = "1.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
-
-[[package]]
 name = "quinn"
 version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1907,15 +1747,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
 dependencies = [
  "getrandom 0.3.4",
-]
-
-[[package]]
-name = "rand_xorshift"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "513962919efc330f829edb2535844d1b912b0fbe2ca165d613e4e8788bb05a5a"
-dependencies = [
- "rand_core 0.9.5",
 ]
 
 [[package]]
@@ -2119,18 +1950,6 @@ name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
-
-[[package]]
-name = "rusty-fork"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc6bf79ff24e648f6da1f8d1f011e9cac26491b619e6b9280f2b47f1774e6ee2"
-dependencies = [
- "fnv",
- "quick-error",
- "tempfile",
- "wait-timeout",
-]
 
 [[package]]
 name = "ryu"
@@ -2348,15 +2167,6 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
-]
-
-[[package]]
-name = "sharded-slab"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
-dependencies = [
- "lazy_static",
 ]
 
 [[package]]
@@ -2740,15 +2550,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "thread_local"
-version = "1.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
-dependencies = [
- "cfg-if",
-]
-
-[[package]]
 name = "time"
 version = "0.3.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2943,49 +2744,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
- "valuable",
-]
-
-[[package]]
-name = "tracing-log"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
-dependencies = [
- "log",
- "once_cell",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-serde"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
-dependencies = [
- "serde",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.3.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
-dependencies = [
- "matchers",
- "nu-ansi-term",
- "once_cell",
- "regex-automata",
- "serde",
- "serde_json",
- "sharded-slab",
- "smallvec",
- "thread_local",
- "tracing",
- "tracing-core",
- "tracing-log",
- "tracing-serde",
 ]
 
 [[package]]
@@ -2999,12 +2757,6 @@ name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
-
-[[package]]
-name = "unarray"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
 
 [[package]]
 name = "unicode-bidi"
@@ -3082,12 +2834,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "valuable"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-
-[[package]]
 name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3098,15 +2844,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "wait-timeout"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "want"

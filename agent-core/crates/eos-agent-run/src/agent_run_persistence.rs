@@ -1,6 +1,5 @@
 //! Agent-run persistence helpers owned by the runner.
 
-use eos_tool::ToolResult;
 use eos_types::{
     AgentRun, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, JsonObject, TaskId,
 };
@@ -29,19 +28,18 @@ pub(crate) async fn finish_agent_run_if_requested(
     store: &dyn AgentRunStore,
     persistence_requested: bool,
     agent_run_id: &AgentRunId,
-    submission_outcome: Option<&ToolResult>,
+    submission_payload: Option<&JsonObject>,
     token_count: Option<i64>,
     error: Option<&str>,
 ) -> Result<(), AgentRunError> {
     if !persistence_requested {
         return Ok(());
     }
-    let submission_payload = submission_outcome.map(tool_result_payload);
     store
         .finish_run(
             agent_run_id,
             None,
-            submission_payload.as_ref(),
+            submission_payload,
             token_count.unwrap_or_default(),
             error,
         )
@@ -100,15 +98,6 @@ pub(crate) fn completion_from_agent_run(
         token_count: Some(run.token_count),
         error: Some(message),
     })
-}
-
-pub(crate) fn tool_result_payload(result: &ToolResult) -> JsonObject {
-    let mut payload = JsonObject::new();
-    payload.insert("output".to_owned(), json!(result.output));
-    payload.insert("is_error".to_owned(), json!(result.is_error));
-    payload.insert("metadata".to_owned(), json!(result.metadata));
-    payload.insert("is_terminal".to_owned(), json!(result.is_terminal));
-    payload
 }
 
 fn cancelled_payload(reason: &str) -> JsonObject {

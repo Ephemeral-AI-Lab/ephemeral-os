@@ -1,4 +1,4 @@
-//! Outbound daemon-payload contracts for the `tool_api` helpers.
+//! Outbound daemon-payload contracts for the tool-dispatch helpers.
 //!
 //! `parse.rs` (response decoding) is well-covered; the **request** side — the
 //! hand-built JSON payload each helper sends, the op it targets, and the timeout

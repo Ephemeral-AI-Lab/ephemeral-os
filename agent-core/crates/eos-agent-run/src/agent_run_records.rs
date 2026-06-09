@@ -1,16 +1,14 @@
 //! Private adapter to engine-owned message records.
 
-use eos_types::{AgentRunMessageRecordKind, WorkflowTaskRole};
+use eos_types::{TaskAgentRunKind, WorkflowTaskRole};
 
 /// Convert the public runner/port record kind into the engine message-record
 /// type.
 #[must_use]
-pub fn to_message_record_kind(
-    kind: &AgentRunMessageRecordKind,
-) -> eos_engine::records::AgentRunRecordKind {
+pub fn to_message_record_kind(kind: &TaskAgentRunKind) -> eos_engine::records::AgentRunRecordKind {
     match kind {
-        AgentRunMessageRecordKind::Root => eos_engine::records::AgentRunRecordKind::Root,
-        AgentRunMessageRecordKind::WorkflowTask {
+        TaskAgentRunKind::Root => eos_engine::records::AgentRunRecordKind::Root,
+        TaskAgentRunKind::WorkflowTask {
             workflow_id,
             iteration_id,
             attempt_id,
@@ -21,17 +19,17 @@ pub fn to_message_record_kind(
             attempt_id: attempt_id.clone(),
             role: to_message_record_workflow_role(*role),
         },
-        AgentRunMessageRecordKind::Subagent {
+        TaskAgentRunKind::Subagent {
             parent_agent_run_id,
         } => eos_engine::records::AgentRunRecordKind::Subagent {
             parent_agent_run_id: parent_agent_run_id.clone(),
         },
-        AgentRunMessageRecordKind::Advisor {
+        TaskAgentRunKind::Advisor {
             parent_agent_run_id,
         } => eos_engine::records::AgentRunRecordKind::Advisor {
             parent_agent_run_id: parent_agent_run_id.clone(),
         },
-        AgentRunMessageRecordKind::Agent => eos_engine::records::AgentRunRecordKind::Agent,
+        TaskAgentRunKind::Agent => eos_engine::records::AgentRunRecordKind::Agent,
         _ => eos_engine::records::AgentRunRecordKind::Agent,
     }
 }

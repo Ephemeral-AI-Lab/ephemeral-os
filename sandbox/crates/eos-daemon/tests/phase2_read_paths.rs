@@ -13,7 +13,7 @@ use eos_overlay as _;
 use eos_plugin as _;
 use eos_protocol::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use eos_runner as _;
-use eos_workspace_modes as _;
+use eos_workspace_runtime as _;
 use serde as _;
 use serde_json::{json, Value};
 use sha2 as _;

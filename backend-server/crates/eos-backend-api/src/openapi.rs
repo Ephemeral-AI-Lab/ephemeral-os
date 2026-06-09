@@ -14,7 +14,7 @@ use eos_backend_types::{
     AgentRunStat, ApiRunStatus, CorrectnessStats, CreateUserRequest, CreateUserRequestResponse,
     EventRecord, PerformanceStats, RunRecord, SandboxView, UserRequestDetail,
 };
-use eos_state::{AgentRun, Task};
+use eos_types::{AgentRun, Task};
 
 /// `GET /openapi.json` — the assembled `OpenAPI` 3.0 document.
 pub(crate) async fn openapi_doc() -> Json<Value> {

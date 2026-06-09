@@ -88,7 +88,7 @@
         <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> (bytes, exists) = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(&amp;path.path).map_err(api_error)?;
         <span class="rs-kw">let</span> manifest = stack.read_active_manifest().map_err(api_error)?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, 0);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, 0);
         timings.insert(
             &quot;api.read.layer_stack_read_s&quot;.to_owned(),
             json!(read_start.elapsed().as_secs_f64()),
@@ -97,7 +97,7 @@
             bytes,
             exists,
             manifest_version: <span class="rs-type">Some</span>(manifest.version),
-            timings: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(timings),
+            timings: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-83">timing_map</a>(timings),
         })
     }
 </code></pre>
@@ -118,7 +118,7 @@
             .transpose()
             .map_err(api_error)?;
         <span class="rs-kw">let</span> occ_start = <span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
             &amp;<span class="rs-self">self</span>.root,
             snapshot_version,
             &amp;[<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> {
@@ -131,7 +131,7 @@
         <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(<span class="rs-self">self</span>.root.clone())
             .and_then(|stack| stack.read_active_manifest())
             .map_err(api_error)?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, result.published_file_count());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, result.published_file_count());
         timings.insert(
             format!(&quot;api.{}.occ_apply_s&quot;, request.kind.verb()),
             json!(occ_start.elapsed().as_secs_f64()),
@@ -139,7 +139,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-changeset-outcome-131">changeset_outcome</a>(
             request.kind,
             &amp;result,
-            <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(timings),
+            <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-83">timing_map</a>(timings),
         ))
     }
 </code></pre>
@@ -508,7 +508,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-isolated-timings-350">isolated_timings</a>(changed_path_count: usize) -&gt; <span class="rs-type">WorkspaceTimings</span> {
     <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>([(
         &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
-        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(changed_path_count)),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-291">usize_to_f64_saturating</a>(changed_path_count)),
     )])
 }
 </code></pre>
@@ -534,7 +534,7 @@
     total_start: <span class="rs-type">Instant</span>,
 ) {
     <span class="rs-kw">let</span> duration_s = total_start.elapsed().as_secs_f64();
-    <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(
+    <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(
         &amp;handle.caller_id,
         json!({
             &quot;tool_name&quot;: tool_name,
@@ -580,17 +580,17 @@
 <span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>};
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerRef</span>, <span class="rs-type">Manifest</span>};
-<span class="rs-kw">use</span> eos_workspace::{
+<span class="rs-kw">use</span> eos_workspace_contract::{
     <span class="rs-type">ChangedPathKinds</span>, <span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceConflict</span>, <span class="rs-type">WorkspaceMode</span>,
     <span class="rs-type">WorkspaceMutationKind</span>, <span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceMutationRequest</span>,
     <span class="rs-type">WorkspaceMutationSink</span>, <span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceReadView</span>, <span class="rs-type">WorkspaceTimings</span>,
 };
 <span class="rs-kw">use</span> serde_json::json;
 
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::occ::{apply_occ_changeset, hash_current, manifest_version_u64};
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response_timings::usize_to_f64_saturating;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response_timings::{resource_timings, timing_map};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::occ::{apply_occ_changeset, hash_current, manifest_version_u64};
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-api-error-29">api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
     <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(&quot;daemon_workspace_error&quot;, error.to_string())
@@ -638,7 +638,7 @@
         <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> (bytes, exists) = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(&amp;path.path).map_err(api_error)?;
         <span class="rs-kw">let</span> manifest = stack.read_active_manifest().map_err(api_error)?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, 0);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, 0);
         timings.insert(
             &quot;api.read.layer_stack_read_s&quot;.to_owned(),
             json!(read_start.elapsed().as_secs_f64()),
@@ -647,7 +647,7 @@
             bytes,
             exists,
             manifest_version: <span class="rs-type">Some</span>(manifest.version),
-            timings: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(timings),
+            timings: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-83">timing_map</a>(timings),
         })
     }
 }
@@ -668,7 +668,7 @@
             .transpose()
             .map_err(api_error)?;
         <span class="rs-kw">let</span> occ_start = <span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
             &amp;<span class="rs-self">self</span>.root,
             snapshot_version,
             &amp;[<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> {
@@ -681,7 +681,7 @@
         <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(<span class="rs-self">self</span>.root.clone())
             .and_then(|stack| stack.read_active_manifest())
             .map_err(api_error)?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, result.published_file_count());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, result.published_file_count());
         timings.insert(
             format!(&quot;api.{}.occ_apply_s&quot;, request.kind.verb()),
             json!(occ_start.elapsed().as_secs_f64()),
@@ -689,7 +689,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-changeset-outcome-131">changeset_outcome</a>(
             request.kind,
             &amp;result,
-            <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(timings),
+            <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-83">timing_map</a>(timings),
         ))
     }
 }
@@ -917,7 +917,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-isolated-timings-350">isolated_timings</a>(changed_path_count: usize) -&gt; <span class="rs-type">WorkspaceTimings</span> {
     <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>([(
         &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
-        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(changed_path_count)),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-291">usize_to_f64_saturating</a>(changed_path_count)),
     )])
 }
 
@@ -930,7 +930,7 @@
     total_start: <span class="rs-type">Instant</span>,
 ) {
     <span class="rs-kw">let</span> duration_s = total_start.elapsed().as_secs_f64();
-    <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(
+    <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(
         &amp;handle.caller_id,
         json!({
             &quot;tool_name&quot;: tool_name,

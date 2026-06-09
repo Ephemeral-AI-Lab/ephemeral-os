@@ -1,4 +1,4 @@
-//! Submission terminal tools.
+//! Terminal submission tools.
 
 use eos_types::JsonObject;
 use eos_types::TaskOutcomeStatus;
@@ -148,7 +148,7 @@ mod planner {
             };
             let submission_kind = plan.disposition.submission_kind_label();
 
-            let ack = self.service.port.apply_plan(plan).await?;
+            let ack = self.service.api.apply_plan(plan).await?;
             Ok(submission_ack_result(
                 ack,
                 "Accepted planner submission.",
@@ -519,17 +519,19 @@ mod root {
             task_store: Arc<FakeTaskStore>,
             request_store: Arc<FakeRequestStore>,
         ) -> SubmitRootOutcome {
-            SubmitRootOutcome::new(RootSubmissionHandle::new(crate::Submission::new(
-                task_store,
-                request_store,
-                Arc::new(NoopAttemptSubmission),
-            )))
+            SubmitRootOutcome::new(RootSubmissionHandle::new(
+                crate::TerminalSubmissionRuntime::new(
+                    task_store,
+                    request_store,
+                    Arc::new(NoopAttemptSubmission),
+                ),
+            ))
         }
 
         struct NoopAttemptSubmission;
 
         #[async_trait::async_trait]
-        impl eos_types::AttemptSubmissionPort for NoopAttemptSubmission {
+        impl eos_types::WorkflowAttemptSubmissionApi for NoopAttemptSubmission {
             async fn apply_plan(
                 &self,
                 _plan: eos_types::PlannerPlan,
@@ -683,7 +685,7 @@ mod generator {
                 outcome: parsed.outcome.clone(),
                 terminal_tool_result: meta_obj(&[("generator_role", json!("generator"))]),
             };
-            let ack = self.service.port.submit_generator(submission).await?;
+            let ack = self.service.api.submit_generator(submission).await?;
             Ok(submission_ack_result(
                 ack,
                 &format!("Accepted generator {}.", parsed.status.as_str()),
@@ -781,7 +783,7 @@ mod reducer {
                 outcome: parsed.outcome.clone(),
                 terminal_tool_result: JsonObject::new(),
             };
-            let ack = self.service.port.apply_reducer(submission).await?;
+            let ack = self.service.api.apply_reducer(submission).await?;
             Ok(submission_ack_result(
                 ack,
                 &format!("Accepted reducer {}.", parsed.status.as_str()),

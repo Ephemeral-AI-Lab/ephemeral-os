@@ -19,9 +19,7 @@ mod run_subagent {
     use async_trait::async_trait;
     use eos_types::JsonObject;
     use eos_types::Message;
-    use eos_types::{
-        AgentName, AgentRunApi, AgentRunError, AgentRunMessageRecordKind, SpawnAgentRequest,
-    };
+    use eos_types::{AgentName, AgentRunApi, AgentRunError, SpawnAgentRequest, TaskAgentRunKind};
     use schemars::{schema_for, JsonSchema};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
@@ -166,7 +164,7 @@ mod run_subagent {
                     workspace_root: ctx.workspace_root.clone(),
                     is_isolated_workspace_mode: ctx.is_isolated_workspace_mode,
                     persist: true,
-                    record_kind: AgentRunMessageRecordKind::Subagent {
+                    task_agent_run_kind: TaskAgentRunKind::Subagent {
                         parent_agent_run_id,
                     },
                 })
@@ -176,7 +174,7 @@ mod run_subagent {
                 Err(err) => return render_launch_error(err),
             };
             self.subagent_sessions
-                .register_subagent(&agent_run_id)
+                .register_subagent_run(&agent_run_id)
                 .await?;
             Ok(launch_result(&agent_run_id, agent_name.as_str()))
         }
@@ -281,7 +279,7 @@ mod cancel_subagent {
             }
             if self
                 .subagent_sessions
-                .cancel_subagent(&parsed.agent_run_id, &parsed.reason)
+                .cancel_subagent_run(&parsed.agent_run_id, &parsed.reason)
                 .await?
             {
                 Ok(render_cancelled(&parsed.agent_run_id, &parsed.reason))

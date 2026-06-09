@@ -7,14 +7,14 @@
 //! bumps a dropped counter — `publish` never `.await`s and never touches `SQLite`. A
 //! dedicated async drainer owns each payload and persists it through
 //! [`ObsEventRepo`], retrying once on a transient failure and otherwise counting a
-//! durable persist loss. The flow mirrors `eos_audit::BufferedJsonlSink` (a bounded
+//! durable persist loss. The flow mirrors `eos_agent_core::BufferedJsonlSink` (a bounded
 //! queue + drainer + an explicit shutdown that flushes accepted events), but the
 //! drainer is a Tokio task because the destination write is async.
 //!
 //! Source mapping: every event published through this sink is agent-core
 //! engine/tool-path observability, so its persisted [`ObsSource`] is `Engine`.
 //! Daemon-pulled rows are `Daemon` and flow through the [`ingestor`](crate::ingestor)
-//! instead. The [`AuditNode`](eos_audit::AuditNode) carries no daemon invocation id,
+//! instead. The [`AuditNode`](eos_agent_core::AuditNode) carries no daemon invocation id,
 //! so the engine-path `sandbox_invocation_id` is always null here — the model-facing
 //! `tool_use_id`/`sandbox_id` come straight from the node.
 
@@ -25,7 +25,7 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use eos_audit::{AuditError, AuditEvent, AuditSink};
+use eos_agent_core::{AuditError, AuditEvent, AuditSink};
 use eos_backend_store::{ObsEventRepo, StoreError};
 use eos_backend_types::{ObsEvent, ObsSource};
 

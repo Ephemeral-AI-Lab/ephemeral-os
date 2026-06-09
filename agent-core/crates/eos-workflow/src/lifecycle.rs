@@ -7,7 +7,7 @@ use eos_types::{
     WorkflowId, WorkflowOutcome,
 };
 
-use crate::attempt::AttemptDeps;
+use crate::attempt::AttemptResources;
 use crate::ids::WorkflowLifecycleConfig;
 use crate::iteration::{
     IterationAttemptCoordinator, IterationClosed, IterationClosedCallback,
@@ -26,7 +26,7 @@ type IterationCoordinatorFuture<'a> = Pin<
 /// Workflow-level lifecycle coordinator.
 #[derive(Clone)]
 pub(crate) struct WorkflowLifecycle {
-    deps: AttemptDeps,
+    deps: AttemptResources,
     iteration_coordinators: Arc<OpenIterationCoordinatorRegistry>,
     config: WorkflowLifecycleConfig,
 }
@@ -43,7 +43,7 @@ impl WorkflowLifecycle {
     /// Create a lifecycle coordinator.
     #[must_use]
     pub(crate) fn new(
-        deps: AttemptDeps,
+        deps: AttemptResources,
         iteration_coordinators: Arc<OpenIterationCoordinatorRegistry>,
     ) -> Self {
         Self {

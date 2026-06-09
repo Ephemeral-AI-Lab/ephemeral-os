@@ -1,13 +1,14 @@
 //! Caller-keyed workspace-run service.
 //!
-//! The run container and lifecycle orchestration live in the `eos-workspace-run`
-//! crate (the `eos-occ`-free composition tier); this module is the daemon half:
+//! The run container and lifecycle orchestration live in the
+//! `eos-workspace-runtime` crate (the `eos-occ`-free composition tier); this
+//! module is the daemon half:
 //! it owns the `WorkspaceRunManager` singleton ([`commands`]), injects the
 //! daemon-resident seams (the OCC publish, resource telemetry, and isolated-audit
 //! sink) via [`host_ports`], and exposes the RPC/op facade plus the per-caller /
 //! whole-sandbox cancel surface ([`cancel`]). A run composes the
-//! `eos-command-session` PTY substrate with the overlay (ephemeral) / namespace
-//! (isolated) state it owns directly; completion publishes the captured upperdir
+//! runtime PTY substrate with the overlay (ephemeral) / namespace (isolated)
+//! state it owns directly; completion publishes the captured upperdir
 //! (ephemeral) or records it for audit (isolated), cancellation discards it, so
 //! "cancel never publishes" stays structural.
 //!

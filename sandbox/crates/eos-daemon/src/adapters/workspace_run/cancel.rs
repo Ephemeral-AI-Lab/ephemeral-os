@@ -13,7 +13,7 @@
 //!   backstop (the assert-no-leases gate + commit live in the cancellation spec,
 //!   not here).
 
-use eos_workspace_modes::isolated::IsolatedError;
+use eos_workspace_runtime::isolated::IsolatedError;
 use serde_json::{json, Value};
 
 use super::isolated;

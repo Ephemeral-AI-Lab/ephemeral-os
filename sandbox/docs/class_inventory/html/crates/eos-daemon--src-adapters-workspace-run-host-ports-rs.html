@@ -71,7 +71,7 @@
         <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(root.to_path_buf())
             .and_then(|stack| stack.read_active_manifest())
             .map_err(workspace_api_error)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, 0)))
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-83">timing_map</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, 0)))
     }
 </code></pre>
 </details></td></tr><tr id="method-finalize-ephemeral-35"><td>method</td><td>finalize_ephemeral</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-finalize-ephemeral-35">finalize_ephemeral</a> (&amp; self , root : &amp; Path , workspace : EphemeralWorkspace , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code><details class="function-source">
@@ -83,35 +83,40 @@
         base_timings: <span class="rs-type">WorkspaceTimings</span>,
         request: <span class="rs-type">FinalizeCommandRequest</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
-        finalize_ephemeral_command(&amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(root), workspace, base_timings, request)
+        finalize_ephemeral_command(
+            &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(root),
+            workspace,
+            base_timings,
+            request,
+        )
     }
 </code></pre>
-</details></td></tr><tr id="method-record-tool-call-45"><td>method</td><td>record_tool_call</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a> (&amp; self , caller_id : &amp; str , audit : Value)</code><details class="function-source">
+</details></td></tr><tr id="method-record-tool-call-50"><td>method</td><td>record_tool_call</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a> (&amp; self , caller_id : &amp; str , audit : Value)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, audit: <span class="rs-type">Value</span>) {
-        <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(caller_id, audit);
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, audit: <span class="rs-type">Value</span>) {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(caller_id, audit);
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-daemon/src/adapters/workspace_run/host_ports.rs:23</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-workspace-api-error-50" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error private fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-daemon/src/adapters/workspace_run/host_ports.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-workspace-api-error-55" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error private fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-daemon/src/adapters/workspace_run/host_ports.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_api_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#item-fn-workspace-api-error-50">workspace_api_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#item-fn-workspace-api-error-55">workspace_api_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#item-fn-workspace-api-error-50">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#item-fn-workspace-api-error-55">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
     <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-daemon/src/adapters/workspace_run/host_ports.rs:50</p>
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/host_ports.rs:55</p>
 </article></div>
 </section></div>
 </main>
@@ -122,7 +127,7 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Daemon implementation of the run-host injected seams.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! These are the three responsibilities the `eos-workspace-run` crate</span>
+<span class="rs-comment">//! These are the three responsibilities the `eos-workspace-runtime` crate</span>
 <span class="rs-comment">//! deliberately does NOT take on (they would pull the `eos-occ` edge or reach</span>
 <span class="rs-comment">//! daemon-global state): publishing through the per-root OCC single writer,</span>
 <span class="rs-comment">//! sampling daemon-process resource telemetry, and recording an isolated</span>
@@ -130,17 +135,17 @@
 
 <span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
 
-<span class="rs-kw">use</span> eos_workspace_modes::ephemeral::{finalize_ephemeral_command, <span class="rs-type">EphemeralWorkspace</span>};
 <span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
-<span class="rs-kw">use</span> eos_workspace::{
+<span class="rs-kw">use</span> eos_workspace_contract::{
     <span class="rs-type">FinalizeCommandRequest</span>, <span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceTimings</span>,
 };
-<span class="rs-kw">use</span> eos_workspace_run::<span class="rs-type">WorkspaceRunHostPorts</span>;
+<span class="rs-kw">use</span> eos_workspace_runtime::ephemeral::{finalize_ephemeral_command, <span class="rs-type">EphemeralWorkspace</span>};
+<span class="rs-kw">use</span> eos_workspace_runtime::<span class="rs-type">WorkspaceRunHostPorts</span>;
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response_timings::{resource_timings, timing_map};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::overlay::<a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::record_tool_call;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response_timings::{resource_timings, timing_map};
 
 <span class="rs-comment">/// Zero-sized: each call resolves its daemon resources (the per-root OCC writer,</span>
 <span class="rs-comment">/// the process-global isolated session) freshly, so there is no captured state.</span>
@@ -151,7 +156,7 @@
         <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(root.to_path_buf())
             .and_then(|stack| stack.read_active_manifest())
             .map_err(workspace_api_error)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, 0)))
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-83">timing_map</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, 0)))
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-finalize-ephemeral-35">finalize_ephemeral</a>(
@@ -161,15 +166,20 @@
         base_timings: <span class="rs-type">WorkspaceTimings</span>,
         request: <span class="rs-type">FinalizeCommandRequest</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
-        finalize_ephemeral_command(&amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(root), workspace, base_timings, request)
+        finalize_ephemeral_command(
+            &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(root),
+            workspace,
+            base_timings,
+            request,
+        )
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, audit: <span class="rs-type">Value</span>) {
-        <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(caller_id, audit);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str, audit: <span class="rs-type">Value</span>) {
+        <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(caller_id, audit);
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#item-fn-workspace-api-error-50">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#item-fn-workspace-api-error-55">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
     <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-38">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
 }
 </code></pre>

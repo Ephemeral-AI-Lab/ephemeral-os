@@ -12,11 +12,11 @@ use axum::http::{Request, StatusCode};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
-use eos_agent_message_records::AgentMessageRecords;
+use eos_agent_run::AgentMessageRecords;
 use eos_backend_runtime::{CancelOutcome, DeleteRejection, SandboxManagerError};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{BackendRunStatus, EventRecord, RunMeta, SandboxState};
-use eos_state::RequestStatus;
+use eos_types::RequestStatus;
 use eos_types::{AgentRunId, RequestId, SandboxId, TaskId, UtcDateTime};
 
 use support::{

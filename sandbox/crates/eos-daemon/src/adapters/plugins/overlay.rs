@@ -12,7 +12,7 @@ use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBind
 use eos_plugin::ServiceMode;
 use eos_protocol::Intent;
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
-use eos_workspace_modes::ephemeral::{
+use eos_workspace_runtime::ephemeral::{
     finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralSnapshot,
     EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
 };

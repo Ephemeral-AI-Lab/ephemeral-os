@@ -53,7 +53,12 @@ impl ObsEventRepo {
         .bind(event.task_id.as_ref().map(TaskId::as_str))
         .bind(event.agent_run_id.as_ref().map(AgentRunId::as_str))
         .bind(event.tool_use_id.as_ref().map(ToolUseId::as_str))
-        .bind(event.sandbox_invocation_id.as_ref().map(InvocationId::as_str))
+        .bind(
+            event
+                .sandbox_invocation_id
+                .as_ref()
+                .map(InvocationId::as_str),
+        )
         .bind(event.sandbox_id.as_ref().map(SandboxId::as_str))
         .bind(event.source.as_str())
         .bind(&event.kind)
@@ -110,7 +115,7 @@ impl ObsEventRepo {
     }
 
     /// Timing and resource summary across all obs events. The caller supplies the
-    /// canonical obs `kind` vocabulary (owned by `eos-backend-audit` / `eos-audit`).
+    /// canonical obs `kind` vocabulary (owned by `eos-backend-audit` / `eos-agent-core`).
     ///
     /// # Errors
     /// [`StoreError`] on a query failure.
@@ -312,19 +317,28 @@ fn row_to_obs_event(row: &SqliteRow) -> Result<ObsEvent, StoreError> {
 fn row_to_correlation(row: &SqliteRow) -> Result<SandboxCallCorrelation, StoreError> {
     let created_at: OffsetDateTime = row.try_get("created_at")?;
     Ok(SandboxCallCorrelation {
-        request_id: id_in("sandbox_call_correlation.request_id", row.try_get("request_id")?)?,
+        request_id: id_in(
+            "sandbox_call_correlation.request_id",
+            row.try_get("request_id")?,
+        )?,
         task_id: id_in("sandbox_call_correlation.task_id", row.try_get("task_id")?)?,
         agent_run_id: id_in(
             "sandbox_call_correlation.agent_run_id",
             row.try_get("agent_run_id")?,
         )?,
-        tool_use_id: id_in("sandbox_call_correlation.tool_use_id", row.try_get("tool_use_id")?)?,
+        tool_use_id: id_in(
+            "sandbox_call_correlation.tool_use_id",
+            row.try_get("tool_use_id")?,
+        )?,
         sandbox_invocation_id: id_in(
             "sandbox_call_correlation.sandbox_invocation_id",
             row.try_get("sandbox_invocation_id")?,
         )?,
         caller_id: CallerId(row.try_get("caller_id")?),
-        sandbox_id: id_in("sandbox_call_correlation.sandbox_id", row.try_get("sandbox_id")?)?,
+        sandbox_id: id_in(
+            "sandbox_call_correlation.sandbox_id",
+            row.try_get("sandbox_id")?,
+        )?,
         created_at: ts_out(created_at),
     })
 }

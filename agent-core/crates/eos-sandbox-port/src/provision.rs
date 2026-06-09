@@ -1,6 +1,6 @@
 //! Request-scoped sandbox provisioning port.
 //!
-//! This is the daemon-agnostic binding contract `eos-runtime` depends on to
+//! This is the daemon-agnostic binding contract `eos-agent-core` depends on to
 //! resolve the sandbox a request runs in. The concrete provisioner
 //! (`RequestSandboxProvisioner`, Docker/daemon-backed) lives in
 //! `eos-sandbox-host`; it implements this trait and maps its host error into the

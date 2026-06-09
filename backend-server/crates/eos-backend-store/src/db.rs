@@ -165,7 +165,10 @@ where
 }
 
 /// Parse a nullable TEXT id column into an optional typed id.
-pub(crate) fn opt_id_in<T>(column: &'static str, raw: Option<String>) -> Result<Option<T>, StoreError>
+pub(crate) fn opt_id_in<T>(
+    column: &'static str,
+    raw: Option<String>,
+) -> Result<Option<T>, StoreError>
 where
     T: TryFrom<String, Error = CoreError>,
 {

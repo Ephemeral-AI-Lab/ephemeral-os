@@ -2,19 +2,24 @@
 
 use std::sync::Arc;
 
+use eos_types::AgentRunApi;
 use tokio::sync::{oneshot, watch};
 
 use super::{
     AgentExecutionMetadataService, AgentLoopBackgroundDependencies, AgentLoopExecutor,
-    AgentLoopHookDependencies, AgentLoopHooks, AgentLoopOutcome, AgentLoopOutcomeKind,
-    AgentLoopToolRegistryFactory, NoopAgentLoopHooks, StartAgentLoopRequest,
+    AgentLoopHookDependencies, AgentLoopHooks, AgentLoopOutcome, AgentLoopToolRegistryFactory,
+    NoopAgentLoopHooks, StartAgentLoopRequest,
 };
 use crate::query::{EventCallback, EventSource, EventSourceFactory};
 
 /// Public non-blocking launcher for agent loops.
 pub trait AgentLoopLauncher: Send + Sync {
     /// Start an agent loop and return immediately with its outcome receiver.
-    fn start_agent_loop(&self, request: StartAgentLoopRequest) -> StartedAgentLoop;
+    fn start_agent_loop(
+        &self,
+        request: StartAgentLoopRequest,
+        agent_run_api: Arc<dyn AgentRunApi>,
+    ) -> StartedAgentLoop;
 }
 
 /// Handle returned after an agent loop has been started.
@@ -164,7 +169,11 @@ impl TokioAgentLoopLauncher {
 }
 
 impl AgentLoopLauncher for TokioAgentLoopLauncher {
-    fn start_agent_loop(&self, request: StartAgentLoopRequest) -> StartedAgentLoop {
+    fn start_agent_loop(
+        &self,
+        request: StartAgentLoopRequest,
+        agent_run_api: Arc<dyn AgentRunApi>,
+    ) -> StartedAgentLoop {
         let (outcome_sender, outcome_receiver) = oneshot::channel();
         let (cancel_handle, cancel_signal) = agent_loop_cancel_pair();
         let loop_executor = AgentLoopExecutor::new(
@@ -176,6 +185,7 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
             self.background_dependencies.clone(),
             self.hook_dependencies.clone(),
             self.event_callback.clone(),
+            agent_run_api,
         );
 
         tokio::spawn(async move {
@@ -187,26 +197,5 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
             outcome_receiver,
             cancel_handle,
         }
-    }
-}
-
-/// Compatibility facade for callers that have not moved to an injected launcher.
-#[must_use]
-pub fn start_agent_loop(_request: StartAgentLoopRequest) -> StartedAgentLoop {
-    let (outcome_sender, outcome_receiver) = oneshot::channel();
-    let (cancel_handle, _cancel_signal) = agent_loop_cancel_pair();
-    tokio::spawn(async move {
-        let _ignored = outcome_sender.send(AgentLoopOutcome {
-            kind: AgentLoopOutcomeKind::LoopFailed {
-                error_summary: "start_agent_loop facade is not wired to runtime composition"
-                    .to_owned(),
-            },
-            final_conversation_messages: Vec::new(),
-            total_token_count: None,
-        });
-    });
-    StartedAgentLoop {
-        outcome_receiver,
-        cancel_handle,
     }
 }

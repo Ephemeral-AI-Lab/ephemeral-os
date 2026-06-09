@@ -10,14 +10,14 @@ use serde_json::json;
 use super::*;
 use crate::support::{root_task, MemoryStores, QueueRunner};
 
-/// A `CancelPort` fake mirroring `EngineCancelPort::cancel_task`'s persisted
+/// A `AgentCoreCancellationApi` fake mirroring `EngineAgentCoreCancellationApi::cancel_task`'s persisted
 /// flip; these store-level tests have no live-run registry.
-struct TestCancelPort {
+struct TestAgentCoreCancellationApi {
     task_store: Arc<dyn TaskStore>,
 }
 
 #[async_trait]
-impl CancelPort for TestCancelPort {
+impl AgentCoreCancellationApi for TestAgentCoreCancellationApi {
     async fn cancel_task(
         &self,
         task_id: &eos_types::TaskId,
@@ -61,7 +61,7 @@ async fn cancel_workflow_cancels_child_state_without_touching_parent() {
     let deps = stores.deps(runner);
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
-    let cancel_port: Arc<dyn CancelPort> = Arc::new(TestCancelPort {
+    let cancel_port: Arc<dyn AgentCoreCancellationApi> = Arc::new(TestAgentCoreCancellationApi {
         task_store: stores.clone(),
     });
     let service = WorkflowService::new(

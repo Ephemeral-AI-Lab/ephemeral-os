@@ -29,7 +29,7 @@
     {
       "name": "eos-isolated-workspace",
       "displayName": "eos-isolated-workspace",
-      "cargoTestName": "eos-isolated-workspace",
+      "cargoTestName": "workspace-runtime-isolated",
       "path": "eos-isolated-workspace/readme.json",
       "page": "eos-isolated-workspace/index.html"
     },
@@ -50,7 +50,7 @@
     {
       "name": "eos-command-session",
       "displayName": "eos-command-session",
-      "cargoTestName": "eos-command-session",
+      "cargoTestName": "workspace-runtime-command-session",
       "path": "eos-command-session/readme.json",
       "page": "eos-command-session/index.html"
     },

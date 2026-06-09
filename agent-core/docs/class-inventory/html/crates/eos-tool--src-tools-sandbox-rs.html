@@ -97,9 +97,9 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-301"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-301"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
 </code></pre>
@@ -110,7 +110,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileInput-285">ReadFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileInput-285">ReadFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -188,9 +188,9 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-434"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-434"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
 </code></pre>
@@ -201,7 +201,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFileInput-423">WriteFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFileInput-423">WriteFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -262,9 +262,9 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-521"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-521"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
 </code></pre>
@@ -275,7 +275,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFileInput-503">EditFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFileInput-503">EditFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -355,9 +355,9 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-620"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-620"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
 </code></pre>
@@ -368,7 +368,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEditInput-607">MultiEditInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEditInput-607">MultiEditInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -448,9 +448,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-715"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-715"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
 </code></pre>
@@ -462,7 +462,7 @@
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
             <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspaceInput-704">EnterIsolatedWorkspaceInput</a> =
-                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>, input) {
+                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>, input) {
                     <span class="rs-type">Ok</span>(v) =&gt; v,
                     <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
                 };
@@ -488,7 +488,7 @@
             };
             <span class="rs-kw">if</span> result.base.success {
                 <span class="rs-self">self</span>.service
-                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">true</span>)
+                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">true</span>)
                     .<span class="rs-kw">await</span>?;
             }
             <a class="symbol-link rs-fn" href="eos-tool--src-tools-sandbox-rs.html#item-fn-render-enter-result-176">render_enter_result</a>(&amp;result)
@@ -505,9 +505,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-821"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-821"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
 </code></pre>
@@ -519,7 +519,7 @@
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
             <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspaceInput-809">ExitIsolatedWorkspaceInput</a> =
-                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>, input) {
+                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>, input) {
                     <span class="rs-type">Ok</span>(v) =&gt; v,
                     <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
                 };
@@ -545,7 +545,7 @@
             };
             <span class="rs-kw">if</span> result.base.success {
                 <span class="rs-self">self</span>.service
-                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">false</span>)
+                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">false</span>)
                     .<span class="rs-kw">await</span>?;
             }
             <a class="symbol-link rs-fn" href="eos-tool--src-tools-sandbox-rs.html#item-fn-render-exit-result-188">render_exit_result</a>(&amp;result)
@@ -783,17 +783,17 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , sandbox_service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a> ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , sandbox_service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(
         registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
         config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
-        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     ) {
         <span class="rs-kw">let</span> enter = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>,
             enter,
@@ -816,17 +816,17 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , sandbox_service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a> ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , sandbox_service : <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(
         registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
         config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
-        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     ) {
         <span class="rs-kw">let</span> exit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>,
             exit,
@@ -849,14 +849,14 @@
     <h3>register</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , sandbox : crate :: tools :: <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a> ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-156">register</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , sandbox : crate :: tools :: <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
-    sandbox: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+    sandbox: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
 ) {
     <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
@@ -866,7 +866,7 @@
     <span class="rs-kw">use</span> schemars::schema_for;
 
     <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>,
         read_file,
@@ -880,7 +880,7 @@
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(read_file::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(sandbox.clone())),
     );
     <span class="rs-kw">let</span> write_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>,
         write_file,
@@ -894,7 +894,7 @@
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(write_file::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(sandbox.clone())),
     );
     <span class="rs-kw">let</span> edit_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>,
         edit_file,
@@ -908,7 +908,7 @@
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(edit_file::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(sandbox.clone())),
     );
     <span class="rs-kw">let</span> multi_edit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>,
         multi_edit,
@@ -934,11 +934,11 @@
     <h3>register_schema</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-422">register_schema</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-421">register_schema</a> (registry : &amp; mut crate :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> , config : &amp; crate :: registry :: <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-422">register_schema</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-421">register_schema</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
 ) {
@@ -948,7 +948,7 @@
     <span class="rs-kw">use</span> schemars::schema_for;
 
     <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>,
         read_file,
@@ -961,7 +961,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileOutput-11">ReadFileOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileOutput-11">ReadFileOutput</a>&quot;),
     );
     <span class="rs-kw">let</span> write_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>,
         write_file,
@@ -974,7 +974,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>&gt;(&quot;<span class="rs-type">WriteFileOutput</span>&quot;),
     );
     <span class="rs-kw">let</span> edit_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>,
         edit_file,
@@ -987,7 +987,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>&gt;(&quot;<span class="rs-type">EditFileOutput</span>&quot;),
     );
     <span class="rs-kw">let</span> multi_edit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>,
         multi_edit,
@@ -1000,7 +1000,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>&gt;(&quot;<span class="rs-type">MultiEditOutput</span>&quot;),
     );
     <span class="rs-kw">let</span> enter = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>,
         enter,
@@ -1012,7 +1012,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
     <span class="rs-kw">let</span> exit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>,
         exit,
@@ -1633,7 +1633,7 @@
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::outputs::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileOutput-11">ReadFileOutput</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{cwd, invalid_input, ok_json, request_base, resolve_path, <span class="rs-type">MAX_READ_FILE_LINES</span>};
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>;
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-sandbox-rs.html#item-fn-default-one-278">default_one</a>() -&gt; u32 {
         1
@@ -1654,11 +1654,11 @@
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a> {
-        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a> {
-        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
     }
@@ -1670,7 +1670,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileInput-285">ReadFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileInput-285">ReadFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -1778,7 +1778,7 @@
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::outputs::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{cwd, failure_status, mutation_result, request_base, resolve_path};
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>;
 
     #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFileInput-423">WriteFileInput</a> {
@@ -1787,11 +1787,11 @@
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a> {
-        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a> {
-        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
     }
@@ -1803,7 +1803,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFileInput-423">WriteFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFileInput-423">WriteFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -1858,7 +1858,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>;
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{default_empty, default_false, edit_output, request_base, resolve_path};
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>;
 
     #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFileInput-503">EditFileInput</a> {
@@ -1874,11 +1874,11 @@
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a> {
-        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a> {
-        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
     }
@@ -1890,7 +1890,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFileInput-503">EditFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFileInput-503">EditFileInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -1953,7 +1953,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>;
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{default_empty, default_false, edit_output, request_base, resolve_path};
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>;
 
     #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEditOp-598">MultiEditOp</a> {
@@ -1973,11 +1973,11 @@
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a> {
-        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a> {
-        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
     }
@@ -1989,7 +1989,7 @@
             input: &amp;<span class="rs-type">JsonObject</span>,
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
-            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEditInput-607">MultiEditInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>, input) {
+            <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEditInput-607">MultiEditInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>, input) {
                 <span class="rs-type">Ok</span>(v) =&gt; v,
                 <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
             };
@@ -2051,7 +2051,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::text_spec;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::parse_input;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-ToolExecutor-32">ToolExecutor</a>;
@@ -2068,11 +2068,11 @@
     }
 
     <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a> {
-        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
     }
@@ -2085,7 +2085,7 @@
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
             <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspaceInput-704">EnterIsolatedWorkspaceInput</a> =
-                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>, input) {
+                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>, input) {
                     <span class="rs-type">Ok</span>(v) =&gt; v,
                     <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
                 };
@@ -2111,7 +2111,7 @@
             };
             <span class="rs-kw">if</span> result.base.success {
                 <span class="rs-self">self</span>.service
-                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">true</span>)
+                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">true</span>)
                     .<span class="rs-kw">await</span>?;
             }
             <a class="symbol-link rs-fn" href="eos-tool--src-tools-sandbox-rs.html#item-fn-render-enter-result-176">render_enter_result</a>(&amp;result)
@@ -2121,10 +2121,10 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(
         registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
         config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
-        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     ) {
         <span class="rs-kw">let</span> enter = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>,
             enter,
@@ -2152,7 +2152,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::text_spec;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::parse_input;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-ToolExecutor-32">ToolExecutor</a>;
@@ -2174,11 +2174,11 @@
     }
 
     <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a> {
-        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> { service }
         }
     }
@@ -2191,7 +2191,7 @@
             ctx: &amp;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ExecutionMetadata-140">ExecutionMetadata</a>,
         ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
             <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspaceInput-809">ExitIsolatedWorkspaceInput</a> =
-                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-261">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>, input) {
+                <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-parse-input-264">parse_input</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>, input) {
                     <span class="rs-type">Ok</span>(v) =&gt; v,
                     <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
                 };
@@ -2217,7 +2217,7 @@
             };
             <span class="rs-kw">if</span> result.base.success {
                 <span class="rs-self">self</span>.service
-                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">false</span>)
+                    .<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a>(agent_run_id, <span class="rs-kw">false</span>)
                     .<span class="rs-kw">await</span>?;
             }
             <a class="symbol-link rs-fn" href="eos-tool--src-tools-sandbox-rs.html#item-fn-render-exit-result-188">render_exit_result</a>(&amp;result)
@@ -2227,10 +2227,10 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(
         registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
         config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
-        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+        sandbox_service: <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
     ) {
         <span class="rs-kw">let</span> exit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>);
-        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+        <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
             registry,
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>,
             exit,
@@ -2248,7 +2248,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
-    sandbox: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-40">SandboxHandle</a>,
+    sandbox: <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>,
 ) {
     <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
 
@@ -2258,7 +2258,7 @@
     <span class="rs-kw">use</span> schemars::schema_for;
 
     <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>,
         read_file,
@@ -2272,7 +2272,7 @@
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(read_file::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(sandbox.clone())),
     );
     <span class="rs-kw">let</span> write_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>,
         write_file,
@@ -2286,7 +2286,7 @@
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(write_file::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(sandbox.clone())),
     );
     <span class="rs-kw">let</span> edit_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>,
         edit_file,
@@ -2300,7 +2300,7 @@
         <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(edit_file::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(sandbox.clone())),
     );
     <span class="rs-kw">let</span> multi_edit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-161">register_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-tool-164">register_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>,
         multi_edit,
@@ -2317,7 +2317,7 @@
     exit_isolated_workspace::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, sandbox);
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-422">register_schema</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-421">register_schema</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
 ) {
@@ -2327,7 +2327,7 @@
     <span class="rs-kw">use</span> schemars::schema_for;
 
     <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFile-296">ReadFile</a>,
         read_file,
@@ -2340,7 +2340,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileOutput-11">ReadFileOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ReadFileOutput-11">ReadFileOutput</a>&quot;),
     );
     <span class="rs-kw">let</span> write_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-WriteFile-429">WriteFile</a>,
         write_file,
@@ -2353,7 +2353,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>&gt;(&quot;<span class="rs-type">WriteFileOutput</span>&quot;),
     );
     <span class="rs-kw">let</span> edit_file = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EditFile-516">EditFile</a>,
         edit_file,
@@ -2366,7 +2366,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>&gt;(&quot;<span class="rs-type">EditFileOutput</span>&quot;),
     );
     <span class="rs-kw">let</span> multi_edit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MultiEdit-615">MultiEdit</a>,
         multi_edit,
@@ -2379,7 +2379,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-MutationOutput-21">MutationOutput</a>&gt;(&quot;<span class="rs-type">MultiEditOutput</span>&quot;),
     );
     <span class="rs-kw">let</span> enter = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-EnterIsolatedWorkspace-710">EnterIsolatedWorkspace</a>,
         enter,
@@ -2391,7 +2391,7 @@
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
     <span class="rs-kw">let</span> exit = config.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-get-168">get</a>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>);
-    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-176">register_schema_tool</a>(
+    <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-register-schema-tool-179">register_schema_tool</a>(
         registry,
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-sandbox-rs.html#item-struct-ExitIsolatedWorkspace-816">ExitIsolatedWorkspace</a>,
         exit,

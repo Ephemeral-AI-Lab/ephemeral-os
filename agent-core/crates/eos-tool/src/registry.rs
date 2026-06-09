@@ -6,8 +6,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_sandbox_port::SandboxTransport;
 use eos_types::{
-    AgentRunApi, AgentRunId, AttemptSubmissionPort, CommandSessionId, RequestStore, SandboxId,
-    StartedWorkflow, TaskStore, WorkflowApi,
+    AgentRunApi, AgentRunId, CommandSessionId, RequestStore, SandboxId, StartedWorkflow, TaskStore,
+    WorkflowApi, WorkflowAttemptSubmissionApi,
 };
 
 use crate::{SkillRegistry, ToolError};
@@ -862,23 +862,23 @@ pub use tool_registry::ToolRegistry;
 
 /// Store and attempt-submission resources used by terminal tools.
 #[derive(Clone)]
-pub struct Submission {
+pub struct TerminalSubmissionRuntime {
     inner: Arc<SubmissionInner>,
 }
 
 struct SubmissionInner {
     task_store: Arc<dyn TaskStore>,
     request_store: Arc<dyn RequestStore>,
-    attempt: Arc<dyn AttemptSubmissionPort>,
+    attempt: Arc<dyn WorkflowAttemptSubmissionApi>,
 }
 
-impl Submission {
+impl TerminalSubmissionRuntime {
     /// Build terminal-submission resources.
     #[must_use]
     pub fn new(
         task_store: Arc<dyn TaskStore>,
         request_store: Arc<dyn RequestStore>,
-        attempt: Arc<dyn AttemptSubmissionPort>,
+        attempt: Arc<dyn WorkflowAttemptSubmissionApi>,
     ) -> Self {
         Self {
             inner: Arc::new(SubmissionInner {
@@ -897,37 +897,38 @@ impl Submission {
         Ok(self.inner.request_store.clone())
     }
 
-    pub(crate) fn attempt(&self) -> Result<Arc<dyn AttemptSubmissionPort>, ToolError> {
+    pub(crate) fn attempt(&self) -> Result<Arc<dyn WorkflowAttemptSubmissionApi>, ToolError> {
         Ok(self.inner.attempt.clone())
     }
 }
 
-impl fmt::Debug for Submission {
+impl fmt::Debug for TerminalSubmissionRuntime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Submission").finish_non_exhaustive()
+        f.debug_struct("TerminalSubmissionRuntime")
+            .finish_non_exhaustive()
     }
 }
 
 /// Object-safe background-session registration used by background-producing tools.
 #[async_trait]
-pub trait BackgroundSessions: Send + Sync {
+pub trait BackgroundSessionControl: Send + Sync {
     /// Register a detached subagent run.
-    async fn register_subagent(&self, run: AgentRunId) -> Result<(), ToolError>;
+    async fn register_subagent_run(&self, run: AgentRunId) -> Result<(), ToolError>;
     /// Register a background command session.
-    async fn register_command(
+    async fn register_command_session(
         &self,
         id: CommandSessionId,
         sandbox: SandboxId,
     ) -> Result<(), ToolError>;
     /// Register a delegated workflow.
-    async fn register_workflow(&self, started: StartedWorkflow) -> Result<(), ToolError>;
+    async fn register_workflow_session(&self, started: StartedWorkflow) -> Result<(), ToolError>;
     /// Cancel one detached subagent run.
-    async fn cancel_subagent(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError>;
+    async fn cancel_subagent_run(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError>;
 }
 
 /// Run-local isolated-workspace mode update.
 #[async_trait]
-pub trait WorkspaceMode: Send + Sync {
+pub trait IsolatedWorkspaceModeControl: Send + Sync {
     /// Update whether the calling agent currently has an isolated workspace.
     async fn set_isolated_workspace_mode(
         &self,
@@ -948,11 +949,11 @@ pub struct ToolRuntime {
     /// Skill registry.
     pub skills: Arc<SkillRegistry>,
     /// Terminal submission resources.
-    pub submission: Submission,
+    pub submission: TerminalSubmissionRuntime,
     /// Background session registration/cancellation.
-    pub background: Arc<dyn BackgroundSessions>,
+    pub background: Arc<dyn BackgroundSessionControl>,
     /// Isolated-workspace mode update.
-    pub workspace_mode: Arc<dyn WorkspaceMode>,
+    pub workspace_mode: Arc<dyn IsolatedWorkspaceModeControl>,
 }
 
 impl fmt::Debug for ToolRuntime {

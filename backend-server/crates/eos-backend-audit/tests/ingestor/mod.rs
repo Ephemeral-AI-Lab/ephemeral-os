@@ -36,7 +36,13 @@ fn epoch_reset_with_zero_boundary_records_no_loss() {
     // pull reports no ring loss must NOT fabricate a `lost_before_seq = Some(0)`
     // boundary (M3): `has_counted_loss` (`seq > 0`) and `audit_sandboxes_with_loss`
     // must agree that this row carries no loss.
-    let cursor = next_cursor(&SandboxId::new_v4(), 2, true, Some(&prior(0)), &batch(None, None));
+    let cursor = next_cursor(
+        &SandboxId::new_v4(),
+        2,
+        true,
+        Some(&prior(0)),
+        &batch(None, None),
+    );
     assert_eq!(cursor.lost_before_seq, None);
     assert_eq!(cursor.last_seq, 0);
     assert_eq!(cursor.boot_epoch_id, 2);
@@ -46,7 +52,13 @@ fn epoch_reset_with_zero_boundary_records_no_loss() {
 fn epoch_reset_after_real_progress_records_prior_high_water() {
     // A reboot after genuine progress still records the prior high-water as lost and
     // resets `last_seq` into the new epoch's space.
-    let cursor = next_cursor(&SandboxId::new_v4(), 2, true, Some(&prior(7)), &batch(Some(3), None));
+    let cursor = next_cursor(
+        &SandboxId::new_v4(),
+        2,
+        true,
+        Some(&prior(7)),
+        &batch(Some(3), None),
+    );
     assert_eq!(cursor.lost_before_seq, Some(7));
     assert_eq!(cursor.last_seq, 3);
 }

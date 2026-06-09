@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{JsonObject, ToolUseId};
 
+/// The default completion token cap used when an agent profile does not provide
+/// a narrower model request limit.
+pub const DEFAULT_MAX_TOKENS: u32 = 32768;
+
 /// The role of a conversation message.
 ///
 /// There is deliberately no `System` variant: the system prompt is the model

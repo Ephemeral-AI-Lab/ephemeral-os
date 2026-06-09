@@ -1,6 +1,6 @@
 //! Workflow lifecycle and per-attempt runtime tunables.
 //!
-//! `eos-runtime` reads this section at the composition root. The workflow depth
+//! `eos-agent-core` reads this section at the composition root. The workflow depth
 //! bound feeds the planner deferral hook; the nested attempt section feeds
 //! `eos-workflow`'s per-attempt launch dependencies as plain values.
 

@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use tokio::task::JoinSet;
 
 use crate::attempt::plan_dag::{dag_resolution, ready_pending_plan_ids, DagResolution};
-use crate::attempt::{AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptDeps};
+use crate::attempt::{AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptResources};
 use crate::util::json_object;
 use crate::{Result, WorkflowError};
 
@@ -137,7 +137,7 @@ impl AttemptStageAdvancer {
 
     async fn build_launch(
         &self,
-        deps: &AttemptDeps,
+        deps: &AttemptResources,
         attempt: &Attempt,
         task: &Task,
     ) -> Result<AgentLaunch> {

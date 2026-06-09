@@ -115,7 +115,7 @@
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-service-instance-id-122"><td>method</td><td>service_instance_id</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a> (&amp; self) -&gt; String</code><p class="docstring">Deterministic, content-addressed reuse key for a service instance.<br>Despite the `_id` suffix this is NOT a per-spawn unique handle: it is a<br>stable digest of the identity dimensions that define instance sharing<br>(layer-stack root, plugin, service, profile digest), so two payloads with<br>the same dimensions intentionally resolve to — and reuse — one instance.<br>Used as the manifest key in status and refresh health checks.</p><details class="function-source">
+</details></td></tr><tr id="method-service-instance-id-122"><td>method</td><td>service_instance_id</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-138">service_instance_id</a> (&amp; self) -&gt; String</code><p class="docstring">Deterministic, content-addressed reuse key for a service instance.<br>Despite the `_id` suffix this is NOT a per-spawn unique handle: it is a<br>stable digest of the identity dimensions that define instance sharing<br>(layer-stack root, plugin, service, profile digest), so two payloads with<br>the same dimensions intentionally resolve to — and reuse — one instance.<br>Used as the manifest key in status and refresh health checks.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Deterministic, content-addressed reuse key for a service instance.</span>
     <span class="rs-comment">///</span>
@@ -125,7 +125,7 @@
     <span class="rs-comment">/// the same dimensions intentionally resolve to — and reuse — one instance.</span>
     <span class="rs-comment">/// Used as the manifest key in status and refresh health checks.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-138">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         format!(
             &quot;{}:{}:{}:{}&quot;,
             <span class="rs-self">self</span>.layer_stack_root, <span class="rs-self">self</span>.plugin_id, <span class="rs-self">self</span>.service_id, <span class="rs-self">self</span>.service_profile_digest
@@ -553,7 +553,7 @@
     <span class="rs-comment">/// the same dimensions intentionally resolve to — and reuse — one instance.</span>
     <span class="rs-comment">/// Used as the manifest key in status and refresh health checks.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-138">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         format!(
             &quot;{}:{}:{}:{}&quot;,
             <span class="rs-self">self</span>.layer_stack_root, <span class="rs-self">self</span>.plugin_id, <span class="rs-self">self</span>.service_id, <span class="rs-self">self</span>.service_profile_digest

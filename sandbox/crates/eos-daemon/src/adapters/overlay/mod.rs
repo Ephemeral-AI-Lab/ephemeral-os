@@ -11,7 +11,7 @@ use std::process::{Command, Stdio};
 use eos_overlay::overlay_writable_root;
 use eos_protocol::LayerChange;
 use eos_runner::{RunRequest, RunResult};
-use eos_workspace_modes::ephemeral::{
+use eos_workspace_runtime::ephemeral::{
     EphemeralDirAllocator, EphemeralRunDirs, EphemeralSnapshot, EphemeralWorkspaceError,
     InvocationId, PathChange, PublishOutcome, WorkspacePublisherPort, WorkspaceRoot,
 };
@@ -28,7 +28,7 @@ pub(crate) use convert::{
 };
 use convert::{manifest_from_snapshot, overlay_daemon_error, publish_outcome_from_changeset};
 
-pub(crate) use eos_workspace_modes::ephemeral::RunDirCleanup;
+pub(crate) use eos_workspace_runtime::ephemeral::RunDirCleanup;
 
 pub(crate) struct DaemonPublisherPort<'a> {
     root: &'a Path,

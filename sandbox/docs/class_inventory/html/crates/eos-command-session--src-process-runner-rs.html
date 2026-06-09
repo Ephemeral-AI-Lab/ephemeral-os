@@ -599,7 +599,10 @@
             runner.as_ref(),
             <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>),
         );
-        assert_eq!((cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()), (&quot;cancelled&quot;, 130));
+        assert_eq!(
+            (cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;cancelled&quot;, 130)
+        );
 
         <span class="rs-comment">// A deadline timeout is distinct: timed_out/124, so the parked completion</span>
         <span class="rs-comment">// tells the agent the command timed out rather than was cancelled.</span>
@@ -608,7 +611,10 @@
             runner.as_ref(),
             <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>),
         );
-        assert_eq!((timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()), (&quot;timed_out&quot;, 124));
+        assert_eq!(
+            (timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;timed_out&quot;, 124)
+        );
     }
 </code></pre>
 </details>
@@ -1029,7 +1035,10 @@
             runner.as_ref(),
             <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>),
         );
-        assert_eq!((cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()), (&quot;cancelled&quot;, 130));
+        assert_eq!(
+            (cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), cancelled.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;cancelled&quot;, 130)
+        );
 
         <span class="rs-comment">// A deadline timeout is distinct: timed_out/124, so the parked completion</span>
         <span class="rs-comment">// tells the agent the command timed out rather than was cancelled.</span>
@@ -1038,7 +1047,10 @@
             runner.as_ref(),
             <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>),
         );
-        assert_eq!((timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()), (&quot;timed_out&quot;, 124));
+        assert_eq!(
+            (timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-status-109">status</a>(), timed_out.<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;timed_out&quot;, 124)
+        );
     }
 }
 </code></pre>

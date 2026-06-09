@@ -79,7 +79,7 @@
         <span class="rs-type">Ok</span>(root) =&gt; <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(root),
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
     };
-    <span class="rs-kw">let</span> active_command_sessions = workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-310">active_command_sessions_for_caller</a>(&amp;caller_id);
+    <span class="rs-kw">let</span> active_command_sessions = workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-309">active_command_sessions_for_caller</a>(&amp;caller_id);
     <span class="rs-kw">if</span> active_command_sessions &gt; 0 {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-errors-rs.html#item-fn-error-json-58">error_json</a>(
             &quot;active_background_work&quot;,
@@ -372,7 +372,7 @@
         .session
         .list_open_callers()
         .into_iter()
-        .filter(|caller| workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-310">active_command_sessions_for_caller</a>(caller) &gt; 0)
+        .filter(|caller| workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-309">active_command_sessions_for_caller</a>(caller) &gt; 0)
         .collect::&lt;<span class="rs-type">HashSet</span>&lt;_&gt;&gt;();
     state.session.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ttl-sweep-226">ttl_sweep</a>(&amp;active_callers)
 }
@@ -386,17 +386,17 @@
     <h3>record_tool_call</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a> (caller_id : &amp; str , payload : Value)</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a> (caller_id : &amp; str , payload : Value)</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(caller_id: &amp;str, payload: <span class="rs-type">Value</span>) {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(caller_id: &amp;str, payload: <span class="rs-type">Value</span>) {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(state) = guard.as_mut() {
         state
             .session
-            .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(&amp;<span class="rs-type">CallerId</span>(caller_id.to_owned()), payload);
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(&amp;<span class="rs-type">CallerId</span>(caller_id.to_owned()), payload);
     }
 }
 </code></pre>
@@ -453,9 +453,9 @@
 #[cfg(test)]
 <span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">OnceLock</span>, <span class="rs-type">PoisonError</span>};
 
-<span class="rs-kw">use</span> eos_workspace_modes::isolated::{<span class="rs-type">CallerId</span>, <span class="rs-type">IsolatedError</span>};
+<span class="rs-kw">use</span> eos_workspace_runtime::isolated::{<span class="rs-type">CallerId</span>, <span class="rs-type">IsolatedError</span>};
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_workspace_run::<span class="rs-type">CommandHandle</span>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_workspace_runtime::<span class="rs-type">CommandHandle</span>;
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::workspace_run;
@@ -467,10 +467,10 @@
 };
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> runtime::command_handle_from;
-<span class="rs-kw">use</span> state::{ensure_state, lock_state_cell, reset_test_manager_file, with_state};
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> state::configure_isolated_workspace;
 #[cfg(test)]
 <span class="rs-kw">use</span> state::default_isolated_workspace_config;
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> state::configure_isolated_workspace;
+<span class="rs-kw">use</span> state::{ensure_state, lock_state_cell, reset_test_manager_file, with_state};
 
 <span class="rs-kw">const</span> <span class="rs-type">TEST_HARNESS_ENV</span>: &amp;str = &quot;<span class="rs-type">EOS_ISOLATED_WORKSPACE_TEST_HARNESS</span>&quot;;
 
@@ -489,7 +489,7 @@
         <span class="rs-type">Ok</span>(root) =&gt; <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(root),
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
     };
-    <span class="rs-kw">let</span> active_command_sessions = workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-310">active_command_sessions_for_caller</a>(&amp;caller_id);
+    <span class="rs-kw">let</span> active_command_sessions = workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-309">active_command_sessions_for_caller</a>(&amp;caller_id);
     <span class="rs-kw">if</span> active_command_sessions &gt; 0 {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-errors-rs.html#item-fn-error-json-58">error_json</a>(
             &quot;active_background_work&quot;,
@@ -669,18 +669,18 @@
         .session
         .list_open_callers()
         .into_iter()
-        .filter(|caller| workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-310">active_command_sessions_for_caller</a>(caller) &gt; 0)
+        .filter(|caller| workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-active-command-sessions-for-caller-309">active_command_sessions_for_caller</a>(caller) &gt; 0)
         .collect::&lt;<span class="rs-type">HashSet</span>&lt;_&gt;&gt;();
     state.session.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ttl-sweep-226">ttl_sweep</a>(&amp;active_callers)
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(caller_id: &amp;str, payload: <span class="rs-type">Value</span>) {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(caller_id: &amp;str, payload: <span class="rs-type">Value</span>) {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-state-rs.html#item-fn-lock-state-cell-155">lock_state_cell</a>();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(state) = guard.as_mut() {
         state
             .session
-            .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-45">record_tool_call</a>(&amp;<span class="rs-type">CallerId</span>(caller_id.to_owned()), payload);
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-host-ports-rs.html#method-record-tool-call-50">record_tool_call</a>(&amp;<span class="rs-type">CallerId</span>(caller_id.to_owned()), payload);
     }
 }
 

@@ -267,9 +267,9 @@
         <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(items) =&gt; items
             .iter()
             .map(|item| {
-                item.as_str().map(str::to_owned).ok_or_else(|| {
-                    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;paths must be strings&quot;.to_owned())
-                })
+                item.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;paths must be strings&quot;.to_owned()))
             })
             .collect(),
         _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(
@@ -460,9 +460,9 @@
         <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(items) =&gt; items
             .iter()
             .map(|item| {
-                item.as_str().map(str::to_owned).ok_or_else(|| {
-                    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;paths must be strings&quot;.to_owned())
-                })
+                item.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;paths must be strings&quot;.to_owned()))
             })
             .collect(),
         _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(

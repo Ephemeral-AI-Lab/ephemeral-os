@@ -3,14 +3,14 @@
 use std::path::PathBuf;
 
 use eos_protocol::models::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_workspace::{
+use eos_workspace_contract::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     WorkspaceApiError, WorkspaceConflict, WorkspaceFileOps, WorkspaceMode, WriteFileOutcome,
     WriteFileRequest,
 };
-use eos_workspace_modes::ephemeral::EphemeralWorkspaceOps;
+use eos_workspace_runtime::ephemeral::EphemeralWorkspaceOps;
 #[cfg(target_os = "linux")]
-use eos_workspace_modes::isolated::IsolatedWorkspaceOps;
+use eos_workspace_runtime::isolated::IsolatedWorkspaceOps;
 use serde_json::{json, Value};
 
 use crate::adapters::workspace::EphemeralFilePorts;
@@ -189,7 +189,7 @@ struct GuardedWireResponse {
     changed_paths: Vec<String>,
     changed_path_kinds: std::collections::BTreeMap<String, String>,
     mutation_source: String,
-    timings: eos_workspace::WorkspaceTimings,
+    timings: eos_workspace_contract::WorkspaceTimings,
     applied_edits: Option<i64>,
 }
 

@@ -247,8 +247,8 @@
 <span class="rs-comment">//! request file, and the setns stdin payload. The verb-specific `args`</span>
 <span class="rs-comment">//! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim</span>
 <span class="rs-comment">//! to the in-namespace tool primitive); the typed per-verb args/results are the</span>
-<span class="rs-comment">//! daemon's concern (decoded into `eos-workspace` / `eos-command-session` types),</span>
-<span class="rs-comment">//! not modeled here.</span>
+<span class="rs-comment">//! daemon's concern (decoded into `eos-workspace-contract` /</span>
+<span class="rs-comment">//! `eos-workspace-runtime` types), not modeled here.</span>
 
 <span class="rs-kw">use</span> std::os::unix::io::<span class="rs-type">RawFd</span>;
 <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;

@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-types · src/models.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-types File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">agent-core</a>
+<section class="summary">
+  <div><b>34</b><span>modules</span></div>
+  <div><b>166</b><span>items</span></div>
+  <div><b>239</b><span>fields</span></div>
+  <div><b>144</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-types.html"><span>agent.rs</span><small>6/5</small></a></li><li><a class="file-link" href="eos-types--src-config-rs.html"><span>config.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-types--src-contracts-rs.html"><span>contracts.rs</span><small>22/0</small></a></li><li><a class="file-link" href="eos-types--src-error-rs.html"><span>error.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-types--src-frontmatter-rs.html"><span>frontmatter.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-types--src-ids-rs.html"><span>ids.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-types--src-json-rs.html"><span>json.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-types--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-types--src-llm-rs.html"><span>llm.rs</span><small>4/4</small></a></li><li><a class="file-link active" href="eos-types--src-models-rs.html"><span>models.rs</span><small>2/5</small></a></li><li><span class="folder">state</span><ul class="file-tree"><li><span class="folder">engine</span><ul class="file-tree"><li><a class="file-link" href="eos-types--src-state-engine-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-state-engine-rs.html"><span>engine.rs</span><small>0/0</small></a></li><li><span class="folder">model_registry</span><ul class="file-tree"><li><a class="file-link" href="eos-types--src-state-model-registry-model-rs.html"><span>model.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-state-model-registry-rs.html"><span>model_registry.rs</span><small>0/0</small></a></li><li><span class="folder">request_task</span><ul class="file-tree"><li><a class="file-link" href="eos-types--src-state-request-task-paging-rs.html"><span>paging.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-types--src-state-request-task-request-rs.html"><span>request.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-types--src-state-request-task-task-rs.html"><span>task.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-state-request-task-rs.html"><span>request_task.rs</span><small>0/0</small></a></li><li><span class="folder">tools</span><ul class="file-tree"><li><a class="file-link" href="eos-types--src-state-tools-background-rs.html"><span>background.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-types--src-state-tools-submissions-rs.html"><span>submissions.rs</span><small>5/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-state-tools-rs.html"><span>tools.rs</span><small>0/0</small></a></li><li><span class="folder">workflow</span><ul class="file-tree"><li><a class="file-link" href="eos-types--src-state-workflow-attempt-rs.html"><span>attempt.rs</span><small>6/0</small></a></li><li><a class="file-link" href="eos-types--src-state-workflow-iteration-rs.html"><span>iteration.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-types--src-state-workflow-outcomes-rs.html"><span>outcomes.rs</span><small>3/2</small></a></li><li><a class="file-link" href="eos-types--src-state-workflow-plan-rs.html"><span>plan.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-types--src-state-workflow-workflow-rs.html"><span>workflow.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-state-workflow-rs.html"><span>workflow.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-state-rs.html"><span>state.rs</span><small>0/0</small></a></li><li><span class="folder">stores</span><ul class="file-tree"><li><a class="file-link" href="eos-types--src-stores-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-types--src-stores-model-registry-rs.html"><span>model_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-types--src-stores-request-task-rs.html"><span>request_task.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-types--src-stores-workflow-rs.html"><span>workflow.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-types--src-stores-rs.html"><span>stores.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-types--src-time-rs.html"><span>time.rs</span><small>4/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="models crates/eos-types/src/models.rs ModelsConfig impl ModelsConfig ModelRegistrationConfig impl ModelRegistrationConfig defaults_are_empty parses_registrations active_only_config_is_valid rejects_blank_and_duplicate_keys validate_at_uses_nested_field_prefix">
+  <div class="module-head">
+    <div>
+      <h2>src/models.rs</h2>
+      <p class="path">module <code>models</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>2 impls</span>
+      <span>5 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ModelsConfig-15" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ModelsConfig pub pub struct ModelsConfig crates/eos-types/src/models.rs active Option &lt; String &gt; registrations Vec &lt; ModelRegistrationConfig &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ModelsConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a></code>
+  <p class="docstring">Model-registry seed configuration.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>registrations</td><td><code>Vec &lt; <a class="symbol-link" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-active-key-30"><td>method</td><td>active_key</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a> (&amp; self) -&gt; Option &lt; &amp; str &gt;</code><p class="docstring">Borrow the trimmed active key when configured.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Borrow the trimmed active key when configured.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.active
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    }
+</code></pre>
+</details></td></tr><tr id="method-validate-39"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-validate-39">validate</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a> &gt;</code><p class="docstring">Enforce config-shape constraints.<br># Errors<br>Returns [`ConfigError`] when the active key is blank, a registration key is<br>blank, or registration keys are duplicated.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enforce config-shape constraints.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError`] when the active key is blank, a registration key is</span>
+    <span class="rs-comment">/// blank, or registration keys are duplicated.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a>(&quot;models&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-validate-at-48"><td>method</td><td>validate_at</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a> (&amp; self , field_prefix : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a> &gt;</code><p class="docstring">Enforce config-shape constraints using a caller-supplied field prefix.<br># Errors<br>Returns [`ConfigError`] when the active key is blank, a registration key is<br>blank, or registration keys are duplicated.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enforce config-shape constraints using a caller-supplied field prefix.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError`] when the active key is blank, a registration key is</span>
+    <span class="rs-comment">/// blank, or registration keys are duplicated.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a>(&amp;<span class="rs-self">self</span>, field_prefix: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>
+            .active
+            .as_deref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> {
+                field: format!(&quot;{field_prefix}.active&quot;),
+            });
+        }
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> keys = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-39">new</a>();
+        <span class="rs-kw">for</span> (idx, registration) <span class="rs-kw">in</span> <span class="rs-self">self</span>.registrations.iter().enumerate() {
+            <span class="rs-kw">let</span> field = format!(&quot;{field_prefix}.registrations[{idx}].key&quot;);
+            <span class="rs-kw">let</span> key = registration.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>();
+            <span class="rs-kw">if</span> key.is_empty() {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field });
+            }
+            <span class="rs-kw">if</span> !keys.<a class="symbol-link rs-fn" href="eos-types--src-stores-workflow-rs.html#method-insert-16">insert</a>(key.to_owned()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                    field,
+                    detail: &quot;must be unique&quot;.to_owned(),
+                });
+            }
+        }
+
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-active-registration-82"><td>method</td><td>active_registration</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-active-registration-82">active_registration</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a> &gt;</code><p class="docstring">Return the active registration, synthesizing one from `active` when the<br>active key is not explicitly listed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return the active registration, synthesizing one from `active` when the</span>
+    <span class="rs-comment">/// active key is not explicitly listed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-registration-82">active_registration</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a>&gt; {
+        <span class="rs-kw">let</span> active_key = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>()?;
+        <span class="rs-self">self</span>.registrations
+            .iter()
+            .find(|registration| registration.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>() == active_key)
+            .cloned()
+            .or_else(|| {
+                <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a> {
+                    key: active_key.to_owned(),
+                    label: <span class="rs-type">None</span>,
+                    class_path: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-39">new</a>(),
+                    kwargs: <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-39">new</a>(),
+                })
+            })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-types/src/models.rs:15</p>
+</article><article id="item-struct-ModelRegistrationConfig-102" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ModelRegistrationConfig pub pub struct ModelRegistrationConfig crates/eos-types/src/models.rs key String label Option &lt; String &gt; class_path String kwargs Map &lt; String , Value &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ModelRegistrationConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a></code>
+  <p class="docstring">One model registration row.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>key</td><td><code>String</code></td></tr><tr><td>pub</td><td>label</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>class_path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kwargs</td><td><code>Map &lt; String , Value &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-key-121"><td>method</td><td>key</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-key-121">key</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the trimmed model key.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Borrow the trimmed model key.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-self">self</span>.key.trim()
+    }
+</code></pre>
+</details></td></tr><tr id="method-label-127"><td>method</td><td>label</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-label-127">label</a> (&amp; self) -&gt; String</code><p class="docstring">Return the label, defaulting to the trimmed model key.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return the label, defaulting to the trimmed model key.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-label-127">label</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.label
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>())
+            .to_owned()
+    }
+</code></pre>
+</details></td></tr><tr id="method-class-path-138"><td>method</td><td>class_path</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-models-rs.html#method-class-path-138">class_path</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the trimmed migration-only class path.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Borrow the trimmed migration-only class path.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-class-path-138">class_path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-self">self</span>.class_path.trim()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-types/src/models.rs:102</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-defaults-are-empty-153" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn defaults_are_empty private fn defaults_are_empty () crates/eos-types/src/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>defaults_are_empty</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-models-rs.html#item-fn-defaults-are-empty-153">defaults_are_empty</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-defaults-are-empty-153">defaults_are_empty</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-default-25">default</a>();
+
+        assert_eq!(cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(), <span class="rs-type">None</span>);
+        assert!(cfg.registrations.is_empty());
+        cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap();
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-types/src/models.rs:153</p>
+</article><article id="item-fn-parses-registrations-162" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_registrations private fn parses_registrations () crates/eos-types/src/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parses_registrations</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-models-rs.html#item-fn-parses-registrations-162">parses_registrations</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-parses-registrations-162">parses_registrations</a>() {
+        <span class="rs-kw">let</span> cfg: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+active: claude-sonnet-4-6
+registrations:
+  - key: claude-sonnet-4-6
+    label: <span class="rs-type">Claude</span> <span class="rs-type">Sonnet</span>
+    class_path: legacy.<span class="rs-type">Claude</span>
+    kwargs:
+      effort: high
+&quot;#,
+        )
+        .unwrap();
+
+        assert_eq!(cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(), <span class="rs-type">Some</span>(&quot;claude-sonnet-4-6&quot;));
+        assert_eq!(cfg.registrations[0].<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>(), &quot;claude-sonnet-4-6&quot;);
+        assert_eq!(cfg.registrations[0].<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-label-127">label</a>(), &quot;<span class="rs-type">Claude</span> <span class="rs-type">Sonnet</span>&quot;);
+        assert_eq!(cfg.registrations[0].<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-class-path-138">class_path</a>(), &quot;legacy.<span class="rs-type">Claude</span>&quot;);
+        assert_eq!(cfg.registrations[0].kwargs[&quot;effort&quot;], json!(&quot;high&quot;));
+        cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap();
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-types/src/models.rs:162</p>
+</article><article id="item-fn-active-only-config-is-valid-185" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn active_only_config_is_valid private fn active_only_config_is_valid () crates/eos-types/src/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>active_only_config_is_valid</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-models-rs.html#item-fn-active-only-config-is-valid-185">active_only_config_is_valid</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-active-only-config-is-valid-185">active_only_config_is_valid</a>() {
+        <span class="rs-kw">let</span> cfg: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(&quot;active: claude-sonnet-4-6\n&quot;).unwrap();
+
+        assert_eq!(cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(), <span class="rs-type">Some</span>(&quot;claude-sonnet-4-6&quot;));
+        cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap();
+        assert_eq!(
+            cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-registration-82">active_registration</a>().unwrap().<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>(),
+            &quot;claude-sonnet-4-6&quot;
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-types/src/models.rs:185</p>
+</article><article id="item-fn-rejects-blank-and-duplicate-keys-197" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_blank_and_duplicate_keys private fn rejects_blank_and_duplicate_keys () crates/eos-types/src/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejects_blank_and_duplicate_keys</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-models-rs.html#item-fn-rejects-blank-and-duplicate-keys-197">rejects_blank_and_duplicate_keys</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-rejects-blank-and-duplicate-keys-197">rejects_blank_and_duplicate_keys</a>() {
+        <span class="rs-kw">let</span> blank_active: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(&quot;active: &#x27;  &#x27;\n&quot;).unwrap();
+        assert!(matches!(
+            blank_active.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field } <span class="rs-kw">if</span> field == &quot;models.active&quot;
+        ));
+
+        <span class="rs-kw">let</span> blank_key: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+registrations:
+  - key: &#x27;&#x27;
+&quot;#,
+        )
+        .unwrap();
+        assert!(matches!(
+            blank_key.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field } <span class="rs-kw">if</span> field == &quot;models.registrations[0].key&quot;
+        ));
+
+        <span class="rs-kw">let</span> duplicate: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+registrations:
+  - key: one
+  - key: one
+&quot;#,
+        )
+        .unwrap();
+        assert!(matches!(
+            duplicate.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">OutOfRange</span> { field, .. } <span class="rs-kw">if</span> field == &quot;models.registrations[1].key&quot;
+        ));
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-types/src/models.rs:197</p>
+</article><article id="item-fn-validate-at-uses-nested-field-prefix-231" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_at_uses_nested_field_prefix private fn validate_at_uses_nested_field_prefix () crates/eos-types/src/models.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>validate_at_uses_nested_field_prefix</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-models-rs.html#item-fn-validate-at-uses-nested-field-prefix-231">validate_at_uses_nested_field_prefix</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-validate-at-uses-nested-field-prefix-231">validate_at_uses_nested_field_prefix</a>() {
+        <span class="rs-kw">let</span> cfg: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+registrations:
+  - key: &#x27;&#x27;
+&quot;#,
+        )
+        .unwrap();
+
+        assert!(matches!(
+            cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a>(&quot;providers.codex_coding_plan.models&quot;)
+                .unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field }
+                <span class="rs-kw">if</span> field == &quot;providers.codex_coding_plan.models.registrations[0].key&quot;
+        ));
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-types/src/models.rs:231</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-types/src/models.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Provider-scoped model registry seed configuration.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Provider configs embed this shape under `providers.&lt;provider&gt;.models`.</span>
+<span class="rs-comment">//! `eos-agent-core` reads the active provider's model section at the composition</span>
+<span class="rs-comment">//! root, asks `eos-db` to seed the persisted model registry for compatibility,</span>
+<span class="rs-comment">//! and configures the selected LLM client with the active model defaults.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeSet</span>;
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::{<span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>;
+
+<span class="rs-comment">/// Model-registry seed configuration.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> {
+    <span class="rs-comment">/// Active model key. Runtime synthesizes this row when it is not present in</span>
+    <span class="rs-comment">/// `registrations`, so simple configs can set only this field.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> active: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Configured model registration rows.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> registrations: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> {
+    <span class="rs-comment">/// Borrow the trimmed active key when configured.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.active
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    }
+
+    <span class="rs-comment">/// Enforce config-shape constraints.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError`] when the active key is blank, a registration key is</span>
+    <span class="rs-comment">/// blank, or registration keys are duplicated.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a>(&quot;models&quot;)
+    }
+
+    <span class="rs-comment">/// Enforce config-shape constraints using a caller-supplied field prefix.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError`] when the active key is blank, a registration key is</span>
+    <span class="rs-comment">/// blank, or registration keys are duplicated.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a>(&amp;<span class="rs-self">self</span>, field_prefix: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>
+            .active
+            .as_deref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> {
+                field: format!(&quot;{field_prefix}.active&quot;),
+            });
+        }
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> keys = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-39">new</a>();
+        <span class="rs-kw">for</span> (idx, registration) <span class="rs-kw">in</span> <span class="rs-self">self</span>.registrations.iter().enumerate() {
+            <span class="rs-kw">let</span> field = format!(&quot;{field_prefix}.registrations[{idx}].key&quot;);
+            <span class="rs-kw">let</span> key = registration.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>();
+            <span class="rs-kw">if</span> key.is_empty() {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field });
+            }
+            <span class="rs-kw">if</span> !keys.<a class="symbol-link rs-fn" href="eos-types--src-stores-workflow-rs.html#method-insert-16">insert</a>(key.to_owned()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                    field,
+                    detail: &quot;must be unique&quot;.to_owned(),
+                });
+            }
+        }
+
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Return the active registration, synthesizing one from `active` when the</span>
+    <span class="rs-comment">/// active key is not explicitly listed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-registration-82">active_registration</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a>&gt; {
+        <span class="rs-kw">let</span> active_key = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>()?;
+        <span class="rs-self">self</span>.registrations
+            .iter()
+            .find(|registration| registration.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>() == active_key)
+            .cloned()
+            .or_else(|| {
+                <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a> {
+                    key: active_key.to_owned(),
+                    label: <span class="rs-type">None</span>,
+                    class_path: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-39">new</a>(),
+                    kwargs: <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-39">new</a>(),
+                })
+            })
+    }
+}
+
+<span class="rs-comment">/// One model registration row.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a> {
+    <span class="rs-comment">/// Persisted model key. This is the provider model id sent on `LlmRequest`.</span>
+    <span class="rs-kw">pub</span> key: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Optional human-readable label. Defaults to `key` when empty or absent.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> label: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Migration-only class path retained for parity metadata.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> class_path: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Opaque provider/model kwargs stored with the registration.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> kwargs: <span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a> {
+    <span class="rs-comment">/// Borrow the trimmed model key.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-self">self</span>.key.trim()
+    }
+
+    <span class="rs-comment">/// Return the label, defaulting to the trimmed model key.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-label-127">label</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.label
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>())
+            .to_owned()
+    }
+
+    <span class="rs-comment">/// Borrow the trimmed migration-only class path.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-class-path-138">class_path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-self">self</span>.class_path.trim()
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-defaults-are-empty-153">defaults_are_empty</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-default-25">default</a>();
+
+        assert_eq!(cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(), <span class="rs-type">None</span>);
+        assert!(cfg.registrations.is_empty());
+        cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap();
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-parses-registrations-162">parses_registrations</a>() {
+        <span class="rs-kw">let</span> cfg: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+active: claude-sonnet-4-6
+registrations:
+  - key: claude-sonnet-4-6
+    label: <span class="rs-type">Claude</span> <span class="rs-type">Sonnet</span>
+    class_path: legacy.<span class="rs-type">Claude</span>
+    kwargs:
+      effort: high
+&quot;#,
+        )
+        .unwrap();
+
+        assert_eq!(cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(), <span class="rs-type">Some</span>(&quot;claude-sonnet-4-6&quot;));
+        assert_eq!(cfg.registrations[0].<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>(), &quot;claude-sonnet-4-6&quot;);
+        assert_eq!(cfg.registrations[0].<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-label-127">label</a>(), &quot;<span class="rs-type">Claude</span> <span class="rs-type">Sonnet</span>&quot;);
+        assert_eq!(cfg.registrations[0].<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-class-path-138">class_path</a>(), &quot;legacy.<span class="rs-type">Claude</span>&quot;);
+        assert_eq!(cfg.registrations[0].kwargs[&quot;effort&quot;], json!(&quot;high&quot;));
+        cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap();
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-active-only-config-is-valid-185">active_only_config_is_valid</a>() {
+        <span class="rs-kw">let</span> cfg: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(&quot;active: claude-sonnet-4-6\n&quot;).unwrap();
+
+        assert_eq!(cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-key-30">active_key</a>(), <span class="rs-type">Some</span>(&quot;claude-sonnet-4-6&quot;));
+        cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap();
+        assert_eq!(
+            cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-active-registration-82">active_registration</a>().unwrap().<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-key-121">key</a>(),
+            &quot;claude-sonnet-4-6&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-rejects-blank-and-duplicate-keys-197">rejects_blank_and_duplicate_keys</a>() {
+        <span class="rs-kw">let</span> blank_active: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(&quot;active: &#x27;  &#x27;\n&quot;).unwrap();
+        assert!(matches!(
+            blank_active.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field } <span class="rs-kw">if</span> field == &quot;models.active&quot;
+        ));
+
+        <span class="rs-kw">let</span> blank_key: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+registrations:
+  - key: &#x27;&#x27;
+&quot;#,
+        )
+        .unwrap();
+        assert!(matches!(
+            blank_key.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field } <span class="rs-kw">if</span> field == &quot;models.registrations[0].key&quot;
+        ));
+
+        <span class="rs-kw">let</span> duplicate: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+registrations:
+  - key: one
+  - key: one
+&quot;#,
+        )
+        .unwrap();
+        assert!(matches!(
+            duplicate.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-39">validate</a>().unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">OutOfRange</span> { field, .. } <span class="rs-kw">if</span> field == &quot;models.registrations[1].key&quot;
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#item-fn-validate-at-uses-nested-field-prefix-231">validate_at_uses_nested_field_prefix</a>() {
+        <span class="rs-kw">let</span> cfg: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a> = serde_yaml::from_str(
+            r#&quot;
+registrations:
+  - key: &#x27;&#x27;
+&quot;#,
+        )
+        .unwrap();
+
+        assert!(matches!(
+            cfg.<a class="symbol-link rs-fn" href="eos-types--src-models-rs.html#method-validate-at-48">validate_at</a>(&quot;providers.codex_coding_plan.models&quot;)
+                .unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-types--src-config-rs.html#item-enum-ConfigError-4">ConfigError</a>::<span class="rs-type">MissingValue</span> { field }
+                <span class="rs-kw">if</span> field == &quot;providers.codex_coding_plan.models.registrations[0].key&quot;
+        ));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 //! Structured isolated-workspace error helpers.
 
-use eos_workspace_modes::isolated::IsolatedError;
+use eos_workspace_runtime::isolated::IsolatedError;
 use serde_json::{json, Value};
 
 pub(super) fn require_arg(args: &Value, key: &str) -> Result<String, Value> {

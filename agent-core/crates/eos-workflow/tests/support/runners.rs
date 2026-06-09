@@ -14,7 +14,7 @@ use eos_types::{
     GeneratorSubmission, JsonObject, PlanDisposition, PlanNodeId, ReducerSubmission, RequestId,
     Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,
 };
-use eos_types::{AttemptSubmissionPort, PlanReducer, PlanTask, PlannerPlan};
+use eos_types::{PlanReducer, PlanTask, PlannerPlan, WorkflowAttemptSubmissionApi};
 use parking_lot::Mutex;
 use serde_json::json;
 use tokio::sync::Notify;
@@ -29,7 +29,7 @@ fn node(id: &str) -> PlanNodeId {
 }
 
 /// A scripted terminal submission a test double records via the recording
-/// [`AttemptSubmissionPort`] during `run()` — the same tool->record path the real
+/// [`WorkflowAttemptSubmissionApi`] during `run()` — the same tool->record path the real
 /// submit tools take (Path A-recording). Replaces the old `AgentTerminal` enum
 /// the runner used to return for the loop to apply.
 #[derive(Debug, Clone)]
@@ -47,7 +47,9 @@ pub(crate) enum ScriptedSubmission {
 
 /// Build the recording port over an attempt registry (the test analogue of the
 /// production `AttemptSubmissionAdapter` wiring at the composition root).
-fn recording_port(registry: &Arc<AttemptOrchestratorRegistry>) -> Arc<dyn AttemptSubmissionPort> {
+fn recording_port(
+    registry: &Arc<AttemptOrchestratorRegistry>,
+) -> Arc<dyn WorkflowAttemptSubmissionApi> {
     Arc::new(AttemptSubmissionAdapter::new(registry.clone()))
 }
 
@@ -60,7 +62,7 @@ fn recording_port(registry: &Arc<AttemptOrchestratorRegistry>) -> Arc<dyn Attemp
 pub(crate) struct QueueRunner {
     submissions: Mutex<VecDeque<ScriptedSubmission>>,
     launches: Mutex<Vec<AgentLaunch>>,
-    port: OnceLock<Arc<dyn AttemptSubmissionPort>>,
+    port: OnceLock<Arc<dyn WorkflowAttemptSubmissionApi>>,
     notify: Notify,
 }
 
@@ -107,10 +109,12 @@ impl AgentRunner for QueueRunner {
 /// a recording variant resolves the bound port and fails loud if a test forgot
 /// to `bind()` after `deps()`.
 async fn record_scripted(
-    port: &OnceLock<Arc<dyn AttemptSubmissionPort>>,
+    port: &OnceLock<Arc<dyn WorkflowAttemptSubmissionApi>>,
     submission: ScriptedSubmission,
 ) -> Result<AgentRunReport> {
-    fn bound(port: &OnceLock<Arc<dyn AttemptSubmissionPort>>) -> &Arc<dyn AttemptSubmissionPort> {
+    fn bound(
+        port: &OnceLock<Arc<dyn WorkflowAttemptSubmissionApi>>,
+    ) -> &Arc<dyn WorkflowAttemptSubmissionApi> {
         port.get()
             .expect("recording port bound (call bind() after deps())")
     }
@@ -151,7 +155,7 @@ pub(crate) struct ScriptedRunner {
     launches: Mutex<Vec<AgentLaunch>>,
     in_flight: AtomicUsize,
     max_in_flight: AtomicUsize,
-    port: OnceLock<Arc<dyn AttemptSubmissionPort>>,
+    port: OnceLock<Arc<dyn WorkflowAttemptSubmissionApi>>,
 }
 
 impl std::fmt::Debug for ScriptedRunner {

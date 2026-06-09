@@ -92,7 +92,10 @@ async fn reaper_writes_cancelled_with_reason_and_releases_once() {
     let binding = manager.acquire(&request, None).await.unwrap();
 
     reaper
-        .reap(&request, Disposition::Cancelled(Some("user asked".to_owned())))
+        .reap(
+            &request,
+            Disposition::Cancelled(Some("user asked".to_owned())),
+        )
         .await;
 
     assert!(manager.view(&binding.sandbox_id).is_none());

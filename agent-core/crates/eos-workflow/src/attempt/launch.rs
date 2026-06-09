@@ -221,7 +221,7 @@ impl AgentLaunch {
 
 /// Per-attempt dependency bundle.
 #[derive(Clone)]
-pub struct AttemptDeps {
+pub struct AttemptResources {
     /// Workflow store.
     pub(crate) workflow_store: Arc<dyn WorkflowStore>,
     /// Iteration store.
@@ -246,9 +246,9 @@ pub struct AttemptDeps {
     pub(crate) max_concurrent_task_runs: usize,
 }
 
-impl std::fmt::Debug for AttemptDeps {
+impl std::fmt::Debug for AttemptResources {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AttemptDeps")
+        f.debug_struct("AttemptResources")
             .field("max_concurrent_task_runs", &self.max_concurrent_task_runs)
             .field(
                 "has_iteration_coordinators",
@@ -259,7 +259,7 @@ impl std::fmt::Debug for AttemptDeps {
     }
 }
 
-impl AttemptDeps {
+impl AttemptResources {
     /// Create deps with sane workflow defaults.
     #[must_use]
     pub fn new(
@@ -344,7 +344,7 @@ impl AttemptDeps {
 /// Role-parametrized launch factory.
 #[derive(Debug, Clone)]
 pub struct AgentLaunchFactory {
-    deps: AttemptDeps,
+    deps: AttemptResources,
 }
 
 struct LaunchBuildArgs<'a> {
@@ -362,7 +362,7 @@ struct LaunchBuildArgs<'a> {
 impl AgentLaunchFactory {
     /// Create a launch factory.
     #[must_use]
-    pub fn new(deps: AttemptDeps) -> Self {
+    pub fn new(deps: AttemptResources) -> Self {
         Self { deps }
     }
 

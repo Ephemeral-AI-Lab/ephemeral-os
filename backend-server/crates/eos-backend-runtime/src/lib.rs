@@ -3,7 +3,7 @@
 //! [`SandboxManager`] (Phase 4) is the in-memory owner of sandbox setup, binding,
 //! refcounting, delete policy, and teardown; it composes the Docker/daemon host
 //! (`eos-sandbox-host`) behind one shared registry and implements the
-//! [`SandboxGateway`](eos_sandbox_port::SandboxGateway) port so `eos-runtime` can
+//! [`SandboxGateway`](eos_sandbox_port::SandboxGateway) port so `eos-agent-core` can
 //! be wired against it without importing the host.
 //!
 //! Phase 5 adds the run orchestration that consumes the manager:

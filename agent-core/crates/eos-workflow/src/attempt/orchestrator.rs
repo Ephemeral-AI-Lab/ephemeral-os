@@ -10,7 +10,7 @@ use eos_types::{
 
 use crate::attempt::plan_dag::{validate_plan_agents, validate_plan_shape};
 use crate::attempt::{
-    AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptDeps, AttemptStageAdvancer,
+    AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptResources, AttemptStageAdvancer,
 };
 use crate::ids::{generator_task_id, planner_task_id, reducer_task_id};
 use crate::util::json_object;
@@ -38,7 +38,7 @@ struct PlanRowSpec {
 /// State machine for one Attempt.
 pub struct AttemptOrchestrator {
     attempt_id: AttemptId,
-    deps: AttemptDeps,
+    deps: AttemptResources,
 }
 
 impl std::fmt::Debug for AttemptOrchestrator {
@@ -52,7 +52,7 @@ impl std::fmt::Debug for AttemptOrchestrator {
 impl AttemptOrchestrator {
     /// Create an orchestrator for `attempt`.
     #[must_use]
-    pub fn new(attempt: &Attempt, deps: AttemptDeps) -> Arc<Self> {
+    pub fn new(attempt: &Attempt, deps: AttemptResources) -> Arc<Self> {
         Arc::new(Self {
             attempt_id: attempt.id.clone(),
             deps,
@@ -633,7 +633,7 @@ impl AttemptOrchestrator {
         Ok(())
     }
 
-    pub(crate) fn deps(&self) -> &AttemptDeps {
+    pub(crate) fn deps(&self) -> &AttemptResources {
         &self.deps
     }
 

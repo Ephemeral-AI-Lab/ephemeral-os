@@ -1,0 +1,41 @@
+[package]
+name = "eos-workspace-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-config.workspace = true
+eos-workspace-contract.workspace = true
+eos-layerstack.workspace = true
+eos-overlay.workspace = true
+eos-protocol.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+nix = { workspace = true, features = ["process", "signal"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { workspace = true, features = ["pty", "event"] }
+futures-util.workspace = true
+libc.workspace = true
+netlink-sys.workspace = true
+rtnetlink.workspace = true
+tokio.workspace = true
+
+[[test]]
+name = "command_session_output"
+path = "tests/command_session/output.rs"
+
+[[test]]
+name = "isolated_network_netfilter"
+path = "tests/isolated/network_netfilter.rs"
+
+[[test]]
+name = "isolated_session"
+path = "tests/isolated/session.rs"
+
+[lints]
+workspace = true

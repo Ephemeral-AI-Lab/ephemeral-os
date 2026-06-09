@@ -229,6 +229,12 @@ async fn launch_resolves_failed_when_sandbox_acquisition_fails() {
         "the host run must never be invoked when sandbox acquisition fails"
     );
     // A failed acquire registers no sandbox ref and tears nothing down.
-    assert!(h.manager.list().is_empty(), "failed acquire tracks no sandbox");
-    assert!(h.teardown.destroyed.lock().is_empty(), "nothing to tear down");
+    assert!(
+        h.manager.list().is_empty(),
+        "failed acquire tracks no sandbox"
+    );
+    assert!(
+        h.teardown.destroyed.lock().is_empty(),
+        "nothing to tear down"
+    );
 }

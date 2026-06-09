@@ -62,7 +62,7 @@ pub enum DaemonError {
 
     /// The isolated-workspace lifecycle failed.
     #[error(transparent)]
-    Isolated(#[from] eos_workspace_modes::isolated::IsolatedError),
+    Isolated(#[from] eos_workspace_runtime::isolated::IsolatedError),
 }
 
 impl DaemonError {

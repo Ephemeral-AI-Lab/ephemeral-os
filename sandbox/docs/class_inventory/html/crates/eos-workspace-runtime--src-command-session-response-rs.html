@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace-runtime · src/command_session/response.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-runtime File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>47</b><span>modules</span></div>
+  <div><b>293</b><span>items</span></div>
+  <div><b>236</b><span>fields</span></div>
+  <div><b>178</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html"><span>runner.rs</span><small>6/9</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link active" href="eos-workspace-runtime--src-command-session-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li><li><span class="folder">ephemeral</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-capture-rs.html"><span>capture.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-command-rs.html"><span>command.rs</span><small>4/20</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-audit-rs.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-command-rs.html"><span>command.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">run</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-run-command-handle-rs.html"><span>command_handle.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-manager-rs.html"><span>manager.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-registry-rs.html"><span>registry.rs</span><small>6/5</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="command_session::response crates/eos-workspace-runtime/src/command_session/response.rs CommandResponse impl CommandResponse CommandSessionCompletion CollectCompletedResponse">
+  <div class="module-head">
+    <div>
+      <h2>src/command_session/response.rs</h2>
+      <p class="path">module <code>command_session::response</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>1 impls</span>
+      <span>0 fns</span>
+      <span>6 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommandResponse-8" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandResponse pub pub struct CommandResponse crates/eos-workspace-runtime/src/command_session/response.rs status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; workspace_mode Option &lt; WorkspaceMode &gt; metadata Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandResponse</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>workspace_mode</td><td><code>Option &lt; WorkspaceMode &gt;</code></td></tr><tr><td>pub</td><td>metadata</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-workspace-outcome-63"><td>constructor</td><td>from_workspace_outcome</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#method-from-workspace-outcome-63">from_workspace_outcome</a> (outcome : WorkspaceCommandOutcome) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-from-workspace-outcome-63">from_workspace_outcome</a>(outcome: <span class="rs-type">WorkspaceCommandOutcome</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: outcome.status,
+            exit_code: outcome.exit_code,
+            stdout: outcome.stdout,
+            stderr: outcome.stderr,
+            command_session_id: outcome.command_session_id,
+            workspace_mode: <span class="rs-type">Some</span>(outcome.mode),
+            metadata: json!({
+                &quot;success&quot;: outcome.success,
+                &quot;changed_paths&quot;: outcome.changed_paths,
+                &quot;changed_path_kinds&quot;: outcome.changed_path_kinds,
+                &quot;mutation_source&quot;: outcome.mutation_source,
+                &quot;conflict&quot;: outcome.conflict,
+                &quot;conflict_reason&quot;: outcome.conflict_reason,
+                &quot;timings&quot;: outcome.timings,
+                &quot;metadata&quot;: outcome.metadata,
+            }),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-last-lines-85"><td>method</td><td>with_last_lines</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#method-with-last-lines-85">with_last_lines</a> (mut self , last_n_lines : usize) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-with-last-lines-85">with_last_lines</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.stdout = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-output-rs.html#item-fn-tail-lines-1">tail_lines</a>(&amp;<span class="rs-self">self</span>.stdout, last_n_lines);
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-to-wire-value-91"><td>method</td><td>to_wire_value</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#method-to-wire-value-91">to_wire_value</a> (&amp; self) -&gt; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-to-wire-value-91">to_wire_value</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = json!({
+            &quot;status&quot;: <span class="rs-self">self</span>.status,
+            &quot;exit_code&quot;: <span class="rs-self">self</span>.exit_code,
+            &quot;output&quot;: {
+                &quot;stdout&quot;: <span class="rs-self">self</span>.stdout,
+                &quot;stderr&quot;: <span class="rs-self">self</span>.stderr,
+            },
+        });
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(command_session_id) = <span class="rs-self">self</span>.command_session_id.as_ref() {
+            response[&quot;command_session_id&quot;] = json!(command_session_id);
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(mode) = <span class="rs-self">self</span>.workspace_mode <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> response;
+        };
+        <span class="rs-kw">let</span> mode = mode.as_str();
+        response[&quot;success&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;success&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!(<span class="rs-self">self</span>.status == &quot;ok&quot;));
+        response[&quot;workspace&quot;] = json!(mode);
+        response[&quot;workspace_mode&quot;] = json!(mode);
+        response[&quot;stdout&quot;] = json!(<span class="rs-self">self</span>.stdout);
+        response[&quot;stderr&quot;] = json!(<span class="rs-self">self</span>.stderr);
+        response[&quot;conflict&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;conflict&quot;)
+            .cloned()
+            .unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
+        response[&quot;conflict_reason&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;conflict_reason&quot;)
+            .cloned()
+            .unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
+        response[&quot;changed_paths&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;changed_paths&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        response[&quot;changed_path_kinds&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;changed_path_kinds&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        response[&quot;mutation_source&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;mutation_source&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!(&quot;&quot;));
+        response[&quot;error&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Null</span>;
+        response[&quot;timings&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;timings&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(metadata) = <span class="rs-self">self</span>.metadata.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;metadata&quot;).and_then(<span class="rs-type">Value</span>::as_object) {
+            <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> metadata {
+                response[key] = value.clone();
+            }
+        }
+        response
+    }
+</code></pre>
+</details></td></tr><tr id="method-running-24"><td>associated-fn</td><td>running</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#method-running-24">running</a> (command_session_id : String , stdout : String) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-running-24">running</a>(command_session_id: <span class="rs-type">String</span>, stdout: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: &quot;running&quot;.to_owned(),
+            exit_code: <span class="rs-type">None</span>,
+            stdout,
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(command_session_id),
+            workspace_mode: <span class="rs-type">None</span>,
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancelled-37"><td>associated-fn</td><td>cancelled</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#method-cancelled-37">cancelled</a> (stdout : String) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-cancelled-37">cancelled</a>(stdout: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: &quot;cancelled&quot;.to_owned(),
+            exit_code: <span class="rs-type">None</span>,
+            stdout,
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            command_session_id: <span class="rs-type">None</span>,
+            workspace_mode: <span class="rs-type">None</span>,
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-error-50"><td>associated-fn</td><td>error</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#method-error-50">error</a> (stderr : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-error-50">error</a>(stderr: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: &quot;error&quot;.to_owned(),
+            exit_code: <span class="rs-type">None</span>,
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            stderr: stderr.into(),
+            command_session_id: <span class="rs-type">None</span>,
+            workspace_mode: <span class="rs-type">None</span>,
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/response.rs:8</p>
+</article><article id="item-struct-CommandSessionCompletion-157" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionCompletion pub pub struct CommandSessionCompletion crates/eos-workspace-runtime/src/command_session/response.rs command_session_id String caller_id String command String result CommandResponse ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandSessionCompletion</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a></code>
+  <p class="docstring">A settled command session parked for the agent-core heartbeat to drain. The<br>daemon's workspace-run registry owns the completion queue; this is the shared<br>DTO it stores and the wire layer serializes.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>result</td><td><code><a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/response.rs:157</p>
+</article><article id="item-struct-CollectCompletedResponse-168" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CollectCompletedResponse pub pub struct CollectCompletedResponse crates/eos-workspace-runtime/src/command_session/response.rs success bool completions Vec &lt; CommandSessionCompletion &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CollectCompletedResponse</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CollectCompletedResponse-168">CollectCompletedResponse</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>completions</td><td><code>Vec &lt; <a class="symbol-link" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/response.rs:168</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-runtime/src/command_session/response.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> eos_workspace_contract::{<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceMode</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::output::tail_lines;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> {
+    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> stdout: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> stderr: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> command_session_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> workspace_mode: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkspaceMode</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> metadata: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-running-24">running</a>(command_session_id: <span class="rs-type">String</span>, stdout: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: &quot;running&quot;.to_owned(),
+            exit_code: <span class="rs-type">None</span>,
+            stdout,
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            command_session_id: <span class="rs-type">Some</span>(command_session_id),
+            workspace_mode: <span class="rs-type">None</span>,
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-cancelled-37">cancelled</a>(stdout: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: &quot;cancelled&quot;.to_owned(),
+            exit_code: <span class="rs-type">None</span>,
+            stdout,
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            command_session_id: <span class="rs-type">None</span>,
+            workspace_mode: <span class="rs-type">None</span>,
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-error-50">error</a>(stderr: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: &quot;error&quot;.to_owned(),
+            exit_code: <span class="rs-type">None</span>,
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(),
+            stderr: stderr.into(),
+            command_session_id: <span class="rs-type">None</span>,
+            workspace_mode: <span class="rs-type">None</span>,
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-from-workspace-outcome-63">from_workspace_outcome</a>(outcome: <span class="rs-type">WorkspaceCommandOutcome</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: outcome.status,
+            exit_code: outcome.exit_code,
+            stdout: outcome.stdout,
+            stderr: outcome.stderr,
+            command_session_id: outcome.command_session_id,
+            workspace_mode: <span class="rs-type">Some</span>(outcome.mode),
+            metadata: json!({
+                &quot;success&quot;: outcome.success,
+                &quot;changed_paths&quot;: outcome.changed_paths,
+                &quot;changed_path_kinds&quot;: outcome.changed_path_kinds,
+                &quot;mutation_source&quot;: outcome.mutation_source,
+                &quot;conflict&quot;: outcome.conflict,
+                &quot;conflict_reason&quot;: outcome.conflict_reason,
+                &quot;timings&quot;: outcome.timings,
+                &quot;metadata&quot;: outcome.metadata,
+            }),
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-with-last-lines-85">with_last_lines</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.stdout = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-output-rs.html#item-fn-tail-lines-1">tail_lines</a>(&amp;<span class="rs-self">self</span>.stdout, last_n_lines);
+        <span class="rs-self">self</span>
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-response-rs.html#method-to-wire-value-91">to_wire_value</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = json!({
+            &quot;status&quot;: <span class="rs-self">self</span>.status,
+            &quot;exit_code&quot;: <span class="rs-self">self</span>.exit_code,
+            &quot;output&quot;: {
+                &quot;stdout&quot;: <span class="rs-self">self</span>.stdout,
+                &quot;stderr&quot;: <span class="rs-self">self</span>.stderr,
+            },
+        });
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(command_session_id) = <span class="rs-self">self</span>.command_session_id.as_ref() {
+            response[&quot;command_session_id&quot;] = json!(command_session_id);
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(mode) = <span class="rs-self">self</span>.workspace_mode <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> response;
+        };
+        <span class="rs-kw">let</span> mode = mode.as_str();
+        response[&quot;success&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;success&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!(<span class="rs-self">self</span>.status == &quot;ok&quot;));
+        response[&quot;workspace&quot;] = json!(mode);
+        response[&quot;workspace_mode&quot;] = json!(mode);
+        response[&quot;stdout&quot;] = json!(<span class="rs-self">self</span>.stdout);
+        response[&quot;stderr&quot;] = json!(<span class="rs-self">self</span>.stderr);
+        response[&quot;conflict&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;conflict&quot;)
+            .cloned()
+            .unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
+        response[&quot;conflict_reason&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;conflict_reason&quot;)
+            .cloned()
+            .unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
+        response[&quot;changed_paths&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;changed_paths&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        response[&quot;changed_path_kinds&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;changed_path_kinds&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        response[&quot;mutation_source&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;mutation_source&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!(&quot;&quot;));
+        response[&quot;error&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Null</span>;
+        response[&quot;timings&quot;] = <span class="rs-self">self</span>
+            .metadata
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;timings&quot;)
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(metadata) = <span class="rs-self">self</span>.metadata.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;metadata&quot;).and_then(<span class="rs-type">Value</span>::as_object) {
+            <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> metadata {
+                response[key] = value.clone();
+            }
+        }
+        response
+    }
+}
+
+<span class="rs-comment">/// A settled command session parked for the agent-core heartbeat to drain. The</span>
+<span class="rs-comment">/// daemon's workspace-run registry owns the completion queue; this is the shared</span>
+<span class="rs-comment">/// DTO it stores and the wire layer serializes.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a> {
+    <span class="rs-kw">pub</span> command_session_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> command: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> result: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CollectCompletedResponse-168">CollectCompletedResponse</a> {
+    <span class="rs-kw">pub</span> success: bool,
+    <span class="rs-kw">pub</span> completions: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-response-rs.html#item-struct-CommandSessionCompletion-157">CommandSessionCompletion</a>&gt;,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

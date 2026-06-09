@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace-runtime · src/command_session/process/runner.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-runtime File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>47</b><span>modules</span></div>
+  <div><b>293</b><span>items</span></div>
+  <div><b>236</b><span>fields</span></div>
+  <div><b>178</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">command_session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-workspace-runtime--src-command-session-process-runner-rs.html"><span>runner.rs</span><small>6/9</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-response-rs.html"><span>response.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-command-session-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li><li><span class="folder">ephemeral</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-capture-rs.html"><span>capture.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-command-rs.html"><span>command.rs</span><small>4/20</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-ephemeral-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li><li><span class="folder">isolated</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-audit-rs.html"><span>audit.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-command-rs.html"><span>command.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">network</span><ul class="file-tree"><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>0/20</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/31</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-network-rs.html"><span>network.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><span class="folder">session</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-capacity-rs.html"><span>capacity.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-gc-rs.html"><span>gc.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-persistence-rs.html"><span>persistence.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-ports-rs.html"><span>ports.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-support-rs.html"><span>support.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-types-rs.html"><span>types.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-isolated-session-rs.html"><span>session.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-workspace-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">run</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace-runtime--src-run-command-handle-rs.html"><span>command_handle.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-manager-rs.html"><span>manager.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workspace-runtime--src-run-registry-rs.html"><span>registry.rs</span><small>6/5</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="command_session::process::runner crates/eos-workspace-runtime/src/command_session/process/runner.rs CommandSessionProcess CommandProcessExit impl CommandProcessExit ProcessReap KillReason CommandCompletionStatus impl CommandCompletionStatus CommandRunnerResult impl CommandRunnerResult impl CommandSessionProcess spawn_current_exe_ns_runner spawn_command_output_reader write_run_request lock set_nonblocking poll_timeout_ms stdin_backpressure runner_ok kill_reason_maps_to_terminal_status">
+  <div class="module-head">
+    <div>
+      <h2>src/command_session/process/runner.rs</h2>
+      <p class="path">module <code>command_session::process::runner</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>4 impls</span>
+      <span>9 fns</span>
+      <span>16 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommandSessionProcess-23" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionProcess pub pub struct CommandSessionProcess crates/eos-workspace-runtime/src/command_session/process/runner.rs pgid Option &lt; i32 &gt; writer Mutex &lt; File &gt; reader_done Mutex &lt; Option &lt; mpsc :: Receiver &lt; () &gt; &gt; &gt; child Mutex &lt; Option &lt; Child &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandSessionProcess</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pgid</td><td><code>Option &lt; i32 &gt;</code></td></tr><tr><td>private</td><td>writer</td><td><code>Mutex &lt; File &gt;</code></td></tr><tr><td>private</td><td>reader_done</td><td><code>Mutex &lt; Option &lt; mpsc :: Receiver &lt; () &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>child</td><td><code>Mutex &lt; Option &lt; Child &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-write-stdin-182"><td>method</td><td>write_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-write-stdin-182">write_stdin</a> (&amp; self , bytes : &amp; [u8]) -&gt; io :: Result &lt; () &gt;</code><p class="docstring">Push `bytes` to the command's stdin without blocking unbounded. The master<br>is non-blocking; when the consumer stops draining, `write` returns<br>`WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`<br>before returning a structured backpressure error. Cancel/terminate is a<br>separate (`killpg`) path, so the session stays controllable throughout.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Push `bytes` to the command's stdin without blocking unbounded. The master</span>
+    <span class="rs-comment">/// is non-blocking; when the consumer stops draining, `write` returns</span>
+    <span class="rs-comment">/// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`</span>
+    <span class="rs-comment">/// before returning a structured backpressure error. Cancel/terminate is a</span>
+    <span class="rs-comment">/// separate (`killpg`) path, so the session stays controllable throughout.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-write-stdin-182">write_stdin</a>(&amp;<span class="rs-self">self</span>, bytes: &amp;[u8]) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.writer);
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">STDIN_WRITE_DEADLINE</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> offset = 0;
+        <span class="rs-kw">while</span> offset &lt; bytes.len() {
+            <span class="rs-kw">match</span> writer.write(&amp;bytes[offset..]) {
+                <span class="rs-type">Ok</span>(0) =&gt; {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+                        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WriteZero</span>,
+                        &quot;command session stdin closed&quot;,
+                    ));
+                }
+                <span class="rs-type">Ok</span>(written) =&gt; offset += written,
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {
+                    <span class="rs-kw">let</span> timeout_ms = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-poll-timeout-ms-369">poll_timeout_ms</a>(deadline);
+                    <span class="rs-kw">if</span> timeout_ms == 0 {
+                        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a>());
+                    }
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&amp;*writer, <span class="rs-type">PollFlags</span>::<span class="rs-type">OUT</span>)];
+                    <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, timeout_ms) {
+                        <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a>()),
+                        <span class="rs-type">Ok</span>(_) =&gt; {}
+                        <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; {}
+                        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(err)),
+                    }
+                }
+                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-terminate-220"><td>method</td><td>terminate</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-terminate-220">terminate</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-terminate-220">terminate</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pgid) = <span class="rs-self">self</span>.pgid {
+            <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-signal-rs.html#item-fn-terminate-process-group-7">terminate_process_group</a>(pgid);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-try-reap-226"><td>method</td><td>try_reap</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-try-reap-226">try_reap</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-try-reap-226">try_reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.child);
+        <span class="rs-kw">match</span> child.as_mut() {
+            <span class="rs-type">Some</span>(handle) =&gt; <span class="rs-kw">match</span> handle.try_wait() {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(status)) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-take-81">take</a>();
+                    <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-status-41">from_status</a>(status))
+                }
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Running</span>,
+                <span class="rs-type">Err</span>(_) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-take-81">take</a>();
+                    <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>())
+                }
+            },
+            <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>()),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-wait-for-reader-done-245"><td>method</td><td>wait_for_reader_done</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-wait-for-reader-done-245">wait_for_reader_done</a> (&amp; self , timeout : Duration)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-wait-for-reader-done-245">wait_for_reader_done</a>(&amp;<span class="rs-self">self</span>, timeout: <span class="rs-type">Duration</span>) {
+        <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.reader_done).<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-take-81">take</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reader_done) = reader_done {
+            <span class="rs-kw">let</span> _ = reader_done.recv_timeout(timeout);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-inactive-172"><td>associated-fn</td><td>inactive</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-inactive-172">inactive</a> (writer : File) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-inactive-172">inactive</a>(writer: <span class="rs-type">File</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            pgid: <span class="rs-type">None</span>,
+            writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(writer),
+            reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">None</span>),
+            child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">None</span>),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:23</p>
+</article><article id="item-struct-CommandProcessExit-30" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandProcessExit pub pub struct CommandProcessExit crates/eos-workspace-runtime/src/command_session/process/runner.rs exit_code Option &lt; i64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandProcessExit</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-status-41"><td>constructor</td><td>from_status</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-status-41">from_status</a> (status : ExitStatus) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-status-41">from_status</a>(status: <span class="rs-type">ExitStatus</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> exit_code = status
+            .code()
+            .map(i64::from)
+            .or_else(|| status.signal().map(|signal| -i64::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(signal)));
+        <span class="rs-self">Self</span> { exit_code }
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-code-50"><td>method</td><td>exit_code</td><td><code>pub const fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a> (self) -&gt; Option &lt; i64 &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+        <span class="rs-self">self</span>.exit_code
+    }
+</code></pre>
+</details></td></tr><tr id="method-unwaitable-36"><td>associated-fn</td><td>unwaitable</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { exit_code: <span class="rs-type">None</span> }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:30</p>
+</article><article id="item-struct-CommandCompletionStatus-74" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandCompletionStatus pub pub struct CommandCompletionStatus crates/eos-workspace-runtime/src/command_session/process/runner.rs status String exit_code i64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandCompletionStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>status</td><td><code>String</code></td></tr><tr><td>private</td><td>exit_code</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-process-and-runner-81"><td>constructor</td><td>from_process_and_runner</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a> (process_exit : <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a> , runner : Option &lt; &amp; <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a> &gt; , kill : Option &lt; <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a> &gt; ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(
+        process_exit: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>,
+        runner: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>&gt;,
+        kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> exit_code = runner
+            .map(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::exit_code)
+            .or_else(|| process_exit.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>())
+            .unwrap_or(1);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> status = runner
+            .and_then(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::status)
+            .unwrap_or(&quot;error&quot;)
+            .to_owned();
+        <span class="rs-kw">match</span> kill {
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>) =&gt; {
+                status = &quot;cancelled&quot;.to_owned();
+                exit_code = 130;
+            }
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>) =&gt; {
+                status = &quot;timed_out&quot;.to_owned();
+                exit_code = 124;
+            }
+            <span class="rs-type">None</span> =&gt; {}
+        }
+        <span class="rs-self">Self</span> { status, exit_code }
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-109"><td>method</td><td>status</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.status
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-code-114"><td>method</td><td>exit_code</td><td><code>pub const fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a> (&amp; self) -&gt; i64</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:74</p>
+</article><article id="item-struct-CommandRunnerResult-120" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandRunnerResult pub pub struct CommandRunnerResult crates/eos-workspace-runtime/src/command_session/process/runner.rs exit_code i64 status Option &lt; String &gt; value Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandRunnerResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>private</td><td>status</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>value</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-value-135"><td>constructor</td><td>from_value</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a> (value : Value) -&gt; Option &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> exit_code = value.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;exit_code&quot;).and_then(|value| {
+            value
+                .as_i64()
+                .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
+        })?;
+        <span class="rs-kw">let</span> status = value
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;tool_result&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_object)
+            .and_then(|tool_result| tool_result.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;status&quot;))
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .map(str::to_owned);
+        <span class="rs-type">Some</span>(<span class="rs-self">Self</span> {
+            exit_code,
+            status,
+            value,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-code-155"><td>method</td><td>exit_code</td><td><code>pub const fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a> (&amp; self) -&gt; i64</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-160"><td>method</td><td>status</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a> (&amp; self) -&gt; Option &lt; &amp; str &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.status.as_deref()
+    }
+</code></pre>
+</details></td></tr><tr id="method-value-165"><td>method</td><td>value</td><td><code>pub const fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-value-165">value</a> (&amp; self) -&gt; &amp; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-value-165">value</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Value</span> {
+        &amp;<span class="rs-self">self</span>.value
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-from-path-128"><td>associated-fn</td><td>read_from_path</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-read-from-path-128">read_from_path</a> (path : &amp; Path) -&gt; Option &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-read-from-path-128">read_from_path</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> bytes = std::fs::read(path).ok()?;
+        <span class="rs-kw">let</span> value = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;bytes).ok()?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:120</p>
+</article><article id="item-enum-ProcessReap-56" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProcessReap pub pub enum ProcessReap crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ProcessReap</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Exited</td><td><code>0: <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:56</p>
+</article><article id="item-enum-KillReason-62" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum KillReason pub pub enum KillReason crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>KillReason</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a></code>
+  <p class="docstring">Why the substrate killed a command session's process group. The owning run<br>maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →<br>"timed_out"/124 — and either reason DISCARDS the overlay (a killed command<br>never OCC-merges).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Cancelled</td><td><code></code></td></tr><tr><td>TimedOut</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:62</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-spawn-current-exe-ns-runner-253" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_current_exe_ns_runner pub pub fn spawn_current_exe_ns_runner (request_path : &amp; Path , run_request : &amp; Value , output_path : &amp; Path , transcript_path : PathBuf , transcript_timestamp_timezone : &amp; str ,) -&gt; io :: Result &lt; CommandSessionProcess &gt; crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawn_current_exe_ns_runner</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-current-exe-ns-runner-253">spawn_current_exe_ns_runner</a> (request_path : &amp; Path , run_request : &amp; Value , output_path : &amp; Path , transcript_path : PathBuf , transcript_timestamp_timezone : &amp; str ,) -&gt; io :: Result &lt; <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-current-exe-ns-runner-253">spawn_current_exe_ns_runner</a>(
+    request_path: &amp;<span class="rs-type">Path</span>,
+    run_request: &amp;<span class="rs-type">Value</span>,
+    output_path: &amp;<span class="rs-type">Path</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    transcript_timestamp_timezone: &amp;str,
+) -&gt; io::<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-write-run-request-346">write_run_request</a>(request_path, run_request)?;
+    <span class="rs-kw">let</span> (master, slave) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-pty-rs.html#item-fn-open-pty-pair-6">open_pty_pair</a>()?;
+    <span class="rs-comment">// Non-blocking master OFD (shared by the writer dup and the reader): writes</span>
+    <span class="rs-comment">// can't wedge on a non-draining consumer, and the reader polls instead.</span>
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-set-nonblocking-360">set_nonblocking</a>(&amp;master)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child_command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(std::env::current_exe()?);
+    child_command
+        .arg(&quot;ns-runner&quot;)
+        .arg(&quot;--request&quot;)
+        .arg(request_path)
+        .arg(&quot;--output&quot;)
+        .arg(output_path)
+        .stdin(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(slave.try_clone()?))
+        .stdout(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(slave.try_clone()?))
+        .stderr(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(slave))
+        .process_group(0);
+    <span class="rs-kw">let</span> child = child_command.spawn()?;
+    <span class="rs-kw">let</span> pgid = i32::try_from(child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-147">id</a>()).map_err(|_| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;child pid does not fit i32: {}&quot;, child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-147">id</a>()),
+        )
+    })?;
+    <span class="rs-kw">let</span> writer = master.try_clone()?;
+    <span class="rs-kw">let</span> transcript_prefixer = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(transcript_timestamp_timezone)
+        .map_err(|error| {
+            io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+                io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidInput</span>,
+                format!(&quot;invalid transcript timestamp timezone: {error}&quot;),
+            )
+        })?;
+    <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-command-output-reader-301">spawn_command_output_reader</a>(master, transcript_path, transcript_prefixer);
+
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a> {
+        pgid: <span class="rs-type">Some</span>(pgid),
+        writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(writer),
+        reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">Some</span>(reader_done)),
+        child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">Some</span>(child)),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:253</p>
+</article><article id="item-fn-spawn-command-output-reader-301" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_command_output_reader private fn spawn_command_output_reader (mut master : File , transcript_path : PathBuf , mut transcript_prefixer : TranscriptTimestampPrefixer ,) -&gt; mpsc :: Receiver &lt; () &gt; crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawn_command_output_reader</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-command-output-reader-301">spawn_command_output_reader</a> (mut master : File , transcript_path : PathBuf , mut transcript_prefixer : <a class="symbol-link" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a> ,) -&gt; mpsc :: Receiver &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-command-output-reader-301">spawn_command_output_reader</a>(
+    <span class="rs-kw">mut</span> master: <span class="rs-type">File</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">mut</span> transcript_prefixer: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>,
+) -&gt; mpsc::<span class="rs-type">Receiver</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> (done_tx, done_rx) = mpsc::channel();
+    thread::spawn(<span class="rs-kw">move</span> || {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> transcript = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>()
+            .create(<span class="rs-kw">true</span>)
+            .append(<span class="rs-kw">true</span>)
+            .open(transcript_path)
+            .ok();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = [0_u8; 8192];
+        loop {
+            <span class="rs-comment">// The master is non-blocking; block here until readable or hangup with</span>
+            <span class="rs-comment">// no busy-loop and no added latency (infinite poll wakes on the first</span>
+            <span class="rs-comment">// byte or on slave close), then drain what is available.</span>
+            {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&amp;master, <span class="rs-type">PollFlags</span>::<span class="rs-type">IN</span>)];
+                <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, -1) {
+                    <span class="rs-type">Ok</span>(_) =&gt; {}
+                    <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; <span class="rs-kw">continue</span>,
+                    <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+                }
+            }
+            <span class="rs-kw">match</span> master.read(&amp;<span class="rs-kw">mut</span> buf) {
+                <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">break</span>,
+                <span class="rs-type">Ok</span>(n) =&gt; {
+                    <span class="rs-kw">let</span> transcript_bytes = transcript_prefixer.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-transcript-rs.html#method-prefix-56">prefix</a>(&amp;buf[..n]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(file) = transcript.as_mut() {
+                        <span class="rs-kw">if</span> file.write_all(&amp;transcript_bytes).is_err() {
+                            transcript = <span class="rs-type">None</span>;
+                        }
+                    }
+                }
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+            }
+        }
+        <span class="rs-kw">let</span> _ = done_tx.send(());
+    });
+    done_rx
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:301</p>
+</article><article id="item-fn-write-run-request-346" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_run_request private fn write_run_request (path : &amp; Path , request : &amp; Value) -&gt; io :: Result &lt; () &gt; crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_run_request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-write-run-request-346">write_run_request</a> (path : &amp; Path , request : &amp; Value) -&gt; io :: Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-write-run-request-346">write_run_request</a>(path: &amp;<span class="rs-type">Path</span>, request: &amp;<span class="rs-type">Value</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> bytes = serde_json::to_vec(request).map_err(|error| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;serialize command runner request: {error}&quot;),
+        )
+    })?;
+    std::fs::write(path, bytes)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:346</p>
+</article><article id="item-fn-lock-356" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:356</p>
+</article><article id="item-fn-set-nonblocking-360" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn set_nonblocking private fn set_nonblocking (file : &amp; File) -&gt; io :: Result &lt; () &gt; crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>set_nonblocking</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-set-nonblocking-360">set_nonblocking</a> (file : &amp; File) -&gt; io :: Result &lt; () &gt;</code>
+  <p class="docstring">Mark `file`'s open file description non-blocking so `read`/`write` return<br>`WouldBlock` instead of stalling. Applied to the PTY master before it is<br>shared between the writer dup and the reader thread.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Mark `file`'s open file description non-blocking so `read`/`write` return</span>
+<span class="rs-comment">/// `WouldBlock` instead of stalling. Applied to the PTY master before it is</span>
+<span class="rs-comment">/// shared between the writer dup and the reader thread.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-set-nonblocking-360">set_nonblocking</a>(file: &amp;<span class="rs-type">File</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> flags = fcntl_getfl(file)?;
+    fcntl_setfl(file, flags | <span class="rs-type">OFlags</span>::<span class="rs-type">NONBLOCK</span>)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:360</p>
+</article><article id="item-fn-poll-timeout-ms-369" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn poll_timeout_ms private fn poll_timeout_ms (deadline : Instant) -&gt; i32 crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>poll_timeout_ms</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-poll-timeout-ms-369">poll_timeout_ms</a> (deadline : Instant) -&gt; i32</code>
+  <p class="docstring">Milliseconds left until `deadline`, clamped to a non-negative `i32` for<br>`poll`. Returns 0 once the deadline has passed.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Milliseconds left until `deadline`, clamped to a non-negative `i32` for</span>
+<span class="rs-comment">/// `poll`. Returns 0 once the deadline has passed.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-poll-timeout-ms-369">poll_timeout_ms</a>(deadline: <span class="rs-type">Instant</span>) -&gt; i32 {
+    <span class="rs-kw">let</span> remaining = deadline.saturating_duration_since(<span class="rs-type">Instant</span>::now());
+    i32::try_from(remaining.as_millis()).unwrap_or(i32::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:369</p>
+</article><article id="item-fn-stdin-backpressure-376" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stdin_backpressure private fn stdin_backpressure () -&gt; io :: Error crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>stdin_backpressure</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a> () -&gt; io :: Error</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a>() -&gt; io::<span class="rs-type">Error</span> {
+    io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span>,
+        &quot;stdin_backpressure: command is not draining its stdin&quot;,
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:376</p>
+</article><article id="item-fn-runner-ok-389" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runner_ok private fn runner_ok () -&gt; Option &lt; CommandRunnerResult &gt; crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>runner_ok</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-runner-ok-389">runner_ok</a> () -&gt; Option &lt; <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-runner-ok-389">runner_ok</a>() -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>&gt; {
+        <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a>(json!({&quot;exit_code&quot;: 0, &quot;tool_result&quot;: {&quot;status&quot;: &quot;ok&quot;}}))
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:389</p>
+</article><article id="item-fn-kill-reason-maps-to-terminal-status-393" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn kill_reason_maps_to_terminal_status private fn kill_reason_maps_to_terminal_status () crates/eos-workspace-runtime/src/command_session/process/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>kill_reason_maps_to_terminal_status</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-kill-reason-maps-to-terminal-status-393">kill_reason_maps_to_terminal_status</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-kill-reason-maps-to-terminal-status-393">kill_reason_maps_to_terminal_status</a>() {
+        <span class="rs-kw">let</span> exit = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>();
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-runner-ok-389">runner_ok</a>();
+
+        <span class="rs-comment">// Natural exit (`None`): the runner's own status is preserved.</span>
+        <span class="rs-kw">let</span> ok = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(exit, runner.as_ref(), <span class="rs-type">None</span>);
+        assert_eq!((ok.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(), ok.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>()), (&quot;ok&quot;, 0));
+
+        <span class="rs-comment">// A user cancel overrides the runner result with cancelled/130.</span>
+        <span class="rs-kw">let</span> cancelled = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(
+            exit,
+            runner.as_ref(),
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>),
+        );
+        assert_eq!(
+            (cancelled.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(), cancelled.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;cancelled&quot;, 130)
+        );
+
+        <span class="rs-comment">// A deadline timeout is distinct: timed_out/124, so the parked completion</span>
+        <span class="rs-comment">// tells the agent the command timed out rather than was cancelled.</span>
+        <span class="rs-kw">let</span> timed_out = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(
+            exit,
+            runner.as_ref(),
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>),
+        );
+        assert_eq!(
+            (timed_out.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(), timed_out.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;timed_out&quot;, 124)
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-runtime/src/command_session/process/runner.rs:393</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-runtime/src/command_session/process/runner.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::fs::{<span class="rs-type">File</span>, <span class="rs-type">OpenOptions</span>};
+<span class="rs-kw">use</span> std::io::{<span class="rs-self">self</span>, <span class="rs-type">Read</span>, <span class="rs-type">Write</span>};
+<span class="rs-kw">use</span> std::os::unix::process::{<span class="rs-type">CommandExt</span>, <span class="rs-type">ExitStatusExt</span>};
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::process::{<span class="rs-type">Child</span>, <span class="rs-type">Command</span>, <span class="rs-type">ExitStatus</span>, <span class="rs-type">Stdio</span>};
+<span class="rs-kw">use</span> std::sync::{mpsc, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
+<span class="rs-kw">use</span> std::thread;
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> rustix::event::{poll, <span class="rs-type">PollFd</span>, <span class="rs-type">PollFlags</span>};
+<span class="rs-kw">use</span> rustix::fs::{fcntl_getfl, fcntl_setfl, <span class="rs-type">OFlags</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::command_session::transcript::<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{open_pty_pair, terminate_process_group};
+
+<span class="rs-comment">/// Cap on how long a single `write_stdin` pushes bytes into the PTY before</span>
+<span class="rs-comment">/// returning a structured backpressure error. The master is non-blocking, so a</span>
+<span class="rs-comment">/// consumer that never drains its stdin cannot wedge the writer past this bound.</span>
+<span class="rs-kw">const</span> <span class="rs-type">STDIN_WRITE_DEADLINE</span>: <span class="rs-type">Duration</span> = <span class="rs-type">Duration</span>::from_secs(2);
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a> {
+    pgid: <span class="rs-type">Option</span>&lt;i32&gt;,
+    writer: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">File</span>&gt;,
+    reader_done: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;()&gt;&gt;&gt;,
+    child: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Child</span>&gt;&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a> {
+    exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { exit_code: <span class="rs-type">None</span> }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-status-41">from_status</a>(status: <span class="rs-type">ExitStatus</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> exit_code = status
+            .code()
+            .map(i64::from)
+            .or_else(|| status.signal().map(|signal| -i64::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(signal)));
+        <span class="rs-self">Self</span> { exit_code }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+        <span class="rs-self">self</span>.exit_code
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a> {
+    <span class="rs-type">Running</span>,
+    <span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>),
+}
+
+<span class="rs-comment">/// Why the substrate killed a command session's process group. The owning run</span>
+<span class="rs-comment">/// maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →</span>
+<span class="rs-comment">/// "timed_out"/124 — and either reason DISCARDS the overlay (a killed command</span>
+<span class="rs-comment">/// never OCC-merges).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a> {
+    <span class="rs-comment">/// A caller asked to cancel (Ctrl-C/Ctrl-D, the cancel op, or run teardown).</span>
+    <span class="rs-type">Cancelled</span>,
+    <span class="rs-comment">/// The session exceeded its deadline and the reaper killed it as a backstop.</span>
+    <span class="rs-type">TimedOut</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a> {
+    status: <span class="rs-type">String</span>,
+    exit_code: i64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(
+        process_exit: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>,
+        runner: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>&gt;,
+        kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> exit_code = runner
+            .map(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::exit_code)
+            .or_else(|| process_exit.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>())
+            .unwrap_or(1);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> status = runner
+            .and_then(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::status)
+            .unwrap_or(&quot;error&quot;)
+            .to_owned();
+        <span class="rs-kw">match</span> kill {
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>) =&gt; {
+                status = &quot;cancelled&quot;.to_owned();
+                exit_code = 130;
+            }
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>) =&gt; {
+                status = &quot;timed_out&quot;.to_owned();
+                exit_code = 124;
+            }
+            <span class="rs-type">None</span> =&gt; {}
+        }
+        <span class="rs-self">Self</span> { status, exit_code }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.status
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a> {
+    exit_code: i64,
+    status: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    value: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-read-from-path-128">read_from_path</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> bytes = std::fs::read(path).ok()?;
+        <span class="rs-kw">let</span> value = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;bytes).ok()?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a>(value)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> exit_code = value.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;exit_code&quot;).and_then(|value| {
+            value
+                .as_i64()
+                .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
+        })?;
+        <span class="rs-kw">let</span> status = value
+            .<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;tool_result&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_object)
+            .and_then(|tool_result| tool_result.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-get-69">get</a>(&quot;status&quot;))
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .map(str::to_owned);
+        <span class="rs-type">Some</span>(<span class="rs-self">Self</span> {
+            exit_code,
+            status,
+            value,
+        })
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.status.as_deref()
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-value-165">value</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Value</span> {
+        &amp;<span class="rs-self">self</span>.value
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-inactive-172">inactive</a>(writer: <span class="rs-type">File</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            pgid: <span class="rs-type">None</span>,
+            writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(writer),
+            reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">None</span>),
+            child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">None</span>),
+        }
+    }
+
+    <span class="rs-comment">/// Push `bytes` to the command's stdin without blocking unbounded. The master</span>
+    <span class="rs-comment">/// is non-blocking; when the consumer stops draining, `write` returns</span>
+    <span class="rs-comment">/// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`</span>
+    <span class="rs-comment">/// before returning a structured backpressure error. Cancel/terminate is a</span>
+    <span class="rs-comment">/// separate (`killpg`) path, so the session stays controllable throughout.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-write-stdin-182">write_stdin</a>(&amp;<span class="rs-self">self</span>, bytes: &amp;[u8]) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.writer);
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">STDIN_WRITE_DEADLINE</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> offset = 0;
+        <span class="rs-kw">while</span> offset &lt; bytes.len() {
+            <span class="rs-kw">match</span> writer.write(&amp;bytes[offset..]) {
+                <span class="rs-type">Ok</span>(0) =&gt; {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+                        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WriteZero</span>,
+                        &quot;command session stdin closed&quot;,
+                    ));
+                }
+                <span class="rs-type">Ok</span>(written) =&gt; offset += written,
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {
+                    <span class="rs-kw">let</span> timeout_ms = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-poll-timeout-ms-369">poll_timeout_ms</a>(deadline);
+                    <span class="rs-kw">if</span> timeout_ms == 0 {
+                        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a>());
+                    }
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&amp;*writer, <span class="rs-type">PollFlags</span>::<span class="rs-type">OUT</span>)];
+                    <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, timeout_ms) {
+                        <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a>()),
+                        <span class="rs-type">Ok</span>(_) =&gt; {}
+                        <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; {}
+                        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(err)),
+                    }
+                }
+                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-terminate-220">terminate</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pgid) = <span class="rs-self">self</span>.pgid {
+            <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-signal-rs.html#item-fn-terminate-process-group-7">terminate_process_group</a>(pgid);
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-try-reap-226">try_reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.child);
+        <span class="rs-kw">match</span> child.as_mut() {
+            <span class="rs-type">Some</span>(handle) =&gt; <span class="rs-kw">match</span> handle.try_wait() {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(status)) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-take-81">take</a>();
+                    <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-status-41">from_status</a>(status))
+                }
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Running</span>,
+                <span class="rs-type">Err</span>(_) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-take-81">take</a>();
+                    <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>())
+                }
+            },
+            <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-ProcessReap-56">ProcessReap</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>()),
+        }
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-wait-for-reader-done-245">wait_for_reader_done</a>(&amp;<span class="rs-self">self</span>, timeout: <span class="rs-type">Duration</span>) {
+        <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>(&amp;<span class="rs-self">self</span>.reader_done).<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-run-registry-rs.html#method-take-81">take</a>();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reader_done) = reader_done {
+            <span class="rs-kw">let</span> _ = reader_done.recv_timeout(timeout);
+        }
+    }
+}
+
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-current-exe-ns-runner-253">spawn_current_exe_ns_runner</a>(
+    request_path: &amp;<span class="rs-type">Path</span>,
+    run_request: &amp;<span class="rs-type">Value</span>,
+    output_path: &amp;<span class="rs-type">Path</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    transcript_timestamp_timezone: &amp;str,
+) -&gt; io::<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-write-run-request-346">write_run_request</a>(request_path, run_request)?;
+    <span class="rs-kw">let</span> (master, slave) = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-pty-rs.html#item-fn-open-pty-pair-6">open_pty_pair</a>()?;
+    <span class="rs-comment">// Non-blocking master OFD (shared by the writer dup and the reader): writes</span>
+    <span class="rs-comment">// can't wedge on a non-draining consumer, and the reader polls instead.</span>
+    <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-set-nonblocking-360">set_nonblocking</a>(&amp;master)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child_command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(std::env::current_exe()?);
+    child_command
+        .arg(&quot;ns-runner&quot;)
+        .arg(&quot;--request&quot;)
+        .arg(request_path)
+        .arg(&quot;--output&quot;)
+        .arg(output_path)
+        .stdin(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(slave.try_clone()?))
+        .stdout(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(slave.try_clone()?))
+        .stderr(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime.html#method-from-18">from</a>(slave))
+        .process_group(0);
+    <span class="rs-kw">let</span> child = child_command.spawn()?;
+    <span class="rs-kw">let</span> pgid = i32::try_from(child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-147">id</a>()).map_err(|_| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;child pid does not fit i32: {}&quot;, child.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-id-147">id</a>()),
+        )
+    })?;
+    <span class="rs-kw">let</span> writer = master.try_clone()?;
+    <span class="rs-kw">let</span> transcript_prefixer = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(transcript_timestamp_timezone)
+        .map_err(|error| {
+            io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+                io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidInput</span>,
+                format!(&quot;invalid transcript timestamp timezone: {error}&quot;),
+            )
+        })?;
+    <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-command-output-reader-301">spawn_command_output_reader</a>(master, transcript_path, transcript_prefixer);
+
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandSessionProcess-23">CommandSessionProcess</a> {
+        pgid: <span class="rs-type">Some</span>(pgid),
+        writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(writer),
+        reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">Some</span>(reader_done)),
+        child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(<span class="rs-type">Some</span>(child)),
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-spawn-command-output-reader-301">spawn_command_output_reader</a>(
+    <span class="rs-kw">mut</span> master: <span class="rs-type">File</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">mut</span> transcript_prefixer: <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>,
+) -&gt; mpsc::<span class="rs-type">Receiver</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> (done_tx, done_rx) = mpsc::channel();
+    thread::spawn(<span class="rs-kw">move</span> || {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> transcript = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>()
+            .create(<span class="rs-kw">true</span>)
+            .append(<span class="rs-kw">true</span>)
+            .open(transcript_path)
+            .ok();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = [0_u8; 8192];
+        loop {
+            <span class="rs-comment">// The master is non-blocking; block here until readable or hangup with</span>
+            <span class="rs-comment">// no busy-loop and no added latency (infinite poll wakes on the first</span>
+            <span class="rs-comment">// byte or on slave close), then drain what is available.</span>
+            {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(&amp;master, <span class="rs-type">PollFlags</span>::<span class="rs-type">IN</span>)];
+                <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, -1) {
+                    <span class="rs-type">Ok</span>(_) =&gt; {}
+                    <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; <span class="rs-kw">continue</span>,
+                    <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+                }
+            }
+            <span class="rs-kw">match</span> master.read(&amp;<span class="rs-kw">mut</span> buf) {
+                <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">break</span>,
+                <span class="rs-type">Ok</span>(n) =&gt; {
+                    <span class="rs-kw">let</span> transcript_bytes = transcript_prefixer.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-transcript-rs.html#method-prefix-56">prefix</a>(&amp;buf[..n]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(file) = transcript.as_mut() {
+                        <span class="rs-kw">if</span> file.write_all(&amp;transcript_bytes).is_err() {
+                            transcript = <span class="rs-type">None</span>;
+                        }
+                    }
+                }
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-isolated-error-rs.html#method-kind-82">kind</a>() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+            }
+        }
+        <span class="rs-kw">let</span> _ = done_tx.send(());
+    });
+    done_rx
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-write-run-request-346">write_run_request</a>(path: &amp;<span class="rs-type">Path</span>, request: &amp;<span class="rs-type">Value</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> bytes = serde_json::to_vec(request).map_err(|error| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;serialize command runner request: {error}&quot;),
+        )
+    })?;
+    std::fs::write(path, bytes)
+}
+
+<span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-lock-356">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+
+<span class="rs-comment">/// Mark `file`'s open file description non-blocking so `read`/`write` return</span>
+<span class="rs-comment">/// `WouldBlock` instead of stalling. Applied to the PTY master before it is</span>
+<span class="rs-comment">/// shared between the writer dup and the reader thread.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-set-nonblocking-360">set_nonblocking</a>(file: &amp;<span class="rs-type">File</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> flags = fcntl_getfl(file)?;
+    fcntl_setfl(file, flags | <span class="rs-type">OFlags</span>::<span class="rs-type">NONBLOCK</span>)?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// Milliseconds left until `deadline`, clamped to a non-negative `i32` for</span>
+<span class="rs-comment">/// `poll`. Returns 0 once the deadline has passed.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-poll-timeout-ms-369">poll_timeout_ms</a>(deadline: <span class="rs-type">Instant</span>) -&gt; i32 {
+    <span class="rs-kw">let</span> remaining = deadline.saturating_duration_since(<span class="rs-type">Instant</span>::now());
+    i32::try_from(remaining.as_millis()).unwrap_or(i32::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-stdin-backpressure-376">stdin_backpressure</a>() -&gt; io::<span class="rs-type">Error</span> {
+    io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-session-rs.html#method-new-90">new</a>(
+        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span>,
+        &quot;stdin_backpressure: command is not draining its stdin&quot;,
+    )
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-runner-ok-389">runner_ok</a>() -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>&gt; {
+        <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandRunnerResult-120">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-value-135">from_value</a>(json!({&quot;exit_code&quot;: 0, &quot;tool_result&quot;: {&quot;status&quot;: &quot;ok&quot;}}))
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-kill-reason-maps-to-terminal-status-393">kill_reason_maps_to_terminal_status</a>() {
+        <span class="rs-kw">let</span> exit = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandProcessExit-30">CommandProcessExit</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-unwaitable-36">unwaitable</a>();
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-fn-runner-ok-389">runner_ok</a>();
+
+        <span class="rs-comment">// Natural exit (`None`): the runner's own status is preserved.</span>
+        <span class="rs-kw">let</span> ok = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(exit, runner.as_ref(), <span class="rs-type">None</span>);
+        assert_eq!((ok.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(), ok.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>()), (&quot;ok&quot;, 0));
+
+        <span class="rs-comment">// A user cancel overrides the runner result with cancelled/130.</span>
+        <span class="rs-kw">let</span> cancelled = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(
+            exit,
+            runner.as_ref(),
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">Cancelled</span>),
+        );
+        assert_eq!(
+            (cancelled.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(), cancelled.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;cancelled&quot;, 130)
+        );
+
+        <span class="rs-comment">// A deadline timeout is distinct: timed_out/124, so the parked completion</span>
+        <span class="rs-comment">// tells the agent the command timed out rather than was cancelled.</span>
+        <span class="rs-kw">let</span> timed_out = <a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-struct-CommandCompletionStatus-74">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-from-process-and-runner-81">from_process_and_runner</a>(
+            exit,
+            runner.as_ref(),
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#item-enum-KillReason-62">KillReason</a>::<span class="rs-type">TimedOut</span>),
+        );
+        assert_eq!(
+            (timed_out.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-status-109">status</a>(), timed_out.<a class="symbol-link rs-fn" href="eos-workspace-runtime--src-command-session-process-runner-rs.html#method-exit-code-50">exit_code</a>()),
+            (&quot;timed_out&quot;, 124)
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

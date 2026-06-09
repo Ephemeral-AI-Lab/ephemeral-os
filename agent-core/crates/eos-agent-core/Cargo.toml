@@ -1,0 +1,40 @@
+[package]
+name = "eos-agent-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+eos-db.workspace = true
+eos-engine.workspace = true
+eos-workflow.workspace = true
+eos-agent-run.workspace = true
+eos-sandbox-port.workspace = true
+eos-types.workspace = true
+eos-llm-client.workspace = true
+eos-tool.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+schemars.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+futures.workspace = true
+# Layer-A scripted-LLM/EventSource doubles + fake transport (TESTING_SPEC §11).
+# `build_test_state`/`FakeProvisioner` stay crate-local (tests/unit/support.rs):
+# they are `eos-agent-core` types, so the dev-dep two-instance rule bars consuming
+# them from this crate's in-crate tests (§14.2).
+eos-testkit = { workspace = true }
+
+[package.metadata.cargo-machete]
+ignored = ["eos-testkit", "futures", "tempfile"]
+
+[lints]
+workspace = true

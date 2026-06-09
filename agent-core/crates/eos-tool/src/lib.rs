@@ -19,9 +19,9 @@ pub use model::{
     ToolResult,
 };
 pub use registry::{
-    build_default_registry, build_registry_schema, BackgroundSessions, CallerScope, RegisteredTool,
-    Submission, ToolConfig, ToolConfigError, ToolConfigSet, ToolExecutor, ToolRegistry,
-    ToolRuntime, WorkspaceMode,
+    build_default_registry, build_registry_schema, BackgroundSessionControl, CallerScope,
+    IsolatedWorkspaceModeControl, RegisteredTool, TerminalSubmissionRuntime, ToolConfig,
+    ToolConfigError, ToolConfigSet, ToolExecutor, ToolRegistry, ToolRuntime,
 };
 pub use tools::terminal::{render_tool_instruction, TerminalTool, ToolInstructions};
 pub use tools::{

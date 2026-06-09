@@ -4,12 +4,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_engine::records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
-use eos_engine::{AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind};
-use eos_llm_client::Message;
+use eos_engine::{
+    tool_result_payload, AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome,
+    AgentLoopOutcomeKind,
+};
 use eos_types::{
     AgentDefinition, AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi, AgentRunError,
-    AgentRunId, AgentRunMessageRecordKind, AgentRunOutcome, AgentRunStatus, AgentRunStore,
-    AgentType, SpawnAgentRequest,
+    AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, AgentType, Message,
+    SpawnAgentRequest, TaskAgentRunKind,
 };
 use tokio::sync::oneshot;
 
@@ -17,7 +19,7 @@ use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRuns};
 use crate::agent_loop_request::build_start_agent_loop_request;
 use crate::agent_run_persistence::{
     completion_from_agent_run, create_agent_run_if_requested, finish_agent_run_cancelled,
-    finish_agent_run_if_requested, tool_result_payload,
+    finish_agent_run_if_requested,
 };
 use crate::to_message_record_kind;
 
@@ -97,7 +99,7 @@ impl AgentRunService {
         let Some(request_id) = request.request_id.as_ref() else {
             return Ok(None);
         };
-        let kind = to_message_record_kind(&request.record_kind);
+        let kind = to_message_record_kind(&request.task_agent_run_kind);
         let handle = message_records
             .start_agent_run(AgentRunRecordStart {
                 request_id,
@@ -159,16 +161,12 @@ impl AgentRunService {
         outcome: AgentLoopOutcome,
     ) -> AgentRunOutcome {
         let agent_outcome = agent_run_outcome_from_loop(agent_run_id.clone(), outcome);
-        let submission = agent_outcome
-            .submission_payload
-            .as_ref()
-            .map(tool_result_from_payload);
         let error = agent_outcome.error.as_deref();
         let finish = finish_agent_run_if_requested(
             &*self.agent_run_store,
             persistence_requested,
             &agent_run_id,
-            submission.as_ref(),
+            agent_outcome.submission_payload.as_ref(),
             agent_outcome.token_count,
             error,
         )
@@ -221,7 +219,7 @@ impl AgentRunApi for AgentRunService {
         let Some(agent_def) = self.agent_registry.get(&agent_name) else {
             return Err(AgentRunError::AgentNotRegistered(requested_agent_name));
         };
-        if let Some(expected) = expected_agent_type(&request.record_kind) {
+        if let Some(expected) = expected_agent_type(&request.task_agent_run_kind) {
             if agent_def.agent_type != expected {
                 return Err(AgentRunError::WrongAgentType {
                     agent_name: requested_agent_name,
@@ -252,7 +250,10 @@ impl AgentRunApi for AgentRunService {
         }
         let start_request =
             build_start_agent_loop_request(&agent_def, request, agent_run_id.clone());
-        let started = self.agent_loop_launcher.start_agent_loop(start_request);
+        let agent_run_api: Arc<dyn AgentRunApi> = Arc::new(self.clone());
+        let started = self
+            .agent_loop_launcher
+            .start_agent_loop(start_request, agent_run_api);
 
         self.active_agent_runs
             .insert(agent_run_id.clone(), started.cancel_handle, message_record)
@@ -417,29 +418,6 @@ fn loop_messages_to_llm_messages(messages: Vec<AgentLoopMessage>) -> Vec<Message
         .collect()
 }
 
-fn tool_result_from_payload(payload: &eos_types::JsonObject) -> eos_tool::ToolResult {
-    let output = payload
-        .get("output")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_default()
-        .to_owned();
-    let is_error = payload
-        .get("is_error")
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false);
-    let metadata = payload
-        .get("metadata")
-        .and_then(serde_json::Value::as_object)
-        .cloned()
-        .unwrap_or_default();
-    eos_tool::ToolResult {
-        output,
-        is_error,
-        metadata,
-        is_terminal: false,
-    }
-}
-
 const fn agent_type_value(agent_type: AgentType) -> &'static str {
     match agent_type {
         AgentType::Agent => "agent",
@@ -448,13 +426,13 @@ const fn agent_type_value(agent_type: AgentType) -> &'static str {
     }
 }
 
-const fn expected_agent_type(record_kind: &AgentRunMessageRecordKind) -> Option<AgentType> {
+const fn expected_agent_type(record_kind: &TaskAgentRunKind) -> Option<AgentType> {
     match record_kind {
-        AgentRunMessageRecordKind::Root
-        | AgentRunMessageRecordKind::WorkflowTask { .. }
-        | AgentRunMessageRecordKind::Agent => Some(AgentType::Agent),
-        AgentRunMessageRecordKind::Subagent { .. } => Some(AgentType::Subagent),
-        AgentRunMessageRecordKind::Advisor { .. } => Some(AgentType::Advisor),
+        TaskAgentRunKind::Root
+        | TaskAgentRunKind::WorkflowTask { .. }
+        | TaskAgentRunKind::Agent => Some(AgentType::Agent),
+        TaskAgentRunKind::Subagent { .. } => Some(AgentType::Subagent),
+        TaskAgentRunKind::Advisor { .. } => Some(AgentType::Advisor),
         _ => None,
     }
 }
@@ -467,21 +445,21 @@ mod tests {
     fn record_kind_declares_required_agent_type() {
         let parent_agent_run_id = AgentRunId::new_v4();
         assert_eq!(
-            expected_agent_type(&AgentRunMessageRecordKind::Root),
+            expected_agent_type(&TaskAgentRunKind::Root),
             Some(AgentType::Agent)
         );
         assert_eq!(
-            expected_agent_type(&AgentRunMessageRecordKind::Agent),
+            expected_agent_type(&TaskAgentRunKind::Agent),
             Some(AgentType::Agent)
         );
         assert_eq!(
-            expected_agent_type(&AgentRunMessageRecordKind::Subagent {
+            expected_agent_type(&TaskAgentRunKind::Subagent {
                 parent_agent_run_id: parent_agent_run_id.clone(),
             }),
             Some(AgentType::Subagent)
         );
         assert_eq!(
-            expected_agent_type(&AgentRunMessageRecordKind::Advisor {
+            expected_agent_type(&TaskAgentRunKind::Advisor {
                 parent_agent_run_id,
             }),
             Some(AgentType::Advisor)

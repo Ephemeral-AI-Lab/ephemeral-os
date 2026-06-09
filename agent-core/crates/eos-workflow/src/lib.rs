@@ -30,13 +30,13 @@ mod util;
 mod support;
 
 pub use attempt::{
-    AgentLaunch, AgentRunReport, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
+    AgentLaunch, AgentRunReport, AgentRunner, AttemptOrchestratorRegistry, AttemptResources,
     ExecutionLaunch, PlannerLaunch,
 };
 pub use config::{AttemptConfig, WorkflowConfig, DEFAULT_WORKFLOW_MAX_DEPTH};
 pub use context::{
     render_context_xml, render_task_guidance, AgentContext, AgentEntryComposer, AgentEntryMessages,
-    ContextEngine, ContextEngineDeps, ContextRole, ContextScope, ContextSection,
+    ContextEngine, ContextEngineStores, ContextRole, ContextScope, ContextSection,
 };
 pub use error::{Result, WorkflowError};
 pub use ids::{generator_task_id, planner_task_id, reducer_task_id, WorkflowLifecycleConfig};

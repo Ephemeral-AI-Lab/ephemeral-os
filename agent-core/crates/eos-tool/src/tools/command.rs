@@ -210,7 +210,7 @@ mod exec_command {
             if let Some(session_id) = &result.command_session_id {
                 if result.is_running() {
                     self.service
-                        .register_command(session_id, sandbox_id)
+                        .register_command_session(session_id, sandbox_id)
                         .await?;
                 }
             }

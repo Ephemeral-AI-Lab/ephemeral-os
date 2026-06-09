@@ -21,7 +21,7 @@
 
 use serde_json::{Map, Value};
 
-use eos_audit::ObsEnvelope;
+use eos_agent_core::ObsEnvelope;
 use eos_backend_store::{AuditCursorRepo, ObsEventRepo, SandboxCallCorrelationRepo, StoreError};
 use eos_backend_types::{AuditCursor, ObsEvent, ObsSource, SandboxCallCorrelation};
 use eos_protocol::CallerId;
@@ -122,7 +122,9 @@ impl AuditIngestor {
             let caller = caller_id(&row.payload);
             let bridge = match (&invocation, &caller) {
                 (Some(invocation), Some(caller)) => {
-                    self.correlations.get(sandbox_id, caller, invocation).await?
+                    self.correlations
+                        .get(sandbox_id, caller, invocation)
+                        .await?
                 }
                 _ => None,
             };
@@ -137,7 +139,13 @@ impl AuditIngestor {
             self.obs_events.insert(&obs).await?;
         }
 
-        let cursor = next_cursor(sandbox_id, boot_epoch_id, epoch_reset, prior.as_ref(), &batch);
+        let cursor = next_cursor(
+            sandbox_id,
+            boot_epoch_id,
+            epoch_reset,
+            prior.as_ref(),
+            &batch,
+        );
         self.cursors.upsert(&cursor).await?;
         Ok(IngestReport {
             epoch_reset,
@@ -216,7 +224,9 @@ fn next_cursor(
         // the daemon's cumulative dropped count.
         let last = cursor_after.map_or(prior_last, |after| after.max(prior_last));
         let lost = max_opt(prior.and_then(|cursor| cursor.lost_before_seq), ring_lost);
-        let dropped = prior.map_or(ring_dropped, |cursor| cursor.dropped_count.max(ring_dropped));
+        let dropped = prior.map_or(ring_dropped, |cursor| {
+            cursor.dropped_count.max(ring_dropped)
+        });
         (last, lost, dropped)
     };
 

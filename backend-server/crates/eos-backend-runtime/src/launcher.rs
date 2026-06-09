@@ -21,9 +21,9 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use tokio_util::sync::CancellationToken;
 
+use eos_agent_core::EventCallback;
 use eos_backend_store::{RunMetaRepo, StoreError};
 use eos_backend_types::{BackendRunStatus, CreateUserRequest, RunMeta};
-use eos_runtime::EventCallback;
 use eos_types::{RequestId, SandboxId, UtcDateTime};
 
 use crate::event_bus::EventBus;
@@ -223,7 +223,10 @@ impl RunLauncher {
             reason: Mutex::new(None),
         });
         // Registered before spawn so `cancel` can never miss an in-flight run.
-        self.inner.runs.lock().insert(request_id.clone(), slot.clone());
+        self.inner
+            .runs
+            .lock()
+            .insert(request_id.clone(), slot.clone());
 
         let sandbox_id = sandbox_args.and_then(|args| args.sandbox_id);
         let inner = self.inner.clone();

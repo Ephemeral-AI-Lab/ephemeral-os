@@ -6,7 +6,7 @@ use workspace_guard::{
 };
 
 const PORT_CRATE_ALLOWLIST: &[&str] = &["eos-sandbox-port"];
-const API_MODULE_ALLOWLIST: &[&str] = &["crates/eos-sandbox-port/src/tool_api"];
+const API_MODULE_ALLOWLIST: &[&str] = &[];
 const RUNTIME_PATH_ALLOWLIST: &[&str] = &[
     "crates/eos-agent-core/src/runtime.rs",
     "crates/eos-agent-core/src/runtime",
@@ -41,7 +41,7 @@ fn no_nonexistent_api_facade_crate_name() {
 #[test]
 fn final_target_uses_no_forbidden_vocabulary_in_modules_or_public_types() {
     let workspace = Workspace::load();
-    if !workspace.is_final_crate_map() {
+    if !workspace.final_layout_rules_active() {
         return;
     }
 
@@ -84,7 +84,7 @@ fn final_target_uses_no_forbidden_vocabulary_in_modules_or_public_types() {
 #[test]
 fn final_target_keeps_api_out_of_crate_and_module_suffixes() {
     let workspace = Workspace::load();
-    if !workspace.is_final_crate_map() {
+    if !workspace.final_layout_rules_active() {
         return;
     }
 
@@ -126,7 +126,7 @@ fn final_target_keeps_api_out_of_crate_and_module_suffixes() {
 #[test]
 fn final_target_scopes_runtime_to_agent_core_runtime() {
     let workspace = Workspace::load();
-    if !workspace.is_final_crate_map() {
+    if !workspace.final_layout_rules_active() {
         return;
     }
 

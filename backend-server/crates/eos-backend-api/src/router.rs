@@ -16,14 +16,14 @@ use async_trait::async_trait;
 use axum::routing::{get, post};
 use axum::Router;
 
-use eos_agent_message_records::AgentMessageRecords;
+use eos_agent_run::AgentMessageRecords;
 use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{
     CancelOutcome, EventBus, LaunchError, RunLauncher, SandboxManager, SandboxManagerError,
 };
 use eos_backend_store::{EventLogRepo, RunMetaRepo};
 use eos_backend_types::{CreateUserRequest, SandboxView};
-use eos_state::{AgentRunStore, RequestStore, TaskStore};
+use eos_types::{AgentRunStore, RequestStore, TaskStore};
 use eos_types::{RequestId, SandboxId};
 
 use crate::handlers;

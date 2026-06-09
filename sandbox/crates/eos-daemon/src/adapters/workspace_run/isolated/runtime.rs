@@ -15,11 +15,11 @@ use eos_layerstack::LayerStack;
 use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
 use eos_runner::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
-use eos_workspace_modes::isolated::{
+use eos_workspace_runtime::isolated::{
     IsolatedError, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease, WorkspaceHandle,
 };
 #[cfg(target_os = "linux")]
-use eos_workspace_run::CommandHandle;
+use eos_workspace_runtime::CommandHandle;
 #[cfg(target_os = "linux")]
 use nix::fcntl::OFlag;
 #[cfg(target_os = "linux")]
@@ -262,8 +262,8 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                         "net-ready {} {} {} {}\n",
                         veth.ns_name,
                         veth.ns_ip,
-                        eos_workspace_modes::isolated::BRIDGE_PREFIX_LEN,
-                        eos_workspace_modes::isolated::GATEWAY
+                        eos_workspace_runtime::isolated::BRIDGE_PREFIX_LEN,
+                        eos_workspace_runtime::isolated::GATEWAY
                     )
                 },
             );
@@ -277,9 +277,9 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         if test_runtime_stub_enabled() {
             return Ok(PathBuf::new());
         }
-        let path = PathBuf::from(eos_workspace_modes::isolated::CGROUP_ROOT).join(format!(
+        let path = PathBuf::from(eos_workspace_runtime::isolated::CGROUP_ROOT).join(format!(
             "{}{}",
-            eos_workspace_modes::isolated::HANDLE_PREFIX,
+            eos_workspace_runtime::isolated::HANDLE_PREFIX,
             handle.workspace_handle_id.0
         ));
         std::fs::create_dir_all(&path).map_err(setup_error)?;

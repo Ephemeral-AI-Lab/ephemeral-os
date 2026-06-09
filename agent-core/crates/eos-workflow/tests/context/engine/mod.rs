@@ -11,8 +11,8 @@ use crate::context::{render_context_xml, render_task_guidance, ContextScope, Con
 use crate::ids::{generator_task_id, reducer_task_id};
 use crate::support::{tid, MemoryStores};
 
-fn deps(stores: &Arc<MemoryStores>) -> ContextEngineDeps {
-    ContextEngineDeps {
+fn deps(stores: &Arc<MemoryStores>) -> ContextEngineStores {
+    ContextEngineStores {
         workflow_store: stores.clone(),
         iteration_store: stores.clone(),
         attempt_store: stores.clone(),

@@ -453,7 +453,7 @@ mod tests {
     use async_trait::async_trait;
     use eos_types::{AgentRun, AgentRunError, SpawnAgentRequest, UtcDateTime};
 
-    use crate::NotificationService;
+    use crate::EngineNotificationQueue;
 
     use super::*;
 
@@ -492,7 +492,7 @@ mod tests {
         }
     }
 
-    fn manager(notifier: &NotificationService) -> SubagentSessionManager {
+    fn manager(notifier: &EngineNotificationQueue) -> SubagentSessionManager {
         SubagentSessionManager::new(
             "owner-run".parse().expect("agent run id"),
             Arc::new(FakeAgentRunService),
@@ -541,7 +541,7 @@ mod tests {
 
     #[tokio::test]
     async fn count_cancel_and_completion_notification_are_manager_owned() {
-        let notifier = NotificationService::new();
+        let notifier = EngineNotificationQueue::new();
         let manager = manager(&notifier);
         let running_id: AgentRunId = "run-sub-1".parse().expect("agent run id");
         manager

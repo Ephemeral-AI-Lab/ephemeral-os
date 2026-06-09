@@ -9,9 +9,7 @@ use eos_backend_types::{
     SandboxState, SandboxView, EVENT_STREAM_GAP,
 };
 use eos_protocol::CallerId;
-use eos_types::{
-    AgentRunId, InvocationId, RequestId, SandboxId, TaskId, ToolUseId, UtcDateTime,
-};
+use eos_types::{AgentRunId, InvocationId, RequestId, SandboxId, TaskId, ToolUseId, UtcDateTime};
 use serde_json::{json, Value};
 
 fn ts() -> UtcDateTime {
@@ -59,14 +57,12 @@ fn create_request_rejects_unknown_top_level_field() {
 #[test]
 fn v1_sandbox_args_accept_only_sandbox_id() {
     // The supported override binds an existing sandbox.
-    let args: SandboxArgs =
-        serde_json::from_value(json!({ "sandbox_id": "sb-1" })).unwrap();
+    let args: SandboxArgs = serde_json::from_value(json!({ "sandbox_id": "sb-1" })).unwrap();
     assert_eq!(args.sandbox_id, Some("sb-1".parse::<SandboxId>().unwrap()));
 
     // Deferred per-request overrides are rejected (AC10), not silently ignored.
     for deferred in ["image", "snapshot", "project_dir", "provider"] {
-        let err = serde_json::from_value::<SandboxArgs>(json!({ deferred: "v" }))
-            .unwrap_err();
+        let err = serde_json::from_value::<SandboxArgs>(json!({ deferred: "v" })).unwrap_err();
         assert!(err.to_string().contains(deferred), "{deferred}: {err}");
     }
 }
@@ -84,7 +80,12 @@ fn sandbox_view_serializes_no_connection_material() {
         destroy_on_finish: true,
     };
     let value = serde_json::to_value(&view).unwrap();
-    let keys: Vec<&str> = value.as_object().unwrap().keys().map(String::as_str).collect();
+    let keys: Vec<&str> = value
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
 
     // No daemon connection material or credentials may appear (AC4). The denied
     // names are assembled from fragments so this assertion does not itself trip
@@ -108,7 +109,13 @@ fn sandbox_view_serializes_no_connection_material() {
 fn page_clamps_limit_and_defaults() {
     assert_eq!(Page::new(10_000, 5).limit, Page::MAX_LIMIT);
     assert_eq!(Page::new(0, 0).limit, 1);
-    assert_eq!(Page::new(25, 5), Page { limit: 25, offset: 5 });
+    assert_eq!(
+        Page::new(25, 5),
+        Page {
+            limit: 25,
+            offset: 5
+        }
+    );
     assert_eq!(Page::default().limit, Page::DEFAULT_LIMIT);
     assert_eq!(Page::default().offset, 0);
 }

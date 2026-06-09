@@ -42,7 +42,7 @@
 </section>
 <main class="crate-layout">
   <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-tool.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool--src-hooks-rs.html"><span>hooks.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-tool--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-tool--src-model-rs.html"><span>model.rs</span><small>7/9</small></a></li><li><a class="file-link active" href="eos-tool--src-registry-rs.html"><span>registry.rs</span><small>12/26</small></a></li><li><span class="folder">tools</span><ul class="file-tree"><li><a class="file-link" href="eos-tool--src-tools-ask-advisor-rs.html"><span>ask_advisor.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-tool--src-tools-command-rs.html"><span>command.rs</span><small>7/11</small></a></li><li><a class="file-link" href="eos-tool--src-tools-sandbox-rs.html"><span>sandbox.rs</span><small>15/27</small></a></li><li><a class="file-link" href="eos-tool--src-tools-skills-rs.html"><span>skills.rs</span><small>10/35</small></a></li><li><a class="file-link" href="eos-tool--src-tools-subagent-rs.html"><span>subagent.rs</span><small>4/10</small></a></li><li><a class="file-link" href="eos-tool--src-tools-submission-rs.html"><span>submission.rs</span><small>16/20</small></a></li><li><a class="file-link" href="eos-tool--src-tools-terminal-rs.html"><span>terminal.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-tool--src-tools-workflow-rs.html"><span>workflow.rs</span><small>6/6</small></a></li></ul></li><li><a class="file-link" href="eos-tool--src-tools-rs.html"><span>tools.rs</span><small>8/6</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry crates/eos-tool/src/registry.rs ToolExecutor RegisteredTool impl std :: fmt :: Debug for RegisteredTool impl RegisteredTool ToolRegistry impl ToolRegistry ToolConfig ToolConfigSet impl ToolConfigSet ToolConfigError parse_tool_config parse_hooks parse_hook_item hook_from_token extension read_dir_sorted Scratch impl Scratch impl Drop for Scratch valid_file parses_a_well_formed_file absent_hooks_is_empty rejects_unknown_intent rejects_missing_intent rejects_unknown_hook_token rejects_terminal_mismatch rejects_empty_description load_rejects_non_directory_root load_rejects_unknown_tool_file load_rejects_missing_tool load_full_valid_set_is_total hook_tokens_round_trip disallow_nested_max_depth_parses_from_entry workflow_max_depth_overrides_deferral_hooks schema_to_object text_spec json_spec text_spec_with_agent_enum patch_agent_enum Submission SubmissionInner impl Submission impl fmt :: Debug for Submission BackgroundSessions WorkspaceMode ToolRuntime impl fmt :: Debug for ToolRuntime">
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry crates/eos-tool/src/registry.rs ToolExecutor RegisteredTool impl std :: fmt :: Debug for RegisteredTool impl RegisteredTool ToolRegistry impl ToolRegistry ToolConfig ToolConfigSet impl ToolConfigSet ToolConfigError parse_tool_config parse_hooks parse_hook_item hook_from_token extension read_dir_sorted Scratch impl Scratch impl Drop for Scratch valid_file parses_a_well_formed_file absent_hooks_is_empty rejects_unknown_intent rejects_missing_intent rejects_unknown_hook_token rejects_terminal_mismatch rejects_empty_description load_rejects_non_directory_root load_rejects_unknown_tool_file load_rejects_missing_tool load_full_valid_set_is_total hook_tokens_round_trip disallow_nested_max_depth_parses_from_entry workflow_max_depth_overrides_deferral_hooks schema_to_object text_spec json_spec text_spec_with_agent_enum patch_agent_enum TerminalSubmissionRuntime SubmissionInner impl TerminalSubmissionRuntime impl fmt :: Debug for TerminalSubmissionRuntime BackgroundSessionControl IsolatedWorkspaceModeControl ToolRuntime impl fmt :: Debug for ToolRuntime">
   <div class="module-head">
     <div>
       <h2>src/registry.rs</h2>
@@ -330,23 +330,23 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-tool/src/registry.rs:272</p>
-</article><article id="item-struct-Submission-863" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Submission pub pub struct Submission crates/eos-tool/src/registry.rs inner Arc &lt; SubmissionInner &gt; ">
+</article><article id="item-struct-TerminalSubmissionRuntime-863" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TerminalSubmissionRuntime pub pub struct TerminalSubmissionRuntime crates/eos-tool/src/registry.rs inner Arc &lt; SubmissionInner &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
-    <h3>Submission</h3>
+    <h3>TerminalSubmissionRuntime</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a></code>
   <p class="docstring">Store and attempt-submission resources used by terminal tools.</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-876"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , request_store : Arc &lt; dyn RequestStore &gt; , attempt : Arc &lt; dyn AttemptSubmissionPort &gt; ,) -&gt; Self</code><p class="docstring">Build terminal-submission resources.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-876"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-new-83">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , request_store : Arc &lt; dyn RequestStore &gt; , attempt : Arc &lt; dyn WorkflowAttemptSubmissionApi &gt; ,) -&gt; Self</code><p class="docstring">Build terminal-submission resources.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Build terminal-submission resources.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(
         task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
         request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">RequestStore</span>&gt;,
-        attempt: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt;,
+        attempt: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowAttemptSubmissionApi</span>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             inner: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a> {
@@ -369,39 +369,40 @@
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.inner.request_store.clone())
     }
 </code></pre>
-</details></td></tr><tr id="method-attempt-900"><td>method</td><td>attempt</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-attempt-900">attempt</a> (&amp; self) -&gt; Result &lt; Arc &lt; dyn AttemptSubmissionPort &gt; , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-attempt-900"><td>method</td><td>attempt</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-attempt-900">attempt</a> (&amp; self) -&gt; Result &lt; Arc &lt; dyn WorkflowAttemptSubmissionApi &gt; , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-attempt-900">attempt</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt;, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-attempt-900">attempt</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowAttemptSubmissionApi</span>&gt;, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.inner.attempt.clone())
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a></code></summary><table><tbody><tr id="method-fmt-906"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a></code></summary><table><tbody><tr id="method-fmt-906"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a>&quot;).finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a>&quot;)
+            .finish_non_exhaustive()
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-tool/src/registry.rs:863</p>
-</article><article id="item-struct-ToolRuntime-939" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolRuntime pub pub struct ToolRuntime crates/eos-tool/src/registry.rs sandbox Arc &lt; dyn SandboxTransport &gt; workflow Arc &lt; dyn WorkflowApi &gt; launcher Arc &lt; dyn AgentRunApi &gt; skills Arc &lt; SkillRegistry &gt; submission Submission background Arc &lt; dyn BackgroundSessions &gt; workspace_mode Arc &lt; dyn WorkspaceMode &gt; ">
+</article><article id="item-struct-ToolRuntime-940" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolRuntime pub pub struct ToolRuntime crates/eos-tool/src/registry.rs sandbox Arc &lt; dyn SandboxTransport &gt; workflow Arc &lt; dyn WorkflowApi &gt; launcher Arc &lt; dyn AgentRunApi &gt; skills Arc &lt; SkillRegistry &gt; submission TerminalSubmissionRuntime background Arc &lt; dyn BackgroundSessionControl &gt; workspace_mode Arc &lt; dyn IsolatedWorkspaceModeControl &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ToolRuntime</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-939">ToolRuntime</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a></code>
   <p class="docstring">Runtime handles captured by concrete tool executors.</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>sandbox</td><td><code>Arc &lt; dyn SandboxTransport &gt;</code></td></tr><tr><td>pub</td><td>workflow</td><td><code>Arc &lt; dyn WorkflowApi &gt;</code></td></tr><tr><td>pub</td><td>launcher</td><td><code>Arc &lt; dyn AgentRunApi &gt;</code></td></tr><tr><td>pub</td><td>skills</td><td><code>Arc &lt; <a class="symbol-link" href="eos-tool--src-tools-skills-rs.html#item-struct-SkillRegistry-222">SkillRegistry</a> &gt;</code></td></tr><tr><td>pub</td><td>submission</td><td><code><a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a></code></td></tr><tr><td>pub</td><td>background</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessions-911">BackgroundSessions</a> &gt;</code></td></tr><tr><td>pub</td><td>workspace_mode</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-WorkspaceMode-928">WorkspaceMode</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-939">ToolRuntime</a></code></summary><table><tbody><tr id="method-fmt-959"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>sandbox</td><td><code>Arc &lt; dyn SandboxTransport &gt;</code></td></tr><tr><td>pub</td><td>workflow</td><td><code>Arc &lt; dyn WorkflowApi &gt;</code></td></tr><tr><td>pub</td><td>launcher</td><td><code>Arc &lt; dyn AgentRunApi &gt;</code></td></tr><tr><td>pub</td><td>skills</td><td><code>Arc &lt; <a class="symbol-link" href="eos-tool--src-tools-skills-rs.html#item-struct-SkillRegistry-222">SkillRegistry</a> &gt;</code></td></tr><tr><td>pub</td><td>submission</td><td><code><a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a></code></td></tr><tr><td>pub</td><td>background</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessionControl-912">BackgroundSessionControl</a> &gt;</code></td></tr><tr><td>pub</td><td>workspace_mode</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-IsolatedWorkspaceModeControl-929">IsolatedWorkspaceModeControl</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a></code></summary><table><tbody><tr id="method-fmt-960"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-939">ToolRuntime</a>&quot;).finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a>&quot;).finish_non_exhaustive()
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
-  <p class="source">crates/eos-tool/src/registry.rs:939</p>
+  <p class="source">crates/eos-tool/src/registry.rs:940</p>
 </article><article id="item-enum-ToolConfigError-344" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ToolConfigError pub pub enum ToolConfigError crates/eos-tool/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
@@ -435,55 +436,55 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-tool/src/registry.rs:32</p>
-</article><article id="item-trait-BackgroundSessions-911" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait BackgroundSessions pub pub trait BackgroundSessions crates/eos-tool/src/registry.rs  register_subagent async fn register_subagent (&amp; self , run : AgentRunId) -&gt; Result &lt; () , ToolError &gt; register_command async fn register_command (&amp; self , id : CommandSessionId , sandbox : SandboxId ,) -&gt; Result &lt; () , ToolError &gt; register_workflow async fn register_workflow (&amp; self , started : StartedWorkflow) -&gt; Result &lt; () , ToolError &gt; cancel_subagent async fn cancel_subagent (&amp; self , run : AgentRunId , reason : &amp; str) -&gt; Result &lt; bool , ToolError &gt;">
+</article><article id="item-trait-BackgroundSessionControl-912" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait BackgroundSessionControl pub pub trait BackgroundSessionControl crates/eos-tool/src/registry.rs  register_subagent_run async fn register_subagent_run (&amp; self , run : AgentRunId) -&gt; Result &lt; () , ToolError &gt; register_command_session async fn register_command_session (&amp; self , id : CommandSessionId , sandbox : SandboxId ,) -&gt; Result &lt; () , ToolError &gt; register_workflow_session async fn register_workflow_session (&amp; self , started : StartedWorkflow) -&gt; Result &lt; () , ToolError &gt; cancel_subagent_run async fn cancel_subagent_run (&amp; self , run : AgentRunId , reason : &amp; str) -&gt; Result &lt; bool , ToolError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
-    <h3>BackgroundSessions</h3>
+    <h3>BackgroundSessionControl</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessions-911">BackgroundSessions</a></code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessionControl-912">BackgroundSessionControl</a></code>
   <p class="docstring">Object-safe background-session registration used by background-producing tools.</p>
   <div class="tags"><span>async_trait</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-register-subagent-914"><td>required</td><td>register_subagent</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-subagent-914">register_subagent</a> (&amp; self , run : AgentRunId) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a detached subagent run.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-register-subagent-run-915"><td>required</td><td>register_subagent_run</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-subagent-run-915">register_subagent_run</a> (&amp; self , run : AgentRunId) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a detached subagent run.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Register a detached subagent run.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-subagent-914">register_subagent</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-subagent-run-915">register_subagent_run</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-register-command-916"><td>required</td><td>register_command</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-command-916">register_command</a> (&amp; self , id : CommandSessionId , sandbox : SandboxId ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a background command session.</p><details class="function-source">
+</details></td></tr><tr id="method-register-command-session-917"><td>required</td><td>register_command_session</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-command-session-917">register_command_session</a> (&amp; self , id : CommandSessionId , sandbox : SandboxId ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a background command session.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Register a background command session.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-command-916">register_command</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-command-session-917">register_command_session</a>(
         &amp;<span class="rs-self">self</span>,
         id: <span class="rs-type">CommandSessionId</span>,
         sandbox: <span class="rs-type">SandboxId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-register-workflow-922"><td>required</td><td>register_workflow</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-workflow-922">register_workflow</a> (&amp; self , started : StartedWorkflow) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a delegated workflow.</p><details class="function-source">
+</details></td></tr><tr id="method-register-workflow-session-923"><td>required</td><td>register_workflow_session</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-register-workflow-session-923">register_workflow_session</a> (&amp; self , started : StartedWorkflow) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Register a delegated workflow.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Register a delegated workflow.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-922">register_workflow</a>(&amp;<span class="rs-self">self</span>, started: <span class="rs-type">StartedWorkflow</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-session-923">register_workflow_session</a>(&amp;<span class="rs-self">self</span>, started: <span class="rs-type">StartedWorkflow</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-cancel-subagent-924"><td>required</td><td>cancel_subagent</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-cancel-subagent-924">cancel_subagent</a> (&amp; self , run : AgentRunId , reason : &amp; str) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel one detached subagent run.</p><details class="function-source">
+</details></td></tr><tr id="method-cancel-subagent-run-925"><td>required</td><td>cancel_subagent_run</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-cancel-subagent-run-925">cancel_subagent_run</a> (&amp; self , run : AgentRunId , reason : &amp; str) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Cancel one detached subagent run.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Cancel one detached subagent run.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-cancel-subagent-924">cancel_subagent</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-cancel-subagent-run-925">cancel_subagent_run</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-tool/src/registry.rs:911</p>
-</article><article id="item-trait-WorkspaceMode-928" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait WorkspaceMode pub pub trait WorkspaceMode crates/eos-tool/src/registry.rs  set_isolated_workspace_mode async fn set_isolated_workspace_mode (&amp; self , agent_run_id : AgentRunId , is_isolated : bool ,) -&gt; Result &lt; () , ToolError &gt;">
+  <p class="source">crates/eos-tool/src/registry.rs:912</p>
+</article><article id="item-trait-IsolatedWorkspaceModeControl-929" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait IsolatedWorkspaceModeControl pub pub trait IsolatedWorkspaceModeControl crates/eos-tool/src/registry.rs  set_isolated_workspace_mode async fn set_isolated_workspace_mode (&amp; self , agent_run_id : AgentRunId , is_isolated : bool ,) -&gt; Result &lt; () , ToolError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
-    <h3>WorkspaceMode</h3>
+    <h3>IsolatedWorkspaceModeControl</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-WorkspaceMode-928">WorkspaceMode</a></code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-trait-IsolatedWorkspaceModeControl-929">IsolatedWorkspaceModeControl</a></code>
   <p class="docstring">Run-local isolated-workspace mode update.</p>
   <div class="tags"><span>async_trait</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-set-isolated-workspace-mode-931"><td>required</td><td>set_isolated_workspace_mode</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a> (&amp; self , agent_run_id : AgentRunId , is_isolated : bool ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Update whether the calling agent currently has an isolated workspace.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-set-isolated-workspace-mode-932"><td>required</td><td>set_isolated_workspace_mode</td><td><code>async fn <a class="symbol-link" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a> (&amp; self , agent_run_id : AgentRunId , is_isolated : bool ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-tool.html#item-enum-ToolError-6">ToolError</a> &gt;</code><p class="docstring">Update whether the calling agent currently has an isolated workspace.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Update whether the calling agent currently has an isolated workspace.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: <span class="rs-type">AgentRunId</span>,
         is_isolated: bool,
@@ -491,7 +492,7 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-tool/src/registry.rs:928</p>
+  <p class="source">crates/eos-tool/src/registry.rs:929</p>
 </article><article id="item-struct-Scratch-538" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Scratch private struct Scratch crates/eos-tool/src/registry.rs 0 PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
@@ -534,7 +535,7 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-tool/src/registry.rs:538</p>
-</article><article id="item-struct-SubmissionInner-869" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SubmissionInner private struct SubmissionInner crates/eos-tool/src/registry.rs task_store Arc &lt; dyn TaskStore &gt; request_store Arc &lt; dyn RequestStore &gt; attempt Arc &lt; dyn AttemptSubmissionPort &gt; ">
+</article><article id="item-struct-SubmissionInner-869" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SubmissionInner private struct SubmissionInner crates/eos-tool/src/registry.rs task_store Arc &lt; dyn TaskStore &gt; request_store Arc &lt; dyn RequestStore &gt; attempt Arc &lt; dyn WorkflowAttemptSubmissionApi &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SubmissionInner</h3>
@@ -542,7 +543,7 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>request_store</td><td><code>Arc &lt; dyn RequestStore &gt;</code></td></tr><tr><td>private</td><td>attempt</td><td><code>Arc &lt; dyn AttemptSubmissionPort &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>request_store</td><td><code>Arc &lt; dyn RequestStore &gt;</code></td></tr><tr><td>private</td><td>attempt</td><td><code>Arc &lt; dyn WorkflowAttemptSubmissionApi &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-tool/src/registry.rs:869</p>
 </article><div class="group-label">Standalone Functions</div><article id="item-fn-schema-to-object-796" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn schema_to_object pub(crate) pub(crate) fn schema_to_object (schema : RootSchema) -&gt; JsonObject crates/eos-tool/src/registry.rs  ">
@@ -1306,8 +1307,8 @@
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">SandboxTransport</span>;
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">CommandSessionId</span>, <span class="rs-type">RequestStore</span>, <span class="rs-type">SandboxId</span>,
-    <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">WorkflowApi</span>,
+    <span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">CommandSessionId</span>, <span class="rs-type">RequestStore</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">StartedWorkflow</span>, <span class="rs-type">TaskStore</span>,
+    <span class="rs-type">WorkflowApi</span>, <span class="rs-type">WorkflowAttemptSubmissionApi</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-tool--src-tools-skills-rs.html#item-struct-SkillRegistry-222">SkillRegistry</a>, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>};
@@ -2154,7 +2155,7 @@
     }
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::{build_default_registry, build_registry_schema, <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CallerScope-31">CallerScope</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::{build_default_registry, build_registry_schema, <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CallerScope-32">CallerScope</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> config::{<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfig-257">ToolConfig</a>, <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-enum-ToolConfigError-344">ToolConfigError</a>, <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> executor::{<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-RegisteredTool-50">RegisteredTool</a>, <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-ToolExecutor-32">ToolExecutor</a>};
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> spec::{json_spec, text_spec, text_spec_with_agent_enum};
@@ -2162,23 +2163,23 @@
 
 <span class="rs-comment">/// Store and attempt-submission resources used by terminal tools.</span>
 #[derive(<span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a> {
     inner: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a>&gt;,
 }
 
 <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a> {
     task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
     request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">RequestStore</span>&gt;,
-    attempt: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt;,
+    attempt: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowAttemptSubmissionApi</span>&gt;,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a> {
     <span class="rs-comment">/// Build terminal-submission resources.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(
         task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
         request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">RequestStore</span>&gt;,
-        attempt: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt;,
+        attempt: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowAttemptSubmissionApi</span>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             inner: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-SubmissionInner-869">SubmissionInner</a> {
@@ -2197,39 +2198,40 @@
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.inner.request_store.clone())
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-attempt-900">attempt</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AttemptSubmissionPort</span>&gt;, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-attempt-900">attempt</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowAttemptSubmissionApi</span>&gt;, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.inner.attempt.clone())
     }
 }
 
-<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a> {
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a>&quot;).finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a>&quot;)
+            .finish_non_exhaustive()
     }
 }
 
 <span class="rs-comment">/// Object-safe background-session registration used by background-producing tools.</span>
 #[async_trait]
-<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessions-911">BackgroundSessions</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessionControl-912">BackgroundSessionControl</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
     <span class="rs-comment">/// Register a detached subagent run.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-subagent-914">register_subagent</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-subagent-run-915">register_subagent_run</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
     <span class="rs-comment">/// Register a background command session.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-command-916">register_command</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-command-session-917">register_command_session</a>(
         &amp;<span class="rs-self">self</span>,
         id: <span class="rs-type">CommandSessionId</span>,
         sandbox: <span class="rs-type">SandboxId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
     <span class="rs-comment">/// Register a delegated workflow.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-922">register_workflow</a>(&amp;<span class="rs-self">self</span>, started: <span class="rs-type">StartedWorkflow</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-workflow-session-923">register_workflow_session</a>(&amp;<span class="rs-self">self</span>, started: <span class="rs-type">StartedWorkflow</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
     <span class="rs-comment">/// Cancel one detached subagent run.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-cancel-subagent-924">cancel_subagent</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-cancel-subagent-run-925">cancel_subagent_run</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">AgentRunId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-tool.html#item-enum-ToolError-6">ToolError</a>&gt;;
 }
 
 <span class="rs-comment">/// Run-local isolated-workspace mode update.</span>
 #[async_trait]
-<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-WorkspaceMode-928">WorkspaceMode</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-IsolatedWorkspaceModeControl-929">IsolatedWorkspaceModeControl</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
     <span class="rs-comment">/// Update whether the calling agent currently has an isolated workspace.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-931">set_isolated_workspace_mode</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-set-isolated-workspace-mode-932">set_isolated_workspace_mode</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: <span class="rs-type">AgentRunId</span>,
         is_isolated: bool,
@@ -2238,7 +2240,7 @@
 
 <span class="rs-comment">/// Runtime handles captured by concrete tool executors.</span>
 #[derive(<span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-939">ToolRuntime</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a> {
     <span class="rs-comment">/// Sandbox transport for file/edit/isolated-workspace tools.</span>
     <span class="rs-kw">pub</span> sandbox: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,
     <span class="rs-comment">/// Delegated-workflow API.</span>
@@ -2248,16 +2250,16 @@
     <span class="rs-comment">/// Skill registry.</span>
     <span class="rs-kw">pub</span> skills: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tool--src-tools-skills-rs.html#item-struct-SkillRegistry-222">SkillRegistry</a>&gt;,
     <span class="rs-comment">/// Terminal submission resources.</span>
-    <span class="rs-kw">pub</span> submission: <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-Submission-863">Submission</a>,
+    <span class="rs-kw">pub</span> submission: <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-TerminalSubmissionRuntime-863">TerminalSubmissionRuntime</a>,
     <span class="rs-comment">/// Background session registration/cancellation.</span>
-    <span class="rs-kw">pub</span> background: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessions-911">BackgroundSessions</a>&gt;,
+    <span class="rs-kw">pub</span> background: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-BackgroundSessionControl-912">BackgroundSessionControl</a>&gt;,
     <span class="rs-comment">/// Isolated-workspace mode update.</span>
-    <span class="rs-kw">pub</span> workspace_mode: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-WorkspaceMode-928">WorkspaceMode</a>&gt;,
+    <span class="rs-kw">pub</span> workspace_mode: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-trait-IsolatedWorkspaceModeControl-929">IsolatedWorkspaceModeControl</a>&gt;,
 }
 
-<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-939">ToolRuntime</a> {
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-fmt-171">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-939">ToolRuntime</a>&quot;).finish_non_exhaustive()
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a>&quot;).finish_non_exhaustive()
     }
 }
 </code></pre>

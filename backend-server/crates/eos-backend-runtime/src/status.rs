@@ -27,7 +27,7 @@
 //! falls back to its own accepted/running view only while agent-core has no row.
 
 use eos_backend_types::{ApiRunStatus, BackendRunStatus};
-use eos_state::RequestStatus;
+use eos_types::RequestStatus;
 
 /// Resolve the API status from the backend run status and the agent-core request
 /// status (`None` when agent-core has not created the request row yet — the

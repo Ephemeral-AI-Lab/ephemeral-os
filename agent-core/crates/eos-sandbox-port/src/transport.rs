@@ -2,8 +2,8 @@
 //!
 //! One async RPC boundary to the sandbox daemon. This crate declares the trait;
 //! `eos-sandbox-host` implements the daemon-backed concrete (`DaemonSandboxTransport`)
-//! and stamps the wire-level protocol version; `eos-runtime` injects it as
-//! `Arc<dyn SandboxTransport>`. The `tool_api` helpers depend only on
+//! and stamps the wire-level protocol version; `eos-agent-core` injects it as
+//! `Arc<dyn SandboxTransport>`. The tool-dispatch helpers depend only on
 //! `&dyn SandboxTransport`, never on a concrete client.
 
 use async_trait::async_trait;
@@ -11,7 +11,7 @@ use eos_types::{JsonObject, SandboxId};
 
 use crate::error::SandboxPortError;
 use crate::ops::DaemonOp;
-use crate::tool_api::{plugin_ensure_payload, PluginPackageEnsureRequest};
+use crate::tool_dispatch::{plugin_ensure_payload, PluginPackageEnsureRequest};
 
 /// One sandbox RPC boundary. Implemented in `eos-sandbox-host` by the daemon
 /// client and (in tests) by an in-memory mock.
@@ -67,7 +67,7 @@ pub trait SandboxTransport: Send + Sync {
 #[cfg(test)]
 pub(crate) mod mock {
     //! An in-memory `SandboxTransport` returning a canned outcome, used by the
-    //! `tool_api` conflict tests.
+    //! tool-dispatch conflict tests.
 
     use super::{async_trait, DaemonOp, JsonObject, SandboxId, SandboxPortError, SandboxTransport};
 

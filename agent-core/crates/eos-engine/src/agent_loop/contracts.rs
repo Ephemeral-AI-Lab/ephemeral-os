@@ -1,18 +1,19 @@
 //! Agent-loop composition contracts owned by the engine.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_sandbox_port::SandboxCommandApi;
 use eos_tool::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
 use eos_types::{
-    AgentRunApi, AgentRunId, AgentRunStore, AgentState, Message, TaskStore, ToolUseId, WorkflowApi,
-    WorkflowStore,
+    AgentRunApi, AgentRunId, AgentRunStore, AgentState, JsonObject, Message, TaskStore, ToolUseId,
+    WorkflowApi, WorkflowStore,
 };
+use serde_json::json;
 
 use crate::background::BackgroundManagers;
-use crate::notifications::NotificationService;
+use crate::notifications::EngineNotificationQueue;
 use crate::EngineError;
 
 /// Thin request to start one agent loop.
@@ -67,6 +68,17 @@ pub enum AgentLoopOutcomeKind {
     },
 }
 
+/// Convert a terminal tool result into the persisted JSON payload shape.
+#[must_use]
+pub fn tool_result_payload(result: &ToolResult) -> JsonObject {
+    let mut payload = JsonObject::new();
+    payload.insert("output".to_owned(), json!(result.output));
+    payload.insert("is_error".to_owned(), json!(result.is_error));
+    payload.insert("metadata".to_owned(), json!(result.metadata));
+    payload.insert("is_terminal".to_owned(), json!(result.is_terminal));
+    payload
+}
+
 /// Input for rendering one tool call's execution metadata.
 #[derive(Debug, Clone)]
 pub struct ExecutionMetadataBuildInput {
@@ -94,12 +106,23 @@ pub trait AgentExecutionMetadataService: Send + Sync {
 }
 
 /// Factory input for building one loop's concrete tool registry.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AgentLoopToolRegistryBuildInput {
     /// Agent-run id.
     pub agent_run_id: AgentRunId,
+    /// Agent-run lifecycle API for nested launches from this loop.
+    pub agent_run_api: Arc<dyn AgentRunApi>,
     /// Engine-owned background aggregate for the run.
     pub background: Option<BackgroundManagers>,
+}
+
+impl std::fmt::Debug for AgentLoopToolRegistryBuildInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentLoopToolRegistryBuildInput")
+            .field("agent_run_id", &self.agent_run_id)
+            .field("background", &self.background)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Runtime-provided factory for concrete tool registries.
@@ -148,10 +171,9 @@ impl AgentLoopHookDependencies {
 /// Runtime-supplied ports needed by engine-owned background managers.
 #[derive(Clone)]
 pub struct AgentLoopBackgroundDependencies {
-    agent_run_service: Arc<dyn AgentRunApi>,
     command_service: Arc<dyn SandboxCommandApi>,
     completion_poll_interval: Duration,
-    workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
+    workflow_service: Arc<dyn WorkflowApi>,
 }
 
 impl std::fmt::Debug for AgentLoopBackgroundDependencies {
@@ -166,13 +188,11 @@ impl AgentLoopBackgroundDependencies {
     /// Build concrete background dependencies from runtime-owned ports.
     #[must_use]
     pub fn new(
-        agent_run_service: Arc<dyn AgentRunApi>,
         command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
-        workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
+        workflow_service: Arc<dyn WorkflowApi>,
     ) -> Self {
         Self {
-            agent_run_service,
             command_service,
             completion_poll_interval,
             workflow_service,
@@ -182,15 +202,16 @@ impl AgentLoopBackgroundDependencies {
     pub(crate) fn build_managers(
         &self,
         agent_run_id: AgentRunId,
-        notifications: NotificationService,
+        agent_run_api: Arc<dyn AgentRunApi>,
+        notifications: EngineNotificationQueue,
     ) -> BackgroundManagers {
         BackgroundManagers::new(
             agent_run_id,
-            self.agent_run_service.clone(),
+            agent_run_api,
             self.command_service.clone(),
             self.completion_poll_interval,
             notifications,
-            &self.workflow_service,
+            self.workflow_service.clone(),
         )
     }
 }

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use eos_occ::{ChangesetResult, FileResult, OccStatus};
 use eos_protocol::{LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
-use eos_workspace_modes::ephemeral::{
+use eos_workspace_runtime::ephemeral::{
     EphemeralSnapshot, EphemeralWorkspaceError, PathChange, PathChangeKind, PublishOutcome,
     PublishStatus,
 };

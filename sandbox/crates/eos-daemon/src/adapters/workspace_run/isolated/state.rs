@@ -7,7 +7,7 @@ use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
 use eos_layerstack::{read_workspace_binding, LayerStack};
-use eos_workspace_modes::isolated::{
+use eos_workspace_runtime::isolated::{
     IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress,
 };

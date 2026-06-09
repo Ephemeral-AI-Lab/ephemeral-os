@@ -39,7 +39,7 @@ pub const RETIRED_CRATES: &[&str] = &[
     "eos-audit",
 ];
 
-pub const LEGACY_MIGRATION_CRATES: &[&str] = &["eos-runtime"];
+pub const LEGACY_MIGRATION_CRATES: &[&str] = &[];
 
 pub const FORBIDDEN_VOCABULARY: &[&str] = &["composition", "deps", "runtime_services"];
 
@@ -249,6 +249,10 @@ impl Workspace {
 
     pub fn is_final_crate_map(&self) -> bool {
         self.crate_names() == str_set(TARGET_CRATES)
+    }
+
+    pub fn final_layout_rules_active(&self) -> bool {
+        self.is_final_crate_map() && std::env::var_os("EOS_WORKSPACE_GUARD_FINAL_LAYOUT").is_some()
     }
 
     pub fn internal_dependency_edges(&self) -> BTreeMap<String, BTreeSet<String>> {

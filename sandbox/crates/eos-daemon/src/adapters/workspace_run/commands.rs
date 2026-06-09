@@ -9,12 +9,12 @@ use std::sync::OnceLock;
 use std::time::Instant;
 
 #[cfg(target_os = "linux")]
-use eos_command_session::{
+use eos_layerstack::require_workspace_binding;
+#[cfg(target_os = "linux")]
+use eos_workspace_runtime::command_session::{
     CancelCommandSession, CommandResponse, CommandSessionCompletion, CommandSessionError,
     ReadCommandProgress, StartCommandSession, WriteStdin,
 };
-#[cfg(target_os = "linux")]
-use eos_layerstack::require_workspace_binding;
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
@@ -36,7 +36,7 @@ use super::wire::{
     command_session_error, strip_session_id,
 };
 #[cfg(target_os = "linux")]
-use eos_workspace_run::{StartTarget, WorkspaceRunManager};
+use eos_workspace_runtime::{StartTarget, WorkspaceRunManager};
 
 #[cfg(target_os = "linux")]
 fn workspace_run_manager() -> &'static WorkspaceRunManager {

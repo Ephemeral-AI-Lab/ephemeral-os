@@ -235,7 +235,7 @@
             ))
         })
         .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
-    <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+    <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
         &amp;root,
         body.snapshot_version,
         &amp;changes,
@@ -581,8 +581,8 @@
 <span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
 <span class="rs-kw">use</span> serde_json::json;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::occ::apply_occ_changeset;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">OCC_APPLY_CHANGESET_OP</span>: &amp;str = &quot;daemon.occ.apply_changeset&quot;;
 
@@ -632,7 +632,7 @@
             ))
         })
         .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
-    <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
+    <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-31">apply_occ_changeset</a>(
         &amp;root,
         body.snapshot_version,
         &amp;changes,

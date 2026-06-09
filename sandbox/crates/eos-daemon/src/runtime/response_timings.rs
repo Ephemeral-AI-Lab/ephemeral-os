@@ -6,7 +6,7 @@ use std::time::Instant;
 use eos_occ::ChangesetResult;
 use eos_protocol::Manifest;
 use eos_runner::RunResult;
-use eos_workspace::WorkspaceTimings;
+use eos_workspace_contract::WorkspaceTimings;
 use serde_json::{json, Value};
 
 #[derive(Clone, Copy, Debug)]
@@ -21,7 +21,7 @@ pub(crate) struct TreeResourceStats {
 
 impl TreeResourceStats {
     pub(crate) fn from_ephemeral(
-        stats: &eos_workspace_modes::ephemeral::TreeResourceStats,
+        stats: &eos_workspace_runtime::ephemeral::TreeResourceStats,
     ) -> Self {
         let file_entries = stats.files.saturating_add(stats.symlinks);
         let entry_count = file_entries.saturating_add(stats.dirs);
@@ -289,7 +289,7 @@ fn mutation_source(verb: &str) -> &'static str {
 // correct for small counts (depth, path counts) but wrong on the byte paths
 // (e.g. `*_tree_bytes`), where a >4.29 GB tree was silently clamped.
 pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
-    eos_workspace::usize_to_f64_saturating(value)
+    eos_workspace_contract::usize_to_f64_saturating(value)
 }
 
 #[cfg(test)]
@@ -298,7 +298,7 @@ pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
 }
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
-    eos_workspace::u64_to_f64_saturating(value)
+    eos_workspace_contract::u64_to_f64_saturating(value)
 }
 
 #[cfg(test)]

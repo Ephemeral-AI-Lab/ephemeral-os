@@ -91,17 +91,17 @@
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>String</code></td></tr><tr><td>private</td><td>status</td><td><code>String</code></td></tr><tr><td>private</td><td>message</td><td><code>String</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:219</p>
-</article><article id="item-struct-FakePublisher-359" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct FakePublisher private struct FakePublisher crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+</article><article id="item-struct-FakePublisher-363" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct FakePublisher private struct FakePublisher crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>FakePublisher</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a></code>
   <div class="tags"></div>
-  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> for <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a></code></summary><table><tbody><tr id="method-publish-upperdir-changes-362"><td>method</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#method-publish-upperdir-changes-362">publish_upperdir_changes</a> (&amp; self , _root : &amp; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a> , _snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , _path_kinds : &amp; [<a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a>] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a> , <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code><details class="function-source">
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> for <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a></code></summary><table><tbody><tr id="method-publish-upperdir-changes-366"><td>method</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#method-publish-upperdir-changes-366">publish_upperdir_changes</a> (&amp; self , _root : &amp; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a> , _snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , _path_kinds : &amp; [<a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PathChange-42">PathChange</a>] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a> , <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#method-publish-upperdir-changes-362">publish_upperdir_changes</a>(
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#method-publish-upperdir-changes-366">publish_upperdir_changes</a>(
             &amp;<span class="rs-self">self</span>,
             _root: &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
             _snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
@@ -128,7 +128,7 @@
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:359</p>
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:363</p>
 </article><div class="group-label">Standalone Functions</div><article id="item-fn-prepare-ephemeral-command-44" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_ephemeral_command pub pub fn prepare_ephemeral_command (context : EphemeralCommandPrepareContext , snapshot : EphemeralSnapshot , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedEphemeralCommand , WorkspaceApiError &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -223,19 +223,22 @@
         snapshot,
         dirs,
     };
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-PreparedEphemeralCommand-36">PreparedEphemeralCommand</a> { prepared, workspace })
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-PreparedEphemeralCommand-36">PreparedEphemeralCommand</a> {
+        prepared,
+        workspace,
+    })
 }
 </code></pre>
 </details>
 
   <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:44</p>
-</article><article id="item-fn-finalize-ephemeral-command-130" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_ephemeral_command pub pub fn finalize_ephemeral_command (publisher : &amp; impl WorkspacePublisherPort , workspace : EphemeralWorkspace , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+</article><article id="item-fn-finalize-ephemeral-command-133" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_ephemeral_command pub pub fn finalize_ephemeral_command (publisher : &amp; impl WorkspacePublisherPort , workspace : EphemeralWorkspace , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>finalize_ephemeral_command</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a> (publisher : &amp; impl <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> , workspace : <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a> , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a> (publisher : &amp; impl <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> , workspace : <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a> , base_timings : WorkspaceTimings , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code>
   <p class="docstring">Capture the command's upperdir, publish it through `publisher`, and shape the<br>command outcome. This is the COMPLETE branch only — the run calls it when the<br>command settled normally; cancel discards instead and never reaches here.<br># Errors<br>Returns [`WorkspaceApiError`] when capture or publish-result parsing fails.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -247,18 +250,15 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`WorkspaceApiError`] when capture or publish-result parsing fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a>(
     publisher: &amp;<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a>,
     workspace: <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a>,
     base_timings: <span class="rs-type">WorkspaceTimings</span>,
     request: <span class="rs-type">FinalizeCommandRequest</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> run_dir = workspace.dirs.run_dir.clone();
-    <span class="rs-kw">let</span> finalize = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-fn-finalize-publishable-workspace-23">finalize_publishable_workspace</a>(
-        publisher,
-        <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-struct-FinalizeRequest-9">FinalizeRequest</a> { workspace },
-    )
-    .map_err(finalize_error)?;
+    <span class="rs-kw">let</span> finalize = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-fn-finalize-publishable-workspace-23">finalize_publishable_workspace</a>(publisher, <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-struct-FinalizeRequest-9">FinalizeRequest</a> { workspace })
+        .map_err(finalize_error)?;
     <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-publish-files-242">publish_files</a>(&amp;finalize.publish)?;
     <span class="rs-kw">let</span> path_kinds = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-path-changes-to-wire-281">path_changes_to_wire</a>(&amp;finalize.capture.path_kinds);
     <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
@@ -324,7 +324,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:130</p>
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:133</p>
 </article><article id="item-fn-discard-ephemeral-command-212" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discard_ephemeral_command pub pub fn discard_ephemeral_command (dirs : &amp; EphemeralRunDirs) crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -422,9 +422,9 @@
     files
         .iter()
         .map(|file| {
-            <span class="rs-kw">let</span> object = file.as_object().ok_or_else(|| {
-                <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-error-234">finalize_error</a>(&quot;publish file result must be an object&quot;)
-            })?;
+            <span class="rs-kw">let</span> object = file
+                .as_object()
+                .ok_or_else(|| <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-error-234">finalize_error</a>(&quot;publish file result must be an object&quot;))?;
             <span class="rs-kw">let</span> path = object
                 .get(&quot;path&quot;)
                 .and_then(<span class="rs-type">Value</span>::as_str)
@@ -607,45 +607,49 @@
 ) {
     <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
     <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_exists&quot;), entry_count.min(1));
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(
+        timings,
+        &amp;format!(&quot;{prefix}_tree_exists&quot;),
+        entry_count.min(1),
+    );
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
 }
 </code></pre>
 </details>
 
   <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:326</p>
-</article><article id="item-fn-insert-resource-timing-345" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_resource_timing private fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64) crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+</article><article id="item-fn-insert-resource-timing-349" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_resource_timing private fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64) crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_resource_timing</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a> (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a> (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, key: &amp;str, value: u64) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, key: &amp;str, value: u64) {
     timings.insert(key.to_owned(), json!(u64_to_f64_saturating(value)));
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:345</p>
-</article><article id="item-fn-workspace-with-upperdir-388" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_with_upperdir private fn workspace_with_upperdir (root : &amp; std :: path :: Path) -&gt; EphemeralWorkspace crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:349</p>
+</article><article id="item-fn-workspace-with-upperdir-392" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_with_upperdir private fn workspace_with_upperdir (root : &amp; std :: path :: Path) -&gt; EphemeralWorkspace crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_with_upperdir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a> (root : &amp; std :: path :: Path) -&gt; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a> (root : &amp; std :: path :: Path) -&gt; <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a>(root: &amp;std::path::<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a>(root: &amp;std::path::<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a> {
         <span class="rs-kw">let</span> upperdir = root.join(&quot;upper&quot;);
         <span class="rs-kw">let</span> workdir = root.join(&quot;work&quot;);
         <span class="rs-kw">let</span> run_dir = root.join(&quot;run&quot;);
@@ -678,19 +682,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:388</p>
-</article><article id="item-fn-prepare-builds-fresh-runner-request-and-session-metadata-419" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_builds_fresh_runner_request_and_session_metadata private fn prepare_builds_fresh_runner_request_and_session_metadata () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:392</p>
+</article><article id="item-fn-prepare-builds-fresh-runner-request-and-session-metadata-423" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_builds_fresh_runner_request_and_session_metadata private fn prepare_builds_fresh_runner_request_and_session_metadata () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prepare_builds_fresh_runner_request_and_session_metadata</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-prepare-builds-fresh-runner-request-and-session-metadata-419">prepare_builds_fresh_runner_request_and_session_metadata</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-prepare-builds-fresh-runner-request-and-session-metadata-423">prepare_builds_fresh_runner_request_and_session_metadata</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-prepare-builds-fresh-runner-request-and-session-metadata-419">prepare_builds_fresh_runner_request_and_session_metadata</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-prepare-builds-fresh-runner-request-and-session-metadata-423">prepare_builds_fresh_runner_request_and_session_metadata</a>(
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> writable_root = std::env::temp_dir().join(format!(
             &quot;eos-ephemeral-command-prepare-{}&quot;,
@@ -734,7 +738,8 @@
         );
         assert_eq!(prepared.prepared.run_request[&quot;layer_paths&quot;][0], &quot;/lower/a&quot;);
         assert_eq!(prepared.workspace.snapshot.lease_id, &quot;lease-1&quot;);
-        <span class="rs-kw">let</span> metadata = std::fs::read_to_string(prepared.prepared.session_dir.join(&quot;metadata.json&quot;))?;
+        <span class="rs-kw">let</span> metadata =
+            std::fs::read_to_string(prepared.prepared.session_dir.join(&quot;metadata.json&quot;))?;
         assert!(metadata.contains(&quot;\&quot;workspace\&quot;: \&quot;ephemeral\&quot;&quot;));
 
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(writable_root);
@@ -743,29 +748,29 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:419</p>
-</article><article id="item-fn-finalize-captures-publishes-and-shapes-command-outcome-471" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_captures_publishes_and_shapes_command_outcome private fn finalize_captures_publishes_and_shapes_command_outcome () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:423</p>
+</article><article id="item-fn-finalize-captures-publishes-and-shapes-command-outcome-476" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_captures_publishes_and_shapes_command_outcome private fn finalize_captures_publishes_and_shapes_command_outcome () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>finalize_captures_publishes_and_shapes_command_outcome</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-captures-publishes-and-shapes-command-outcome-471">finalize_captures_publishes_and_shapes_command_outcome</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-captures-publishes-and-shapes-command-outcome-476">finalize_captures_publishes_and_shapes_command_outcome</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-captures-publishes-and-shapes-command-outcome-471">finalize_captures_publishes_and_shapes_command_outcome</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-captures-publishes-and-shapes-command-outcome-476">finalize_captures_publishes_and_shapes_command_outcome</a>(
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
             &quot;eos-ephemeral-command-finalize-{}&quot;,
             std::process::id()
         ));
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
-        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a>(&amp;root);
+        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a>(&amp;root);
 
-        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a>(
-            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a>,
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a>(
+            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a>,
             workspace,
             <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-dirs-rs.html#method-new-19">new</a>(),
             <span class="rs-type">FinalizeCommandRequest</span> {
@@ -791,29 +796,29 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:471</p>
-</article><article id="item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-506" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds private fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:476</p>
+</article><article id="item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-511" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds private fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt; crates/eos-workspace-modes/src/ephemeral/command.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-506">finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-511">finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</a> () -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error &gt; &gt;</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-506">finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-511">finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</a>(
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
             &quot;eos-ephemeral-command-finalize-failed-{}&quot;,
             std::process::id()
         ));
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
-        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a>(&amp;root);
+        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a>(&amp;root);
 
-        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a>(
-            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a>,
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a>(
+            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a>,
             workspace,
             <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-dirs-rs.html#method-new-19">new</a>(),
             <span class="rs-type">FinalizeCommandRequest</span> {
@@ -838,7 +843,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:506</p>
+  <p class="source">crates/eos-workspace-modes/src/ephemeral/command.rs:511</p>
 </article></div>
 </section></div>
 </main>
@@ -973,7 +978,10 @@
         snapshot,
         dirs,
     };
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-PreparedEphemeralCommand-36">PreparedEphemeralCommand</a> { prepared, workspace })
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-PreparedEphemeralCommand-36">PreparedEphemeralCommand</a> {
+        prepared,
+        workspace,
+    })
 }
 
 <span class="rs-comment">/// Capture the command's upperdir, publish it through `publisher`, and shape the</span>
@@ -983,18 +991,15 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`WorkspaceApiError`] when capture or publish-result parsing fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a>(
     publisher: &amp;<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a>,
     workspace: <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a>,
     base_timings: <span class="rs-type">WorkspaceTimings</span>,
     request: <span class="rs-type">FinalizeCommandRequest</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> run_dir = workspace.dirs.run_dir.clone();
-    <span class="rs-kw">let</span> finalize = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-fn-finalize-publishable-workspace-23">finalize_publishable_workspace</a>(
-        publisher,
-        <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-struct-FinalizeRequest-9">FinalizeRequest</a> { workspace },
-    )
-    .map_err(finalize_error)?;
+    <span class="rs-kw">let</span> finalize = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-fn-finalize-publishable-workspace-23">finalize_publishable_workspace</a>(publisher, <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-finalize-rs.html#item-struct-FinalizeRequest-9">FinalizeRequest</a> { workspace })
+        .map_err(finalize_error)?;
     <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-publish-files-242">publish_files</a>(&amp;finalize.publish)?;
     <span class="rs-kw">let</span> path_kinds = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-path-changes-to-wire-281">path_changes_to_wire</a>(&amp;finalize.capture.path_kinds);
     <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
@@ -1103,9 +1108,9 @@
     files
         .iter()
         .map(|file| {
-            <span class="rs-kw">let</span> object = file.as_object().ok_or_else(|| {
-                <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-error-234">finalize_error</a>(&quot;publish file result must be an object&quot;)
-            })?;
+            <span class="rs-kw">let</span> object = file
+                .as_object()
+                .ok_or_else(|| <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-error-234">finalize_error</a>(&quot;publish file result must be an object&quot;))?;
             <span class="rs-kw">let</span> path = object
                 .get(&quot;path&quot;)
                 .and_then(<span class="rs-type">Value</span>::as_str)
@@ -1183,15 +1188,19 @@
 ) {
     <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
     <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_exists&quot;), entry_count.min(1));
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
-    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(
+        timings,
+        &amp;format!(&quot;{prefix}_tree_exists&quot;),
+        entry_count.min(1),
+    );
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
+    <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-345">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, key: &amp;str, value: u64) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-insert-resource-timing-349">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, key: &amp;str, value: u64) {
     timings.insert(key.to_owned(), json!(u64_to_f64_saturating(value)));
 }
 
@@ -1205,10 +1214,10 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ephemeral::{<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralRunDirs-19">EphemeralRunDirs</a>, <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-enum-PublishStatus-70">PublishStatus</a>};
 
-    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a>;
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a>;
 
-    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#method-publish-upperdir-changes-362">publish_upperdir_changes</a>(
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#method-publish-upperdir-changes-366">publish_upperdir_changes</a>(
             &amp;<span class="rs-self">self</span>,
             _root: &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
             _snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
@@ -1234,7 +1243,7 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a>(root: &amp;std::path::<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a>(root: &amp;std::path::<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a> {
         <span class="rs-kw">let</span> upperdir = root.join(&quot;upper&quot;);
         <span class="rs-kw">let</span> workdir = root.join(&quot;work&quot;);
         <span class="rs-kw">let</span> run_dir = root.join(&quot;run&quot;);
@@ -1266,7 +1275,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-prepare-builds-fresh-runner-request-and-session-metadata-419">prepare_builds_fresh_runner_request_and_session_metadata</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-prepare-builds-fresh-runner-request-and-session-metadata-423">prepare_builds_fresh_runner_request_and_session_metadata</a>(
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> writable_root = std::env::temp_dir().join(format!(
             &quot;eos-ephemeral-command-prepare-{}&quot;,
@@ -1310,7 +1319,8 @@
         );
         assert_eq!(prepared.prepared.run_request[&quot;layer_paths&quot;][0], &quot;/lower/a&quot;);
         assert_eq!(prepared.workspace.snapshot.lease_id, &quot;lease-1&quot;);
-        <span class="rs-kw">let</span> metadata = std::fs::read_to_string(prepared.prepared.session_dir.join(&quot;metadata.json&quot;))?;
+        <span class="rs-kw">let</span> metadata =
+            std::fs::read_to_string(prepared.prepared.session_dir.join(&quot;metadata.json&quot;))?;
         assert!(metadata.contains(&quot;\&quot;workspace\&quot;: \&quot;ephemeral\&quot;&quot;));
 
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(writable_root);
@@ -1318,17 +1328,17 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-captures-publishes-and-shapes-command-outcome-471">finalize_captures_publishes_and_shapes_command_outcome</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-captures-publishes-and-shapes-command-outcome-476">finalize_captures_publishes_and_shapes_command_outcome</a>(
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
             &quot;eos-ephemeral-command-finalize-{}&quot;,
             std::process::id()
         ));
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
-        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a>(&amp;root);
+        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a>(&amp;root);
 
-        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a>(
-            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a>,
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a>(
+            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a>,
             workspace,
             <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-dirs-rs.html#method-new-19">new</a>(),
             <span class="rs-type">FinalizeCommandRequest</span> {
@@ -1353,17 +1363,17 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-506">finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-marks-failed-command-unsuccessful-even-when-publish-succeeds-511">finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds</a>(
     ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span>&gt;&gt; {
         <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
             &quot;eos-ephemeral-command-finalize-failed-{}&quot;,
             std::process::id()
         ));
         <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
-        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-388">workspace_with_upperdir</a>(&amp;root);
+        <span class="rs-kw">let</span> workspace = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-workspace-with-upperdir-392">workspace_with_upperdir</a>(&amp;root);
 
-        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-130">finalize_ephemeral_command</a>(
-            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-359">FakePublisher</a>,
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-fn-finalize-ephemeral-command-133">finalize_ephemeral_command</a>(
+            &amp;<a class="symbol-link rs-type" href="eos-workspace-modes--src-ephemeral-command-rs.html#item-struct-FakePublisher-363">FakePublisher</a>,
             workspace,
             <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-workspace-modes--src-ephemeral-dirs-rs.html#method-new-19">new</a>(),
             <span class="rs-type">FinalizeCommandRequest</span> {

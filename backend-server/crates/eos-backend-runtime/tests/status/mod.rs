@@ -2,7 +2,7 @@
 //! `crate::status` under `#[cfg(test)]`.
 
 use eos_backend_types::{ApiRunStatus, BackendRunStatus};
-use eos_state::RequestStatus;
+use eos_types::RequestStatus;
 
 use super::resolve_api_status;
 

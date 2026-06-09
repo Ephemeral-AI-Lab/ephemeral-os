@@ -7,12 +7,12 @@
 //!   ([`models`]);
 //! - the typed daemon op constants ([`DaemonOp`]);
 //! - the [`SandboxTransport`] async trait seam (DIP — implemented downstream in
-//!   `eos-sandbox-host`, injected by `eos-runtime`);
+//!   `eos-sandbox-host`, injected by `eos-agent-core`);
 //! - the [`SandboxGateway`] single-handle injection seam that bundles the
 //!   transport and provisioner (implemented by the backend `SandboxManager`);
 //! - the timeout policy ([`exec_dispatch_timeout`] and the `*_TIMEOUT_S`
 //!   constants); and
-//! - the pure `tool_api` helpers that build a daemon payload, call a transport,
+//! - the pure tool-dispatch helpers that build a daemon payload, call a transport,
 //!   and parse the JSON envelope into a typed result.
 //!
 //! It deliberately does **not** implement the daemon-backed transport, stamp the
@@ -28,7 +28,7 @@ mod models;
 mod ops;
 mod provision;
 mod timeouts;
-mod tool_api;
+mod tool_dispatch;
 mod transport;
 
 pub use command_service::{SandboxCommandApi, SandboxCommandService};
@@ -49,7 +49,7 @@ pub use timeouts::{
     exec_dispatch_timeout, EDIT_FILE_TIMEOUT_S, EXEC_DEFAULT_COMMAND_TIMEOUT_S,
     EXEC_DISPATCH_GRACE_S, READ_FILE_TIMEOUT_S, WRITE_FILE_TIMEOUT_S,
 };
-pub use tool_api::{
+pub use tool_dispatch::{
     cancel, cancel_command_session, cancel_workspace_runs_by_caller_id,
     collect_command_completions, command_session_count, edit_file, ensure_plugin_package,
     enter_isolated_workspace, exec_command, exec_stdin, exit_isolated_workspace, heartbeat,

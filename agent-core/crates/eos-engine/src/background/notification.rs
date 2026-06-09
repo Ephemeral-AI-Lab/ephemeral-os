@@ -4,7 +4,7 @@
 //! Subagent, workflow, and command-session terminal transitions all produce one
 //! [`BackgroundCompletion`], which the emitter renders to a `[BACKGROUND
 //! COMPLETED]` message and enqueues into the agent run's own
-//! [`NotificationService`]. The emitter wraps the exact service owned by the
+//! [`EngineNotificationQueue`]. The emitter wraps the exact queue owned by the
 //! run's `AgentLoopState`, so a completion reaches the run that owns the work
 //! and never another run's queue (spec §13.1). Callers must clone the terminal
 //! data out from under any manager lock and drop the lock *before* awaiting `emit`.
@@ -14,7 +14,7 @@ use eos_types::{AgentRunId, CommandSessionId, SandboxId, WorkflowId};
 use serde_json::Value;
 
 use super::background_session_manager::BackgroundSessionStatus;
-use crate::notifications::{NotificationService, NotificationSink, SystemNotification};
+use crate::notifications::{EngineNotificationQueue, NotificationSink, SystemNotification};
 
 /// A terminal background transition to surface to the owning agent run.
 #[derive(Debug, Clone)]
@@ -122,19 +122,19 @@ fn status_token(status: BackgroundSessionStatus) -> &'static str {
 /// Centralized renderer + delivery adapter wrapping one agent run's notifier.
 #[derive(Clone, Debug, Default)]
 pub struct BackgroundNotificationEmitter {
-    notifications: NotificationService,
+    notifications: EngineNotificationQueue,
 }
 
 impl BackgroundNotificationEmitter {
     /// Wrap the agent run's notification service.
     #[must_use]
-    pub fn new(notifications: NotificationService) -> Self {
+    pub fn new(notifications: EngineNotificationQueue) -> Self {
         Self { notifications }
     }
 
     /// The wrapped notification service (the exact run-local queue).
     #[must_use]
-    pub fn notifications(&self) -> NotificationService {
+    pub fn notifications(&self) -> EngineNotificationQueue {
         self.notifications.clone()
     }
 
@@ -160,8 +160,8 @@ mod tests {
     /// notifier never sees it (instance isolation, §13.1).
     #[tokio::test]
     async fn emits_subagent_completion_into_its_own_notifier() {
-        let notifier = NotificationService::new();
-        let other = NotificationService::new();
+        let notifier = EngineNotificationQueue::new();
+        let other = EngineNotificationQueue::new();
         let emitter = BackgroundNotificationEmitter::new(notifier.clone());
 
         emitter

@@ -125,8 +125,8 @@ async fn failed_reducer_closes_attempt_failed() {
 #[tokio::test]
 async fn record_plan_rejects_bad_shape_with_real_ack() {
     use eos_types::{
-        AttemptSubmissionPort, PlanDisposition, PlanNodeId, PlanReducer, PlanTask, PlannerPlan,
-        SubmissionAck,
+        PlanDisposition, PlanNodeId, PlanReducer, PlanTask, PlannerPlan, SubmissionAck,
+        WorkflowAttemptSubmissionApi,
     };
 
     use crate::AttemptSubmissionAdapter;
@@ -221,8 +221,8 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
 #[tokio::test]
 async fn record_plan_rejects_late_agent_without_orphan_rows() {
     use eos_types::{
-        AttemptSubmissionPort, PlanDisposition, PlanNodeId, PlanReducer, PlanTask, PlannerPlan,
-        SubmissionAck,
+        PlanDisposition, PlanNodeId, PlanReducer, PlanTask, PlannerPlan, SubmissionAck,
+        WorkflowAttemptSubmissionApi,
     };
 
     use crate::AttemptSubmissionAdapter;

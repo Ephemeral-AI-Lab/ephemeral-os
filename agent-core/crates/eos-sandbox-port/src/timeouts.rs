@@ -2,7 +2,7 @@
 //!
 //! File verbs have fixed per-verb budgets; command execution derives its
 //! budget from the command timeout plus a dispatch grace. Control RPCs use a separate
-//! `CONTROL_TIMEOUT_S` that lives in `tool_api::control`. Values are `u32`
+//! `CONTROL_TIMEOUT_S` that lives in `tool_dispatch::control`. Values are `u32`
 //! seconds, matching the [`SandboxTransport::call`] `timeout_s` parameter.
 //!
 //! [`SandboxTransport::call`]: crate::SandboxTransport::call

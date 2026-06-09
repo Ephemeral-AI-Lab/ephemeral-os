@@ -13,7 +13,7 @@ use crate::sandbox::SandboxConfig;
 ///
 /// It owns only backend deployment and sandbox lifecycle defaults.
 /// `ProvidersConfig` and `WorkflowConfig` are deliberately absent: agent-core's
-/// `eos-config` loads and validates those from `agent_core.config_dir`.
+/// owner-local loaders validate those from `agent_core.config_dir`.
 /// `deny_unknown_fields` makes a stray `providers:` / `workflow:` section a hard
 /// error rather than a silently ignored key (AC11).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

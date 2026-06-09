@@ -138,7 +138,7 @@
     env.insert(&quot;<span class="rs-type">EOS_PLUGIN_PUBLIC_OP</span>&quot;.to_owned(), route.public_op.clone());
     <span class="rs-kw">let</span> timeout_seconds = route
         .timeout_ms
-        .map(|timeout| <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-298">u64_to_f64_saturating</a>(timeout) / 1000.0);
+        .map(|timeout| <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-300">u64_to_f64_saturating</a>(timeout) / 1000.0);
     <span class="rs-kw">let</span> overlay_command = <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> {
         layer_stack_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(layer_stack_root),
         invocation_id: invocation_id.to_owned(),
@@ -288,9 +288,9 @@
     lease_acquire_s: f64,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(root.to_path_buf())?.read_active_manifest()?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, outcome.changeset.published_file_count());
-    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;outcome.runner);
-    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-175">insert_tree_resource_timings</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, outcome.changeset.published_file_count());
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-62">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;outcome.runner);
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-177">insert_tree_resource_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;resource.command_exec.upperdir&quot;,
         &amp;outcome.upperdir_stats,
@@ -308,14 +308,14 @@
         &quot;command_exec.total_s&quot;.to_owned(),
         json!(total_start.elapsed().as_secs_f64()),
     );
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-85">guarded_changeset_response</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-87">guarded_changeset_response</a>(
         &quot;plugin_overlay&quot;,
         &amp;outcome.changeset,
         timings,
         total_start,
         <span class="rs-type">None</span>,
     );
-    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-37">attach_runner_shell_fields</a>(&amp;<span class="rs-kw">mut</span> response, &amp;outcome.runner);
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-39">attach_runner_shell_fields</a>(&amp;<span class="rs-kw">mut</span> response, &amp;outcome.runner);
     response[&quot;changed_path_kinds&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(
         outcome
             .path_kinds
@@ -556,24 +556,24 @@
 <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
 <span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
 
-<span class="rs-kw">use</span> eos_workspace_modes::ephemeral::{
-    finalize_publishable_workspace, <span class="rs-type">CallerId</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralSnapshot</span>,
-    <span class="rs-type">EphemeralWorkspace</span>, <span class="rs-type">FinalizeRequest</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">WorkspaceRoot</span> <span class="rs-kw">as</span> <span class="rs-type">EphemeralWorkspaceRoot</span>,
-};
 <span class="rs-kw">use</span> eos_layerstack::{require_workspace_binding, <span class="rs-type">LayerStack</span>, <span class="rs-type">Lease</span>, <span class="rs-type">WorkspaceBinding</span>};
 <span class="rs-kw">use</span> eos_plugin::<span class="rs-type">ServiceMode</span>;
 <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
 <span class="rs-kw">use</span> eos_runner::{<span class="rs-type">RunMode</span>, <span class="rs-type">RunRequest</span>, <span class="rs-type">RunResult</span>, <span class="rs-type">ToolCall</span>, <span class="rs-type">WorkspaceRoot</span>};
+<span class="rs-kw">use</span> eos_workspace_runtime::ephemeral::{
+    finalize_publishable_workspace, <span class="rs-type">CallerId</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralSnapshot</span>,
+    <span class="rs-type">EphemeralWorkspace</span>, <span class="rs-type">FinalizeRequest</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">WorkspaceRoot</span> <span class="rs-kw">as</span> <span class="rs-type">EphemeralWorkspaceRoot</span>,
+};
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::overlay::{
+    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, path_changes_to_wire,
+    run_ns_runner_child, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>, <span class="rs-type">RunDirCleanup</span>,
+};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
     merge_runner_timings, resource_timings, u64_to_f64_saturating, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>,
-};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::overlay::{
-    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, path_changes_to_wire,
-    run_ns_runner_child, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-33">DaemonPublisherPort</a>, <span class="rs-type">RunDirCleanup</span>,
 };
 
 <span class="rs-kw">use</span> eos_plugin::host::route::<span class="rs-type">PluginOperationRoute</span>;
@@ -640,7 +640,7 @@
     env.insert(&quot;<span class="rs-type">EOS_PLUGIN_PUBLIC_OP</span>&quot;.to_owned(), route.public_op.clone());
     <span class="rs-kw">let</span> timeout_seconds = route
         .timeout_ms
-        .map(|timeout| <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-298">u64_to_f64_saturating</a>(timeout) / 1000.0);
+        .map(|timeout| <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-300">u64_to_f64_saturating</a>(timeout) / 1000.0);
     <span class="rs-kw">let</span> overlay_command = <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> {
         layer_stack_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(layer_stack_root),
         invocation_id: invocation_id.to_owned(),
@@ -761,9 +761,9 @@
     lease_acquire_s: f64,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(root.to_path_buf())?.read_active_manifest()?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, outcome.changeset.published_file_count());
-    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;outcome.runner);
-    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-175">insert_tree_resource_timings</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-133">resource_timings</a>(&amp;manifest, outcome.changeset.published_file_count());
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-62">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;outcome.runner);
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-177">insert_tree_resource_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;resource.command_exec.upperdir&quot;,
         &amp;outcome.upperdir_stats,
@@ -781,14 +781,14 @@
         &quot;command_exec.total_s&quot;.to_owned(),
         json!(total_start.elapsed().as_secs_f64()),
     );
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-85">guarded_changeset_response</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-87">guarded_changeset_response</a>(
         &quot;plugin_overlay&quot;,
         &amp;outcome.changeset,
         timings,
         total_start,
         <span class="rs-type">None</span>,
     );
-    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-37">attach_runner_shell_fields</a>(&amp;<span class="rs-kw">mut</span> response, &amp;outcome.runner);
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-39">attach_runner_shell_fields</a>(&amp;<span class="rs-kw">mut</span> response, &amp;outcome.runner);
     response[&quot;changed_path_kinds&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(
         outcome
             .path_kinds

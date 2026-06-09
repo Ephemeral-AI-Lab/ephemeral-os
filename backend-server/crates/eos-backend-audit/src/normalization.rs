@@ -1,4 +1,4 @@
-use eos_audit::{from_jsonl_line, JsonObject, ObsEnvelope, ObsIds, ObsSource};
+use eos_agent_core::{from_jsonl_line, JsonObject, ObsEnvelope, ObsIds, ObsSource};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

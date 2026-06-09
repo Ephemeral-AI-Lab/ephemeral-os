@@ -8,9 +8,7 @@ use eos_backend_types::{
     SandboxCallCorrelation,
 };
 use eos_protocol::CallerId;
-use eos_types::{
-    AgentRunId, InvocationId, RequestId, SandboxId, TaskId, ToolUseId, UtcDateTime,
-};
+use eos_types::{AgentRunId, InvocationId, RequestId, SandboxId, TaskId, ToolUseId, UtcDateTime};
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -104,7 +102,11 @@ async fn reconcile_terminal_is_cas_guarded() {
 
     // A non-terminal row is moved and returned with finished_at stamped.
     let moved = repo
-        .reconcile_terminal(&req("r-cas"), BackendRunStatus::Done, ts("2026-06-06T00:05:00Z"))
+        .reconcile_terminal(
+            &req("r-cas"),
+            BackendRunStatus::Done,
+            ts("2026-06-06T00:05:00Z"),
+        )
         .await
         .unwrap()
         .unwrap();
@@ -113,7 +115,11 @@ async fn reconcile_terminal_is_cas_guarded() {
 
     // A second reconcile finds no accepted/running row: returns None, no clobber.
     assert!(repo
-        .reconcile_terminal(&req("r-cas"), BackendRunStatus::Failed, ts("2026-06-06T01:00:00Z"))
+        .reconcile_terminal(
+            &req("r-cas"),
+            BackendRunStatus::Failed,
+            ts("2026-06-06T01:00:00Z")
+        )
         .await
         .unwrap()
         .is_none());
@@ -134,7 +140,11 @@ async fn reconcile_terminal_is_cas_guarded() {
     };
     repo.insert(&cancelled).await.unwrap();
     assert!(repo
-        .reconcile_terminal(&req("r-cancel"), BackendRunStatus::Done, ts("2026-06-06T02:00:00Z"))
+        .reconcile_terminal(
+            &req("r-cancel"),
+            BackendRunStatus::Done,
+            ts("2026-06-06T02:00:00Z")
+        )
         .await
         .unwrap()
         .is_none());
@@ -145,7 +155,11 @@ async fn reconcile_terminal_is_cas_guarded() {
 
     // An absent run yields None, not an error.
     assert!(repo
-        .reconcile_terminal(&req("ghost"), BackendRunStatus::Done, ts("2026-06-06T03:00:00Z"))
+        .reconcile_terminal(
+            &req("ghost"),
+            BackendRunStatus::Done,
+            ts("2026-06-06T03:00:00Z")
+        )
         .await
         .unwrap()
         .is_none());
@@ -432,13 +446,67 @@ async fn obs_event_aggregations_summarize_kinds_runs_and_audit_split() {
     let repo = store.obs_events();
     // ar-1 engine activity: two tool calls (duration_ms, then a total_ms fallback),
     // one resource sample, one agent-run completion.
-    repo.insert(&obs_row("tool_call.completed", Some("ar-1"), ObsSource::Engine, Some("toolu-1"), None, json!({ "tool_call": { "duration_ms": 10.0 } }))).await.unwrap();
-    repo.insert(&obs_row("tool_call.completed", Some("ar-1"), ObsSource::Engine, Some("toolu-2"), None, json!({ "tool_call": { "total_ms": 30.0 } }))).await.unwrap();
-    repo.insert(&obs_row("os_resource.sampled", Some("ar-1"), ObsSource::Engine, None, None, json!({ "os_resource": { "rss_bytes": 4096 } }))).await.unwrap();
-    repo.insert(&obs_row("agent_run.completed", Some("ar-1"), ObsSource::Engine, None, None, json!({}))).await.unwrap();
+    repo.insert(&obs_row(
+        "tool_call.completed",
+        Some("ar-1"),
+        ObsSource::Engine,
+        Some("toolu-1"),
+        None,
+        json!({ "tool_call": { "duration_ms": 10.0 } }),
+    ))
+    .await
+    .unwrap();
+    repo.insert(&obs_row(
+        "tool_call.completed",
+        Some("ar-1"),
+        ObsSource::Engine,
+        Some("toolu-2"),
+        None,
+        json!({ "tool_call": { "total_ms": 30.0 } }),
+    ))
+    .await
+    .unwrap();
+    repo.insert(&obs_row(
+        "os_resource.sampled",
+        Some("ar-1"),
+        ObsSource::Engine,
+        None,
+        None,
+        json!({ "os_resource": { "rss_bytes": 4096 } }),
+    ))
+    .await
+    .unwrap();
+    repo.insert(&obs_row(
+        "agent_run.completed",
+        Some("ar-1"),
+        ObsSource::Engine,
+        None,
+        None,
+        json!({}),
+    ))
+    .await
+    .unwrap();
     // Daemon audit: one matched (model tool_use_id), one unmatched (invocation only).
-    repo.insert(&obs_row("tool_call.completed", None, ObsSource::Daemon, Some("toolu-model"), Some("inv-1"), json!({}))).await.unwrap();
-    repo.insert(&obs_row("tool_call.completed", None, ObsSource::Daemon, None, Some("inv-2"), json!({ "unmatched": true }))).await.unwrap();
+    repo.insert(&obs_row(
+        "tool_call.completed",
+        None,
+        ObsSource::Daemon,
+        Some("toolu-model"),
+        Some("inv-1"),
+        json!({}),
+    ))
+    .await
+    .unwrap();
+    repo.insert(&obs_row(
+        "tool_call.completed",
+        None,
+        ObsSource::Daemon,
+        None,
+        Some("inv-2"),
+        json!({ "unmatched": true }),
+    ))
+    .await
+    .unwrap();
 
     let perf = repo
         .performance("tool_call.completed", "os_resource.sampled")

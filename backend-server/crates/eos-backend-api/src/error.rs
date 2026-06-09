@@ -12,7 +12,7 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 
-use eos_agent_message_records::MessageRecordError;
+use eos_agent_run::MessageRecordError;
 use eos_backend_runtime::{DeleteRejection, SandboxManagerError};
 use eos_backend_store::StoreError;
 use eos_types::CoreError;

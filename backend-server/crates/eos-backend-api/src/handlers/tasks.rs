@@ -5,8 +5,8 @@ use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
 
-use eos_agent_message_records::MessageRecordError;
-use eos_state::{AgentRun, Task};
+use eos_agent_run::MessageRecordError;
+use eos_types::{AgentRun, Task};
 use eos_types::{AgentRunId, TaskId};
 
 use super::parse_id;

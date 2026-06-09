@@ -1,7 +1,7 @@
 use std::sync::{OnceLock, RwLock};
 
 #[cfg(target_os = "linux")]
-use eos_command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
+use eos_workspace_runtime::command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
 
 use crate::config::CommandSessionConfig;
 

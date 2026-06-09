@@ -12,7 +12,7 @@ mod telemetry;
 pub mod tool_call;
 
 pub use agent_loop::{
-    start_agent_loop, AgentExecutionMetadataService, AgentLoopBackgroundDependencies,
+    tool_result_payload, AgentExecutionMetadataService, AgentLoopBackgroundDependencies,
     AgentLoopCancelHandle, AgentLoopHookDependencies, AgentLoopLauncher, AgentLoopMessage,
     AgentLoopOutcome, AgentLoopOutcomeKind, AgentLoopToolRegistryBuildInput,
     AgentLoopToolRegistryFactory, ExecutionMetadataBuildInput, StartAgentLoopRequest,
@@ -20,10 +20,11 @@ pub use agent_loop::{
 };
 pub use background::{
     BackgroundCompletion, BackgroundManagers, BackgroundNotificationEmitter,
-    BackgroundSessionStatus, BackgroundTeardownService,
+    BackgroundSessionStatus, BackgroundSessionTeardown,
 };
 pub use notifications::{
-    make_default_notification_rules, NotificationRule, NotificationRuleContext, NotificationService,
+    make_default_notification_rules, EngineNotificationQueue, NotificationRule,
+    NotificationRuleContext,
 };
 pub use query::{
     EngineStream, EventCallback, EventSource, EventSourceFactory, ProviderEventSource,

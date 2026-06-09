@@ -66,8 +66,8 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
         (
             "eos-db",
             &[
-                "use:composition",
                 "use:config",
+                "use:database",
                 "use:error",
                 "use:model_registry",
             ],
@@ -126,7 +126,7 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "use:ops",
                 "use:provision",
                 "use:timeouts",
-                "use:tool_api",
+                "use:tool_dispatch",
                 "use:transport",
             ],
         ),
@@ -153,8 +153,6 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
         (
             "eos-types",
             &[
-                "mod:ports",
-                "mod:state",
                 "use:agent",
                 "use:config",
                 "use:contracts",
@@ -164,8 +162,8 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "use:json",
                 "use:llm",
                 "use:models",
-                "use:ports",
                 "use:state",
+                "use:stores",
                 "use:time",
             ],
         ),
@@ -188,16 +186,129 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
 
 fn final_public_surface() -> BTreeMap<String, BTreeSet<String>> {
     surface_map(&[
-        ("eos-agent-core", &[]),
-        ("eos-agent-run", &[]),
-        ("eos-engine", &[]),
-        ("eos-tool", &[]),
-        ("eos-workflow", &[]),
-        ("eos-types", &[]),
-        ("eos-db", &[]),
-        ("eos-llm-client", &[]),
-        ("eos-sandbox-port", &[]),
-        ("eos-testkit", &[]),
+        (
+            "eos-agent-core",
+            &[
+                "use:cancel",
+                "use:entry",
+                "use:eos_sandbox_port",
+                "use:request_input",
+                "use:runtime",
+            ],
+        ),
+        (
+            "eos-agent-run",
+            &[
+                "use:active_agent_runs",
+                "use:agent_run_records",
+                "use:agent_run_service",
+                "use:eos_engine",
+                "use:eos_types",
+            ],
+        ),
+        (
+            "eos-db",
+            &[
+                "use:config",
+                "use:database",
+                "use:error",
+                "use:model_registry",
+            ],
+        ),
+        (
+            "eos-engine",
+            &[
+                "mod:agent_loop",
+                "mod:background",
+                "mod:query",
+                "mod:records",
+                "mod:tool_call",
+                "use:agent_loop",
+                "use:background",
+                "use:notifications",
+                "use:query",
+                "use:support",
+                "use:telemetry",
+            ],
+        ),
+        (
+            "eos-llm-client",
+            &[
+                "use:auth",
+                "use:client",
+                "use:clients",
+                "use:config",
+                "use:error",
+                "use:events",
+                "use:message",
+                "use:types",
+            ],
+        ),
+        (
+            "eos-sandbox-port",
+            &[
+                "use:command_service",
+                "use:error",
+                "use:gateway",
+                "use:models",
+                "use:ops",
+                "use:provision",
+                "use:timeouts",
+                "use:tool_dispatch",
+                "use:transport",
+            ],
+        ),
+        (
+            "eos-testkit",
+            &[
+                "use:agents",
+                "use:engine",
+                "use:llm",
+                "use:meta",
+                "use:sandbox",
+            ],
+        ),
+        (
+            "eos-tool",
+            &[
+                "use:error",
+                "use:hooks",
+                "use:model",
+                "use:registry",
+                "use:tools",
+            ],
+        ),
+        (
+            "eos-types",
+            &[
+                "use:agent",
+                "use:config",
+                "use:contracts",
+                "use:error",
+                "use:frontmatter",
+                "use:ids",
+                "use:json",
+                "use:llm",
+                "use:models",
+                "use:state",
+                "use:stores",
+                "use:time",
+            ],
+        ),
+        (
+            "eos-workflow",
+            &[
+                "use:attempt",
+                "use:config",
+                "use:context",
+                "use:error",
+                "use:ids",
+                "use:iteration",
+                "use:service",
+                "use:starter",
+                "use:submission",
+            ],
+        ),
     ])
 }
 

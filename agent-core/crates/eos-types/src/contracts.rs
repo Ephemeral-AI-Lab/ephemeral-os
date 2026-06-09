@@ -1,6 +1,6 @@
 //! Cross-crate lifecycle contracts.
 //!
-//! This module holds owner-neutral trait ports and passive DTOs that are shared
+//! This module holds owner-neutral behavior traits and passive DTOs that are shared
 //! across sibling crates. Keeping them in `eos-types` avoids dependency cycles:
 //! engine, workflow, tools, and agent-run can all consume the contracts without
 //! depending on each other's concrete implementations.
@@ -42,8 +42,8 @@ pub struct SpawnAgentRequest {
     pub is_isolated_workspace_mode: bool,
     /// Whether to persist the run row.
     pub persist: bool,
-    /// Message-record kind.
-    pub record_kind: AgentRunMessageRecordKind,
+    /// Task-agent-run kind used by the current record layout.
+    pub task_agent_run_kind: TaskAgentRunKind,
 }
 
 /// Current runtime metadata facts for one agent run.
@@ -71,11 +71,10 @@ pub struct AgentState {
     pub is_isolated_workspace_mode: bool,
 }
 
-/// Agent-run message-record layout choice carried by callers without exposing
-/// the private message-record writer crate outside the runner.
+/// Task-agent-run layout choice used to derive the current record path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum AgentRunMessageRecordKind {
+pub enum TaskAgentRunKind {
     /// Root request agent.
     Root,
     /// Delegated workflow planner/generator/reducer task agent.
@@ -103,7 +102,7 @@ pub enum AgentRunMessageRecordKind {
     Agent,
 }
 
-/// Workflow task role used for message-record path labels.
+/// Workflow task role used for task-agent-run path labels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum WorkflowTaskRole {
@@ -256,7 +255,7 @@ pub enum SubmissionAck {
 
 /// Per-attempt submission application for terminal tools.
 #[async_trait]
-pub trait AttemptSubmissionPort: Send + Sync {
+pub trait WorkflowAttemptSubmissionApi: Send + Sync {
     /// Apply a validated planner DAG.
     async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, CoreError>;
 
@@ -287,7 +286,7 @@ pub enum CancelError {
 
 /// Recursive agent-core cancellation primitives.
 #[async_trait]
-pub trait CancelPort: Send + Sync {
+pub trait AgentCoreCancellationApi: Send + Sync {
     /// Cancel a persisted task and any live run bound to it.
     async fn cancel_task(&self, task_id: &TaskId, reason: &str) -> Result<(), CancelError>;
 

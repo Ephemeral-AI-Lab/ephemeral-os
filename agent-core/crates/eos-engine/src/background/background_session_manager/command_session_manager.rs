@@ -307,7 +307,7 @@ mod tests {
     use tokio::time::{sleep, timeout};
 
     use super::*;
-    use crate::notifications::NotificationService;
+    use crate::notifications::EngineNotificationQueue;
     use eos_sandbox_port::SandboxCommandService;
 
     #[derive(Debug, Default)]
@@ -379,7 +379,7 @@ mod tests {
 
     fn manager(
         owner: &str,
-        notifier: &NotificationService,
+        notifier: &EngineNotificationQueue,
         transport: Arc<dyn SandboxTransport>,
     ) -> CommandSessionManager {
         CommandSessionManager::new(
@@ -394,7 +394,7 @@ mod tests {
         let transport = Arc::new(CommandSessionTestTransport::with_collect([completion(
             "cmd_1", "ok", "3 passed",
         )]));
-        let notifier = NotificationService::new();
+        let notifier = EngineNotificationQueue::new();
         let manager = manager("agent-a", &notifier, transport.clone());
         manager
             .register_background_session(
@@ -429,7 +429,7 @@ mod tests {
     #[tokio::test]
     async fn cancel_issues_one_per_caller_rpc() {
         let transport = Arc::new(CommandSessionTestTransport::default());
-        let notifier = NotificationService::new();
+        let notifier = EngineNotificationQueue::new();
         let manager = manager("agent-a", &notifier, transport.clone());
         for id in ["cmd_1", "cmd_2"] {
             manager

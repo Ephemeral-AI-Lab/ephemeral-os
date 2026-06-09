@@ -93,9 +93,9 @@
 <span class="rs-comment">//! commit queue. This module gains no dependency toward the daemon; the daemon</span>
 <span class="rs-comment">//! folds [`PpcError`] onto its own `DaemonError`.</span>
 
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ensure_args;
 <span class="rs-kw">mod</span> package;
 <span class="rs-kw">mod</span> ppc_client;
-<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ensure_args;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> route;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> package::{ensure_package, needs_upload_response, <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>};

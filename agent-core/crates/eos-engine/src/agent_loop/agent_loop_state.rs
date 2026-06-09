@@ -5,12 +5,12 @@ use std::sync::Arc;
 
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_tool::{ToolKey, ToolRegistry, ToolResult};
-use eos_types::AgentRunId;
+use eos_types::{AgentRunApi, AgentRunId};
 
-use crate::background::{BackgroundManagers, BackgroundTeardownService};
+use crate::background::{BackgroundManagers, BackgroundSessionTeardown};
 use crate::notifications::{
-    enqueue_notification_rules, make_default_notification_rules, NotificationRule,
-    NotificationRuleContext, NotificationService, SystemNotification,
+    enqueue_notification_rules, make_default_notification_rules, EngineNotificationQueue,
+    NotificationRule, NotificationRuleContext, SystemNotification,
 };
 
 use super::{
@@ -40,7 +40,7 @@ pub(crate) struct AgentLoopState {
     /// Counted text-only turns without terminal submission.
     pub(crate) text_only_no_terminal_turns: u32,
     /// Run-local notification queue drained at loop turn boundaries.
-    pub(crate) notifier: NotificationService,
+    pub(crate) notifier: EngineNotificationQueue,
     /// Terminal tools visible to this agent loop.
     terminal_tools: BTreeSet<ToolKey>,
     /// Declarative notification rules.
@@ -50,7 +50,7 @@ pub(crate) struct AgentLoopState {
     /// Run-local background managers whose completions feed the notifier.
     background: Option<BackgroundManagers>,
     /// Run-local background teardown service.
-    background_teardown: Option<BackgroundTeardownService>,
+    background_teardown: Option<BackgroundSessionTeardown>,
 }
 
 impl std::fmt::Debug for AgentLoopState {
@@ -78,10 +78,12 @@ impl AgentLoopState {
         request: StartAgentLoopRequest,
         tool_registry_factory: &dyn AgentLoopToolRegistryFactory,
         run_services: AgentLoopRunServices,
+        agent_run_api: Arc<dyn AgentRunApi>,
     ) -> Result<Self, EngineError> {
         let tool_registry =
             tool_registry_factory.build_tool_registry(AgentLoopToolRegistryBuildInput {
                 agent_run_id: request.agent_run_id.clone(),
+                agent_run_api,
                 background: run_services.background.clone(),
             })?;
         let terminal_tools = tool_registry
@@ -210,15 +212,15 @@ impl AgentLoopState {
 
 #[derive(Clone, Debug)]
 pub(crate) struct AgentLoopRunServices {
-    notifier: NotificationService,
+    notifier: EngineNotificationQueue,
     background: Option<BackgroundManagers>,
-    background_teardown: Option<BackgroundTeardownService>,
+    background_teardown: Option<BackgroundSessionTeardown>,
 }
 
 impl AgentLoopRunServices {
     pub(crate) fn inert() -> Self {
         Self {
-            notifier: NotificationService::new(),
+            notifier: EngineNotificationQueue::new(),
             background: None,
             background_teardown: None,
         }
@@ -226,12 +228,12 @@ impl AgentLoopRunServices {
 
     pub(crate) fn from_background(
         background: &BackgroundManagers,
-        notifier: NotificationService,
+        notifier: EngineNotificationQueue,
     ) -> Self {
         Self {
             notifier,
             background: Some(background.clone()),
-            background_teardown: Some(background.teardown_service()),
+            background_teardown: Some(background.session_teardown()),
         }
     }
 }

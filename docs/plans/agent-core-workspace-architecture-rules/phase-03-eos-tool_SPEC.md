@@ -25,17 +25,25 @@ under Known Costs as the relief valve if Phase 0 is reopened.
 
 Revision 2026-06-09 (runtime shape): named `ToolRuntime` fields by capability
 (raw `Arc<dyn …>` handles, no `*Service`/`*Resource` field types) and unified the
-subagent / command / workflow session trackers into a single `BackgroundSessions`
-manager port implemented by `eos-engine`'s existing `BackgroundSessionRuntime`.
-The isolated-workspace toggle stays a small `WorkspaceMode` port. Both stay
-inside `registry.rs`; the locked module tree is unchanged.
+subagent / command / workflow session trackers into a single
+`BackgroundSessionControl` trait implemented by `eos-engine`'s existing
+`BackgroundSessionRuntime`. The isolated-workspace toggle stays a small
+`IsolatedWorkspaceModeControl` trait. Both stay inside `registry.rs`; the locked
+module tree is unchanged.
+
+Revision 2026-06-09 (naming convention pass): replaced internal `*Port` names
+with behavior-specific `*Api` / `*Control` names, renamed the terminal-submission
+dependency aggregate to `TerminalSubmissionRuntime`, and renamed the transitional
+spawn record-layout enum to `TaskAgentRunKind`. Phase 03 keeps this as a
+behavior-preserving rename; Phase 03B owns the deeper move where `eos-agent-run`
+materializes `TaskAgentRunKind` and returns a pre-resolved `AgentRunRecordTarget`.
 
 Revision 2026-06-09 (hook execution ownership): removed the previously implied
 hook-resource bundle from `ToolRuntime` / `RegisteredTool`. `eos-tool` owns only
 hook declarations (`Hook` tokens on `RegisteredTool`). `eos-engine` owns the
 tool-call hook runner and its fields: the run-local `BackgroundManagers` aggregate
-for background-session counts/cancellation, plus engine/store lineage helpers for
-nested workflow depth. No `HookServices`, `HookRuntime`, `HookHandles`, or other
+for background-session counts/cancellation, plus engine/store ancestry helpers
+for nested workflow depth. No `HookServices`, `HookRuntime`, `HookHandles`, or other
 hook execution resource type is exported by `eos-tool`.
 
 ## Scope
@@ -199,21 +207,24 @@ to the crate that owns its behavior or to an owner-neutral contract module.
 | `Hook` | `eos-tool/hooks.rs` |
 | `HookOutcome` | engine-private hook execution internals; not exported by `eos-tool` |
 | `PlannerPlan`, `PlanTask`, `PlanReducer`, `SubmissionAck` | owner-neutral workflow submission contracts, not concrete tool behavior |
-| `AttemptSubmissionPort` | workflow submission contract implemented by `eos-workflow`; consumed by `eos-tool` |
-| `CancelPort` | cancellation contract owned by the lifecycle/cancellation phase, not by concrete tools |
+| `WorkflowAttemptSubmissionApi` | workflow submission API implemented by `eos-workflow`; consumed by `eos-tool` |
+| `AgentCoreCancellationApi` | cancellation API owned by the lifecycle/cancellation phase, not by concrete tools |
 | `SystemNotification`, `NotificationSink` | engine/background contracts |
 | `BackgroundSessionCounts` | passive background accounting DTO in `eos-types`; produced and consumed by engine/background hook execution |
 | `SubagentSessionStatus` | removed; stale public DTO with no live consumer |
 
 The agent-launch contracts (`AgentType`, `AgentName`, `AgentRunApi`,
-`SpawnAgentRequest`, `AgentRunRecordKind`, `TaskRole`) are **not**
+`SpawnAgentRequest`, `TaskAgentRunKind`, `TaskRole`) are **not**
 `eos-tool-ports` items; they arrive from `eos-types` via the Phase 02 contract
 floor that retired the `eos-agent-ports` crate. `tools/subagent.rs` consumes
-them to build spawn requests and select the record kind. `eos-tool` adds no launch-class types
-of its own, performs no `AgentType` validation, and references the `AgentType`
-launch axis only — it does not consume the `AgentRole` behavioral axis, which
-Phase 02 retires. (`TaskRole` is the lineage-row workflow role from Phase 00,
-not a profile axis.)
+them to build spawn requests. Under the current behavior-preserving Phase 03
+code, the request still carries a `task_agent_run_kind: TaskAgentRunKind` value
+for record layout; the Phase 03B target moves that materialization into
+`eos-agent-run` and passes only a pre-resolved `AgentRunRecordTarget` into the
+engine. `eos-tool` adds no launch-class types of its own, performs no
+`AgentType` validation, and references the `AgentType` launch axis only — it does
+not consume the `AgentRole` behavioral axis, which Phase 02 retires. (`TaskRole`
+is the lineage-row workflow role from Phase 00, not a profile axis.)
 
 ## Runtime Rules
 
@@ -229,8 +240,8 @@ replaces the current ten `*Service` structs (the two `services.rs` files in
 `ToolRuntime` fields are named by capability and hold raw handles for concrete
 tool executors; there are no `*Service` / `*Resource` field types and no per-tool
 service. It does **not** carry a hook-resource bundle. The three run-local session
-trackers (subagent, command, workflow) collapse into one `BackgroundSessions`
-manager port (see Mandated runtime simplifications):
+trackers (subagent, command, workflow) collapse into one
+`BackgroundSessionControl` trait (see Mandated runtime simplifications):
 
 | Field | Type | Built by | Used by |
 | --- | --- | --- | --- |
@@ -238,9 +249,9 @@ manager port (see Mandated runtime simplifications):
 | `workflow` | `Arc<dyn WorkflowApi>` | `eos-agent-core` | `tools/workflow.rs` |
 | `launcher` | `Arc<dyn AgentRunApi>` | `eos-agent-core` | `tools/subagent.rs` (`run_subagent`), `tools/ask_advisor.rs` (`ask_advisor`) |
 | `skills` | `Arc<SkillRegistry>` | `eos-agent-core` | `tools/skills.rs` |
-| `submission` | root stores + `AttemptSubmissionPort` | `eos-agent-core`, `eos-agent-run` if needed | `tools/submission.rs` |
-| `background` | `Arc<dyn BackgroundSessions>` | `eos-engine` (its `BackgroundSessionRuntime`) | `tools/subagent.rs`, `tools/command.rs`, `tools/workflow.rs` |
-| `workspace_mode` | `WorkspaceMode` (isolated-workspace toggle) | `eos-agent-core` | `tools/sandbox.rs` |
+| `submission` | `TerminalSubmissionRuntime` (root stores + `WorkflowAttemptSubmissionApi`) | `eos-agent-core`, `eos-agent-run` if needed | `tools/submission.rs` |
+| `background` | `Arc<dyn BackgroundSessionControl>` | `eos-engine` (its `BackgroundSessionRuntime`) | `tools/subagent.rs`, `tools/command.rs`, `tools/workflow.rs` |
+| `workspace_mode` | `Arc<dyn IsolatedWorkspaceModeControl>` (isolated-workspace toggle) | `eos-agent-core` | `tools/sandbox.rs` |
 
 There is no `command-session` field (command execution derives from `sandbox`;
 command-session tracking is a `background` method) and no separate
@@ -256,19 +267,19 @@ pub struct ToolRuntime {
     pub workflow:       Arc<dyn WorkflowApi>,
     pub launcher:       Arc<dyn AgentRunApi>,        // run_subagent + ask_advisor share this one handle
     pub skills:         Arc<SkillRegistry>,
-    pub submission:     Submission,                  // root stores + attempt port
-    pub background:     Arc<dyn BackgroundSessions>, // one manager, not three trackers
-    pub workspace_mode: WorkspaceMode,
+    pub submission:     TerminalSubmissionRuntime,        // root stores + attempt API
+    pub background:     Arc<dyn BackgroundSessionControl>, // one control surface, not three trackers
+    pub workspace_mode: Arc<dyn IsolatedWorkspaceModeControl>,
 }
 
 // trait defined in registry.rs; impl = eos-engine BackgroundSessionRuntime.
 // count / cancel_all are NOT here — engine-side hook execution reads the aggregate directly.
 #[async_trait]
-pub trait BackgroundSessions: Send + Sync {
-    async fn register_subagent(&self, run: AgentRunId) -> Result<(), ToolError>;
-    async fn register_command(&self, id: CommandSessionId, sandbox: SandboxId) -> Result<(), ToolError>;
-    async fn register_workflow(&self, started: StartedWorkflow) -> Result<(), ToolError>;
-    async fn cancel_subagent(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError>;
+pub trait BackgroundSessionControl: Send + Sync {
+    async fn register_subagent_run(&self, run: AgentRunId) -> Result<(), ToolError>;
+    async fn register_command_session(&self, id: CommandSessionId, sandbox: SandboxId) -> Result<(), ToolError>;
+    async fn register_workflow_session(&self, started: StartedWorkflow) -> Result<(), ToolError>;
+    async fn cancel_subagent_run(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError>;
 }
 ```
 
@@ -278,7 +289,7 @@ resource bundle:
 ```rust
 pub(crate) struct ToolCallHooks {
     background: BackgroundManagers,
-    lineage: WorkflowLineageReader, // engine/store-owned helper; no eos-tool port
+    ancestry: WorkflowAncestryReader, // engine/store-owned helper; no eos-tool API
 }
 ```
 
@@ -305,25 +316,27 @@ passed wholesale into every family.
 (`Arc<dyn AgentRunApi>`) but live in **separate family files**
 (`tools/subagent.rs` and `tools/ask_advisor.rs`) because they are different run
 lifecycles. They are **not** the same executor and do **not** "differ only in
-record kind". `run_subagent` is a **detached background** launch — it registers
-the run through `background.register_subagent` and returns immediately.
+task-agent-run kind". `run_subagent` is a **detached background** launch — it
+registers the run through `background.register_subagent_run` and returns
+immediately.
 `ask_advisor` is an **inline (blocking)** run — it awaits `wait_for_agent_outcome`
 and re-maps the result, with a hardcoded `advisor` agent name, advisor messages,
 a forced non-isolated workspace, and `is_terminal = false`, and touches the
-`background` manager not at all. They share the `AgentRunApi` **port**, not a
-behavior; `ToolRuntime` carries one `launcher` field, and each tool stamps its
-own `AgentRunRecordKind` (`Subagent` vs `Advisor`), which `eos-agent-run` maps to
-the required `AgentType` (`subagent` / `advisor`) and validates against the
-spawned profile. `eos-tool` owns no launch-class policy: it never matches on
-`AgentType`, it only sets the record kind. `ask_advisor` needs no session field
-because it blocks; `run_subagent` reaches `background` because it is a tracked
-background run — the asymmetry is a capability difference, not a per-tool service.
+`background` manager not at all. They share the `AgentRunApi` launch API, not a
+behavior; `ToolRuntime` carries one `launcher` field. In the current
+behavior-preserving Phase 03 code, each tool still sets `TaskAgentRunKind`
+(`Subagent` vs `Advisor`) on `SpawnAgentRequest`; Phase 03B moves that row-kind
+materialization behind `eos-agent-run`'s spawn operation. `eos-tool` owns no
+launch-class policy: it never matches on `AgentType`, it only names the spawn
+shape it asks for. `ask_advisor` needs no session field because it blocks;
+`run_subagent` reaches `background` because it is a tracked background run — the
+asymmetry is a capability difference, not a per-tool service.
 
 The six submission executors in `tools/submission.rs` are parameterized by their
-submission target, not by a record kind: `submit_root_outcome` uses the
-two-store root-submission resource (task/request stores with a compare-and-set
-commit); `submit_planner_outcome`, `submit_generator_outcome`, and
-`submit_reducer_outcome` call distinct `AttemptSubmissionPort` methods; and
+submission target, not by a task-agent-run kind: `submit_root_outcome` uses the
+two-store `TerminalSubmissionRuntime` resource (task/request stores with a
+compare-and-set commit); `submit_planner_outcome`, `submit_generator_outcome`,
+and `submit_reducer_outcome` call distinct `WorkflowAttemptSubmissionApi` methods; and
 `submit_subagent_result` and `submit_advisor_feedback` are service-less
 metadata-only terminals with no port call. They share only the file-private
 helpers, not a single dispatch axis.
@@ -337,17 +350,17 @@ helpers, not a single dispatch axis.
    Because the snapshot path no longer fakes services, there is no `Option<...>`
    field on `ToolRuntime`, no `ToolError::MissingPort` variant, and no
    `InertSandboxTransport` shim.
-2. **One background-session manager, not per-family closures.** The three
+2. **One background-session control trait, not per-family closures.** The three
    run-local session trackers (subagent register/cancel, command register,
-   workflow register) collapse into a single object-safe `BackgroundSessions`
-   port defined in `eos-tool` and implemented by `eos-engine`'s existing
+   workflow register) collapse into a single object-safe `BackgroundSessionControl`
+   trait defined in `eos-tool` and implemented by `eos-engine`'s existing
    `BackgroundSessionRuntime` aggregate — the engine already holds all three
    family managers, so the tool side stops receiving them destructured into loose
    callbacks. The isolated-workspace mode update is the one remaining run-local
-   port (`WorkspaceMode`). Both replace the
+   trait (`IsolatedWorkspaceModeControl`). Both replace the
    `Arc<dyn Fn(...) -> BoxServiceFuture<...>>` closure aliases and the
    `BoxServiceFuture` machinery in the current `services.rs`. `count` /
-   `cancel_all` are **not** on the tool-facing port: engine-side hook execution
+   `cancel_all` are **not** on the tool-facing trait: engine-side hook execution
    reads the aggregate directly. `WorkflowApi` and `AgentRunApi` stay the
    `eos-types`-owned `dyn` ports they already are.
 
@@ -358,7 +371,7 @@ composition root**, then passed into the engine via `AgentLoopExecutionRequest`.
 This keeps the graph acyclic:
 
 - `eos-engine` builds the `background` manager — its own
-  `BackgroundSessionRuntime`, the `BackgroundSessions` impl — because it already
+  `BackgroundSessionRuntime`, the `BackgroundSessionControl` impl — because it already
   depends on `eos-tool` (`eos-engine -> eos-tool`); the composition root injects
   the `dyn AgentRunApi` / `dyn WorkflowApi` that the manager tracks for cancel and
   poll.
@@ -401,9 +414,9 @@ pub use error::ToolError;
 pub use hooks::Hook;
 pub use model::{ExecutionMetadata, OutputShape, ToolIntent, ToolKey, ToolName, ToolResult};
 pub use registry::{
-    build_default_registry, build_registry_schema, BackgroundSessions, CallerScope, RegisteredTool,
-    Submission, ToolConfig, ToolConfigError, ToolConfigSet, ToolExecutor, ToolRegistry, ToolRuntime,
-    WorkspaceMode,
+    build_default_registry, build_registry_schema, BackgroundSessionControl, CallerScope,
+    IsolatedWorkspaceModeControl, RegisteredTool, TerminalSubmissionRuntime, ToolConfig,
+    ToolConfigError, ToolConfigSet, ToolExecutor, ToolRegistry, ToolRuntime,
 };
 pub use tools::terminal::{render_tool_instruction, TerminalTool, ToolInstructions};
 ```
@@ -454,7 +467,7 @@ subfolder splits, which trade two large cohesive files for two folders.
 | Define `ToolRuntime` in `registry.rs` with non-optional live handles and the shared agent-launch field; keep hook execution resources out of `ToolRuntime` / `RegisteredTool` | Done |
 | Split the schema-snapshot builder (`build_registry_schema`) from the live builder and delete the `Option`/`MissingPort`/`InertSandboxTransport` layer | Done |
 | Delete `HookServices` / hook-resource stamping and move tool-call hook dependencies to engine-owned runner fields | Done |
-| Unify subagent/command/workflow session tracking into one `BackgroundSessions` port (impl = engine `BackgroundSessionRuntime`; register/cancel only); keep the `WorkspaceMode` toggle as the one run-local port | Done |
+| Unify subagent/command/workflow session tracking into one `BackgroundSessionControl` trait (impl = engine `BackgroundSessionRuntime`; register/cancel only); keep the `IsolatedWorkspaceModeControl` toggle as the one run-local control trait | Done |
 | Name `ToolRuntime` fields by capability with raw `Arc<dyn …>` handles; drop the `*Service`/`*Resource` field types and the separate command field (derive `SandboxCommandApi` from `sandbox`) | Done |
 | Collapse sandbox file/edit and isolated-workspace tools into `tools/sandbox.rs` | Done |
 | Collapse shell/session tools into `tools/command.rs` | Done |
@@ -500,12 +513,12 @@ Implementation verification (2026-06-09):
   schema-snapshot path is `build_registry_schema(config, caller)` and the live
   path is `build_default_registry(config, caller, runtime)`.
 - The subagent, command, and workflow session trackers are one
-  `BackgroundSessions` port defined in `eos-tool` and implemented by
+  `BackgroundSessionControl` trait defined in `eos-tool` and implemented by
   `eos-engine`'s `BackgroundSessionRuntime`; `ToolRuntime` carries one
-  `background` field, not three trackers, and the port exposes only
+  `background` field, not three trackers, and the trait exposes only
   register/cancel (`count` / `cancel_all` stay engine-internal — engine-side hook
   execution reads the aggregate directly). The isolated-workspace toggle is the
-  one remaining run-local port; neither is an `Arc<dyn Fn(...) -> BoxFuture>`
+  one remaining run-local control trait; neither is an `Arc<dyn Fn(...) -> BoxFuture>`
   closure.
 - `HookOutcome` is not exported from `eos-tool`.
 - Hook *declarations* live in `eos-tool/hooks.rs`; hook *execution* (the pipeline
@@ -517,7 +530,7 @@ Implementation verification (2026-06-09):
 - Stateful pre-hook dependencies are normal fields on the engine-owned tool-call
   hook runner, not `eos-tool` API and not stamped onto `RegisteredTool`.
   `RequireNoBackgroundSessions` reads `BackgroundManagers`; nested deferral reads
-  engine/store-owned workflow lineage. There is no `HookServices`,
+  engine/store-owned workflow ancestry. There is no `HookServices`,
   `HookRuntime`, `HookHandles`, or `RegisteredTool.hook_services`.
 - `tools/command.rs` owns `exec_command`, `write_stdin`, and
   `read_command_progress`.
@@ -528,11 +541,14 @@ Implementation verification (2026-06-09):
   one injected `AgentRunApi` handle and `ToolRuntime` does not carry two separate
   `AgentRunApi` fields, but they stay in separate family files because they are
   different run lifecycles (detached background vs spawned-and-awaited), not
-  "only in record kind".
+  "only in task-agent-run kind".
 - `eos-tool` consumes `AgentType`, `AgentName`, `AgentRunApi`,
-  `SpawnAgentRequest`, and `AgentRunRecordKind` from `eos-types`; it performs no
-  `AgentType` validation (that stays in `eos-agent-run`) and references the
-  `AgentType` launch axis only, never the retired `AgentRole` axis.
+  `SpawnAgentRequest`, and the current transitional `TaskAgentRunKind` from
+  `eos-types`; it performs no `AgentType` validation (that stays in
+  `eos-agent-run`) and references the `AgentType` launch axis only, never the
+  retired `AgentRole` axis. Phase 03B replaces tool-side record-layout facts with
+  `eos-agent-run` materializing `TaskAgentRunKind` and passing
+  `AgentRunRecordTarget` to the engine.
 - `eos-engine` imports tool framework contracts from `eos-tool`.
 - `eos-tool` has no dependency on `eos-engine`.
 - `eos-agent-core` builds `ToolRuntime` through `eos-tool`.

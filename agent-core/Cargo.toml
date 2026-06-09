@@ -6,7 +6,7 @@ members = [
   "crates/eos-db", "crates/eos-llm-client",
   "crates/eos-sandbox-port",
   "crates/eos-tool", "crates/eos-engine", "crates/eos-workflow",
-  "crates/eos-runtime",
+  "crates/eos-agent-core",
   "crates/eos-testkit",
   "workspace-guard",
 ]
@@ -54,7 +54,6 @@ base64      = "0.22"
 parking_lot = "0.12"
 secrecy     = "0.8"
 uuid        = { version = "1", features = ["v4", "serde"] }
-console-subscriber = "0.4"
 # dev
 insta             = { version = "1", features = ["json"] }
 proptest          = "1"
@@ -71,7 +70,7 @@ eos-sandbox-port   = { path = "crates/eos-sandbox-port" }
 eos-tool           = { path = "crates/eos-tool" }
 eos-engine         = { path = "crates/eos-engine" }
 eos-workflow       = { path = "crates/eos-workflow" }
-eos-runtime        = { path = "crates/eos-runtime" }
+eos-agent-core     = { path = "crates/eos-agent-core" }
 # Dev-only shared test doubles (scripted LLM/EventSource, fake sandbox edges,
 # AppState builder, Layer-B workflow runners). Consumed under [dev-dependencies]
 # with the minimal feature; the resulting dev-only dep cycles are Cargo-legal.

@@ -16,7 +16,7 @@ struct RuleFixture {
     tool_calls_used: u32,
     tool_call_limit: u32,
     terminal_submitted: bool,
-    notifier: NotificationService,
+    notifier: EngineNotificationQueue,
 }
 
 impl RuleFixture {
@@ -28,7 +28,7 @@ impl RuleFixture {
             tool_calls_used: 0,
             tool_call_limit: 4,
             terminal_submitted: false,
-            notifier: NotificationService::new(),
+            notifier: EngineNotificationQueue::new(),
         }
     }
 }
@@ -140,7 +140,7 @@ async fn reasoning_only_does_not_nudge_but_text_only_does() {
 
 #[tokio::test]
 async fn notification_service_queues_and_drains() {
-    let service = NotificationService::new();
+    let service = EngineNotificationQueue::new();
     service
         .notify_system(SystemNotification {
             event: "evt".to_owned(),

@@ -2,7 +2,7 @@ use eos_types::{AttemptBudget, AttemptId, PlanNodeId, TaskId};
 
 use crate::Result;
 
-/// Per-workflow lifecycle knobs injected by `eos-runtime`.
+/// Per-workflow lifecycle knobs injected by `eos-agent-core`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct WorkflowLifecycleConfig {
     /// Attempts allowed per iteration before the iteration closes failed.

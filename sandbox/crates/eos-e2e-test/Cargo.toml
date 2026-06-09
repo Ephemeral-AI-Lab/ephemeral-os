@@ -34,7 +34,7 @@ name = "ephemeral_workspace"
 path = "tests/ephemeral_workspace/mod.rs"
 
 [[test]]
-name = "eos-isolated-workspace"
+name = "workspace-runtime-isolated"
 path = "tests/eos-isolated-workspace/mod.rs"
 
 [[test]]
@@ -46,7 +46,7 @@ name = "eos-occ"
 path = "tests/eos-occ/mod.rs"
 
 [[test]]
-name = "eos-command-session"
+name = "workspace-runtime-command-session"
 path = "tests/eos-command-session/mod.rs"
 
 [[test]]

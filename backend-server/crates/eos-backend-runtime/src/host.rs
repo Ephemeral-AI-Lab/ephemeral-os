@@ -4,20 +4,20 @@
 //! sandbox to completion" — and only needs the resolved Done/Failed disposition
 //! back. Hiding agent-core's `run_request` behind this trait keeps the launcher's
 //! lifecycle logic (run-meta writes, cancellation, reaping) testable against a
-//! fake without standing up a full [`RuntimeServices`] graph (its in-memory test
-//! construction lives crate-local to `eos-runtime`, unreachable from here). This
+//! fake without standing up a full [`AgentCoreRuntime`] graph (its in-memory test
+//! construction lives crate-local to `eos-agent-core`, unreachable from here). This
 //! is a load-bearing substitution boundary, so it is a `dyn` trait by intent.
 //!
 //! Production wiring is [`RuntimeHost`]: it owns the per-deployment
 //! `workspace_root` + [`WorkflowConfig`], assembles the per-request
-//! [`RequestRunInput`], and calls [`eos_runtime::run_request`].
+//! [`RequestRunInput`], and calls [`eos_agent_core::run_request`].
 
 use async_trait::async_trait;
 
-use eos_config::WorkflowConfig;
-use eos_runtime::{run_request, EventCallback, RequestRunInput, RuntimeServices};
-use eos_state::TaskStatus;
+use eos_agent_core::{run_request, AgentCoreRuntime, EventCallback, RequestRunInput};
+use eos_types::TaskStatus;
 use eos_types::{RequestId, SandboxId};
+use eos_workflow::WorkflowConfig;
 
 /// How a completed (non-cancelled) host run resolved. Cancellation is owned by the
 /// launcher (it drops the run future), so it is not a host outcome.
@@ -52,14 +52,14 @@ pub trait RunHost: Send + Sync {
 
 /// Production [`RunHost`]: the backend composition root's handle on agent-core.
 ///
-/// Holds the injected [`RuntimeServices`] graph plus the per-deployment run
+/// Holds the injected [`AgentCoreRuntime`] graph plus the per-deployment run
 /// template (`workspace_root` + [`WorkflowConfig`]) — v1 has no per-request
 /// workflow override, so these are constant across requests. The resolved
 /// `sandbox_id` is threaded into [`RequestRunInput`] so `run_request`'s internal
 /// gateway acquire short-circuits to the binding the launcher already pinned
 /// (idempotent per request id).
 pub struct RuntimeHost {
-    services: RuntimeServices,
+    services: AgentCoreRuntime,
     workspace_root: String,
     workflow_config: WorkflowConfig,
 }
@@ -76,7 +76,7 @@ impl RuntimeHost {
     /// Build the production host from the injected services and run template.
     #[must_use]
     pub fn new(
-        services: RuntimeServices,
+        services: AgentCoreRuntime,
         workspace_root: impl Into<String>,
         workflow_config: WorkflowConfig,
     ) -> Self {

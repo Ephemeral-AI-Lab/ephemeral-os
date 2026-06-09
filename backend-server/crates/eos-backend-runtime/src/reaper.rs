@@ -72,12 +72,22 @@ impl Reaper {
         let finished_at = UtcDateTime::now();
         let mut result = self
             .run_meta
-            .set_status(request_id, status, Some(finished_at), cancel_reason.as_deref())
+            .set_status(
+                request_id,
+                status,
+                Some(finished_at),
+                cancel_reason.as_deref(),
+            )
             .await;
         if result.is_err() {
             result = self
                 .run_meta
-                .set_status(request_id, status, Some(finished_at), cancel_reason.as_deref())
+                .set_status(
+                    request_id,
+                    status,
+                    Some(finished_at),
+                    cancel_reason.as_deref(),
+                )
                 .await;
         }
         if let Err(err) = result {

@@ -1,5 +1,5 @@
 #[cfg(target_os = "linux")]
-use eos_command_session::{
+use eos_workspace_runtime::command_session::{
     CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionError,
 };
 use serde_json::{json, Value};

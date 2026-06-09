@@ -1,7 +1,7 @@
 //! Provider-scoped model registry seed configuration.
 //!
 //! Provider configs embed this shape under `providers.<provider>.models`.
-//! `eos-runtime` reads the active provider's model section at the composition
+//! `eos-agent-core` reads the active provider's model section at the composition
 //! root, asks `eos-db` to seed the persisted model registry for compatibility,
 //! and configures the selected LLM client with the active model defaults.
 
