@@ -31,7 +31,7 @@ impl NotificationRule for TerminalCallReminder {
         let mut names: Vec<&str> = ctx
             .terminal_tools
             .iter()
-            .map(|name| name.as_str())
+            .map(eos_tool::ToolKey::as_str)
             .collect();
         names.sort_unstable();
         let names = names.join(", ");

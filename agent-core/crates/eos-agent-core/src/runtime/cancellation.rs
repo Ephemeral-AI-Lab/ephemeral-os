@@ -1,4 +1,4 @@
-//! Runtime-local recursive cancellation API.
+//! Runtime-local recursive cancellation contract implementation.
 
 use std::sync::{Arc, OnceLock};
 

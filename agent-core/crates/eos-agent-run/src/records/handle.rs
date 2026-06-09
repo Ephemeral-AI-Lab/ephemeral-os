@@ -6,8 +6,11 @@ use eos_types::{ContentBlock, Message};
 use serde_json::{json, Value};
 
 use super::error::Result;
-use super::io::{append_event, append_initial_message_rows, append_message_rows, read_bytes_after, read_events_after};
-use super::record::{MessageAppendRange, NodeEvent, RecordBytes};
+use super::io::{
+    append_event, append_initial_message_rows, append_message_rows, read_bytes_after,
+    read_events_after,
+};
+use super::record::{MessageAppendRange, NodeEvent, RecordBytes, RecordIdentity};
 
 /// A started agent-run message-record node.
 #[derive(Debug, Clone)]
@@ -15,6 +18,7 @@ pub struct AgentRunRecordHandle {
     node_dir: PathBuf,
     messages_path: PathBuf,
     events_path: PathBuf,
+    identity: RecordIdentity,
 }
 
 impl AgentRunRecordHandle {
@@ -30,7 +34,8 @@ impl AgentRunRecordHandle {
     /// # Errors
     /// Returns [`super::MessageRecordError`] if message or event append fails.
     pub async fn append_messages(&self, messages: &[Message]) -> Result<MessageAppendRange> {
-        let range = append_message_rows(&self.messages_path, "message", messages).await?;
+        let range =
+            append_message_rows(&self.messages_path, &self.identity, "message", messages).await?;
         if range.count > 0 {
             let mut payload = JsonObject::new();
             payload.insert("count".to_owned(), json!(range.count));
@@ -83,7 +88,13 @@ impl AgentRunRecordHandle {
         system_prompt: &str,
         initial_messages: &[Message],
     ) -> Result<MessageAppendRange> {
-        append_initial_message_rows(&self.messages_path, system_prompt, initial_messages).await
+        append_initial_message_rows(
+            &self.messages_path,
+            &self.identity,
+            system_prompt,
+            initial_messages,
+        )
+        .await
     }
 
     pub(crate) async fn append_event(
@@ -91,14 +102,15 @@ impl AgentRunRecordHandle {
         kind: impl Into<String>,
         payload: JsonObject,
     ) -> Result<()> {
-        append_event(&self.events_path, kind.into(), payload).await
+        append_event(&self.events_path, &self.identity, kind.into(), payload).await
     }
 
-    pub(crate) fn from_node_dir(node_dir: PathBuf) -> Self {
+    pub(crate) fn from_node_dir(node_dir: PathBuf, identity: RecordIdentity) -> Self {
         Self {
             messages_path: node_dir.join("messages.jsonl"),
             events_path: node_dir.join("events.jsonl"),
             node_dir,
+            identity,
         }
     }
 }

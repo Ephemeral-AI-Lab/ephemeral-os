@@ -53,9 +53,7 @@ pub struct RequestOutcome {
 /// statically non-empty, so `TaskId` parsing (which only rejects the empty
 /// string) cannot fail.
 pub(crate) fn root_task_id_for(request_id: &RequestId) -> TaskId {
-    format!("root-{request_id}")
-        .parse()
-        .expect("root-{request_id} is non-empty, so TaskId parsing cannot fail")
+    eos_types::root_task_id(request_id)
 }
 
 /// Run a top-level request to completion and return the root's outcome.
@@ -240,7 +238,6 @@ pub async fn run_request(
                     initial_messages: vec![Message::from_user_text(prompt.clone())],
                     target: SpawnAgentTarget::Root {
                         request_id: request_id.clone(),
-                        task_id: root_task_id.clone(),
                     },
                     tool_use_id: None,
                     sandbox_id: Some(binding.sandbox_id.clone()),

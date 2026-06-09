@@ -294,7 +294,7 @@ where
 }
 
 #[must_use]
-pub fn read_outcome(
+fn read_outcome(
     mode: WorkspaceMode,
     content: String,
     exists: bool,
@@ -311,7 +311,7 @@ pub fn read_outcome(
 }
 
 #[must_use]
-pub fn write_conflict(
+fn write_conflict(
     mode: WorkspaceMode,
     mutation_source: &str,
     path: &str,
@@ -335,7 +335,7 @@ pub fn write_conflict(
 }
 
 #[must_use]
-pub fn edit_conflict(
+fn edit_conflict(
     mode: WorkspaceMode,
     mutation_source: &str,
     path: &str,
@@ -359,7 +359,7 @@ pub fn edit_conflict(
     }
 }
 
-pub fn insert_total(timings: &mut WorkspaceTimings, verb: &str, start: Instant) {
+fn insert_total(timings: &mut WorkspaceTimings, verb: &str, start: Instant) {
     timings.insert(
         format!("api.{verb}.total_s"),
         json!(start.elapsed().as_secs_f64()),

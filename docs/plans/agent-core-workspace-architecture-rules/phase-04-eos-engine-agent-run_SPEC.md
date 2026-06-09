@@ -98,45 +98,55 @@ launcher and passes it into `AgentRunService`.
 
 ## Resulting File Structure
 
+Phase 04 optimizes for the cleanest end state instead of the smallest
+rename/move. This target keeps provider-stream concerns, engine events,
+tool-call scheduling, records, and background lifecycle accounting as separate
+ownership groups.
+
 ```text
 agent-core/crates/eos-engine/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs
 │   ├── error.rs
-│   ├── events.rs
-│   ├── printer.rs
-│   ├── notifications/
-│   │   ├── mod.rs
-│   │   └── rules.rs
 │   ├── agent_loop/
 │   │   ├── mod.rs
 │   │   ├── launcher.rs
 │   │   ├── executor.rs
 │   │   ├── state.rs
-│   │   ├── stream.rs
 │   │   └── turn.rs
-│   ├── tool_dispatch/
+│   ├── provider_stream/
+│   │   ├── mod.rs
+│   │   ├── source.rs
+│   │   └── messages.rs
+│   ├── tool_call/
 │   │   ├── mod.rs
 │   │   ├── batch.rs
-│   │   └── execution.rs
+│   │   ├── execute.rs
+│   │   └── hooks/
+│   ├── event/
+│   │   ├── mod.rs
+│   │   ├── event.rs
+│   │   ├── sink.rs
+│   │   └── printer.rs
 │   ├── records/
 │   │   ├── mod.rs
 │   │   ├── writer.rs
 │   │   └── event_mapper.rs
 │   └── background/
 │       ├── mod.rs
-│       ├── notification.rs
-│       └── background_session_manager/
-│           ├── mod.rs
-│           ├── command_session_manager.rs
-│           ├── subagent_session_manager.rs
-│           └── workflow_session_manager.rs
+│       ├── runtime.rs
+│       ├── command_session.rs
+│       ├── subagent_session.rs
+│       ├── workflow_session.rs
+│       └── notification.rs
 └── tests/
     ├── agent_loop/
+    ├── provider_stream/
+    ├── tool_call/
+    ├── event/
     ├── records/
-    ├── background/
-    └── notifications/
+    └── background/
 ```
 
 ```text
@@ -147,16 +157,54 @@ agent-core/crates/eos-agent-run/
 │   ├── error.rs
 │   ├── service.rs
 │   ├── spawn.rs
-│   ├── active_agent_run.rs
-│   ├── persistence.rs
+│   ├── active_agent_run_handle.rs
 │   ├── completion.rs
 │   ├── cancellation.rs
-│   └── records.rs
+│   ├── persistence.rs
+│   └── record_target.rs
 └── tests/
     ├── lifecycle/
     ├── completion/
     └── cancellation/
 ```
+
+Target struct field shape:
+
+```rust
+pub struct AgentRunService {
+    agent_registry: Arc<AgentRegistry>,
+    agent_run_store: Arc<dyn AgentRunStore>,
+    task_agent_run_store: Arc<dyn TaskAgentRunStore>,
+    loop_launcher: Arc<dyn AgentLoopLauncher>,
+    active_agent_runs: RwLock<HashMap<AgentRunId, ActiveAgentRunHandle>>,
+    runtime_state: Option<Arc<dyn AgentRuntimeStateStore>>,
+}
+
+struct ActiveAgentRunHandle {
+    agent_run_id: AgentRunId,
+    loop_cancellation: AgentLoopCancellationHandle,
+    outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
+}
+
+pub struct TokioAgentLoopLauncher {
+    provider_stream_factory: ProviderStreamSourceFactory,
+    tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
+    metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
+    background_inputs: Option<BackgroundSessionInputs>,
+    event_sink: Option<EngineEventSink>,
+}
+```
+
+Target naming rules:
+
+| Existing or weaker name | Target name | Reason |
+| --- | --- | --- |
+| `query/` for provider streaming | `provider_stream/` | names the model-stream boundary directly |
+| `tool_dispatch/` | `tool_call/` | matches model-visible tool-call vocabulary |
+| `events.rs` plus `printer.rs` | `event/{event,sink,printer}.rs` | keeps event data, observation, and rendering separate |
+| `records.rs` in `eos-agent-run` | `record_target.rs` | run crate passes a passive target, engine writes records |
+| `BackgroundManagers` | `BackgroundSessionRuntime` | aggregate root is session lifecycle accounting, not a bag of managers |
+| `agent_run_service` field for `dyn AgentRunApi` | `agent_run_api` | names the trait contract rather than a concrete service |
 
 ## File Ownership Contract
 
@@ -170,32 +218,37 @@ logic.
 | File | Owns | Must not own |
 | --- | --- | --- |
 | `lib.rs` | narrow public exports | implementation logic or compatibility re-export maze |
-| `events.rs` | engine event enum, event severity, event sink input shape | printing, persistence, run finalization |
-| `printer.rs` | engine event printing/sink behavior | durable record writes |
-| `notifications/mod.rs` | loop-local notification queue and rule evaluation | external notification facade or run finalization |
-| `notifications/rules.rs` | notification rules that are local to loop execution | session storage, persistence, or tool behavior |
+| `error.rs` | engine error type and conversions | lifecycle persistence or tool-family errors |
+| `event/mod.rs` | event module routing and narrow exports | loop execution or record persistence |
+| `event/event.rs` | engine event enum, event severity, and event sink input shape | printing, persistence, run finalization |
+| `event/sink.rs` | `EngineEventSink` and event observation delivery | durable finalization or record layout |
+| `event/printer.rs` | engine event printing behavior | durable record writes |
 | `agent_loop/mod.rs` | loop module routing and public loop-internal exports | full loop implementation |
 | `agent_loop/launcher.rs` | concrete `AgentLoopLauncher` implementation and Tokio task launch | run spawning, wait/poll/cancel, durable finalization |
 | `agent_loop/executor.rs` | full loop state machine, provider stream consumption, loop exit decisions | run lifecycle persistence |
 | `agent_loop/state.rs` | in-memory state for one active loop | DB writes, active-run registry |
-| `agent_loop/stream.rs` | provider stream normalization and loop event production | tool dispatch or run finalization |
 | `agent_loop/turn.rs` | assistant turn execution and tool-call turn semantics | concrete tool families |
-| `tool_dispatch/mod.rs` | engine-side tool-dispatch routing | concrete tool families, tool registry definitions |
-| `tool_dispatch/batch.rs` | batch rejection/fan-out policy | concrete tool execution |
-| `tool_dispatch/execution.rs` | one registered-tool execution glue | tool registry construction |
+| `provider_stream/mod.rs` | provider-stream module routing | tool dispatch, records, or lifecycle finalization |
+| `provider_stream/source.rs` | provider stream source and factory contracts | completion, wait/poll notification, or run persistence |
+| `provider_stream/messages.rs` | provider request/message normalization | tool execution or record writing |
+| `tool_call/mod.rs` | engine-side tool-call routing | concrete tool families, tool registry definitions |
+| `tool_call/batch.rs` | batch rejection and bounded fan-out/fan-in policy | one-tool execution internals |
+| `tool_call/execute.rs` | one registered-tool execution glue | tool registry construction |
+| `tool_call/hooks/` | engine-owned pre-tool policy helpers | concrete tool family behavior or run lifecycle persistence |
 | `records/mod.rs` | record module routing and engine-local record exports | final agent-run state transitions |
 | `records/writer.rs` | loop-visible record writes against a resolved record target | DB lineage lookup or run finalization |
 | `records/event_mapper.rs` | engine-event to record-row mapping | printing or persistence finalization |
+| `background/mod.rs` | background module routing and aggregate exports | concrete family protocol details |
+| `background/runtime.rs` | `BackgroundSessionRuntime` aggregate, cross-family counts, cancel, list, and completion polling | concrete family-specific protocol details |
+| `background/command_session.rs` | command-session registration, active IDs, counts, cancel, completion polling | workflow/subagent behavior |
+| `background/subagent_session.rs` | subagent registration, active IDs, counts, cancel, completion polling | command/workflow behavior |
+| `background/workflow_session.rs` | workflow registration, active IDs, counts, cancel, completion polling | command/subagent behavior |
 | `background/notification.rs` | background completion event rendering and enqueueing | session storage or polling |
-| `background/background_session_manager/mod.rs` | `BackgroundSessionRuntime` aggregate, cross-family counts, cancel, list, and completion polling | concrete family-specific protocol details |
-| `background/background_session_manager/command_session_manager.rs` | command-session registration, active IDs, counts, cancel, completion polling | workflow/subagent behavior |
-| `background/background_session_manager/subagent_session_manager.rs` | subagent registration, active IDs, counts, cancel, completion polling | command/workflow behavior |
-| `background/background_session_manager/workflow_session_manager.rs` | workflow registration, active IDs, counts, cancel, completion polling | command/subagent behavior |
 
-The only session-manager vocabulary in this phase is the flat
-`background_session_manager/*_session_manager.rs` layout above. Do not
-reintroduce nested `session_managers/<kind>/...` folders or generic `lane`,
-`recorder`, `driver`, or internal `*_port` names.
+The only background-session vocabulary in this phase is the flat
+`background/{runtime,command_session,subagent_session,workflow_session}.rs`
+layout above. Do not reintroduce nested `session_managers/<kind>/...` folders or
+generic `lane`, `recorder`, `driver`, or internal `*_port` names.
 
 ### eos-agent-run files
 
@@ -204,11 +257,11 @@ reintroduce nested `session_managers/<kind>/...` folders or generic `lane`,
 | `lib.rs` | narrow lifecycle exports | engine or tool implementation exports |
 | `service.rs` | `AgentRunService`, lifecycle orchestration, active-run map ownership | turn execution or concrete engine types |
 | `spawn.rs` | `spawn_agent` orchestration, request validation, launch input mapping, and task-agent-run creation handoff | provider streaming |
-| `active_agent_run.rs` | one process-local `ActiveAgentRun` value | durable DB state or map-wide orchestration |
+| `active_agent_run_handle.rs` | one process-local `ActiveAgentRunHandle` value | durable DB state or map-wide orchestration |
 | `persistence.rs` | durable run state transitions | engine event interpretation |
 | `completion.rs` | exactly-once engine outcome handoff and final-state mapping | event-by-event loop handling |
 | `cancellation.rs` | run cancellation orchestration | concrete tool or sandbox family behavior |
-| `records.rs` | resolve/pass `AgentRunRecordTarget` for engine writes | loop-visible record interpretation |
+| `record_target.rs` | resolve/pass `AgentRunRecordTarget` for engine writes | loop-visible record interpretation |
 
 Target `AgentRunService` field shape:
 
@@ -216,10 +269,10 @@ Target `AgentRunService` field shape:
 pub struct AgentRunService {
     agent_registry: Arc<AgentRegistry>,
     agent_run_store: Arc<dyn AgentRunStore>,
+    task_agent_run_store: Arc<dyn TaskAgentRunStore>,
     loop_launcher: Arc<dyn AgentLoopLauncher>,
-    active_agent_runs: RwLock<HashMap<AgentRunId, ActiveAgentRun>>,
-    record_target_resolver: Arc<dyn AgentRunRecordTargetResolver>,
-    agent_runtime_state: Arc<dyn AgentRuntimeStateStore>,
+    active_agent_runs: RwLock<HashMap<AgentRunId, ActiveAgentRunHandle>>,
+    runtime_state: Option<Arc<dyn AgentRuntimeStateStore>>,
 }
 ```
 
@@ -228,20 +281,20 @@ target type comes from the Phase 02 agent-definition disposition; the concrete
 registry DTO now lives in `eos-types`, so Phase 04 must not recreate an
 agent-definition crate edge.
 
-Target active-run value:
+Target active-run handle value:
 
 ```rust
-struct ActiveAgentRun {
+struct ActiveAgentRunHandle {
     agent_run_id: AgentRunId,
-    cancel_handle: AgentLoopCancelHandle,
+    loop_cancellation: AgentLoopCancellationHandle,
     outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
 }
 ```
 
 There is no target `ActiveAgentRuns` wrapper. `AgentRunService` owns the
-`active_agent_runs` map directly. Keep `agent_run_id` inside `ActiveAgentRun`
-even though it duplicates the map key, so the value remains self-identifying
-when moved into completion or cancellation helpers.
+`active_agent_runs` map directly. Keep `agent_run_id` inside
+`ActiveAgentRunHandle` even though it duplicates the map key, so the handle
+remains self-identifying when moved into completion or cancellation helpers.
 
 ## Loop Launch Contract and Engine Surface
 
@@ -253,7 +306,7 @@ AgentLoopLauncher
 StartAgentLoopRequest
 StartedAgentLoop
 AgentLoopOutcome
-AgentLoopCancelHandle
+AgentLoopCancellationHandle
 AgentLoopCancelSignal
 ToolExecutionMetadataReader
 ```
@@ -261,8 +314,8 @@ ToolExecutionMetadataReader
 `eos-engine` implements this contract and exports only concrete engine
 composition types. It must not re-export every internal engine helper.
 There is no target `services.rs` file and no first-target `services/` folder;
-execution internals stay in `agent_loop/`, `tool_dispatch/`, `records/`,
-`printer.rs`, and `background/`.
+execution internals stay in `agent_loop/`, `provider_stream/`, `tool_call/`,
+`event/`, `records/`, and `background/`.
 
 The loop module is named `agent_loop` (not `loop`): `loop` is a reserved Rust
 keyword, so `mod loop;` does not compile.
@@ -338,17 +391,17 @@ must preserve these behaviors:
 ## Background Session Contract
 
 `background/mod.rs` is the routing/export surface. The aggregate root lives in
-`background/background_session_manager/mod.rs`. The family manager modules keep
-implementation details local, but the aggregate owns cross-family policy.
+`background/runtime.rs`. The family session modules keep implementation details
+local, but the aggregate owns cross-family policy.
 
 | Capability | Owner | Required behavior |
 | --- | --- | --- |
 | register active background work | family module | records typed active ID and source family |
-| count active work | `background_session_manager/mod.rs` | returns command/subagent/workflow counts in one snapshot |
-| list active IDs | `background_session_manager/mod.rs` | preserves family identity; no stringly mixed ID list |
-| cancel by reason | `background_session_manager/mod.rs` | forwards `cancel(reason)` to every family and reports partial failures |
-| poll completions | `background_session_manager/mod.rs` | drains family completions and emits engine events |
-| terminal gate | `background_session_manager/mod.rs` plus hooks in `eos-tool` | terminal submission/isolated-workspace gates can prove no background sessions remain |
+| count active work | `background/runtime.rs` | returns command/subagent/workflow counts in one snapshot |
+| list active IDs | `background/runtime.rs` | preserves family identity; no stringly mixed ID list |
+| cancel by reason | `background/runtime.rs` | forwards `cancel(reason)` to every family and reports partial failures |
+| poll completions | `background/runtime.rs` | drains family completions and emits engine events |
+| terminal gate | `background/runtime.rs` plus hooks in `eos-tool` | terminal submission/isolated-workspace gates can prove no background sessions remain |
 
 The background runtime is allowed to depend on sandbox, workflow, and subagent
 runtime handles. It must not depend on concrete tool family modules or on
@@ -390,7 +443,7 @@ Handoff rules:
 | failed engine startup creates a failed run outcome, not a dangling active run | `eos-agent-run` |
 | background sessions are cancelled or reported before final state is persisted | `eos-engine` reports; `eos-agent-run` persists |
 | final outcome is visible to waiters and pollers after persistence succeeds | `eos-agent-run` |
-| `ActiveAgentRun` is removed from the map before final publication | `eos-agent-run` |
+| `ActiveAgentRunHandle` is removed from the map before final publication | `eos-agent-run` |
 | engine event sinks cannot finalize or publish run outcomes | `eos-engine` / `eos-agent-core` |
 
 ## Records and Engine Event Printing
@@ -400,7 +453,7 @@ Target ownership:
 | Behavior | Owner |
 | --- | --- |
 | event emission during loop | `eos-engine` |
-| engine event printing | `eos-engine/printer.rs` |
+| engine event printing | `eos-engine/event/printer.rs` |
 | record interpretation | `eos-engine/records/event_mapper.rs` |
 | record writing | `eos-engine/records/writer.rs` |
 | durable run finalization | `eos-agent-run` |
@@ -413,9 +466,9 @@ Record and print rules:
 
 | Rule | Owner |
 | --- | --- |
-| every model-visible stream/tool event can be printed during execution | `printer.rs` |
+| every model-visible stream/tool event can be printed during execution | `event/printer.rs` |
 | every durable loop-visible event is interpreted once into records | `records/event_mapper.rs` |
-| printing failure cannot corrupt loop state | `printer.rs` reports non-fatal sink errors |
+| printing failure cannot corrupt loop state | `event/printer.rs` reports non-fatal sink errors |
 | record write failure is an engine error and appears in `AgentLoopOutcome` | `records/writer.rs`, `agent_loop/executor.rs` |
 | externally exposed record DTOs are re-exported by `eos-agent-core` only if needed | `eos-agent-core` |
 
@@ -443,7 +496,7 @@ literal file name `messages.jsonl` is unchanged.
 | Separate lifecycle completion channel from engine event sinks | Not started |
 | Rename current `EventCallback` target to `EngineEventSink` | Not started |
 | Remove no-op `AgentLoopHooks` or rename/load it as engine-only `AgentLoopObserver` | Not started |
-| Replace `ActiveAgentRuns` wrapper target with `HashMap<AgentRunId, ActiveAgentRun>` | Not started |
+| Replace `ActiveAgentRuns` wrapper target with `HashMap<AgentRunId, ActiveAgentRunHandle>` | Not started |
 | Add execution invariants for stream/tool/terminal behavior | Not started |
 | Add `BackgroundSessionRuntime` aggregate contract | Not started |
 | Move records into engine internals | Not started |
@@ -484,12 +537,13 @@ literal file name `messages.jsonl` is unchanged.
 - `eos-agent-run` does not import concrete tool modules.
 - `eos-agent-run` has no dependency on `eos-tool` or `ToolResult`; model-facing
   rendering happens above the lifecycle layer.
-- `eos-agent-run` owns `active_agent_runs: HashMap<AgentRunId, ActiveAgentRun>`
+- `eos-agent-run` owns `active_agent_runs: HashMap<AgentRunId, ActiveAgentRunHandle>`
   directly; there is no target `ActiveAgentRuns` wrapper.
 - `eos-agent-run` owns spawn/wait/poll/cancel/finalization.
 - `eos-agent-run` does not interpret stream/tool events.
 - `eos-engine/src/background` keeps concrete command, workflow, and subagent
-  managers under flat `background_session_manager/*_session_manager.rs` files;
+  managers under
+  `background/{runtime,command_session,subagent_session,workflow_session}.rs`;
   there are no target `background/*_sessions.rs` files and no nested
   `session_managers/<kind>/...` folders.
 - Engine completion returns to run lifecycle through an outcome receiver or
@@ -509,5 +563,5 @@ literal file name `messages.jsonl` is unchanged.
 - `cargo test -p eos-agent-run` passes.
 - Focused tests cover loop outcome handoff, cancellation races, background
   accounting, records, and engine event printing.
-- Final file layout follows the file ownership table above; there is no
+- Final file layout follows the resulting file structure above; there is no
   standalone module-count cap for this phase.

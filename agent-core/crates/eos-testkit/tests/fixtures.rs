@@ -52,7 +52,7 @@ fn start_request() -> StartAgentLoopRequest {
     }
 }
 
-fn agent_state(agent_name: &str) -> AgentRunRuntimeSnapshot {
+fn runtime_snapshot(agent_name: &str) -> AgentRunRuntimeSnapshot {
     AgentRunRuntimeSnapshot {
         agent_run_id: AgentRunId::new_v4(),
         agent_name: agent_name.to_owned(),
@@ -119,8 +119,8 @@ async fn factory_by_agent_routes_by_agent_name() {
         ("advisor", vec![text_turn("advisor turn")]),
     ]);
     let start_request = start_request();
-    let root_source = factory(&start_request, &agent_state("root"));
-    let advisor_source = factory(&start_request, &agent_state("advisor"));
+    let root_source = factory(&start_request, &runtime_snapshot("root"));
+    let advisor_source = factory(&start_request, &runtime_snapshot("advisor"));
     let root_events =
         collect_source_with_request(&*root_source, &request_with_tool("submit_root_outcome")).await;
     let advisor_events = collect_source_with_request(

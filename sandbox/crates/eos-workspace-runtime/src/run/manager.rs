@@ -28,7 +28,7 @@ use crate::command_session::{
 };
 use crate::ephemeral::{
     discard_ephemeral_command, prepare_ephemeral_command, EphemeralCommandPrepareContext,
-    SnapshotLease, PreparedEphemeralCommand,
+    PreparedEphemeralCommand, SnapshotLease,
 };
 use crate::isolated::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,

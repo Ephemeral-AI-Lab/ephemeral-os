@@ -61,7 +61,7 @@ async fn cancel_workflow_cancels_child_state_without_touching_parent() {
     let deps = stores.deps(runner);
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
-    let cancel_port: Arc<dyn AgentCoreCancellationApi> = Arc::new(TestAgentCoreCancellationApi {
+    let cancellation: Arc<dyn AgentCoreCancellationApi> = Arc::new(TestAgentCoreCancellationApi {
         task_store: stores.clone(),
     });
     let service = WorkflowService::new(
@@ -70,7 +70,7 @@ async fn cancel_workflow_cancels_child_state_without_touching_parent() {
         stores.clone(),
         stores.clone(),
         stores.clone(),
-        cancel_port,
+        cancellation,
     );
 
     let agent_run_id: AgentRunId = "agent-run-1".parse().expect("agent run id");

@@ -4,18 +4,19 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentDefinition, AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeFuture,
-    AgentLoopOutcomeKind, AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi,
-    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunRecordTarget, AgentRunStatus,
-    AgentRunStore, AgentType, CreatedTaskAgentRun, Message, ParentedAgentRunKind,
-    SpawnAgentRequest, SpawnAgentTarget, TaskAgentRunKind, TaskAgentRunStore, TaskId, TaskStatus,
+    root_task_id, workflow_task_id, AgentDefinition, AgentLoopLauncher, AgentLoopMessage,
+    AgentLoopOutcome, AgentLoopOutcomeFuture, AgentLoopOutcomeKind,
+    AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi, AgentRunError, AgentRunId,
+    AgentRunOutcome, AgentRunRecordTarget, AgentRunStatus, AgentRunStore, AgentType,
+    CreatedTaskAgentRun, Message, ParentedAgentRunKind, SpawnAgentRequest, SpawnAgentTarget,
+    TaskAgentRunKind, TaskAgentRunStore, TaskId, TaskStatus,
 };
 
 use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRuns};
 use crate::agent_loop_request::build_start_agent_loop_request;
 use crate::agent_run_persistence::{
-    completion_from_agent_run, create_agent_run_if_requested, finish_agent_run_cancelled,
-    finish_agent_run_if_requested,
+    completion_from_agent_run, create_compat_agent_run, finish_compat_agent_run,
+    finish_compat_agent_run_cancelled,
 };
 use crate::agent_run_records::to_agent_run_record_kind;
 use crate::records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
@@ -99,15 +100,18 @@ impl AgentRunService {
         };
         let kind = to_agent_run_record_kind(&request.target.task_agent_run_kind());
         let handle = message_records
-            .start_agent_run(AgentRunRecordStart {
-                request_id: &record_target.request_id,
-                task_id: Some(&record_target.task_id),
-                agent_run_id: &record_target.agent_run_id,
-                agent_name: agent_def.name.as_str(),
-                kind: &kind,
-                system_prompt: agent_def.system_prompt.as_deref().unwrap_or_default(),
-                initial_messages: &request.initial_messages,
-            })
+            .start_agent_run_at(
+                &record_target.record_dir,
+                AgentRunRecordStart {
+                    request_id: &record_target.request_id,
+                    task_id: Some(&record_target.task_id),
+                    agent_run_id: &record_target.agent_run_id,
+                    agent_name: agent_def.name.as_str(),
+                    kind: &kind,
+                    system_prompt: agent_def.system_prompt.as_deref().unwrap_or_default(),
+                    initial_messages: &request.initial_messages,
+                },
+            )
             .await
             .map_err(|err| AgentRunError::Internal(err.to_string()))?;
         Ok(Some(ActiveAgentRunRecord::new(
@@ -155,14 +159,12 @@ impl AgentRunService {
     async fn finalize_agent_run_from_agent_loop_outcome(
         &self,
         agent_run_id: AgentRunId,
-        persistence_requested: bool,
         outcome: AgentLoopOutcome,
     ) -> AgentRunOutcome {
         let agent_outcome = agent_run_outcome_from_loop(agent_run_id.clone(), outcome);
         let error = agent_outcome.error.as_deref();
-        let finish = finish_agent_run_if_requested(
+        let finish = finish_compat_agent_run(
             &*self.agent_run_store,
-            persistence_requested,
             &agent_run_id,
             agent_outcome.submission_payload.as_ref(),
             agent_outcome.token_count,
@@ -194,12 +196,10 @@ impl AgentRunService {
     async fn finalize_agent_run_from_dropped_agent_loop_sender(
         &self,
         agent_run_id: AgentRunId,
-        persistence_requested: bool,
     ) -> AgentRunOutcome {
         let error = "agent loop outcome sender dropped".to_owned();
-        let _ignored = finish_agent_run_if_requested(
+        let _ignored = finish_compat_agent_run(
             &*self.agent_run_store,
-            persistence_requested,
             &agent_run_id,
             None,
             None,
@@ -226,27 +226,24 @@ impl AgentRunService {
         agent_name: &DefinitionAgentName,
     ) -> Result<CreatedTaskAgentRun, AgentRunError> {
         match &request.target {
-            SpawnAgentTarget::Root {
-                request_id,
-                task_id,
-            } => {
+            SpawnAgentTarget::Root { request_id } => {
                 self.task_agent_run_store
-                    .create_root_task_agent_run(request_id, task_id, agent_run_id, agent_name)
+                    .create_root_task_agent_run(request_id, agent_run_id, agent_name)
                     .await
             }
             SpawnAgentTarget::Workflow {
                 request_id,
-                task_id,
                 workflow,
                 role,
+                plan_node_id,
             } => {
                 self.task_agent_run_store
                     .create_workflow_task_agent_run(
                         request_id,
-                        task_id,
                         agent_run_id,
                         workflow,
                         *role,
+                        plan_node_id.as_ref(),
                         agent_name,
                     )
                     .await
@@ -348,10 +345,10 @@ impl AgentRunApi for AgentRunService {
         let created_run = self
             .create_task_agent_run(&request, &agent_run_id, &agent_name)
             .await?;
-        let persistence_requested = create_agent_run_if_requested(
+        let compat_task_id = compat_agent_run_task_id(&request.target);
+        create_compat_agent_run(
             &*self.agent_run_store,
-            true,
-            legacy_task_row_id_for_agent_run(&request.target),
+            compat_task_id.as_ref(),
             &agent_run_id,
             agent_def.name.as_str(),
         )
@@ -375,13 +372,7 @@ impl AgentRunApi for AgentRunService {
         let service = self.clone();
         let forward_agent_run_id = agent_run_id.clone();
         tokio::spawn(async move {
-            forward_agent_loop_outcome(
-                service,
-                forward_agent_run_id,
-                persistence_requested,
-                started.outcome,
-            )
-            .await;
+            forward_agent_loop_outcome(service, forward_agent_run_id, started.outcome).await;
         });
 
         Ok(agent_run_id)
@@ -432,7 +423,7 @@ impl AgentRunApi for AgentRunService {
         if let Some(completion) = &completion {
             completion.cancel(reason);
         }
-        finish_agent_run_cancelled(&*self.agent_run_store, agent_run_id, reason).await?;
+        finish_compat_agent_run_cancelled(&*self.agent_run_store, agent_run_id, reason).await?;
         let payload = cancelled_task_payload(reason);
         self.finish_task_agent_run(
             agent_run_id,
@@ -467,7 +458,6 @@ impl AgentRunApi for AgentRunService {
 async fn forward_agent_loop_outcome(
     service: AgentRunService,
     agent_run_id: AgentRunId,
-    persistence_requested: bool,
     outcome: AgentLoopOutcomeFuture,
 ) {
     let received = outcome.await;
@@ -477,19 +467,12 @@ async fn forward_agent_loop_outcome(
     let outcome = match received {
         Some(outcome) => {
             service
-                .finalize_agent_run_from_agent_loop_outcome(
-                    agent_run_id.clone(),
-                    persistence_requested,
-                    outcome,
-                )
+                .finalize_agent_run_from_agent_loop_outcome(agent_run_id.clone(), outcome)
                 .await
         }
         None => {
             service
-                .finalize_agent_run_from_dropped_agent_loop_sender(
-                    agent_run_id.clone(),
-                    persistence_requested,
-                )
+                .finalize_agent_run_from_dropped_agent_loop_sender(agent_run_id.clone())
                 .await
         }
     };
@@ -528,11 +511,15 @@ fn agent_run_outcome_from_loop(
     }
 }
 
-fn legacy_task_row_id_for_agent_run(target: &SpawnAgentTarget) -> Option<&TaskId> {
+fn compat_agent_run_task_id(target: &SpawnAgentTarget) -> Option<TaskId> {
     match target {
-        SpawnAgentTarget::Root { task_id, .. } | SpawnAgentTarget::Workflow { task_id, .. } => {
-            Some(task_id)
-        }
+        SpawnAgentTarget::Root { request_id } => Some(root_task_id(request_id)),
+        SpawnAgentTarget::Workflow {
+            workflow,
+            role,
+            plan_node_id,
+            ..
+        } => workflow_task_id(&workflow.attempt_id, *role, plan_node_id.as_ref()).ok(),
         SpawnAgentTarget::Subagent { .. } | SpawnAgentTarget::Advisor { .. } => None,
     }
 }

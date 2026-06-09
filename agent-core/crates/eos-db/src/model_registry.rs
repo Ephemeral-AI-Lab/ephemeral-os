@@ -342,8 +342,10 @@ mod tests {
     async fn registry() -> (tempfile::TempDir, ModelRegistry) {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = dir.path().join("models.db");
-        let mut cfg = crate::DatabaseConfig::default();
-        cfg.url = crate::DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url");
+        let cfg = crate::DatabaseConfig {
+            url: crate::DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url"),
+            ..Default::default()
+        };
         let pool = crate::pool::open_pool(&cfg).await.expect("pool");
         (dir, ModelRegistry::new(pool))
     }

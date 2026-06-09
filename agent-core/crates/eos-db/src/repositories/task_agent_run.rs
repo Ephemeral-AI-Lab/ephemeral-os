@@ -5,11 +5,11 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_types::{
-    format_record_dir, parented_task_id, AgentName, AgentRunId, AgentRunRecordIndex,
-    AgentRunRecordTarget, CoreError, CreatedTaskAgentRun, ParentAgentRunAnchor,
-    ParentedAgentRunKind, ParentedRun, RequestId, Sealed, TaskAgentRunKind, TaskAgentRunStore,
-    TaskExecutionIndex, TaskId, TaskRole, TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates,
-    WorkflowTaskRole,
+    format_record_dir, parented_task_id, root_task_id, workflow_task_id, AgentName, AgentRunId,
+    AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget, CoreError, CreatedTaskAgentRun,
+    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, PlanNodeId, RequestId, Sealed,
+    TaskAgentRunKind, TaskAgentRunStore, TaskExecutionIndex, TaskId, TaskRole, TaskRun, TaskStatus,
+    ToolUseId, WorkflowCoordinates, WorkflowTaskRole,
 };
 
 use crate::error::DbError;
@@ -35,10 +35,10 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
     async fn create_root_task_agent_run(
         &self,
         request_id: &RequestId,
-        task_id: &TaskId,
         agent_run_id: &AgentRunId,
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError> {
+        let task_id = root_task_id(request_id);
         let now = OffsetDateTime::now_utc();
         let mut tx = self.pool.begin().await.map_err(DbError::from)?;
         sqlx::query(
@@ -75,30 +75,33 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
             .into());
         }
         tx.commit().await.map_err(DbError::from)?;
-        Ok(created_from_index(AgentRunRecordIndex {
+        let index = AgentRunRecordIndex {
             request_id: request_id.clone(),
             agent_run_id: agent_run_id.clone(),
-            task_id: task_id.clone(),
+            task_id,
             kind: TaskAgentRunKind::Root,
-        }))
+            parent_record_dir: None,
+        };
+        Ok(created_from_index(&index))
     }
 
     async fn create_workflow_task_agent_run(
         &self,
         request_id: &RequestId,
-        task_id: &TaskId,
         agent_run_id: &AgentRunId,
         workflow: &WorkflowCoordinates,
         role: WorkflowTaskRole,
+        plan_node_id: Option<&PlanNodeId>,
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError> {
+        let task_id = workflow_task_id(&workflow.attempt_id, role, plan_node_id)?;
         let now = OffsetDateTime::now_utc();
         let task_role = task_role_from_workflow_role(role);
         sqlx::query(
             "INSERT INTO task_runs \
              (task_id, agent_run_id, request_id, role, status, workflow_id, iteration_id, \
-              attempt_id, agent_name, terminal_payload, token_count, error, created_at, \
-              updated_at, finished_at) \
+             attempt_id, agent_name, terminal_payload, token_count, error, created_at, \
+             updated_at, finished_at) \
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL, ?, ?, NULL)",
         )
         .bind(task_id.as_str())
@@ -115,15 +118,17 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
         .execute(&self.pool)
         .await
         .map_err(DbError::from)?;
-        Ok(created_from_index(AgentRunRecordIndex {
+        let index = AgentRunRecordIndex {
             request_id: request_id.clone(),
             agent_run_id: agent_run_id.clone(),
-            task_id: task_id.clone(),
+            task_id,
             kind: TaskAgentRunKind::Workflow {
                 workflow: workflow.clone(),
                 role,
             },
-        }))
+            parent_record_dir: None,
+        };
+        Ok(created_from_index(&index))
     }
 
     async fn create_parented_task_agent_run(
@@ -135,6 +140,14 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError> {
         let task_id = parented_task_id(&parent.agent_run_id, kind, tool_use_id)?;
+        let parent_index = resolved_record_index(&self.pool, &parent.agent_run_id)
+            .await?
+            .ok_or_else(|| DbError::NotFound {
+                table: "task_agent_runs",
+                id: parent.agent_run_id.to_string(),
+            })?;
+        validate_parent_anchor(parent, &parent_index)?;
+        let parent_record_dir = format_record_dir(&parent_index);
         let now = OffsetDateTime::now_utc();
         sqlx::query(
             "INSERT INTO parented_runs \
@@ -157,7 +170,7 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
         .execute(&self.pool)
         .await
         .map_err(DbError::from)?;
-        Ok(created_from_index(AgentRunRecordIndex {
+        let index = AgentRunRecordIndex {
             request_id: parent.request_id.clone(),
             agent_run_id: agent_run_id.clone(),
             task_id,
@@ -165,7 +178,9 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
                 parent_agent_run_id: parent.agent_run_id.clone(),
                 kind,
             },
-        }))
+            parent_record_dir: Some(parent_record_dir),
+        };
+        Ok(created_from_index(&index))
     }
 
     async fn finish_task_run(
@@ -228,25 +243,8 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
         &self,
         agent_run_id: &AgentRunId,
     ) -> Result<Option<AgentRunRecordIndex>, CoreError> {
-        if let Some(row) =
-            sqlx::query_as::<Sqlite, TaskRunRow>("SELECT * FROM task_runs WHERE agent_run_id = ?")
-                .bind(agent_run_id.as_str())
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(DbError::from)?
-        {
-            return Ok(Some(task_run_record_index(row)?));
-        }
-        let row = sqlx::query_as::<Sqlite, ParentedRunRecordIndexRow>(
-            "SELECT task_id, agent_run_id, request_id, parent_agent_run_id, kind \
-             FROM parented_runs WHERE agent_run_id = ?",
-        )
-        .bind(agent_run_id.as_str())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(DbError::from)?;
-        row.map(parented_run_record_index)
-            .transpose()
+        resolved_record_index(&self.pool, agent_run_id)
+            .await
             .map_err(Into::into)
     }
 
@@ -359,7 +357,7 @@ struct ParentedRunRow {
     finished_at: Option<OffsetDateTime>,
 }
 
-fn created_from_index(index: AgentRunRecordIndex) -> CreatedTaskAgentRun {
+fn created_from_index(index: &AgentRunRecordIndex) -> CreatedTaskAgentRun {
     CreatedTaskAgentRun {
         agent_run_id: index.agent_run_id.clone(),
         task_id: index.task_id.clone(),
@@ -367,9 +365,28 @@ fn created_from_index(index: AgentRunRecordIndex) -> CreatedTaskAgentRun {
             request_id: index.request_id.clone(),
             agent_run_id: index.agent_run_id.clone(),
             task_id: index.task_id.clone(),
-            record_dir: format_record_dir(&index),
+            record_dir: format_record_dir(index),
         },
     }
+}
+
+fn validate_parent_anchor(
+    parent: &ParentAgentRunAnchor,
+    parent_index: &AgentRunRecordIndex,
+) -> Result<(), DbError> {
+    if parent_index.request_id.as_str() != parent.request_id.as_str() {
+        return Err(DbError::InvalidEnum {
+            field: "parent_agent_run_anchor.request_id",
+            value: parent.request_id.to_string(),
+        });
+    }
+    if parent_index.task_id.as_str() != parent.parent_task_id.as_str() {
+        return Err(DbError::InvalidEnum {
+            field: "parent_agent_run_anchor.parent_task_id",
+            value: parent.parent_task_id.to_string(),
+        });
+    }
+    Ok(())
 }
 
 fn row_to_task_run(row: TaskRunRow) -> Result<TaskRun, DbError> {
@@ -437,7 +454,7 @@ fn row_to_parented_run(row: ParentedRunRow) -> Result<ParentedRun, DbError> {
     })
 }
 
-fn task_run_record_index(row: TaskRunRow) -> Result<AgentRunRecordIndex, DbError> {
+fn task_run_record_index(row: &TaskRunRow) -> Result<AgentRunRecordIndex, DbError> {
     let task_id = parse_id("task_runs.task_id", &row.task_id)?;
     let request_id = parse_id("task_runs.request_id", &row.request_id)?;
     let agent_run_id = parse_id("task_runs.agent_run_id", &row.agent_run_id)?;
@@ -446,9 +463,15 @@ fn task_run_record_index(row: TaskRunRow) -> Result<AgentRunRecordIndex, DbError
         TaskRole::Root => TaskAgentRunKind::Root,
         TaskRole::Planner | TaskRole::Generator | TaskRole::Reducer => TaskAgentRunKind::Workflow {
             workflow: WorkflowCoordinates {
-                workflow_id: parse_required_id("task_runs.workflow_id", row.workflow_id)?,
-                iteration_id: parse_required_id("task_runs.iteration_id", row.iteration_id)?,
-                attempt_id: parse_required_id("task_runs.attempt_id", row.attempt_id)?,
+                workflow_id: parse_required_id(
+                    "task_runs.workflow_id",
+                    row.workflow_id.as_deref(),
+                )?,
+                iteration_id: parse_required_id(
+                    "task_runs.iteration_id",
+                    row.iteration_id.as_deref(),
+                )?,
+                attempt_id: parse_required_id("task_runs.attempt_id", row.attempt_id.as_deref())?,
             },
             role: workflow_role_from_task_role(role),
         },
@@ -458,11 +481,13 @@ fn task_run_record_index(row: TaskRunRow) -> Result<AgentRunRecordIndex, DbError
         agent_run_id,
         task_id,
         kind,
+        parent_record_dir: None,
     })
 }
 
 fn parented_run_record_index(
-    row: ParentedRunRecordIndexRow,
+    row: &ParentedRunRecordIndexRow,
+    parent_record_dir: AgentRunRecordDir,
 ) -> Result<AgentRunRecordIndex, DbError> {
     let kind = parse_parented_kind(&row.kind)?;
     Ok(AgentRunRecordIndex {
@@ -476,16 +501,62 @@ fn parented_run_record_index(
             )?,
             kind,
         },
+        parent_record_dir: Some(parent_record_dir),
     })
 }
 
-fn parse_required_id<T>(field: &'static str, value: Option<String>) -> Result<T, DbError>
+async fn resolved_record_index(
+    pool: &SqlitePool,
+    agent_run_id: &AgentRunId,
+) -> Result<Option<AgentRunRecordIndex>, DbError> {
+    let mut current = agent_run_id.clone();
+    let mut parented_chain = Vec::new();
+    for _ in 0..64 {
+        if let Some(row) =
+            sqlx::query_as::<Sqlite, TaskRunRow>("SELECT * FROM task_runs WHERE agent_run_id = ?")
+                .bind(current.as_str())
+                .fetch_optional(pool)
+                .await
+                .map_err(DbError::from)?
+        {
+            let mut index = task_run_record_index(&row)?;
+            while let Some(parented) = parented_chain.pop() {
+                let parent_record_dir = format_record_dir(&index);
+                index = parented_run_record_index(&parented, parent_record_dir)?;
+            }
+            return Ok(Some(index));
+        }
+
+        let Some(row) = sqlx::query_as::<Sqlite, ParentedRunRecordIndexRow>(
+            "SELECT task_id, agent_run_id, request_id, parent_agent_run_id, kind \
+             FROM parented_runs WHERE agent_run_id = ?",
+        )
+        .bind(current.as_str())
+        .fetch_optional(pool)
+        .await
+        .map_err(DbError::from)?
+        else {
+            return Ok(None);
+        };
+        current = parse_id(
+            "parented_runs.parent_agent_run_id",
+            &row.parent_agent_run_id,
+        )?;
+        parented_chain.push(row);
+    }
+    Err(DbError::InvalidEnum {
+        field: "parented_runs.parent_agent_run_id",
+        value: "record lineage exceeded max depth".to_owned(),
+    })
+}
+
+fn parse_required_id<T>(field: &'static str, value: Option<&str>) -> Result<T, DbError>
 where
     T: std::str::FromStr<Err = CoreError>,
 {
     parse_id(
         field,
-        value.as_deref().ok_or_else(|| DbError::InvalidEnum {
+        value.ok_or_else(|| DbError::InvalidEnum {
             field,
             value: String::new(),
         })?,

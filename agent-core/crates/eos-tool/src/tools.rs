@@ -216,12 +216,12 @@ impl ToolExecutor for SchemaOnlyExecutor {
 pub fn build_default_registry(
     config: &ToolConfigSet,
     caller: &CallerScope,
-    runtime: ToolRuntime,
+    runtime: &ToolRuntime,
 ) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
-    let sandbox = SandboxHandle::new(&runtime);
-    let command = CommandHandle::new(&runtime);
-    let background = BackgroundHandle::new(&runtime);
+    let sandbox = SandboxHandle::new(runtime);
+    let command = CommandHandle::new(runtime);
+    let background = BackgroundHandle::new(runtime);
     let root = RootSubmissionHandle::new(runtime.submission.clone());
     let attempt = AttemptSubmissionHandle::new(&runtime.submission);
     let skills = SkillHandle::new(runtime.skills.clone());

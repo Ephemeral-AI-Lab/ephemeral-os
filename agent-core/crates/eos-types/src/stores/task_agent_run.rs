@@ -4,8 +4,9 @@ use async_trait::async_trait;
 
 use crate::{
     AgentName, AgentRunId, AgentRunRecordIndex, CoreError, CreatedTaskAgentRun, JsonObject,
-    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, TaskExecutionIndex, TaskId,
-    TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates, WorkflowTaskRole,
+    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, PlanNodeId, RequestId,
+    TaskExecutionIndex, TaskId, TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates,
+    WorkflowTaskRole,
 };
 
 use super::Sealed;
@@ -17,7 +18,6 @@ pub trait TaskAgentRunStore: Sealed + Send + Sync {
     async fn create_root_task_agent_run(
         &self,
         request_id: &RequestId,
-        task_id: &TaskId,
         agent_run_id: &AgentRunId,
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError>;
@@ -26,10 +26,10 @@ pub trait TaskAgentRunStore: Sealed + Send + Sync {
     async fn create_workflow_task_agent_run(
         &self,
         request_id: &RequestId,
-        task_id: &TaskId,
         agent_run_id: &AgentRunId,
         workflow: &WorkflowCoordinates,
         role: WorkflowTaskRole,
+        plan_node_id: Option<&PlanNodeId>,
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError>;
 
@@ -84,6 +84,18 @@ pub trait TaskAgentRunStore: Sealed + Send + Sync {
         &self,
         task_id: &TaskId,
     ) -> Result<Option<TaskExecutionIndex>, CoreError>;
+}
+
+/// Build the deterministic root task id for a request.
+///
+/// Root tasks are anchored by the request id, so the row-creation owner can bind
+/// `requests.root_task_id` without the spawn caller passing the new run's own
+/// task id back into the target contract.
+#[must_use]
+pub fn root_task_id(request_id: &RequestId) -> TaskId {
+    format!("root-{request_id}")
+        .parse()
+        .expect("root-{request_id} is non-empty, so TaskId parsing cannot fail")
 }
 
 /// Build the deterministic parented-run task id from launch facts.

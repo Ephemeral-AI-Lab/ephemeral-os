@@ -9,7 +9,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_types::{
     AgentCoreCancellationApi, AgentRunId, AttemptClosure, IterationStatus, OutstandingWorkflow,
-    StartWorkflowRequest, StartedWorkflow, TaskId, TaskStore, TerminalWorkflow, WorkflowApi,
+    StartWorkflowRequest, StartedWorkflow, TaskStore, TerminalWorkflow, WorkflowApi,
     WorkflowApiError, WorkflowId, WorkflowStatus, WorkflowTerminalStatus,
 };
 
@@ -23,9 +23,9 @@ pub struct WorkflowService {
     iteration_store: Arc<dyn eos_types::IterationStore>,
     attempt_store: Arc<dyn eos_types::AttemptStore>,
     task_store: Arc<dyn TaskStore>,
-    /// The recursive cancellation port (spec §12.4): workflow cancellation
-    /// decomposes through `cancel_task` rather than flipping task rows directly.
-    cancel_port: Arc<dyn AgentCoreCancellationApi>,
+    /// Recursive cancellation contract: workflow cancellation decomposes through
+    /// `cancel_task` rather than flipping task rows directly.
+    cancellation: Arc<dyn AgentCoreCancellationApi>,
 }
 
 impl std::fmt::Debug for WorkflowService {
@@ -43,7 +43,7 @@ impl WorkflowService {
         iteration_store: Arc<dyn eos_types::IterationStore>,
         attempt_store: Arc<dyn eos_types::AttemptStore>,
         task_store: Arc<dyn TaskStore>,
-        cancel_port: Arc<dyn AgentCoreCancellationApi>,
+        cancellation: Arc<dyn AgentCoreCancellationApi>,
     ) -> Self {
         Self {
             starter,
@@ -51,7 +51,7 @@ impl WorkflowService {
             iteration_store,
             attempt_store,
             task_store,
-            cancel_port,
+            cancellation,
         }
     }
 }
@@ -118,7 +118,6 @@ impl WorkflowApi for WorkflowService {
 
     async fn find_outstanding_workflows(
         &self,
-        _parent_task_id: &TaskId,
         agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
         Ok(self
@@ -272,7 +271,7 @@ impl WorkflowService {
         // Tear down each task's live agent run. The status CAS inside `cancel_task`
         // no-ops (already latched `Cancelled`), but the live-run teardown still runs.
         for task_id in &tasks {
-            self.cancel_port
+            self.cancellation
                 .cancel_task(task_id, reason)
                 .await
                 .map_err(|err| WorkflowError::Invariant(err.to_string()))?;

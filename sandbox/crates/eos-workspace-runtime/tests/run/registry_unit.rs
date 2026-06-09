@@ -15,7 +15,7 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
 
     use crate::command_session::session::CommandSessionSpec;
     use crate::ephemeral::{
-        CallerId, EphemeralRunDirs, SnapshotLease, InvocationId, WorkspaceRoot,
+        CallerId, EphemeralRunDirs, InvocationId, SnapshotLease, WorkspaceRoot,
     };
 
     let session = CommandSession::new(CommandSessionSpec {

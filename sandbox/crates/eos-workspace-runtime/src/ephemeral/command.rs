@@ -18,8 +18,8 @@ use serde_json::{json, Value};
 
 use crate::ephemeral::{
     finalize_publishable_workspace, CallerId, EphemeralDirAllocator, EphemeralRunDirs,
-    SnapshotLease, EphemeralWorkspace, EphemeralWorkspaceError, FinalizeRequest, InvocationId,
-    PathChange, PathChangeKind, PublishOutcome, TreeResourceStats, WorkspacePublisherPort,
+    EphemeralWorkspace, EphemeralWorkspaceError, FinalizeRequest, InvocationId, PathChange,
+    PathChangeKind, PublishOutcome, SnapshotLease, TreeResourceStats, WorkspacePublisherPort,
     WorkspaceRoot,
 };
 

@@ -5,8 +5,8 @@ use std::path::Path;
 use eos_occ::{ChangesetResult, FileResult, OccStatus};
 use eos_protocol::{LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use eos_workspace_runtime::ephemeral::{
-    SnapshotLease, EphemeralWorkspaceError, PathChange, PathChangeKind, PublishOutcome,
-    PublishStatus,
+    EphemeralWorkspaceError, PathChange, PathChangeKind, PublishOutcome, PublishStatus,
+    SnapshotLease,
 };
 use serde_json::{json, Value};
 

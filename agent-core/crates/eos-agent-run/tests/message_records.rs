@@ -5,8 +5,8 @@ use std::path::Path;
 use std::str::FromStr;
 
 use eos_agent_run::records::{
-    AgentMessageRecords, AgentRunRecordHandle, AgentRunRecordKind, AgentRunRecordStart, MessageRecordError,
-    NodeFinishStatus, WorkflowTaskRole,
+    AgentMessageRecords, AgentRunRecordHandle, AgentRunRecordKind, AgentRunRecordStart,
+    MessageRecordError, NodeFinishStatus, WorkflowTaskRole,
 };
 use eos_types::{
     AgentRunId, AgentRunRecordDir, AttemptId, ContentBlock, IterationId, Message, MessageRole,
@@ -100,16 +100,28 @@ async fn root_start_writes_initial_messages_and_events() {
         .collect();
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0]["type"], json!("initial_message"));
+    assert_eq!(rows[0]["request_id"], json!("req-1"));
+    assert_eq!(rows[0]["task_id"], json!("task-1"));
+    assert_eq!(rows[0]["agent_run_id"], json!("run-1"));
     assert_eq!(rows[0]["role"], json!("system"));
     assert_eq!(rows[0]["content"][0]["text"], json!("system prompt"));
+    assert_eq!(rows[1]["request_id"], json!("req-1"));
+    assert_eq!(rows[1]["task_id"], json!("task-1"));
+    assert_eq!(rows[1]["agent_run_id"], json!("run-1"));
     assert_eq!(rows[1]["role"], json!("user"));
     assert!(rows[0].get("turn").is_none());
     assert!(rows[0].get("initial_index").is_none());
 
     let events = handle.read_events(0).await.unwrap();
     assert_eq!(events.len(), 2);
+    assert_eq!(events[0].request_id, "req-1");
+    assert_eq!(events[0].task_id, "task-1");
+    assert_eq!(events[0].agent_run_id, "run-1");
     assert_eq!(events[0].seq, 1);
     assert_eq!(events[0].kind, "node_started");
+    assert_eq!(events[1].request_id, "req-1");
+    assert_eq!(events[1].task_id, "task-1");
+    assert_eq!(events[1].agent_run_id, "run-1");
     assert_eq!(events[1].kind, "messages_initialized");
     assert_eq!(events[1].payload["count"], json!(2));
     assert!(events[1].payload["messages_end_byte"].as_u64().unwrap() > 0);
@@ -462,6 +474,50 @@ async fn subagent_records_use_request_rooted_layout_without_parent_scan() {
     assert!(parent_events
         .iter()
         .all(|event| event.kind != "child_created"));
+}
+
+#[tokio::test]
+async fn parented_records_can_start_at_resolved_parent_layout() {
+    let dir = tempfile::tempdir().unwrap();
+    let records = AgentMessageRecords::new(dir.path());
+    let (request_id, task_id, parent_id) = ids();
+    let parent = start_root(&records, &request_id, &task_id, &parent_id).await;
+    let parent_record_dir =
+        AgentRunRecordDir::new(slash(parent.node_dir().strip_prefix(dir.path()).unwrap()));
+
+    let child_id: AgentRunId = "child-run".parse().unwrap();
+    let child_task_id: TaskId = "child-task".parse().unwrap();
+    let child_record_dir = AgentRunRecordDir::new(format!(
+        "{}/subagents/subagent-run-child-run",
+        parent_record_dir.as_str()
+    ));
+    let child = records
+        .start_agent_run_at(
+            &child_record_dir,
+            AgentRunRecordStart {
+                request_id: &request_id,
+                task_id: Some(&child_task_id),
+                agent_run_id: &child_id,
+                agent_name: "subagent",
+                kind: &AgentRunRecordKind::Subagent {
+                    parent_agent_run_id: parent_id,
+                },
+                system_prompt: "system",
+                initial_messages: &[],
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        slash(child.node_dir().strip_prefix(dir.path()).unwrap()),
+        "requests/req-1/root-task-task-1/agent-run-run-1/subagents/subagent-run-child-run"
+    );
+    assert!(!records
+        .read_events_at(&child_record_dir, 0)
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 #[tokio::test]

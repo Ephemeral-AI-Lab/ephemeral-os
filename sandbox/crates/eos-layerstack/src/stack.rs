@@ -602,9 +602,7 @@ impl LayerStack {
     }
 
     fn layer_digest_path(&self, layer_id: &str) -> PathBuf {
-        self.storage_root
-            .join(LAYER_METADATA_DIR)
-            .join(format!("{layer_id}.digest"))
+        layer_digest_path_at(&self.storage_root, layer_id)
     }
 
     fn head_layer_digest(&self, manifest: &Manifest) -> Result<Option<String>, LayerStackError> {

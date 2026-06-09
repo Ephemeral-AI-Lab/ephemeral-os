@@ -265,7 +265,7 @@ mod tests {
 
     use async_trait::async_trait;
     use eos_types::{
-        OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TaskId, TerminalWorkflow,
+        OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
         WorkflowApiError,
     };
 
@@ -313,7 +313,6 @@ mod tests {
 
         async fn find_outstanding_workflows(
             &self,
-            _parent_task_id: &TaskId,
             _agent_run_id: &AgentRunId,
         ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
             Ok(Vec::new())

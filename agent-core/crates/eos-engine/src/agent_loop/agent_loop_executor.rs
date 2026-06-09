@@ -33,6 +33,19 @@ pub(crate) struct AgentLoopExecutor {
     agent_run_api: Arc<dyn AgentRunApi>,
 }
 
+/// Dependencies for one agent-loop executor.
+pub(crate) struct AgentLoopExecutorInput {
+    pub(crate) provider_stream_source: AgentLoopProviderStream,
+    pub(crate) loop_hooks: Arc<dyn AgentLoopHooks>,
+    pub(crate) tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
+    pub(crate) metadata_service: Arc<dyn ToolExecutionMetadataReader>,
+    pub(crate) cancel_signal: AgentLoopCancelSignal,
+    pub(crate) background_dependencies: Option<BackgroundSessionInputs>,
+    pub(crate) hook_dependencies: Option<ToolCallHookStores>,
+    pub(crate) event_sink: Option<crate::query::EngineEventSink>,
+    pub(crate) agent_run_api: Arc<dyn AgentRunApi>,
+}
+
 impl std::fmt::Debug for AgentLoopExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AgentLoopExecutor").finish_non_exhaustive()
@@ -40,27 +53,17 @@ impl std::fmt::Debug for AgentLoopExecutor {
 }
 
 impl AgentLoopExecutor {
-    pub(crate) fn new(
-        provider_stream_source: AgentLoopProviderStream,
-        loop_hooks: Arc<dyn AgentLoopHooks>,
-        tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-        metadata_service: Arc<dyn ToolExecutionMetadataReader>,
-        cancel_signal: AgentLoopCancelSignal,
-        background_dependencies: Option<BackgroundSessionInputs>,
-        hook_dependencies: Option<ToolCallHookStores>,
-        event_sink: Option<crate::query::EngineEventSink>,
-        agent_run_api: Arc<dyn AgentRunApi>,
-    ) -> Self {
+    pub(crate) fn new(input: AgentLoopExecutorInput) -> Self {
         Self {
-            provider_stream_source,
-            loop_hooks,
-            tool_registry_factory,
-            metadata_service,
-            cancel_signal,
-            background_dependencies,
-            hook_dependencies,
-            event_sink,
-            agent_run_api,
+            provider_stream_source: input.provider_stream_source,
+            loop_hooks: input.loop_hooks,
+            tool_registry_factory: input.tool_registry_factory,
+            metadata_service: input.metadata_service,
+            cancel_signal: input.cancel_signal,
+            background_dependencies: input.background_dependencies,
+            hook_dependencies: input.hook_dependencies,
+            event_sink: input.event_sink,
+            agent_run_api: input.agent_run_api,
         }
     }
 
@@ -70,7 +73,7 @@ impl AgentLoopExecutor {
     ) -> AgentLoopOutcome {
         let event_identity = match self
             .metadata_service
-            .agent_state(&request.record_target.agent_run_id)
+            .agent_run_snapshot(&request.record_target.agent_run_id)
             .await
         {
             Ok(identity) => identity,
@@ -136,7 +139,7 @@ impl AgentLoopExecutor {
                     state
                         .teardown_background(&format!("agent loop failed: {error}"))
                         .await;
-                    let outcome = state.loop_failed(error);
+                    let outcome = state.loop_failed(&error);
                     self.loop_hooks.on_complete(&outcome).await;
                     return outcome;
                 }
@@ -148,7 +151,7 @@ impl AgentLoopExecutor {
                     state
                         .teardown_background("parent agent submitted its terminal")
                         .await;
-                    let outcome = state.terminal_tool_submitted(outcome);
+                    let outcome = state.terminal_tool_submitted(&outcome);
                     self.loop_hooks.on_complete(&outcome).await;
                     return outcome;
                 }
@@ -174,12 +177,9 @@ impl AgentLoopExecutor {
                 &event_identity.agent_name,
                 &event_identity.agent_run_id,
             );
-            match &event {
-                StreamEvent::AssistantMessageComplete { payload, .. } => {
-                    final_usage = Some(payload.usage);
-                    final_message = Some(payload.message.clone());
-                }
-                _ => {}
+            if let StreamEvent::AssistantMessageComplete { payload, .. } = &event {
+                final_usage = Some(payload.usage);
+                final_message = Some(payload.message.clone());
             }
             self.emit_event(&event);
         }
@@ -350,7 +350,7 @@ impl AgentLoopExecutor {
         let notifier = EngineNotificationQueue::new();
         let background = dependencies.build_managers(
             agent_run_id.clone(),
-            self.agent_run_api.clone(),
+            &self.agent_run_api,
             notifier.clone(),
         );
         AgentLoopRunServices::from_background(&background, notifier)
@@ -359,11 +359,11 @@ impl AgentLoopExecutor {
     fn resolve_provider_stream_source(
         &self,
         request: &StartAgentLoopRequest,
-        agent_state: &AgentRunRuntimeSnapshot,
+        agent_run_snapshot: &AgentRunRuntimeSnapshot,
     ) -> Arc<dyn ProviderStreamSource> {
         match &self.provider_stream_source {
             AgentLoopProviderStream::Static(source) => Arc::clone(source),
-            AgentLoopProviderStream::Factory(factory) => factory(request, agent_state),
+            AgentLoopProviderStream::Factory(factory) => factory(request, agent_run_snapshot),
         }
     }
 

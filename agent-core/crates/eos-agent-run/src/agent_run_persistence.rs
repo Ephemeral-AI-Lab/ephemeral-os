@@ -7,34 +7,26 @@ use serde_json::json;
 
 use crate::AgentRunError;
 
-pub(crate) async fn create_agent_run_if_requested(
+pub(crate) async fn create_compat_agent_run(
     store: &dyn AgentRunStore,
-    persist_agent_run: bool,
     task_id: Option<&TaskId>,
     agent_run_id: &AgentRunId,
     agent_name: &str,
-) -> Result<bool, AgentRunError> {
-    if !persist_agent_run {
-        return Ok(false);
-    }
+) -> Result<(), AgentRunError> {
     store
         .create_run(agent_run_id, task_id, agent_name)
         .await
         .map_err(|err| AgentRunError::Internal(err.to_string()))?;
-    Ok(true)
+    Ok(())
 }
 
-pub(crate) async fn finish_agent_run_if_requested(
+pub(crate) async fn finish_compat_agent_run(
     store: &dyn AgentRunStore,
-    persistence_requested: bool,
     agent_run_id: &AgentRunId,
     submission_payload: Option<&JsonObject>,
     token_count: Option<i64>,
     error: Option<&str>,
 ) -> Result<(), AgentRunError> {
-    if !persistence_requested {
-        return Ok(());
-    }
     store
         .finish_run(
             agent_run_id,
@@ -47,7 +39,7 @@ pub(crate) async fn finish_agent_run_if_requested(
         .map_err(|err| AgentRunError::Internal(err.to_string()))
 }
 
-pub(crate) async fn finish_agent_run_cancelled(
+pub(crate) async fn finish_compat_agent_run_cancelled(
     store: &dyn AgentRunStore,
     agent_run_id: &AgentRunId,
     reason: &str,

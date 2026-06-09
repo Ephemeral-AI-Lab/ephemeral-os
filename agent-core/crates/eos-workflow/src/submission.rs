@@ -1,5 +1,5 @@
 //! Recording adapter from the `eos-tool` planner/generator/reducer terminal
-//! submission port to the active per-attempt orchestrators.
+//! submission contract to the active per-attempt orchestrators.
 
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use crate::attempt::AttemptOrchestratorRegistry;
 use crate::WorkflowError;
 
 /// Recording adapter from the `eos-tool` planner/generator/reducer terminal
-/// ports to the active per-attempt orchestrators (Path A-recording).
+/// contracts to the active per-attempt orchestrators (Path A-recording).
 ///
 /// The submit tool writes the agent's real submission straight to the
 /// orchestrator's non-advancing `record_*` variants and returns the

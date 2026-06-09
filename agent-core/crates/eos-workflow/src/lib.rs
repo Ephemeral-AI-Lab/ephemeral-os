@@ -2,7 +2,7 @@
 //! run-stage scheduling, launch context composition, and workflow-context
 //! packets.
 //!
-//! The crate depends on store traits and downstream-state ports, not concrete
+//! The crate depends on store traits and downstream-state contracts, not concrete
 //! persistence or engine crates. It owns only delegated workflow state; root
 //! requests remain direct root tasks.
 #![forbid(unsafe_code)]

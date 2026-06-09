@@ -29,6 +29,6 @@ pub use ops::EphemeralWorkspaceOps;
 pub use ports::WorkspacePublisherPort;
 pub use timings::{PublishTiming, TreeResourceStats};
 pub use types::{
-    CallerId, EphemeralRunDirs, SnapshotLease, EphemeralWorkspace, InvocationId, PathChange,
-    PathChangeKind, PublishOutcome, PublishStatus, WorkspaceRoot,
+    CallerId, EphemeralRunDirs, EphemeralWorkspace, InvocationId, PathChange, PathChangeKind,
+    PublishOutcome, PublishStatus, SnapshotLease, WorkspaceRoot,
 };

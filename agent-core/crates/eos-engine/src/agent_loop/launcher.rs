@@ -9,8 +9,8 @@ use eos_types::{
 use tokio::sync::{oneshot, watch};
 
 use super::{
-    AgentLoopExecutor, AgentLoopHooks, AgentLoopToolRegistryFactory, BackgroundSessionInputs,
-    NoopAgentLoopHooks, ToolCallHookStores, ToolExecutionMetadataReader,
+    AgentLoopExecutor, AgentLoopExecutorInput, AgentLoopHooks, AgentLoopToolRegistryFactory,
+    BackgroundSessionInputs, NoopAgentLoopHooks, ToolCallHookStores, ToolExecutionMetadataReader,
 };
 use crate::query::{EngineEventSink, ProviderStreamSource, ProviderStreamSourceFactory};
 
@@ -124,7 +124,7 @@ impl TokioAgentLoopLauncher {
         }
     }
 
-    /// Attach runtime ports for engine-owned background managers.
+    /// Attach runtime contracts for engine-owned background managers.
     #[must_use]
     pub fn with_background_dependencies(mut self, dependencies: BackgroundSessionInputs) -> Self {
         self.background_dependencies = Some(dependencies);
@@ -154,17 +154,17 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
     ) -> StartedAgentLoop {
         let (outcome_sender, outcome_receiver) = oneshot::channel();
         let (cancel_handle, cancel_signal) = agent_loop_cancel_pair();
-        let loop_executor = AgentLoopExecutor::new(
-            self.provider_stream_source.clone(),
-            Arc::clone(&self.loop_hooks),
-            Arc::clone(&self.tool_registry_factory),
-            Arc::clone(&self.metadata_service),
+        let loop_executor = AgentLoopExecutor::new(AgentLoopExecutorInput {
+            provider_stream_source: self.provider_stream_source.clone(),
+            loop_hooks: Arc::clone(&self.loop_hooks),
+            tool_registry_factory: Arc::clone(&self.tool_registry_factory),
+            metadata_service: Arc::clone(&self.metadata_service),
             cancel_signal,
-            self.background_dependencies.clone(),
-            self.hook_dependencies.clone(),
-            self.event_sink.clone(),
+            background_dependencies: self.background_dependencies.clone(),
+            hook_dependencies: self.hook_dependencies.clone(),
+            event_sink: self.event_sink.clone(),
             agent_run_api,
-        );
+        });
 
         tokio::spawn(async move {
             let outcome = loop_executor.execute_agent_loop(request).await;

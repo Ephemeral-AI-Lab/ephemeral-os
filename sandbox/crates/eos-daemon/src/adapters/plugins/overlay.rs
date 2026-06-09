@@ -13,8 +13,8 @@ use eos_plugin::ServiceMode;
 use eos_protocol::Intent;
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use eos_workspace_runtime::ephemeral::{
-    finalize_publishable_workspace, CallerId, EphemeralRunDirs, SnapshotLease,
-    EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
+    finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralWorkspace,
+    FinalizeRequest, InvocationId, SnapshotLease, WorkspaceRoot as EphemeralWorkspaceRoot,
 };
 use serde_json::{json, Value};
 

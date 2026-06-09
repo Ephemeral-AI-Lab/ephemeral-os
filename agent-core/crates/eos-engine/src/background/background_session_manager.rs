@@ -85,7 +85,7 @@ pub(super) struct BackgroundSessionRuntime {
 impl BackgroundSessionRuntime {
     pub(super) fn new(
         agent_run_id: AgentRunId,
-        agent_run_service: Arc<dyn AgentRunApi>,
+        agent_run_service: &Arc<dyn AgentRunApi>,
         command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         notifications: EngineNotificationQueue,
@@ -94,7 +94,7 @@ impl BackgroundSessionRuntime {
         let notification = BackgroundNotificationEmitter::new(notifications);
         let subagent_session_manager = SubagentSessionManager::new(
             agent_run_id.clone(),
-            agent_run_service.clone(),
+            Arc::clone(agent_run_service),
             notification.clone(),
         );
         let workflow_session_manager = WorkflowSessionManager::new(
@@ -172,7 +172,7 @@ impl BackgroundManagers {
     #[must_use]
     pub fn new(
         agent_run_id: AgentRunId,
-        agent_run_service: Arc<dyn AgentRunApi>,
+        agent_run_service: &Arc<dyn AgentRunApi>,
         command_service: Arc<dyn SandboxCommandApi>,
         completion_poll_interval: Duration,
         notifications: EngineNotificationQueue,

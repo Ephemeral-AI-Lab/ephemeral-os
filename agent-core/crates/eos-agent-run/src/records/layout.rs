@@ -47,6 +47,7 @@ pub(crate) fn node_dir(root: &Path, input: &AgentRunRecordStart<'_>) -> Result<P
         agent_run_id: input.agent_run_id.clone(),
         task_id,
         kind,
+        parent_record_dir: None,
     });
     record_dir_path(root, record_dir.as_str())
 }
@@ -55,7 +56,7 @@ pub(crate) fn record_dir(root: &Path, record_dir: &AgentRunRecordDir) -> Result<
     record_dir_path(root, record_dir.as_str())
 }
 
-fn validate_start_segments(input: &AgentRunRecordStart<'_>) -> Result<()> {
+pub(crate) fn validate_start_segments(input: &AgentRunRecordStart<'_>) -> Result<()> {
     safe_segment("request_id", input.request_id.as_str())?;
     safe_segment("agent-run", input.agent_run_id.as_str())?;
     if let Some(task_id) = input.task_id {

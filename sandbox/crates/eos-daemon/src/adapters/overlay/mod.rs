@@ -12,8 +12,8 @@ use eos_overlay::overlay_writable_root;
 use eos_protocol::LayerChange;
 use eos_runner::{RunRequest, RunResult};
 use eos_workspace_runtime::ephemeral::{
-    EphemeralDirAllocator, EphemeralRunDirs, SnapshotLease, EphemeralWorkspaceError,
-    InvocationId, PathChange, PublishOutcome, WorkspacePublisherPort, WorkspaceRoot,
+    EphemeralDirAllocator, EphemeralRunDirs, EphemeralWorkspaceError, InvocationId, PathChange,
+    PublishOutcome, SnapshotLease, WorkspacePublisherPort, WorkspaceRoot,
 };
 
 use crate::adapters::occ::{

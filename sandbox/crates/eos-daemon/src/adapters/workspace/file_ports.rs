@@ -184,7 +184,9 @@ pub(crate) struct IsolatedFilePorts {
 
 #[cfg(target_os = "linux")]
 impl IsolatedFilePorts {
-    pub(crate) fn new(handle: crate::adapters::workspace_run::isolated::IsolatedCommandHandle) -> Self {
+    pub(crate) fn new(
+        handle: crate::adapters::workspace_run::isolated::IsolatedCommandHandle,
+    ) -> Self {
         Self {
             handle,
             started_at: Instant::now(),
@@ -322,7 +324,9 @@ fn write_isolated_upper(
 }
 
 #[cfg(target_os = "linux")]
-fn isolated_manifest(handle: &crate::adapters::workspace_run::isolated::IsolatedCommandHandle) -> Manifest {
+fn isolated_manifest(
+    handle: &crate::adapters::workspace_run::isolated::IsolatedCommandHandle,
+) -> Manifest {
     Manifest {
         version: handle.manifest_version,
         schema_version: 1,

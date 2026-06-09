@@ -6,26 +6,33 @@ use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 use super::error::{MessageRecordError, Result};
-use super::record::{MessageAppendRange, NodeEvent, RecordBytes};
+use super::record::{MessageAppendRange, NodeEvent, RecordBytes, RecordIdentity};
 
 #[derive(Serialize)]
 struct MessageRow<'a> {
     #[serde(rename = "type")]
     row_type: &'static str,
+    request_id: &'a str,
+    task_id: &'a str,
+    agent_run_id: &'a str,
     role: &'static str,
     content: &'a [ContentBlock],
 }
 
 #[derive(Serialize)]
-struct MessageRowOwned {
+struct MessageRowOwned<'a> {
     #[serde(rename = "type")]
     row_type: &'static str,
+    request_id: &'a str,
+    task_id: &'a str,
+    agent_run_id: &'a str,
     role: &'static str,
     content: Vec<ContentBlock>,
 }
 
 pub(crate) async fn append_message_rows(
     path: &Path,
+    identity: &RecordIdentity,
     row_type: &'static str,
     messages: &[Message],
 ) -> Result<MessageAppendRange> {
@@ -33,6 +40,9 @@ pub(crate) async fn append_message_rows(
         .iter()
         .map(|message| MessageRow {
             row_type,
+            request_id: identity.request_id.as_str(),
+            task_id: identity.task_id.as_str(),
+            agent_run_id: identity.agent_run_id.as_str(),
             role: role_wire(message.role),
             content: &message.content,
         })
@@ -42,12 +52,16 @@ pub(crate) async fn append_message_rows(
 
 pub(crate) async fn append_initial_message_rows(
     path: &Path,
+    identity: &RecordIdentity,
     system_prompt: &str,
     initial_messages: &[Message],
 ) -> Result<MessageAppendRange> {
     let mut rows = Vec::with_capacity(initial_messages.len().saturating_add(1));
     rows.push(MessageRowOwned {
         row_type: "initial_message",
+        request_id: identity.request_id.as_str(),
+        task_id: identity.task_id.as_str(),
+        agent_run_id: identity.agent_run_id.as_str(),
         role: "system",
         content: vec![ContentBlock::Text {
             text: system_prompt.to_owned(),
@@ -55,6 +69,9 @@ pub(crate) async fn append_initial_message_rows(
     });
     rows.extend(initial_messages.iter().map(|message| MessageRowOwned {
         row_type: "initial_message",
+        request_id: identity.request_id.as_str(),
+        task_id: identity.task_id.as_str(),
+        agent_run_id: identity.agent_run_id.as_str(),
         role: role_wire(message.role),
         content: message.content.clone(),
     }));
@@ -92,12 +109,20 @@ async fn append_rows<T: Serialize>(path: &Path, rows: &[T]) -> Result<MessageApp
     })
 }
 
-pub(crate) async fn append_event(path: &Path, kind: String, payload: JsonObject) -> Result<()> {
+pub(crate) async fn append_event(
+    path: &Path,
+    identity: &RecordIdentity,
+    kind: String,
+    payload: JsonObject,
+) -> Result<()> {
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
     let seq = next_event_seq(path).await?;
     let event = NodeEvent {
+        request_id: identity.request_id.clone(),
+        task_id: identity.task_id.clone(),
+        agent_run_id: identity.agent_run_id.clone(),
         seq,
         kind,
         payload,

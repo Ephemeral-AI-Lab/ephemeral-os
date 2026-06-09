@@ -1,6 +1,14 @@
 use eos_types::{JsonObject, UtcDateTime};
 use serde::{Deserialize, Serialize};
 
+/// Stable identity columns written on every node-local record row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RecordIdentity {
+    pub request_id: String,
+    pub task_id: String,
+    pub agent_run_id: String,
+}
+
 /// Byte range produced by a message append.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MessageAppendRange {
@@ -24,6 +32,15 @@ pub struct RecordBytes {
 /// One node-local event row.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeEvent {
+    /// Owning request id.
+    #[serde(default)]
+    pub request_id: String,
+    /// Owning task id.
+    #[serde(default)]
+    pub task_id: String,
+    /// Agent-run id.
+    #[serde(default)]
+    pub agent_run_id: String,
     /// Node-local sequence, starting at 1.
     pub seq: u64,
     /// Stable event category.

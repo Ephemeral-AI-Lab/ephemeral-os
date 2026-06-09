@@ -77,9 +77,7 @@ mod delegate_workflow {
             let service = self.workflow_service.as_ref();
             let sessions = &self.workflow_sessions;
 
-            let outstanding = service
-                .find_outstanding_workflows(task_id, agent_run_id)
-                .await?;
+            let outstanding = service.find_outstanding_workflows(agent_run_id).await?;
             if let Some(existing) = outstanding.first() {
                 let payload = json!({
                     "workflow_id": existing.workflow_id.as_str(),

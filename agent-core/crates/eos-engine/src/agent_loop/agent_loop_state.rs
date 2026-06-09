@@ -119,7 +119,7 @@ impl AgentLoopState {
         self.text_only_no_terminal_turns = self.text_only_no_terminal_turns.saturating_add(1);
     }
 
-    pub(crate) fn terminal_tool_submitted(self, outcome: ToolResult) -> AgentLoopOutcome {
+    pub(crate) fn terminal_tool_submitted(self, outcome: &ToolResult) -> AgentLoopOutcome {
         AgentLoopOutcome {
             kind: AgentLoopOutcomeKind::TerminalToolSubmitted {
                 submission_payload: tool_result_payload(&outcome),
@@ -129,7 +129,7 @@ impl AgentLoopState {
         }
     }
 
-    pub(crate) fn loop_failed(self, error: EngineError) -> AgentLoopOutcome {
+    pub(crate) fn loop_failed(self, error: &EngineError) -> AgentLoopOutcome {
         self.loop_failed_summary(error.to_string())
     }
 

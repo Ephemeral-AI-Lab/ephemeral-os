@@ -233,7 +233,7 @@ supporting analysis backing the payload, and residual risks.";
         (!trimmed.is_empty()).then_some(trimmed)
     }
 }
-mod ask_advisor {
+mod implementation {
     //! The `ask_advisor` helper tool — a blocking read-only advisor audit of a
     //! pending terminal submission.
     //!
@@ -414,7 +414,7 @@ pub(crate) fn register(
     config: &crate::registry::ToolConfigSet,
     launcher: std::sync::Arc<dyn eos_types::AgentRunApi>,
 ) {
-    ask_advisor::register(registry, config, launcher);
+    implementation::register(registry, config, launcher);
 }
 
 pub(crate) fn register_schema(
@@ -433,7 +433,7 @@ pub(crate) fn register_schema(
         text_spec(
             ToolName::AskAdvisor,
             &ask_advisor.description,
-            schema_for!(ask_advisor::AskAdvisorInput),
+            schema_for!(implementation::AskAdvisorInput),
         ),
         OutputShape::Text,
     );

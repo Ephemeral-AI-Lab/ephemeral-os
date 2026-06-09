@@ -112,7 +112,7 @@ impl AgentLoopToolRegistryFactory for RuntimeToolRegistryFactory {
             workspace_mode: Arc::new(self.services.agent_state.clone()),
         };
         let mut registry =
-            build_default_registry(&self.services.agent_core.tool_config, &caller, runtime);
+            build_default_registry(&self.services.agent_core.tool_config, &caller, &runtime);
         register_plugin_tools(&mut registry, &self.services.sandbox.transport);
         Ok(registry)
     }
@@ -128,7 +128,7 @@ impl RuntimeToolExecutionMetadataReader {
         Self { services }
     }
 
-    async fn load_agent_state(
+    async fn load_agent_run_snapshot(
         &self,
         agent_run_id: &eos_types::AgentRunId,
     ) -> Result<AgentRunRuntimeSnapshot, EngineError> {
@@ -236,18 +236,18 @@ impl RuntimeToolExecutionMetadataReader {
 
 #[async_trait]
 impl ToolExecutionMetadataReader for RuntimeToolExecutionMetadataReader {
-    async fn agent_state(
+    async fn agent_run_snapshot(
         &self,
         agent_run_id: &eos_types::AgentRunId,
     ) -> Result<AgentRunRuntimeSnapshot, EngineError> {
-        self.load_agent_state(agent_run_id).await
+        self.load_agent_run_snapshot(agent_run_id).await
     }
 
     async fn build_execution_metadata(
         &self,
         input: ExecutionMetadataBuildInput,
     ) -> Result<ExecutionMetadata, EngineError> {
-        let state = self.load_agent_state(&input.agent_run_id).await?;
+        let state = self.load_agent_run_snapshot(&input.agent_run_id).await?;
         Ok(ExecutionMetadata {
             agent_name: state.agent_name,
             agent_run_id: Some(state.agent_run_id),

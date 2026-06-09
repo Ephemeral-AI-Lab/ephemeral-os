@@ -1,7 +1,7 @@
 use eos_protocol::LayerChange;
 
 use crate::ephemeral::error::EphemeralWorkspaceError;
-use crate::ephemeral::types::{SnapshotLease, PathChange, PublishOutcome, WorkspaceRoot};
+use crate::ephemeral::types::{PathChange, PublishOutcome, SnapshotLease, WorkspaceRoot};
 
 /// Publisher port supplied by the daemon's neutral OCC publisher adapter.
 pub trait WorkspacePublisherPort {

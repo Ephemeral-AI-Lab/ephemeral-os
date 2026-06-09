@@ -64,7 +64,7 @@ pub use state::{
     TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME, TASK_AGENT_ROLES,
 };
 pub use stores::{
-    parented_task_id, AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore,
-    Sealed, StoreError, TaskAgentRunStore, TaskStore, WorkflowStore,
+    parented_task_id, root_task_id, AgentRunStore, AttemptStore, IterationStore, ModelStore,
+    RequestStore, Sealed, StoreError, TaskAgentRunStore, TaskStore, WorkflowStore,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

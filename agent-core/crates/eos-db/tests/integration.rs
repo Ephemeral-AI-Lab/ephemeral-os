@@ -3,12 +3,12 @@
 
 use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_types::{
-    AgentName, AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus,
-    DeferredGoal, ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus,
-    JsonObject, MaterializedPlan, Page, ParentAgentRunAnchor, ParentedAgentRunKind,
-    PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task, TaskAgentRunKind, TaskId,
-    TaskRole, TaskStatus, ToolUseId, UtcDateTime, WorkflowCoordinates, WorkflowStatus,
-    WorkflowTaskRole,
+    format_record_dir, AgentName, AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage,
+    AttemptStatus, DeferredGoal, ExecutionRole, ExecutionTaskOutcome, IterationCreationReason,
+    IterationStatus, JsonObject, MaterializedPlan, Page, ParentAgentRunAnchor,
+    ParentedAgentRunKind, PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task,
+    TaskAgentRunKind, TaskId, TaskRole, TaskStatus, ToolUseId, UtcDateTime, WorkflowCoordinates,
+    WorkflowStatus, WorkflowTaskRole,
 };
 use sqlx::Row;
 
@@ -430,17 +430,17 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
         .await
         .expect("request");
 
-    let root_task = tid("root-lineage");
+    let root_task = eos_types::root_task_id(&request_id);
     let root_run = arid("run-root-lineage");
     let created_root = db
         .task_agent_runs()
-        .create_root_task_agent_run(&request_id, &root_task, &root_run, &agent_name("root"))
+        .create_root_task_agent_run(&request_id, &root_run, &agent_name("root"))
         .await
         .expect("root");
     assert_eq!(created_root.task_id, root_task);
     assert_eq!(
         created_root.record_target.record_dir.as_str(),
-        "requests/req-lineage/root-task-root-lineage/agent-run-run-root-lineage"
+        "requests/req-lineage/root-task-root-req-lineage/agent-run-run-root-lineage"
     );
     assert_eq!(
         db.requests()
@@ -490,15 +490,14 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
         iteration_id: "iter-lineage".parse().expect("iteration id"),
         attempt_id: "attempt-lineage".parse().expect("attempt id"),
     };
-    let planner_task = tid("planner-lineage");
     let planner_run = arid("run-planner-lineage");
     db.task_agent_runs()
         .create_workflow_task_agent_run(
             &request_id,
-            &planner_task,
             &planner_run,
             &workflow_coords,
             WorkflowTaskRole::Planner,
+            None,
             &agent_name("planner"),
         )
         .await
@@ -524,7 +523,8 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
         parent_task_id: root_task.clone(),
         agent_run_id: root_run.clone(),
     };
-    db.task_agent_runs()
+    let created_subagent = db
+        .task_agent_runs()
         .create_parented_task_agent_run(
             &subagent_run,
             &parent,
@@ -534,7 +534,12 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
         )
         .await
         .expect("subagent");
-    db.task_agent_runs()
+    assert_eq!(
+        created_subagent.record_target.record_dir.as_str(),
+        "requests/req-lineage/root-task-root-req-lineage/agent-run-run-root-lineage/subagents/subagent-run-run-sub-lineage"
+    );
+    let created_advisor = db
+        .task_agent_runs()
         .create_parented_task_agent_run(
             &advisor_run,
             &parent,
@@ -544,6 +549,10 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
         )
         .await
         .expect("advisor");
+    assert_eq!(
+        created_advisor.record_target.record_dir.as_str(),
+        "requests/req-lineage/root-task-root-req-lineage/agent-run-run-root-lineage/advisors/advisor-run-run-advisor-lineage"
+    );
     let advisor_payload = json_obj(&[("feedback", serde_json::json!("ship"))]);
     let finished_advisor = db
         .task_agent_runs()
@@ -559,13 +568,18 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
         .expect("advisor run");
     assert_eq!(finished_advisor.status, TaskStatus::Done);
     assert_eq!(finished_advisor.terminal_payload, Some(advisor_payload));
+    let subagent_index = db
+        .task_agent_runs()
+        .record_index_for_agent_run(&subagent_run)
+        .await
+        .expect("subagent index")
+        .expect("subagent index");
+    assert_eq!(
+        format_record_dir(&subagent_index).as_str(),
+        created_subagent.record_target.record_dir.as_str()
+    );
     assert!(matches!(
-        db.task_agent_runs()
-            .record_index_for_agent_run(&subagent_run)
-            .await
-            .expect("subagent index")
-            .expect("subagent index")
-            .kind,
+        subagent_index.kind,
         TaskAgentRunKind::Parented {
             kind: ParentedAgentRunKind::Subagent,
             ..

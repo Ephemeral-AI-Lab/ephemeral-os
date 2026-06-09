@@ -82,12 +82,7 @@ async fn state_reader_materializes_request_execution_tree() {
     let agent_name = AgentName::new("root").unwrap();
     let root = reader
         .task_agent_runs()
-        .create_root_task_agent_run(
-            &request_id,
-            &"root-tree-task".parse().unwrap(),
-            &"root-tree-run".parse().unwrap(),
-            &agent_name,
-        )
+        .create_root_task_agent_run(&request_id, &"root-tree-run".parse().unwrap(), &agent_name)
         .await
         .unwrap();
     let workflow = state

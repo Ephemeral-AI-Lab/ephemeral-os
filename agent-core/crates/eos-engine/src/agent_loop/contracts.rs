@@ -44,7 +44,7 @@ pub struct ExecutionMetadataBuildInput {
 #[async_trait]
 pub trait ToolExecutionMetadataReader: Send + Sync {
     /// Load the current runtime snapshot for one agent run.
-    async fn agent_state(
+    async fn agent_run_snapshot(
         &self,
         agent_run_id: &AgentRunId,
     ) -> Result<AgentRunRuntimeSnapshot, EngineError>;
@@ -118,7 +118,7 @@ impl ToolCallHookStores {
     }
 }
 
-/// Runtime-supplied ports needed by engine-owned background managers.
+/// Runtime-supplied contracts needed by engine-owned background managers.
 #[derive(Clone)]
 pub struct BackgroundSessionInputs {
     command_service: Arc<dyn SandboxCommandApi>,
@@ -135,7 +135,7 @@ impl std::fmt::Debug for BackgroundSessionInputs {
 }
 
 impl BackgroundSessionInputs {
-    /// Build concrete background dependencies from runtime-owned ports.
+    /// Build concrete background dependencies from runtime-owned contracts.
     #[must_use]
     pub fn new(
         command_service: Arc<dyn SandboxCommandApi>,
@@ -157,7 +157,7 @@ impl BackgroundSessionInputs {
     ) -> BackgroundManagers {
         BackgroundManagers::new(
             agent_run_id,
-            agent_run_api,
+            &agent_run_api,
             self.command_service.clone(),
             self.completion_poll_interval,
             notifications,

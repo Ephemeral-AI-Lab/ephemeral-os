@@ -1,8 +1,7 @@
 //! Runtime-owned audit side channel.
 //!
 //! This module owns the audit event envelope, write-only sink seam, normalized
-//! collector row helpers, and append-only JSONL sinks while `eos-agent-core` is the
-//! staging facade for the later `eos-agent-core` fold.
+//! collector row helpers, and append-only JSONL sinks.
 
 mod error;
 mod event;
