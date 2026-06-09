@@ -237,7 +237,7 @@ is no generic standalone `agent` run. The advisor profile uses
 | Guardrails | `workspace-guard` tests | Phase 0 accepted |
 | Tool | `eos-tool` and folded tool/skill crates | Phase 0 accepted |
 | Engine/run | `eos-engine`, `eos-agent-run`, message records | Phase 0 accepted |
-| Agent core/workflow/types | `eos-agent-core`, `eos-workflow`, `eos-types` | Phase 0 accepted |
+| Agent core/server/workflow/types | `eos-agent-core`, `eos-agent-core-server`, `eos-workflow`, `eos-types` | Phase 0 accepted |
 | Integration | root `Cargo.toml`, dependency DAG, public exports | after lane contracts are drafted |
 
 Only the integration lane should edit root `Cargo.toml`, shared workspace

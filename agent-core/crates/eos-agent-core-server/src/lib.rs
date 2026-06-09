@@ -9,7 +9,6 @@
 
 mod dto;
 mod error;
-mod request_state;
 mod service;
 mod user_request;
 

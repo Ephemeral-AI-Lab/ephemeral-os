@@ -18,7 +18,7 @@ use eos_agent_core_server::{
     AgentCoreService, AgentCoreServiceDependencies, AgentCoreServiceSettings,
 };
 use eos_agent_run::AgentRunService;
-use eos_backend_api::{AppState, SandboxRegistry};
+use eos_backend_api::{AppState, AppStateParts, SandboxRegistry};
 use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{EventBus, SandboxManagerError};
 use eos_backend_store::{BackendStore, RunMetaRepo};
@@ -95,8 +95,6 @@ pub fn router_with_message_records(
     let workflow_stores = Arc::new(FakeWorkflowStores);
     let agent_core = AgentCoreService::new(AgentCoreServiceDependencies {
         request_store: request_store.clone(),
-        task_store: task_store.clone(),
-        agent_run_store: agent_run_store.clone(),
         task_agent_run_store: task_agent_run_store.clone(),
         workflow_store: workflow_stores.clone(),
         iteration_store: workflow_stores.clone(),
@@ -113,18 +111,18 @@ pub fn router_with_message_records(
             root_agent_name: AgentName::new("root").expect("root name"),
         },
     });
-    let state = AppState::new(
+    let state = AppState::new(AppStateParts {
         agent_core,
         sandboxes,
-        store.run_meta().clone(),
+        run_meta: store.run_meta().clone(),
         event_bus,
-        store.event_log().clone(),
+        event_log: store.event_log().clone(),
         stats,
         task_store,
         agent_run_store,
         task_agent_run_store,
-        records,
-    );
+        message_records: records,
+    });
     eos_backend_api::build_router(state)
 }
 
@@ -933,7 +931,6 @@ impl eos_types::AttemptStore for FakeWorkflowStores {
     async fn cancel_open_attempts_for_request(
         &self,
         _request_id: &RequestId,
-        _reason: &str,
     ) -> Result<usize, CoreError> {
         Ok(0)
     }

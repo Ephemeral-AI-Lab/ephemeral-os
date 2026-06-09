@@ -1,18 +1,16 @@
 //! Cancel user-request orchestration.
 
-use eos_agent_run::AgentRunService;
 use eos_types::{AgentRunApi, RequestStatus};
 
 use crate::dto::{CancelUserRequestInput, CancelUserRequestOutput};
 use crate::error::AgentCoreServerError;
-use crate::request_state::RequestState;
+use crate::service::AgentCoreService;
 
 pub(crate) async fn cancel_user_request(
-    state: &RequestState,
-    agent_run_service: &AgentRunService,
+    service: &AgentCoreService,
     input: CancelUserRequestInput,
 ) -> Result<CancelUserRequestOutput, AgentCoreServerError> {
-    let Some(request) = state.request_store.get(&input.request_id).await? else {
+    let Some(request) = service.request_store.get(&input.request_id).await? else {
         return Err(AgentCoreServerError::UserRequestNotFound(input.request_id));
     };
     if request.status.is_terminal() {
@@ -22,28 +20,29 @@ pub(crate) async fn cancel_user_request(
         });
     }
 
-    let running = state
+    let running = service
         .task_agent_run_store
         .list_running_agent_runs_for_request(&input.request_id)
         .await?;
     for run in &running {
-        agent_run_service
+        service
+            .agent_run_service
             .cancel_agent_run(&run.agent_run_id, &input.reason)
             .await?;
     }
-    state
+    service
         .workflow_store
         .cancel_open_workflows_for_request(&input.request_id, &input.reason)
         .await?;
-    state
+    service
         .iteration_store
         .cancel_open_iterations_for_request(&input.request_id, &input.reason)
         .await?;
-    state
+    service
         .attempt_store
-        .cancel_open_attempts_for_request(&input.request_id, &input.reason)
+        .cancel_open_attempts_for_request(&input.request_id)
         .await?;
-    state
+    service
         .request_store
         .finish_request(&input.request_id, RequestStatus::Cancelled)
         .await?;

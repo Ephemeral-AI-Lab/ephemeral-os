@@ -13,7 +13,6 @@ eos-agent-run.workspace = true
 eos-sandbox-port.workspace = true
 eos-types.workspace = true
 
-serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

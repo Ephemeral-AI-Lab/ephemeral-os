@@ -41,7 +41,7 @@ const _: () = assert!(crate::daemon_client::DAEMON_PROTOCOL_VERSION == PROTOCOL_
 /// `4c306b4e…`), so any hardcoded amd64 value is a best-effort snapshot that
 /// races the rebuild and is intentionally NOT unit-test-pinned (a value-coupled
 /// test would be permanently flaky). This crate is not yet wired into a running
-/// runtime (`eos-agent-core` is Phase 6), so a lagging pin has no runtime impact
+/// runtime (agent-core request service wiring is Phase 6), so a lagging pin has no runtime impact
 /// today; Phase-7 cutover reconciles the final release pin against the stabilized
 /// binary. The upload/verify LOGIC (arch map, sha-mismatch, marker-skip decision)
 /// is what this crate owns and is fully unit-tested; the pin VALUE is a cutover

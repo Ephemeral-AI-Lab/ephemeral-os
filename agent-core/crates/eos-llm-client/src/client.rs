@@ -1,7 +1,7 @@
 //! The [`LlmClient`] seam (DIP + LSP, anchor §6).
 //!
 //! Source: `providers/types.py::SupportsStreamingMessages`. Stored as
-//! `Arc<dyn LlmClient>` at the `eos-agent-core` composition root (heterogeneous:
+//! `Arc<dyn LlmClient>` at the backend composition root (heterogeneous:
 //! Anthropic, `OpenAI`, mock), so it uses `#[async_trait]` — native
 //! async-fn-in-trait is not yet `dyn`-safe — and returns a boxed [`LlmStream`].
 

@@ -4,7 +4,7 @@ use eos_types::{
 
 use crate::{Result, WorkflowError};
 
-/// Per-workflow lifecycle knobs injected by `eos-agent-core`.
+/// Per-workflow lifecycle knobs injected by backend composition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct WorkflowLifecycleConfig {
     /// Attempts allowed per iteration before the iteration closes failed.

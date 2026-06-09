@@ -70,6 +70,36 @@ pub struct AppState {
     pub(crate) message_records: AgentMessageRecords,
 }
 
+/// Named input parts used to assemble [`AppState`].
+pub struct AppStateParts {
+    /// Backend-facing agent-core request lifecycle service.
+    pub agent_core: AgentCoreService,
+    /// Sanitized sandbox lifecycle registry.
+    pub sandboxes: Arc<dyn SandboxRegistry>,
+    /// Backend run metadata repository.
+    pub run_meta: RunMetaRepo,
+    /// Live event bus used by stream routes.
+    pub event_bus: Arc<EventBus>,
+    /// Persisted milestone event log.
+    pub event_log: EventLogRepo,
+    /// Backend stats reader.
+    pub stats: StatsReader,
+    /// Durable task store.
+    pub task_store: Arc<dyn TaskStore>,
+    /// Durable compatibility agent-run store.
+    pub agent_run_store: Arc<dyn AgentRunStore>,
+    /// Durable task-agent-run lineage store.
+    pub task_agent_run_store: Arc<dyn TaskAgentRunStore>,
+    /// File-backed agent-run record reader.
+    pub message_records: AgentMessageRecords,
+}
+
+impl std::fmt::Debug for AppStateParts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AppStateParts").finish_non_exhaustive()
+    }
+}
+
 impl std::fmt::Debug for AppState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AppState").finish_non_exhaustive()
@@ -81,18 +111,19 @@ impl AppState {
     /// backend store handles. `event_bus` must be the same instance the launcher
     /// publishes through so the stream routes replay and tail one stream.
     #[must_use]
-    pub fn new(
-        agent_core: AgentCoreService,
-        sandboxes: Arc<dyn SandboxRegistry>,
-        run_meta: RunMetaRepo,
-        event_bus: Arc<EventBus>,
-        event_log: EventLogRepo,
-        stats: StatsReader,
-        task_store: Arc<dyn TaskStore>,
-        agent_run_store: Arc<dyn AgentRunStore>,
-        task_agent_run_store: Arc<dyn TaskAgentRunStore>,
-        message_records: AgentMessageRecords,
-    ) -> Self {
+    pub fn new(parts: AppStateParts) -> Self {
+        let AppStateParts {
+            agent_core,
+            sandboxes,
+            run_meta,
+            event_bus,
+            event_log,
+            stats,
+            task_store,
+            agent_run_store,
+            task_agent_run_store,
+            message_records,
+        } = parts;
         Self {
             agent_core,
             sandboxes,

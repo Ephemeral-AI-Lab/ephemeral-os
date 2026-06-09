@@ -164,6 +164,5 @@ pub trait AttemptStore: Sealed + Send + Sync {
     async fn cancel_open_attempts_for_request(
         &self,
         request_id: &RequestId,
-        reason: &str,
     ) -> Result<usize, CoreError>;
 }

@@ -4,13 +4,13 @@ use eos_types::RequestId;
 
 use crate::dto::UserRequestDetail;
 use crate::error::AgentCoreServerError;
-use crate::request_state::RequestState;
+use crate::service::AgentCoreService;
 
 pub(crate) async fn read_user_request(
-    state: &RequestState,
+    service: &AgentCoreService,
     request_id: &RequestId,
 ) -> Result<Option<UserRequestDetail>, AgentCoreServerError> {
-    Ok(state
+    Ok(service
         .request_store
         .get(request_id)
         .await?

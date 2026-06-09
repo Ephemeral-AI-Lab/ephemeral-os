@@ -49,14 +49,8 @@ fn trim_entry(rest: &str) -> String {
 fn final_public_surface() -> BTreeMap<String, BTreeSet<String>> {
     surface_map(&[
         (
-            "eos-agent-core",
-            &[
-                "use:cancel",
-                "use:entry",
-                "use:eos_sandbox_port",
-                "use:request_input",
-                "use:runtime",
-            ],
+            "eos-agent-core-server",
+            &["use:dto", "use:error", "use:service"],
         ),
         (
             "eos-agent-run",
@@ -146,6 +140,7 @@ fn final_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "mod:agent_loop",
                 "use:agent",
                 "use:agent_loop",
+                "use:audit",
                 "use:config",
                 "use:contracts",
                 "use:error",

@@ -19,10 +19,6 @@ pub enum AgentCoreServerError {
         status: RequestStatus,
     },
 
-    /// Root agent configuration is absent or invalid.
-    #[error("root agent is not configured: {0}")]
-    RootAgentConfiguration(String),
-
     /// Sandbox provisioning failed.
     #[error("sandbox provisioning failed: {0}")]
     SandboxProvision(String),

@@ -409,37 +409,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-agent-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "eos-agent-run",
- "eos-db",
- "eos-engine",
- "eos-llm-client",
- "eos-sandbox-port",
- "eos-tool",
- "eos-types",
- "eos-workflow",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "eos-agent-core-server"
 version = "0.1.0"
 dependencies = [
  "eos-agent-run",
  "eos-sandbox-port",
  "eos-types",
- "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -484,7 +459,6 @@ dependencies = [
 name = "eos-backend-audit"
 version = "0.1.0"
 dependencies = [
- "eos-agent-core",
  "eos-backend-store",
  "eos-backend-types",
  "eos-protocol",
@@ -516,20 +490,18 @@ name = "eos-backend-runtime"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "eos-agent-core",
  "eos-backend-config",
  "eos-backend-store",
  "eos-backend-types",
+ "eos-engine",
  "eos-sandbox-host",
  "eos-sandbox-port",
  "eos-types",
- "eos-workflow",
  "parking_lot",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
- "tokio-util",
  "tracing",
 ]
 
@@ -557,19 +529,6 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "eos-db"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "eos-types",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.18",
- "time",
 ]
 
 [[package]]
@@ -683,22 +642,6 @@ dependencies = [
  "thiserror 2.0.18",
  "time",
  "uuid",
-]
-
-[[package]]
-name = "eos-workflow"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "eos-tool",
- "eos-types",
- "parking_lot",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -2677,7 +2620,6 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
- "futures-util",
  "pin-project-lite",
  "tokio",
 ]

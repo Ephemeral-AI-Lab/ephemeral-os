@@ -15,13 +15,11 @@ eos-sandbox-host.workspace = true
 # and lifecycle config.
 eos-backend-types.workspace = true
 eos-backend-config.workspace = true
-# backend.db persistence: run_meta + event_log repositories the launcher, reaper,
-# and event bus write through (never a raw pool).
+# backend.db persistence: event_log repositories the event bus writes through
+# (never a raw pool).
 eos-backend-store.workspace = true
-# agent-core composition entry the launcher drives to completion, plus the owner
-# crates for the host seam / status resolver values.
-eos-agent-core.workspace = true
-eos-workflow.workspace = true
+# Engine stream event callback contract used by the backend event bus.
+eos-engine.workspace = true
 # Typed ids and timestamps used by the refcount state, bindings, and run lifecycle.
 eos-types.workspace = true
 
@@ -29,16 +27,14 @@ async-trait.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-# tokio drives the spawned run task and the event-bus channels (mpsc/broadcast);
-# tokio-util's CancellationToken is the cooperative cancel signal.
+# tokio drives the event-bus channels (mpsc/broadcast).
 tokio.workspace = true
-tokio-util.workspace = true
 # the event-bus callback classifies StreamEvents and builds owned EventRecord
-# payloads (serde_json::to_value); also serializes the client_meta blob.
+# payloads (serde_json::to_value).
 serde_json.workspace = true
 
 [dev-dependencies]
-# temp backend.db files for launcher/reaper/event-bus persistence tests.
+# temp backend.db files for event-bus persistence tests.
 tempfile.workspace = true
 
 [package.metadata.cargo-machete]

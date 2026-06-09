@@ -7,7 +7,7 @@
 //!   ([`models`]);
 //! - the typed daemon op constants ([`DaemonOp`]);
 //! - the [`SandboxTransport`] async trait seam (DIP — implemented downstream in
-//!   `eos-sandbox-host`, injected by `eos-agent-core`);
+//!   `eos-sandbox-host`, injected by backend composition);
 //! - the [`SandboxGateway`] single-handle injection seam that bundles the
 //!   transport and provisioner (implemented by the backend `SandboxManager`);
 //! - the timeout policy ([`exec_dispatch_timeout`] and the `*_TIMEOUT_S`

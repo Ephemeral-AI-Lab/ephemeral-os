@@ -153,7 +153,6 @@ impl AttemptStore for SqlAttemptStore {
     async fn cancel_open_attempts_for_request(
         &self,
         request_id: &RequestId,
-        _reason: &str,
     ) -> Result<usize, CoreError> {
         let now = OffsetDateTime::now_utc();
         let updated = sqlx::query(

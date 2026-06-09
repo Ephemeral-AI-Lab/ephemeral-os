@@ -94,7 +94,6 @@ agent-core/crates/eos-agent-core-server/
 ├── src/
 │   ├── lib.rs
 │   ├── service.rs
-│   ├── request_state.rs
 │   ├── dto.rs
 │   ├── error.rs
 │   └── user_request/
@@ -105,16 +104,11 @@ agent-core/crates/eos-agent-core-server/
 │       ├── list.rs
 │       ├── list_tasks.rs
 │       └── finalizer.rs
-└── tests/
-    ├── create_user_request.rs
-    ├── cancel_user_request.rs
-    ├── read_user_requests.rs
-    ├── list_user_requests.rs
-    ├── list_user_request_tasks.rs
-    └── finalize_user_request.rs
 ```
 
-No additional implementation folders are part of the first target.
+No additional implementation folders or crate-level test folders are part of the
+first target. Service behavior is covered through backend API contract tests,
+`eos-db` store tests, and `eos-agent-run` lifecycle tests.
 
 Do not create these files:
 
@@ -142,7 +136,6 @@ Thin export surface only:
 ```rust
 mod dto;
 mod error;
-mod request_state;
 mod service;
 mod user_request;
 
@@ -168,11 +161,6 @@ This module is allowed to contain:
 It must not contain an HTTP router, a host trait, a runtime struct, or an active
 request registry. It must not be named `service_impl`, because that name
 describes Rust mechanics rather than the domain behavior.
-
-### `src/request_state.rs`
-
-Owns the grouped durable store handles used by request lifecycle operations.
-This is an internal implementation detail, not a public read facade.
 
 ### `src/dto.rs`
 
@@ -203,8 +191,6 @@ backend-server to map errors to HTTP responses.
 #[derive(Clone)]
 pub struct AgentCoreService {
     request_store: Arc<dyn RequestStore>,
-    task_store: Arc<dyn TaskStore>,
-    agent_run_store: Arc<dyn AgentRunStore>,
     task_agent_run_store: Arc<dyn TaskAgentRunStore>,
 
     workflow_store: Arc<dyn WorkflowStore>,
@@ -223,8 +209,6 @@ Field naming rules:
 | Field | Reason |
 | --- | --- |
 | `request_store` | durable top-level request rows |
-| `task_store` | durable task rows |
-| `agent_run_store` | durable compatibility agent-run rows |
 | `task_agent_run_store` | durable task-agent-run lineage rows |
 | `workflow_store` | delegated workflow bookkeeping |
 | `iteration_store` | delegated workflow iteration bookkeeping |
@@ -249,8 +233,6 @@ pub struct AgentCoreServiceSettings {
 ```rust
 pub struct AgentCoreServiceDependencies {
     pub request_store: Arc<dyn RequestStore>,
-    pub task_store: Arc<dyn TaskStore>,
-    pub agent_run_store: Arc<dyn AgentRunStore>,
     pub task_agent_run_store: Arc<dyn TaskAgentRunStore>,
 
     pub workflow_store: Arc<dyn WorkflowStore>,
@@ -317,8 +299,6 @@ API. Cancellation is just `cancel_user_request`.
 pub struct CreateUserRequestInput {
     pub prompt: String,
     pub sandbox_id: Option<SandboxId>,
-    pub client_label: Option<String>,
-    pub client_metadata: serde_json::Value,
 }
 ```
 
@@ -388,9 +368,6 @@ pub enum AgentCoreServerError {
         request_id: RequestId,
         status: RequestStatus,
     },
-
-    #[error("root agent is not configured: {0}")]
-    RootAgentConfiguration(String),
 
     #[error("sandbox provisioning failed: {0}")]
     SandboxProvision(String),
@@ -552,7 +529,6 @@ async fn cancel_open_iterations_for_request(
 async fn cancel_open_attempts_for_request(
     &self,
     request_id: &RequestId,
-    reason: &str,
 ) -> Result<usize, CoreError>;
 ```
 
@@ -630,6 +606,10 @@ references during migration. They must not appear in the final target.
   `AgentCoreReads`.
 - `AgentCoreService` has no `active_requests`, `message_records`,
   `RequestCancellations`, or `cancel_registry` field.
+- `AgentCoreService` does not hold backend-only `task_store` or
+  `agent_run_store` handles.
+- `CreateUserRequestInput` contains only agent-core-owned create inputs; backend
+  `client_label` and `client_metadata` stay in backend metadata handling.
 - Backend request create/detail/list/cancel/tasks routes are exposed under
   `/api/agent-core/requests` and depend on `AgentCoreService`.
 - Backend task and agent-run read/stream routes that expose agent-core resources

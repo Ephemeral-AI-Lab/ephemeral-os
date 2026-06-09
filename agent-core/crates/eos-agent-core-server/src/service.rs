@@ -5,8 +5,8 @@ use std::sync::Arc;
 use eos_agent_run::AgentRunService;
 use eos_sandbox_port::SandboxGateway;
 use eos_types::{
-    AgentName, AgentRunStore, AttemptStore, IterationStore, Page, PageResult, RequestId,
-    RequestStore, TaskAgentRunStore, TaskRun, TaskStore, WorkflowStore,
+    AgentName, AttemptStore, IterationStore, Page, PageResult, RequestId, RequestStore,
+    TaskAgentRunStore, TaskRun, WorkflowStore,
 };
 
 use crate::dto::{
@@ -14,20 +14,11 @@ use crate::dto::{
     CreateUserRequestOutput, UserRequestDetail, UserRequestSummary,
 };
 use crate::error::AgentCoreServerError;
-use crate::request_state::RequestState;
 
 /// Backend-facing request service.
 #[derive(Clone)]
 pub struct AgentCoreService {
     pub(crate) request_store: Arc<dyn RequestStore>,
-    // Required by the Phase 05 constructor/service contract; backend task and
-    // agent-run read routes still receive these store handles separately.
-    #[allow(dead_code)]
-    pub(crate) task_store: Arc<dyn TaskStore>,
-    // Required by the Phase 05 constructor/service contract; agent-run records
-    // remain outside this service's request lifecycle methods.
-    #[allow(dead_code)]
-    pub(crate) agent_run_store: Arc<dyn AgentRunStore>,
     pub(crate) task_agent_run_store: Arc<dyn TaskAgentRunStore>,
     pub(crate) workflow_store: Arc<dyn WorkflowStore>,
     pub(crate) iteration_store: Arc<dyn IterationStore>,
@@ -59,10 +50,6 @@ pub struct AgentCoreServiceSettings {
 pub struct AgentCoreServiceDependencies {
     /// Durable top-level request rows.
     pub request_store: Arc<dyn RequestStore>,
-    /// Durable task rows.
-    pub task_store: Arc<dyn TaskStore>,
-    /// Durable compatibility agent-run rows.
-    pub agent_run_store: Arc<dyn AgentRunStore>,
     /// Durable task-agent-run lineage rows.
     pub task_agent_run_store: Arc<dyn TaskAgentRunStore>,
     /// Workflow rows.
@@ -94,8 +81,6 @@ impl AgentCoreService {
     pub fn new(dependencies: AgentCoreServiceDependencies) -> Self {
         Self {
             request_store: dependencies.request_store,
-            task_store: dependencies.task_store,
-            agent_run_store: dependencies.agent_run_store,
             task_agent_run_store: dependencies.task_agent_run_store,
             workflow_store: dependencies.workflow_store,
             iteration_store: dependencies.iteration_store,
@@ -103,16 +88,6 @@ impl AgentCoreService {
             agent_run_service: dependencies.agent_run_service,
             sandbox_gateway: dependencies.sandbox_gateway,
             settings: dependencies.settings,
-        }
-    }
-
-    pub(crate) fn request_state(&self) -> RequestState {
-        RequestState {
-            request_store: self.request_store.clone(),
-            task_agent_run_store: self.task_agent_run_store.clone(),
-            workflow_store: self.workflow_store.clone(),
-            iteration_store: self.iteration_store.clone(),
-            attempt_store: self.attempt_store.clone(),
         }
     }
 
@@ -137,12 +112,7 @@ impl AgentCoreService {
         &self,
         input: CancelUserRequestInput,
     ) -> Result<CancelUserRequestOutput, AgentCoreServerError> {
-        crate::user_request::cancel::cancel_user_request(
-            &self.request_state(),
-            &self.agent_run_service,
-            input,
-        )
-        .await
+        crate::user_request::cancel::cancel_user_request(self, input).await
     }
 
     /// Read one user request.
@@ -153,7 +123,7 @@ impl AgentCoreService {
         &self,
         request_id: &RequestId,
     ) -> Result<Option<UserRequestDetail>, AgentCoreServerError> {
-        crate::user_request::read::read_user_request(&self.request_state(), request_id).await
+        crate::user_request::read::read_user_request(self, request_id).await
     }
 
     /// List user request summaries.
@@ -164,7 +134,7 @@ impl AgentCoreService {
         &self,
         page: Page,
     ) -> Result<PageResult<UserRequestSummary>, AgentCoreServerError> {
-        crate::user_request::list::list_user_requests(&self.request_state(), page).await
+        crate::user_request::list::list_user_requests(self, page).await
     }
 
     /// List task-agent-runs for a user request.
@@ -175,7 +145,6 @@ impl AgentCoreService {
         &self,
         request_id: &RequestId,
     ) -> Result<Vec<TaskRun>, AgentCoreServerError> {
-        crate::user_request::list_tasks::list_user_request_tasks(&self.request_state(), request_id)
-            .await
+        crate::user_request::list_tasks::list_user_request_tasks(self, request_id).await
     }
 }

@@ -9,12 +9,6 @@ pub struct CreateUserRequestInput {
     pub prompt: String,
     /// Optional existing sandbox to bind; `None` provisions a fresh sandbox.
     pub sandbox_id: Option<SandboxId>,
-    /// Optional backend/client display label. Stored by backend metadata, not by
-    /// the agent-core request row.
-    pub client_label: Option<String>,
-    /// Opaque client metadata. Stored by backend metadata, not by the agent-core
-    /// request row.
-    pub client_metadata: serde_json::Value,
 }
 
 /// Output from creating a user request.

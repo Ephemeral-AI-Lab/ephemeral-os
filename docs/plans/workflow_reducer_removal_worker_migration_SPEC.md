@@ -1,56 +1,67 @@
-# Workflow Reducer Removal And Worker Outcome Migration - SPEC
+# Workflow Reducer Removal And Worker Migration - SPEC
 
 Status: Proposed
 Date: 2026-06-09
-Owner: eos-workflow / eos-types / eos-tool / agent profiles
+Owner: eos-workflow / eos-types / eos-tool / eos-agent-run / eos-db / agent profiles
+
 Scope:
 - `agent-core/crates/eos-types`
 - `agent-core/crates/eos-workflow`
 - `agent-core/crates/eos-tool`
+- `agent-core/crates/eos-agent-run`
+- `agent-core/crates/eos-db`
 - `.eos-agents/profile`
 - `.eos-agents/tools`
 - `.eos-agents/skills`
 
 ## 1. Intent
 
-This is an aggressive cleanup migration. The target removes the reducer role as
-a first-class row, converts generator terminology to worker terminology, and
-collapses terminal outcome handling around one workflow worker outcome.
+This is an aggressive cleanup migration. The target removes reducer as a
+workflow role, converts generator terminology to worker terminology, and removes
+the binary generator/reducer execution model from the persisted workflow state,
+run records, tool contracts, context recipes, and agent-facing profiles.
 
 The workflow model becomes:
 
 ```text
-WorkflowOutcome
-  -> IterationOutcome[]
-      -> AttemptOutcome[]
-          -> PlanOutcome
+Workflow
+  -> Iteration[]
+      -> Attempt[]
+          -> PlanOutcome?
           -> WorkItemOutcome[]
 ```
 
-Root work remains isolated from workflow work:
+The question "did it succeed?" is answered by the existing lifecycle state:
 
 ```text
-RootTaskOutcome
+TaskStatus
+AttemptStatus
+IterationStatus
+WorkflowStatus
 ```
 
-The planner is attempt control-plane runtime. It must not have a `TaskId` or
-`WorkItemId`. Workflow workers are persisted as TaskStore rows and are also
-keyed by planner-authored `WorkItemId`s.
+Outcome records should not duplicate that lifecycle state with extra boolean
+fields. Outcome records carry the durable terminal payload that is not already
+represented by lifecycle state.
+
+Root task, advisor, and subagent terminal payloads remain outside workflow
+outcome aggregation. Do not add new workflow outcome DTOs for them in this
+migration.
 
 ## 2. Decisions
 
 | Area | Decision |
 | --- | --- |
-| Reducer role | Delete. There are no reducer rows, reducer tasks, reducer launches, reducer outcomes, reducer context recipes, or reducer terminal tools. |
-| Generator role | Rename to worker. The implementation and contracts use `Worker` / `WorkItem`; no `Generator` public contract remains. |
-| Agent name | Keep `agent_name` on work items. This is the selected agent profile name, not a task id. |
+| Reducer role | Delete. There are no reducer rows, reducer tasks, reducer launches, reducer outcomes, reducer context recipes, reducer terminal tools, or reducer profile/skill files. |
+| Generator role | Replace with worker. Public workflow contracts use `Worker` / `WorkItem`; no `Generator` public contract remains. |
 | Planner identity | Planner launch is keyed by `AttemptId`; planner has no `TaskId`, no `WorkItemId`, and no TaskStore row. |
+| Worker identity | Worker rows are the only workflow TaskStore rows. Worker task ids are derived from `(AttemptId, WorkItemId)`. |
 | Plan payload | `plan_spec` plus `work_items`; no `task_specs`, no `reducers`, no `disposition`. |
-| Work item payload | Each work item carries its own `work_spec`; do not use `task_spec` in workflow planning contracts. |
-| Outcome status | `status: bool` means the agent/tool returned a structured outcome. It does not mean the work succeeded. |
-| Domain success | `is_success: bool` means the agent's domain decision for root/workflow/work-item success. |
-| Workflow summary | `WorkflowOutcome` has no `summary`. It returns iteration outcomes. |
-| Context size | Worker context includes the plan spec and direct-needs work item outcomes only. Workflow context renderers show only the latest iteration outcome by default. |
+| Work item payload | Each work item carries its own `work_spec`; do not use a separate `task_specs` map. |
+| Success/failure | Use `TaskStatus`, `AttemptStatus`, `IterationStatus`, and `WorkflowStatus`. Do not add `status: bool`, `is_success`, or renamed boolean copies to outcome DTOs. |
+| Outcome text | Keep one terminal payload text field at the terminal boundary. Do not split root/worker/advisor/subagent into bespoke text field names in this migration. |
+| Context data | Do not introduce public context projection DTOs. Context filtering is local to `eos-workflow` render functions. |
+| Record paths | Planner run records must become attempt-owned rather than task-owned. Worker run records remain task-owned. |
 
 Do not introduce these names:
 
@@ -61,6 +72,36 @@ Do not introduce these names:
 - planner `work_item_id`
 - workflow `task_specs`
 - workflow reducer compatibility aliases
+- `has_structured_outcome`
+- `is_successful`
+- `user_result`
+- `work_result`
+- `review_summary`
+- `answer`
+- `work_instruction`
+- `direct_needs`
+- `direct_need_outcomes`
+- `assigned_work_item`
+- `agent_profile_name`
+- `worker_task_by_work_item_id`
+- `ContextOutcomeSlice`
+- `ContextOutcomeView`
+- `AttemptOutcomeForContext`
+- `IterationOutcomeForContext`
+- `WorkflowNodeId`
+
+Naming rules:
+
+| Surface | Rule |
+| --- | --- |
+| Workflow files | Name files after the runtime ownership they contain: `attempt_run`, `planner_run`, `work_items`, `work_items_run`, `workflow_run`, `iteration_run`. |
+| Work item execution | Use `work_items_run` for worker wave execution and settlement. Do not use `work_dag`, `plan_dag`, `node`, `stage`, or `orchestrator` names for this owner. |
+| Plan shape | Use `WorkItemSpec` for planner-authored work items. Do not introduce `PlanWorkItem`; the ownership is already clear from `PlanOutcome.work_items`. |
+| Terminal text | Use one `outcome` field for terminal natural-language payloads. Do not split it into `answer`, `summary`, `user_result`, `work_result`, or `review_summary`. |
+| Success/failure | Use lifecycle enums and terminal `SubmissionStatus`. Do not introduce boolean aliases such as `has_structured_outcome`, `is_successful`, `status: bool`, or `is_success: bool`. |
+| Dependencies | Use `needs` for direct work item dependencies. Do not add `direct_needs` or `direct_need_outcomes`; directness is part of the `needs` contract. |
+| Worker assignment | Use `agent_name: AgentName` on `WorkItemSpec`. Do not use `agent_profile_name` or `assigned_work_item`. |
+| Task mapping | Use deterministic `worker_task_id(attempt_id, work_item_id)`. Do not persist `worker_task_by_work_item_id`. |
 
 ## 3. Resulting File And Folder Structure
 
@@ -69,53 +110,56 @@ Target structure under `agent-core`:
 ```text
 agent-core/crates/eos-types/src/
   contracts/
-    workflow.rs                  # PlanOutcome input contracts, WorkItemSpec, WorkflowAttemptSubmissionApi
-    record.rs                    # Workflow record roles updated from generator/reducer to planner/worker
+    record.rs                    # root, workflow-planner, workflow-worker, parented record subjects
+    workflow.rs                  # WorkflowApi + attempt submission API
   state/
     request_task/
-      task.rs                    # TaskRole::Root, TaskRole::Worker only for TaskStore rows
+      task.rs                    # TaskRole::Root, TaskRole::Worker
     tools/
       submissions.rs             # PlanOutcomeSubmission, WorkerOutcomeSubmission
     workflow/
-      attempt.rs                 # AttemptOutcome stored on closed attempts
-      entity.rs
-      iteration.rs               # IterationOutcome
-      outcomes.rs                # RootTaskOutcome, WorkItemOutcome, PlanOutcome, AttemptOutcome, IterationOutcome, WorkflowOutcome helpers
-      plan.rs                    # MaterializedPlan with work_item_task_ids only
+      workflow.rs                # Workflow lifecycle DTOs
+      iteration.rs               # Iteration lifecycle DTOs
+      attempt.rs                 # Attempt lifecycle DTOs
+      work_item.rs               # WorkItemId, WorkItemSpec, worker_task_id
+      outcome.rs                 # PlanOutcome, WorkItemOutcome, AttemptOutcome helpers
 
 agent-core/crates/eos-workflow/src/
   attempt/
-    launch.rs                    # PlannerLaunch + WorkerLaunch; no ReducerLaunch
-    orchestrator.rs              # record_plan_outcome + record_worker_outcome
-    orchestrator_registry.rs
-    plan_dag.rs                  # work item DAG validation
-    run_stage.rs                 # planner launch then worker waves
+    attempt_run.rs               # thin attempt coordinator
+    active_attempt_runs.rs        # in-process planner abort / active attempt handles
+    planner_run.rs               # planner launch and planner settlement
+    work_items.rs                # plan validation, task materialization, readiness helpers
+    work_items_run.rs            # worker waves, worker settlement, missing outcome synthesis
   context/
-    composer.rs
-    engine.rs                    # planner + worker recipes
-    scope.rs                     # ContextScope::Planner, ContextScope::Worker
-    section.rs                   # ContextRole::Planner, ContextRole::Worker
-    xml.rs
-  lifecycle.rs
-  iteration.rs
-  service.rs
-  state.rs
-  state/
-    projections.rs               # project outcomes to IterationOutcome/WorkflowOutcome
-  submission.rs                  # submit_plan_outcome + submit_worker_outcome adapter
+    planner_first_attempt.rs
+    planner_retry.rs
+    planner_continuation.rs
+    worker_context.rs
+    render.rs
+  attempt_submission.rs          # submit_plan_outcome + submit_worker_outcome adapter
+  workflow_run.rs                # start/check/cancel delegated workflow lifecycle
+  iteration_run.rs               # retry/continuation lifecycle
 
 agent-core/crates/eos-tool/src/
   model.rs                       # ToolName submit_* rename set
   registry.rs
   tools/
-    submission.rs                # root, plan, worker, advisor, subagent terminals
-    terminal.rs                  # Root, Plan, Worker, Advisor, Subagent
+    terminal.rs                  # RootTask, Plan, Worker, Advisor, Subagent
+    submission/
+      mod.rs
+      support.rs
+      submit_root_task_outcome.rs
+      submit_plan_outcome.rs
+      submit_worker_outcome.rs
+      submit_advisor_outcome.rs
+      submit_subagent_outcome.rs
 
 .eos-agents/profile/
   main/
     root.md
     planner.md
-    executor.md                  # worker-capable profile; keep agent name executor unless separately renamed
+    executor.md                  # worker-capable profile; context_recipe = worker
   helper/
     advisor.md
   subagent/
@@ -129,9 +173,17 @@ agent-core/crates/eos-tool/src/
   submit_subagent_outcome.md
 ```
 
-The `executor` profile can remain the default worker agent. The migration should
-remove generator wording from that profile, change its `context_recipe` to
-`worker`, and change its terminal to `submit_worker_outcome`.
+Remove the old mechanism-oriented file names from the target workflow path:
+
+| Delete / replace | Reason |
+| --- | --- |
+| `attempt/orchestrator.rs` | Too broad; split into attempt, planner, and worker run ownership. |
+| `attempt/orchestrator_registry.rs` | Rename to active attempt run ownership. |
+| `attempt/plan_dag.rs` | Names a data structure, not workflow ownership. |
+| `attempt/run_stage.rs` | Names a stage, not the worker-run owner. |
+| `context/engine.rs` | Too generic; split role renderers. |
+| `state/projections.rs` | Too generic; outcome aggregation and context rendering are separate concerns. |
+| `tools/submission.rs` | Too large; terminal tools should live in per-tool files named after wire tools. |
 
 ## 4. Files And Concepts To Delete
 
@@ -165,25 +217,27 @@ Delete or rewrite code concepts:
 | `TaskRole::Planner` | delete from TaskStore roles |
 | `TaskRole::Generator` | `TaskRole::Worker` |
 | `TaskRole::Reducer` | delete |
+| `WorkflowTaskRole::{Planner, Generator, Reducer}` | replace with record subjects that distinguish attempt-owned planner records from task-owned worker records |
+| `WorkflowNodeId` | delete |
 | `ExecutionRole::Generator` | delete |
 | `ExecutionRole::Reducer` | delete |
 | `PlanTask` | `WorkItemSpec` |
 | `PlanReducer` | delete |
 | `GeneratorId` | `WorkItemId` |
 | `ReducerId` | delete |
-| `PlannerId` | delete unless only used as launch-local runtime id; prefer `AttemptId` |
+| `PlannerId` | delete |
 | `PlannerPlan.planner_task_id` | delete |
 | `PlannerPlan.disposition` | delete |
 | `PlannerPlan.tasks` | `PlanOutcome.work_items` |
 | `PlannerPlan.task_specs` | inline `work_spec` on each work item |
 | `PlannerPlan.reducers` | delete |
-| `MaterializedPlan.generator_task_ids` | `MaterializedPlan.work_item_task_ids` |
+| `MaterializedPlan.generator_task_ids` | delete; derive worker task ids from `(AttemptId, WorkItemId)` |
 | `MaterializedPlan.reducer_task_ids` | delete |
 | `GeneratorSubmission` | `WorkerOutcomeSubmission` |
 | `ReducerSubmission` | delete |
-| `ExecutionTaskOutcome` | `WorkItemOutcome` for workflow execution evidence |
+| `ExecutionTaskOutcome` | delete for workflow evidence; use worker task status plus `WorkItemOutcome` |
 
-## 5. IDs To Remove And Add
+## 5. IDs
 
 | ID | Action | Reason |
 | --- | --- | --- |
@@ -192,138 +246,84 @@ Delete or rewrite code concepts:
 | `ReducerId` | remove | Reducer role is deleted. |
 | planner `TaskId` | remove | Planner must not create a TaskStore row. |
 | reducer `TaskId` | remove | Reducer rows no longer exist. |
-| worker `TaskId` | keep | TaskStore still owns persisted agent-run task rows. |
+| worker `TaskId` | keep | TaskStore still owns persisted worker rows. |
 | `WorkItemId` | add | Workflow-local id authored by the planner and used in `needs`. |
 | `AttemptId` | keep | Owns planner launch and attempt aggregation. |
 | `IterationId` | keep | Owns attempt aggregation. |
 | `WorkflowId` | keep | Owns iteration aggregation. |
 
-## 6. Class Contracts
-
-Use the following target contracts. Comments are part of the contract and should
-be carried into public DTOs or schema docs where these types are exposed.
+Worker task ids are deterministic:
 
 ```rust
-pub struct RootTaskOutcome {
-    /// True when the root worker returned this structured outcome. False when
-    /// the runtime synthesized a missing-outcome failure.
-    pub status: bool,
-    /// Root worker decision: whether the user/root task succeeded.
-    pub is_success: bool,
-    /// Persisted root task row.
-    pub task_id: TaskId,
-    /// User-facing final result or concrete blocker.
-    pub summary: String,
-}
-
-pub struct WorkItemOutcome {
-    /// True when the workflow worker returned this structured outcome. False
-    /// when the runtime synthesized a missing-outcome failure.
-    pub status: bool,
-    /// Worker decision: whether the assigned work item succeeded.
-    pub is_success: bool,
-    /// Persisted TaskStore row for the worker run.
-    pub task_id: TaskId,
-    /// Planner-authored workflow-local work item id.
-    pub work_item_id: WorkItemId,
-    /// Factual work result, verification evidence, or concrete blocker.
-    pub summary: String,
-}
-
-pub struct PlanOutcome {
-    /// True when the planner returned this structured plan outcome. False when
-    /// the runtime synthesized a missing-plan failure.
-    pub status: bool,
-    /// Owning workflow attempt. PlanOutcome has no task_id and no work_item_id.
-    pub attempt_id: AttemptId,
-    /// Natural-language description of the plan for worker context.
-    pub plan_spec: String,
-    /// Planner-authored work item DAG. Each item includes its own work_spec.
-    pub work_items: Vec<WorkItemSpec>,
-    /// Concrete current-iteration goal items to carry into the next iteration.
-    /// None means this plan covers the current iteration goal.
-    pub deferred_goal_for_next_iteration: Option<String>,
-}
-
-pub struct AdvisorOutcome {
-    /// True when the advisor returned this structured outcome. False when the
-    /// runtime synthesized a missing-outcome failure.
-    pub status: bool,
-    /// Advisor decision about the reviewed terminal payload.
-    pub verdict: AdvisorVerdict,
-    /// Concrete review findings.
-    pub summary: String,
-}
-
-pub struct SubagentOutcome {
-    /// True when the subagent returned this structured outcome. False when the
-    /// runtime synthesized a missing-outcome failure.
-    pub status: bool,
-    /// Concrete answer to the subagent goal.
-    pub summary: String,
-}
-
-pub struct AttemptOutcome {
-    /// True when the attempt produced a structured aggregate outcome. False
-    /// when the runtime synthesized a missing-attempt failure.
-    pub status: bool,
-    /// Attempt-level decision derived from plan and work item outcomes.
-    pub is_success: bool,
-    /// Owning attempt.
-    pub attempt_id: AttemptId,
-    /// Planner output or synthesized planner failure.
-    pub plan_outcome: PlanOutcome,
-    /// Worker outcomes from this attempt.
-    pub work_item_outcomes: Vec<WorkItemOutcome>,
-}
-
-pub struct IterationOutcome {
-    /// True when the iteration produced a structured aggregate outcome. False
-    /// when the runtime synthesized a missing-iteration failure.
-    pub status: bool,
-    /// Iteration-level decision derived from its attempts.
-    pub is_success: bool,
-    /// Owning iteration.
-    pub iteration_id: IterationId,
-    /// Attempt outcomes in this iteration.
-    pub attempt_outcomes: Vec<AttemptOutcome>,
-}
-
-pub struct WorkflowOutcome {
-    /// True when the workflow produced a structured aggregate outcome. False
-    /// when the runtime synthesized a missing-workflow failure.
-    pub status: bool,
-    /// Workflow-level decision derived from the latest iteration outcome.
-    pub is_success: bool,
-    /// Owning workflow.
-    pub workflow_id: WorkflowId,
-    /// Iteration outcomes. The context renderer includes only the latest
-    /// iteration by default to control prompt size.
-    pub iteration_outcomes: Vec<IterationOutcome>,
-}
+pub fn worker_task_id(attempt_id: &AttemptId, work_item_id: &WorkItemId) -> TaskId;
 ```
 
-Supporting contracts:
+Do not persist a separate `worker_task_by_work_item_id` map. If a mapping is
+needed, derive it from `(AttemptId, WorkItemId)` or load the worker task rows.
+
+## 6. Target Contracts
+
+Use the following target contracts. These intentionally avoid duplicated
+success/status booleans.
 
 ```rust
 pub struct WorkItemSpec {
     /// Planner-authored workflow-local id.
     pub id: WorkItemId,
-    /// Agent profile name selected for this work item.
-    pub agent_name: String,
+    /// Selected worker-capable agent profile name.
+    pub agent_name: AgentName,
     /// Executable work instruction for this item.
     pub work_spec: String,
     /// Direct work item dependencies. These are context edges, not shortcuts.
     pub needs: Vec<WorkItemId>,
 }
 
-pub enum AdvisorVerdict {
-    Approve,
-    Reject,
+pub struct PlanOutcome {
+    /// Owning workflow attempt. PlanOutcome has no task_id and no work_item_id.
+    pub attempt_id: AttemptId,
+    /// Planner description of the work item plan.
+    pub plan_spec: String,
+    /// Planner-authored work item plan. Each item includes its own work_spec.
+    pub work_items: Vec<WorkItemSpec>,
+    /// Concrete current-iteration goal items to carry into the next iteration.
+    /// None means this plan covers the current iteration goal.
+    pub deferred_goal_for_next_iteration: Option<String>,
+}
+
+pub struct WorkItemOutcome {
+    /// Owning workflow attempt.
+    pub attempt_id: AttemptId,
+    /// Persisted TaskStore row for the worker run.
+    pub task_id: TaskId,
+    /// Planner-authored workflow-local work item id.
+    pub work_item_id: WorkItemId,
+    /// Worker terminal payload. The worker task's TaskStatus says success/failure.
+    pub outcome: String,
+}
+
+pub struct AttemptOutcome {
+    /// Owning attempt.
+    pub attempt_id: AttemptId,
+    /// Planner output. None means the planner never submitted a plan.
+    pub plan_outcome: Option<PlanOutcome>,
+    /// Worker terminal payloads from this attempt.
+    pub work_item_outcomes: Vec<WorkItemOutcome>,
 }
 ```
 
+Iteration and workflow records should keep lifecycle state in
+`IterationStatus`/`WorkflowStatus` and carry attempt ids/outcomes as needed for
+read-side rendering. Do not introduce separate `IterationOutcome.status`,
+`IterationOutcome.is_success`, `WorkflowOutcome.status`, or
+`WorkflowOutcome.is_success` booleans.
+
+Root, advisor, and subagent terminal payloads should not create new workflow
+outcome structs. They remain terminal payloads on their existing task/parented
+run records.
+
 ## 7. Model-Facing Tool Contracts
+
+Terminal tools should keep the model-facing payload small.
 
 ### `submit_root_task_outcome`
 
@@ -331,26 +331,14 @@ Input:
 
 ```rust
 pub struct SubmitRootTaskOutcomeInput {
-    /// Root worker decision: whether the user/root task succeeded.
-    pub is_success: bool,
-    /// User-facing final result or concrete blocker.
-    pub summary: String,
+    pub status: SubmissionStatus,
+    pub outcome: String,
 }
 ```
 
-Output recorded:
-
-```rust
-pub struct RootTaskOutcome {
-    pub status: bool,
-    pub is_success: bool,
-    pub task_id: TaskId,
-    pub summary: String,
-}
-```
-
-The tool call itself sets `status = true`. If the root run fails to return, the
-runtime synthesizes `RootTaskOutcome { status: false, is_success: false, ... }`.
+The terminal maps `SubmissionStatus` onto the root task's `TaskStatus` and stores
+the flattened terminal payload on the task run. It does not produce a workflow
+outcome DTO.
 
 ### `submit_plan_outcome`
 
@@ -373,12 +361,11 @@ pub struct WorkItemSpecInput {
 }
 ```
 
-The accepted internal submission is:
+Internal submission:
 
 ```rust
 pub struct PlanOutcomeSubmission {
     pub attempt_id: AttemptId,
-    pub status: bool,
     pub plan_spec: String,
     pub work_items: Vec<WorkItemSpec>,
     pub deferred_goal_for_next_iteration: Option<String>,
@@ -388,11 +375,12 @@ pub struct PlanOutcomeSubmission {
 
 Rules:
 
-- `status` is not model input. The tool call sets `status = true`.
-- A planner failure to return is synthesized by workflow runtime with
-  `status = false`.
+- A model-submitted plan creates `PlanOutcome`.
+- A planner failure to return creates no `PlanOutcome`; attempt failure state
+  records the failure.
 - `PlanOutcomeSubmission` has no `task_id`.
-- `PlanOutcomeSubmission` has no `submission_kind`.
+- `PlanOutcomeSubmission` has no `status`, no `is_success`, and no
+  `submission_kind`.
 - Terminal result metadata must include `attempt_id` and
   `has_deferred_goal_for_next_iteration`; it must not include `disposition`.
 
@@ -419,10 +407,8 @@ Input:
 
 ```rust
 pub struct SubmitWorkerOutcomeInput {
-    /// Worker decision: whether the assigned work item succeeded.
-    pub is_success: bool,
-    /// Free-text summary of the completed or failed work item.
-    pub summary: String,
+    pub status: SubmissionStatus,
+    pub outcome: String,
 }
 ```
 
@@ -433,17 +419,17 @@ pub struct WorkerOutcomeSubmission {
     pub attempt_id: AttemptId,
     pub task_id: TaskId,
     pub work_item_id: WorkItemId,
-    pub is_success: bool,
-    pub summary: String,
+    pub status: SubmissionStatus,
+    pub outcome: String,
     pub terminal_payload: JsonObject,
 }
 ```
 
 Rules:
 
-- `status` is not model input. The tool call sets `status = true`.
-- A worker failure to return is synthesized by workflow runtime with
-  `status = false` and `is_success = false`.
+- The terminal maps `SubmissionStatus` onto the worker task's `TaskStatus`.
+- A worker failure to return is synthesized by workflow runtime as a failed
+  worker task with an outcome payload explaining the missing terminal submission.
 - The worker outcome is keyed by both persisted `task_id` and planner-authored
   `work_item_id`.
 - Terminal result metadata should include `attempt_id`, `task_id`, and
@@ -453,8 +439,8 @@ Model JSON:
 
 ```json
 {
-  "is_success": true,
-  "summary": "Implemented the assigned change and verified it with cargo check."
+  "status": "success",
+  "outcome": "Implemented the assigned change and verified it with cargo check."
 }
 ```
 
@@ -465,22 +451,11 @@ Input:
 ```rust
 pub struct SubmitAdvisorOutcomeInput {
     pub verdict: AdvisorVerdict,
-    pub summary: String,
+    pub outcome: String,
 }
 ```
 
-Recorded outcome:
-
-```rust
-pub struct AdvisorOutcome {
-    pub status: bool,
-    pub verdict: AdvisorVerdict,
-    pub summary: String,
-}
-```
-
-The rename from `submit_advisor_feedback` to `submit_advisor_outcome` makes the
-terminal naming consistent with the other submit tools.
+This renames `submit_advisor_feedback` without adding a workflow outcome DTO.
 
 ### `submit_subagent_outcome`
 
@@ -488,22 +463,12 @@ Input:
 
 ```rust
 pub struct SubmitSubagentOutcomeInput {
-    pub summary: String,
+    pub outcome: String,
 }
 ```
 
-Recorded outcome:
-
-```rust
-pub struct SubagentOutcome {
-    pub status: bool,
-    pub summary: String,
-}
-```
-
-The old `findings` and `references` arrays should be folded into `summary`
-unless a future typed subagent evidence contract is designed. Do not keep a
-half-typed shape in this cleanup.
+This renames `submit_subagent_result` without adding a workflow outcome DTO. Do
+not keep a half-typed `findings`/`references` shape in this cleanup.
 
 ## 8. Workflow Submission API
 
@@ -565,9 +530,9 @@ SubmitAdvisorOutcome
 SubmitSubagentOutcome
 ```
 
-## 10. Plan DAG Contract
+## 10. Work Item Plan Contract
 
-The planner submits a work item DAG.
+The planner submits a work item plan.
 
 Rules:
 
@@ -580,61 +545,44 @@ Rules:
   `needs`; transitive ancestors are not included unless listed directly.
 - At least one work item is required.
 - There is no special sink node. A work item with no downstream dependents is a
-  valid leaf and contributes directly to the attempt outcome.
+  valid leaf and contributes directly to the attempt result.
 
 This is the key simplification: every leaf worker is already a reducer for its
-own branch. Attempt success is derived from worker outcomes, not from a separate
-reducer row.
+own branch. Attempt success is derived from worker task statuses, not from a
+separate reducer row.
 
 ## 11. Outcome Aggregation Rules
 
-Attempt outcome:
+Attempt:
 
-- `status = true` when workflow runtime can produce an `AttemptOutcome`.
-- `is_success = true` when the plan returned successfully and all required work
-  item outcomes have `status = true` and `is_success = true`.
-- If the planner fails to return, synthesize `PlanOutcome.status = false` and
-  `AttemptOutcome.is_success = false`.
-- If any launched worker fails to return, synthesize a failed
-  `WorkItemOutcome`.
+- If the planner fails to return, `PlanOutcome` is absent and the attempt closes
+  failed.
+- If the planner returns a plan, the attempt stores one `PlanOutcome`.
+- Each launched worker that returns a terminal submission records one
+  `WorkItemOutcome` and updates its worker task status.
+- If a worker fails to return, workflow runtime records a failed worker task and
+  a synthesized `WorkItemOutcome` explaining the missing terminal submission.
+- The attempt passes only when every required worker task is `Done`.
+- The attempt fails when any required worker task is `Failed`, `Blocked`, or
+  `Cancelled`, or when worker readiness reaches a failed quiescent state.
 
-Iteration outcome:
+Iteration:
 
-- `status = true` when workflow runtime can produce an `IterationOutcome`.
-- `is_success = true` when the accepted terminal attempt for the iteration is
-  successful.
-- Keep attempt outcomes in the iteration outcome so retry history is inspectable
-  without a separate summary.
+- Iteration status is derived from the accepted terminal attempt.
+- Keep attempt ids/outcomes available so retry history is inspectable.
 
-Workflow outcome:
+Workflow:
 
-- `status = true` when workflow runtime can produce a `WorkflowOutcome`.
-- `is_success = true` when the latest terminal iteration succeeds and there is no
-  deferred goal requiring a next iteration.
-- `iteration_outcomes` replaces summary. Context rendering defaults to the
-  latest iteration only.
+- Workflow status is derived from the latest terminal iteration and whether a
+  deferred goal requires another iteration.
+- Workflow rendering defaults to the latest iteration only.
 
 ## 12. Context Recipe Design
 
-The context engine is a recipe router plus a projection layer:
+The context system should render role-specific text directly from workflow
+state. Do not add a public `ContextOutcomeSlice`/`ContextOutcomeView` contract.
 
-```text
-ContextScope + recipe_id + persisted workflow state -> AgentContext
-```
-
-The workflow stores comprehensive outcomes once. The context engine must not
-mutate or truncate persisted `WorkflowOutcome`, `IterationOutcome`, or
-`AttemptOutcome` records. It renders role-specific context slices from those
-complete outcome trees.
-
-Core rule:
-
-```text
-Persist comprehensive outcome.
-Render only the slice needed by the current agent role and lifecycle moment.
-```
-
-The target context system has two workflow recipes:
+Target recipes:
 
 ```rust
 pub enum ContextRole {
@@ -686,7 +634,7 @@ Planner context may include exactly one of these evidence groups:
 
 - `<previous_attempts>`: retry evidence from failed attempts in the current
   iteration.
-- `<latest_iteration_outcome>`: continuation evidence from the latest successful
+- `<latest_iteration>`: continuation evidence from the latest successful
   previous iteration.
 
 Planner context should not include:
@@ -697,186 +645,13 @@ Planner context should not include:
 - all old iterations by default,
 - `disposition`.
 
-The planner prompt must keep this distinction clear:
-
-```text
-previous_attempts = retry evidence inside the same iteration
-latest_iteration_outcome = continuation evidence from the previous iteration
-current_iteration_goal = the authoritative scope for this planner
-```
-
 Planner directive:
 
 ```text
-Create one work item DAG for the current iteration goal. Submit exactly one
+Create one work item plan for the current iteration goal. Submit exactly one
 plan outcome. Use deferred_goal_for_next_iteration only for concrete current
 iteration goal items intentionally carried into the next iteration.
 ```
-
-#### Planner First Attempt
-
-For the first attempt in the first iteration, render only the workflow and
-iteration scope:
-
-```xml
-<context role="planner">
-  <workflow_goal>...</workflow_goal>
-  <current_iteration_goal>...</current_iteration_goal>
-</context>
-```
-
-There is no prior attempt evidence and no prior iteration evidence.
-
-#### Planner Retry After Attempt Failure
-
-When a new planner launches after a failed attempt in the same iteration, the
-iteration goal does not change. The retry planner sees the same
-`current_iteration_goal` plus filtered failed-attempt evidence.
-
-Render:
-
-```xml
-<context role="planner">
-  <workflow_goal>...</workflow_goal>
-  <current_iteration_goal>...</current_iteration_goal>
-  <previous_attempts>
-    <attempt id="attempt_1">
-      <status>true</status>
-      <is_success>false</is_success>
-      <plan_outcome status="true">
-        <plan_spec>...</plan_spec>
-        <deferred_goal_for_next_iteration>...</deferred_goal_for_next_iteration>
-      </plan_outcome>
-      <worker_evidence>
-        <work_item id="w_leaf_ok" task_id="task_...">
-          <status>true</status>
-          <is_success>true</is_success>
-          <summary>Reusable successful leaf outcome.</summary>
-        </work_item>
-        <work_item id="w_failed" task_id="task_...">
-          <status>true</status>
-          <is_success>false</is_success>
-          <summary>Concrete worker failure.</summary>
-        </work_item>
-        <work_item id="w_missing" task_id="task_...">
-          <status>false</status>
-          <is_success>false</is_success>
-          <summary>Worker did not return a structured outcome.</summary>
-        </work_item>
-      </worker_evidence>
-    </attempt>
-  </previous_attempts>
-</context>
-```
-
-For each failed previous attempt, include:
-
-- `attempt_id`, `status`, and `is_success`.
-- the full `plan_spec` if the planner returned.
-- `PlanOutcome.status`; if `status = false`, no worker outcomes exist.
-- `deferred_goal_for_next_iteration`, if the failed attempt had returned one.
-- successful leaf worker outcomes that are reusable.
-- failed worker outcomes.
-- missing/non-returned worker outcomes synthesized by runtime.
-- successful direct needs of failed workers only when needed to explain the
-  failure.
-
-Do not include every successful internal worker by default. A successful
-internal worker appears only when it is a leaf, or when it is a direct need of a
-failed worker and helps explain the failure.
-
-Leaf definition:
-
-```text
-leaf worker = a work item that no other work item lists in needs
-```
-
-Examples:
-
-```text
-w1 -> w2 -> w3
-```
-
-If `w3` failed, retry context includes `w3` and may include `w2` as the direct
-need that `w3` received. It does not include `w1` unless `w1` is also directly
-relevant.
-
-```text
-w1 -> w2
-w3
-```
-
-If `w2` succeeded and `w3` succeeded, both are leaf outcomes and can be shown as
-reusable successful evidence.
-
-If the planner itself failed to return:
-
-```text
-PlanOutcome.status = false
-work_item_outcomes = []
-AttemptOutcome.is_success = false
-```
-
-The next planner sees that planner-return failure as retry evidence, not as an
-empty successful plan.
-
-#### Planner For A Second Iteration
-
-When the previous iteration succeeded but returned
-`deferred_goal_for_next_iteration`, workflow lifecycle creates a new iteration.
-The second iteration planner sees continuation evidence, not retry evidence.
-
-Render:
-
-```xml
-<context role="planner">
-  <workflow_goal>original delegated workflow goal</workflow_goal>
-  <latest_iteration_outcome>
-    <iteration id="iteration_1">
-      <status>true</status>
-      <is_success>true</is_success>
-      <plan_spec>optional previous plan header</plan_spec>
-      <worker_evidence>
-        <work_item id="w_leaf_1" task_id="task_...">
-          <status>true</status>
-          <is_success>true</is_success>
-          <summary>Successful leaf result from the previous iteration.</summary>
-        </work_item>
-      </worker_evidence>
-    </iteration>
-  </latest_iteration_outcome>
-  <current_iteration_goal>
-    previous deferred_goal_for_next_iteration
-  </current_iteration_goal>
-</context>
-```
-
-For the latest previous iteration, include:
-
-- the latest successful iteration outcome only.
-- successful leaf worker outcomes from the successful terminal attempt.
-- enough ids to reference the prior evidence.
-- the previous plan spec as an optional compact header when it helps interpret
-  the leaf outcomes.
-
-Do not include by default:
-
-- failed attempts from the previous iteration,
-- every internal successful worker,
-- older iterations before the latest previous iteration,
-- a full workflow summary,
-- lifecycle closure decisions.
-
-This rule keeps the continuation planner focused. Prior iteration outcomes are
-evidence; the new `current_iteration_goal` is the scope.
-
-Planner selection matrix:
-
-| Planner launch | Include |
-| --- | --- |
-| First attempt, first iteration | `workflow_goal`, `current_iteration_goal` |
-| Same-iteration retry | failed previous attempts: full `plan_spec`, successful leaf outcomes, failed/missing worker outcomes, relevant direct needs |
-| Second iteration | latest successful previous iteration: successful leaf outcomes, optional previous `plan_spec`, current deferred goal |
 
 ### Worker Recipe
 
@@ -896,12 +671,12 @@ ContextScope::Worker {
 Worker context should include:
 
 - `<plan_spec>`: the planner's plan-level explanation.
-- `<assigned_work>`: this worker's `work_item_id`, `task_id`, and `work_spec`.
+- `<work_item>`: this worker's `work_item_id`, `task_id`, and `work_spec`.
 - `<needs>`: direct dependency outcomes only.
 
 Worker context should not include:
 
-- the full plan DAG unless needed for orientation,
+- the full work item plan unless needed for orientation,
 - transitive dependency outcomes,
 - unrelated sibling work items,
 - reducer-specific guidance,
@@ -910,8 +685,8 @@ Worker context should not include:
 Worker directive:
 
 ```text
-Complete <assigned_work> using <plan_spec> and direct <needs>. Submit exactly
-one worker outcome.
+Complete <work_item> using <plan_spec> and direct <needs>. Submit exactly one
+worker outcome.
 ```
 
 Worker render shape:
@@ -919,37 +694,18 @@ Worker render shape:
 ```xml
 <context role="worker">
   <plan_spec>
-    The planner-level explanation of how this attempt is structured and why this
-    work item exists.
+    The planner-level explanation of how this attempt is structured.
   </plan_spec>
   <needs>
     <work_item id="w1" task_id="task_...">
-      <status>true</status>
-      <is_success>true</is_success>
-      <summary>Direct dependency outcome summary.</summary>
+      <outcome>Direct dependency outcome.</outcome>
     </work_item>
   </needs>
-  <assigned_work id="w2" task_id="task_...">
+  <work_item id="w2" task_id="task_...">
     <agent_name>executor</agent_name>
     <work_spec>The exact instruction for this worker only.</work_spec>
-  </assigned_work>
+  </work_item>
 </context>
-```
-
-Worker filter:
-
-```text
-include:
-- plan_outcome.plan_spec
-- plan_outcome.work_items[current_work_item_id]
-- work_item_outcomes where work_item_id in current_work_item.needs
-
-exclude:
-- sibling work items
-- transitive ancestors not directly listed in needs
-- previous attempts
-- workflow lifecycle decisions
-- the full attempt outcome tree
 ```
 
 Direct-needs example:
@@ -968,102 +724,54 @@ unless the planner explicitly sets:
 }
 ```
 
-### Outcome Projection API
-
-Store complete outcomes, then project them for a context role:
-
-```rust
-pub enum ContextOutcomeView {
-    WorkerNeeds {
-        attempt_id: AttemptId,
-        work_item_id: WorkItemId,
-    },
-    PlannerRetry {
-        iteration_id: IterationId,
-        current_attempt_id: AttemptId,
-    },
-    PlannerContinuation {
-        workflow_id: WorkflowId,
-        current_iteration_id: IterationId,
-    },
-    WorkflowLatest {
-        workflow_id: WorkflowId,
-    },
-}
-
-pub struct ContextOutcomeSlice {
-    pub workflow_goal: Option<String>,
-    pub current_iteration_goal: Option<String>,
-    pub plan_spec: Option<String>,
-    pub assigned_work: Option<WorkItemSpec>,
-    pub needs: Vec<WorkItemOutcome>,
-    pub previous_attempts: Vec<AttemptOutcomeForContext>,
-    pub latest_iteration_outcome: Option<IterationOutcomeForContext>,
-}
-
-pub fn project_outcomes_for_context(
-    workflow_outcome: &WorkflowOutcome,
-    view: ContextOutcomeView,
-) -> ContextOutcomeSlice;
-```
-
-The projection structs should be smaller than the persisted structs. They are
-prompt DTOs, not durable state.
-
-Suggested projection fields:
-
-```rust
-pub struct AttemptOutcomeForContext {
-    pub attempt_id: AttemptId,
-    pub status: bool,
-    pub is_success: bool,
-    pub plan_status: bool,
-    pub plan_spec: Option<String>,
-    pub deferred_goal_for_next_iteration: Option<String>,
-    pub reusable_leaf_outcomes: Vec<WorkItemOutcome>,
-    pub failed_or_missing_outcomes: Vec<WorkItemOutcome>,
-    pub relevant_need_outcomes: Vec<WorkItemOutcome>,
-}
-
-pub struct IterationOutcomeForContext {
-    pub iteration_id: IterationId,
-    pub status: bool,
-    pub is_success: bool,
-    pub plan_spec: Option<String>,
-    pub successful_leaf_outcomes: Vec<WorkItemOutcome>,
-}
-```
-
-Filtering belongs in the context engine or a context projection module, not in
-the stores. Stores return complete records; context projection decides what the
-agent should see.
+Filtering belongs in `eos-workflow/src/context/*`, not in stores. Stores return
+complete records; context rendering decides what the agent should see.
 
 ## 13. Implementation Migration Phases
 
-### Phase 1 - Types And Tools
+### Phase 1 - Types, DB, And Records
 
-- Add `WorkItemId`, `WorkItemSpec`, outcome structs, and submission structs.
-- Rename terminal tool names and model-facing docs.
-- Delete reducer terminal tool registration.
-- Replace generator terminal registration with worker terminal registration.
-- Update terminal descriptors and advisor guidance.
+- Add `WorkItemId`, `WorkItemSpec`, `PlanOutcome`, `WorkItemOutcome`,
+  `AttemptOutcome`, and submission structs.
+- Remove `PlannerId`, `GeneratorId`, `ReducerId`, `PlanDisposition`,
+  `ExecutionRole`, and `ExecutionTaskOutcome` from the workflow target state.
+- Replace task roles with `TaskRole::Root` and `TaskRole::Worker`.
+- Update `eos-db` attempt rows/repositories to remove planner/generator/reducer
+  columns and persist the new attempt state.
+- Update `eos-agent-run` record creation so planner records are attempt-owned and
+  worker records are task-owned.
 
 Verification:
 
 ```text
 cd agent-core && cargo check -p eos-types --all-targets
+cd agent-core && cargo check -p eos-db --all-targets
+cd agent-core && cargo check -p eos-agent-run --all-targets
+```
+
+### Phase 2 - Tools
+
+- Rename terminal tool names and model-facing docs.
+- Delete reducer terminal tool registration.
+- Replace generator terminal registration with worker terminal registration.
+- Split terminal submission implementation into per-tool files.
+- Update terminal descriptors and advisor guidance.
+
+Verification:
+
+```text
 cd agent-core && cargo check -p eos-tool --all-targets
 ```
 
-### Phase 2 - Workflow Lifecycle
+### Phase 3 - Workflow Runtime
 
 - Remove planner TaskStore row creation.
 - Replace `PlannerLaunch` task identity with attempt identity only.
 - Replace `GeneratorLaunch` with `WorkerLaunch`.
 - Delete `ReducerLaunch`.
-- Rewrite plan materialization to create one TaskStore worker row per work
-  item.
-- Rewrite scheduler readiness over `work_item_id -> task_id`.
+- Rewrite plan materialization to create one TaskStore worker row per work item.
+- Rewrite worker readiness over deterministic `worker_task_id`.
+- Rewrite worker run settlement and missing terminal synthesis.
 
 Verification:
 
@@ -1071,10 +779,11 @@ Verification:
 cd agent-core && cargo test -p eos-workflow attempt -- --nocapture
 ```
 
-### Phase 3 - Outcome Aggregation
+### Phase 4 - Outcome Aggregation
 
-- Replace `ExecutionTaskOutcome` projections with `WorkItemOutcome`.
-- Add `AttemptOutcome`, `IterationOutcome`, and `WorkflowOutcome` projections.
+- Replace generator/reducer execution evidence with `PlanOutcome` and
+  `WorkItemOutcome`.
+- Close attempts from worker task statuses.
 - Remove workflow summary projection.
 - Update workflow closure logic to read worker leaves directly.
 
@@ -1085,11 +794,11 @@ cd agent-core && cargo test -p eos-workflow iteration -- --nocapture
 cd agent-core && cargo test -p eos-workflow service -- --nocapture
 ```
 
-### Phase 4 - Context Recipes
+### Phase 5 - Context Recipes
 
 - Replace generator/reducer context roles with worker.
 - Render planner context from iteration outcomes and current failed attempts.
-- Render worker context from `plan_spec`, assigned work, and direct needs
+- Render worker context from `plan_spec`, current work item, and direct needs
   outcomes.
 - Update `.eos-agents/profile/main/planner.md` and
   `.eos-agents/profile/main/executor.md`.
@@ -1100,7 +809,7 @@ Verification:
 cd agent-core && cargo test -p eos-workflow context -- --nocapture
 ```
 
-### Phase 5 - Cleanup Gate
+### Phase 6 - Cleanup Gate
 
 - Delete reducer files, generated references, stale snapshots, and stale docs.
 - Remove `Generator*`, `Reducer*`, and reducer-specific profile/tool docs.
@@ -1111,7 +820,7 @@ Verification:
 ```text
 cd agent-core && cargo check --workspace --all-targets
 cd agent-core && cargo test --workspace
-rg "Generator|generator|Reducer|reducer|submit_generator_outcome|submit_reducer_outcome|disposition|submission_kind" agent-core .eos-agents docs
+rg "Generator|generator|Reducer|reducer|submit_generator_outcome|submit_reducer_outcome|disposition|submission_kind|has_structured_outcome|is_successful|worker_task_by_work_item_id" agent-core .eos-agents docs
 ```
 
 Remaining matches must be either historical migration docs or explicit
@@ -1123,11 +832,14 @@ compatibility notes scheduled for deletion.
 - No planner TaskStore row can be created.
 - No model-facing tool named `submit_generator_outcome`,
   `submit_reducer_outcome`, or `submit_planner_outcome` is registered.
-- `submit_worker_outcome` records one `WorkItemOutcome`.
+- No target workflow DTO contains duplicated `status: bool` / `is_success`
+  outcome fields.
+- `submit_worker_outcome` records one `WorkItemOutcome` and updates the worker
+  task status.
 - `submit_plan_outcome` records one `PlanOutcome` with no `task_id`.
-- `WorkflowOutcome` contains iteration outcomes and no summary.
-- `IterationOutcome` contains attempt outcomes.
-- `AttemptOutcome` contains `PlanOutcome` plus `Vec<WorkItemOutcome>`.
-- Worker context contains `plan_spec`, assigned work, and direct needs outcomes.
+- Worker task ids are derived from `(AttemptId, WorkItemId)`.
+- Attempt pass/fail is derived from worker task statuses.
+- Worker context contains `plan_spec`, current work item, and direct needs
+  outcomes.
 - Planner context contains current iteration scope and compact prior evidence.
 - Terminal result metadata contains no `disposition` and no `submission_kind`.

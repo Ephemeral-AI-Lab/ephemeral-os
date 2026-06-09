@@ -22,4 +22,4 @@ mod openapi;
 mod router;
 mod stream;
 
-pub use router::{build_router, AppState, SandboxRegistry};
+pub use router::{build_router, AppState, AppStateParts, SandboxRegistry};

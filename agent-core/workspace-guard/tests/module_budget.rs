@@ -10,7 +10,7 @@ const PHASE_4_TOTAL_LIMIT: usize = 190;
 const FINAL_TOTAL_LIMIT: usize = 170;
 
 const FINAL_CRATE_LIMITS: &[(&str, usize)] = &[
-    ("eos-agent-core", 22),
+    ("eos-agent-core-server", 10),
     ("eos-tool", 16),
     ("eos-engine", 22),
     ("eos-workflow", 10),

@@ -2,7 +2,7 @@
 //!
 //! One async RPC boundary to the sandbox daemon. This crate declares the trait;
 //! `eos-sandbox-host` implements the daemon-backed concrete (`DaemonSandboxTransport`)
-//! and stamps the wire-level protocol version; `eos-agent-core` injects it as
+//! and stamps the wire-level protocol version; backend composition injects it as
 //! `Arc<dyn SandboxTransport>`. The tool-dispatch helpers depend only on
 //! `&dyn SandboxTransport`, never on a concrete client.
 

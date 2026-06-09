@@ -1,7 +1,7 @@
 //! Pagination value objects for list-style `Store` queries.
 //!
 //! These back the read-side store APIs the backend composition root consumes
-//! through `AgentCoreRuntime::state_reader()` (the backend never opens a pool
+//! through the agent-core request service (the backend never opens a pool
 //! against the agent-core DB). [`Page`] is the request window; [`PageResult`] is
 //! one page plus the filter's unwindowed total; [`RequestListFilter`] narrows a
 //! request listing.

@@ -2,11 +2,11 @@
 //!
 //! This crate owns the reader-side boundary for Rust audit/observability:
 //!
-//! - [`normalization`]/[`gates`]: normalize agent-core JSONL and sandbox audit
-//!   pulls into [`eos_agent_core::ObsEnvelope`] rows and evaluate the Rust runner
+//! - [`normalization`]/[`gates`]: normalize agent JSONL and sandbox audit
+//!   pulls into [`ObsEnvelope`] rows and evaluate the Rust runner
 //!   audit/observability gates. Producers keep their local mechanics (agent-core
 //!   writes normalized JSONL; the daemon exposes a bounded native ring).
-//! - [`PersistingSink`]: the backend [`AuditSink`](eos_agent_core::AuditSink) that
+//! - [`PersistingSink`]: the backend [`AuditSink`] that
 //!   async-drains agent-core audit events into `obs_event` without blocking the
 //!   engine hot path (AC6).
 //! - [`AuditIngestor`]: ingest a daemon `api.audit.pull` response into `obs_event`,
@@ -18,12 +18,18 @@
 
 #![forbid(unsafe_code)]
 
+mod contract;
 mod gates;
 mod ingestor;
 mod normalization;
 mod sink;
 mod stats;
 
+pub use contract::{
+    canonical_event_type, from_jsonl_line, to_jsonl_line, AuditError, AuditEvent, AuditNode,
+    AuditNodeBuilder, AuditSink, AuditSource, JsonObject, NoopAuditSink, ObsEnvelope, ObsIds,
+    ObsSource, AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED, SCHEMA, TOOL_CALL_COMPLETED,
+};
 pub use gates::{
     evaluate_runner_gate_batches, evaluate_runner_gate_sources, evaluate_runner_gates,
     ExpectedToolUse, RunnerCorrectnessEvidence, RunnerGateBatchInput, RunnerGateFailure,

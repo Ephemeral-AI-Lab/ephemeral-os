@@ -491,7 +491,6 @@ impl eos_types::AttemptStore for MemoryStores {
     async fn cancel_open_attempts_for_request(
         &self,
         request_id: &RequestId,
-        reason: &str,
     ) -> std::result::Result<usize, CoreError> {
         let workflow_ids = workflow_ids_for_request(&self.workflows.lock(), request_id);
         let mut count = 0;
@@ -506,7 +505,7 @@ impl eos_types::AttemptStore for MemoryStores {
                 };
                 attempt.state = AttemptState::Closed {
                     closure: AttemptClosure::Cancelled {
-                        reason: reason.to_owned(),
+                        reason: String::new(),
                         outcomes: Vec::new(),
                         closed_at: eos_types::UtcDateTime::now(),
                     },

@@ -1,5 +1,5 @@
 //! [`SandboxManager`] — backend-owned sandbox lifecycle, refcounting, and the
-//! [`SandboxGateway`] implementation `eos-agent-core` is wired against.
+//! [`SandboxGateway`] implementation the agent-core request service is wired against.
 //!
 //! The manager is the single owner of sandbox *setup/destroy policy*: it composes
 //! the Docker/daemon host (`eos-sandbox-host`) behind one shared
@@ -452,7 +452,7 @@ fn reject_destroying(
 /// Backend-owned sandbox lifecycle manager and [`SandboxGateway`] implementation.
 ///
 /// Construct the production manager with [`SandboxManager::with_docker`], inject
-/// it into `eos-agent-core` via `RuntimeServicesBuilder::sandbox_gateway`, and retain
+/// it into the agent-core request service via `AgentCoreServiceDependencies`, and retain
 /// the same handle (an `Arc<SandboxManager>`) to drive [`SandboxManager::release`],
 /// [`SandboxManager::delete`], [`SandboxManager::view`], and
 /// [`SandboxManager::list`].
@@ -611,7 +611,7 @@ impl SandboxGateway for SandboxManager {
     }
 }
 
-/// The provisioner the gateway hands to `eos-agent-core`: its `prepare_for_run` is
+/// The provisioner the gateway hands to agent-core request orchestration: its `prepare_for_run` is
 /// the manager's [`ManagerInner::acquire`], so the runtime's bootstrap binding is
 /// the refcount-acquiring path. Holds a clone of the shared inner state.
 #[derive(Debug)]

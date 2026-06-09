@@ -25,16 +25,11 @@ fn expected_edges() -> Edges {
         ("eos-workflow", &["eos-types", "eos-tool"]),
         ("eos-agent-run", &["eos-types"]),
         (
-            "eos-agent-core",
+            "eos-agent-core-server",
             &[
-                "eos-db",
-                "eos-engine",
-                "eos-workflow",
                 "eos-agent-run",
-                "eos-tool",
                 "eos-sandbox-port",
                 "eos-types",
-                "eos-llm-client",
             ],
         ),
         (

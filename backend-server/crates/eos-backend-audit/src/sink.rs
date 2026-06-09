@@ -1,4 +1,4 @@
-//! [`PersistingSink`] — an [`AuditSink`] that persists agent-core audit events to
+//! [`PersistingSink`] — an [`AuditSink`] that persists agent audit events to
 //! `obs_event` without blocking the engine hot path (AC6).
 //!
 //! [`AuditSink::publish`] is synchronous and borrows its [`AuditEvent`]. This sink
@@ -7,16 +7,16 @@
 //! bumps a dropped counter — `publish` never `.await`s and never touches `SQLite`. A
 //! dedicated async drainer owns each payload and persists it through
 //! [`ObsEventRepo`], retrying once on a transient failure and otherwise counting a
-//! durable persist loss. The flow mirrors `eos_agent_core::BufferedJsonlSink` (a bounded
-//! queue + drainer + an explicit shutdown that flushes accepted events), but the
-//! drainer is a Tokio task because the destination write is async.
+//! durable persist loss. The flow is a bounded queue + drainer + an explicit
+//! shutdown that flushes accepted events; the drainer is a Tokio task because
+//! the destination write is async.
 //!
 //! Source mapping: every event published through this sink is agent-core
 //! engine/tool-path observability, so its persisted [`ObsSource`] is `Engine`.
 //! Daemon-pulled rows are `Daemon` and flow through the [`ingestor`](crate::ingestor)
-//! instead. The [`AuditNode`](eos_agent_core::AuditNode) carries no daemon invocation id,
-//! so the engine-path `sandbox_invocation_id` is always null here — the model-facing
-//! `tool_use_id`/`sandbox_id` come straight from the node.
+//! instead. The [`AuditNode`](crate::AuditNode) carries no daemon invocation id,
+//! so the engine-path `sandbox_invocation_id` is always null here — the
+//! model-facing `tool_use_id`/`sandbox_id` come straight from the node.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -25,9 +25,10 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use eos_agent_core::{AuditError, AuditEvent, AuditSink};
 use eos_backend_store::{ObsEventRepo, StoreError};
 use eos_backend_types::{ObsEvent, ObsSource};
+
+use crate::{AuditError, AuditEvent, AuditSink};
 
 /// Default bound on the `publish`→drainer queue (events in flight before overflow
 /// returns [`AuditError::Backpressure`]).
@@ -218,7 +219,7 @@ impl PersistingSinkShutdown {
     pub async fn shutdown(mut self) {
         // Best-effort flush signal: if the queue is momentarily full the send waits
         // for the drainer to free a slot (it keeps draining), mirroring
-        // `BufferedAuditShutdown`. A closed channel means the drainer already exited.
+        // A closed channel means the drainer already exited.
         if let Some(ctrl_tx) = self.ctrl_tx.take() {
             let _ = ctrl_tx.send(Msg::Shutdown).await;
         }

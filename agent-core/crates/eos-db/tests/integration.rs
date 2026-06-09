@@ -835,7 +835,7 @@ async fn composition_root_and_cascade() {
 }
 
 // Read-side store APIs the backend composition root consumes through
-// `AgentCoreRuntime::state_reader()`: request listing with status filter +
+// agent-core request reads: request listing with status filter +
 // pagination (total ignores the window), the per-request task tree, and the
 // latest run for a task.
 #[tokio::test]

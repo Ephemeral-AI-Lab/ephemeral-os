@@ -62,10 +62,8 @@ tempfile    = "3"
 eos-sandbox-port   = { path = "../agent-core/crates/eos-sandbox-port" }
 eos-types          = { path = "../agent-core/crates/eos-types" }
 eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
-# the run launcher drives agent-core to completion through the facade; status
-# DTOs come from eos-types, workflow config from eos-workflow, and message
-# records route through eos-agent-run.
-eos-agent-core     = { path = "../agent-core/crates/eos-agent-core" }
+# the backend-facing request lifecycle service; status DTOs come from eos-types,
+# and message records route through eos-engine.
 eos-agent-core-server = { path = "../agent-core/crates/eos-agent-core-server" }
 eos-agent-run      = { path = "../agent-core/crates/eos-agent-run" }
 eos-engine         = { path = "../agent-core/crates/eos-engine" }

@@ -13,6 +13,7 @@
 #![warn(missing_docs)]
 
 mod agent;
+mod audit;
 pub mod agent_loop;
 mod config;
 mod contracts;
@@ -28,6 +29,11 @@ mod time;
 
 pub use agent::{
     AgentDefinition, AgentName, AgentNameError, AgentRegistry, AgentRegistryBuilder, AgentType,
+};
+pub use audit::{
+    canonical_event_type, from_jsonl_line, to_jsonl_line, AuditError, AuditEvent, AuditNode,
+    AuditNodeBuilder, AuditSink, AuditSource, NoopAuditSink, ObsEnvelope, ObsIds, ObsSource,
+    AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED, SCHEMA, SCHEMA_VERSION, TOOL_CALL_COMPLETED,
 };
 pub use agent_loop::{
     AgentLoopCancellation, AgentLoopCancellationHandle, AgentLoopCompletion, AgentLoopLauncher,

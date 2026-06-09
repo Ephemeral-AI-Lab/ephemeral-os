@@ -1,6 +1,6 @@
 # Agent-Core Workspace Architecture Rules - Index
 
-Status: Phase 05 implemented; Phase 04 closeout and Phase 06 draft remain tracked
+Status: Phase 04 and Phase 05 implemented; Phase 06 draft remains tracked
 Date: 2026-06-09
 Owner: agent-core workspace
 
@@ -227,33 +227,38 @@ agent-core/
 │   ├── eos-agent-run/
 │   │   └── src/
 │   │       ├── lib.rs
-│   │       ├── error.rs
-│   │       ├── model.rs
-│   │       ├── services.rs
-│   │       ├── active_runs.rs
-│   │       ├── request.rs
+│   │       ├── service.rs
+│   │       ├── spawn.rs
+│   │       ├── active_agent_runs.rs
 │   │       ├── persistence.rs
 │   │       ├── completion.rs
 │   │       └── cancellation.rs
 │   ├── eos-engine/
 │   │   └── src/
 │   │       ├── lib.rs
-│   │       ├── error.rs
-│   │       ├── model.rs
-│   │       ├── events.rs
-│   │       ├── services.rs
 │   │       ├── agent_loop.rs
 │   │       ├── agent_loop/
+│   │       │   ├── contracts.rs
 │   │       │   ├── executor.rs
+│   │       │   ├── launcher.rs
 │   │       │   ├── state.rs
-│   │       │   └── turn.rs
+│   │       ├── event.rs
+│   │       ├── event/
+│   │       │   ├── event.rs
+│   │       │   ├── sink.rs
+│   │       │   ├── printer.rs
+│   │       │   └── outputs.rs
 │   │       ├── records.rs
-│   │       ├── printer.rs
+│   │       ├── records/
+│   │       │   ├── handle.rs
+│   │       │   ├── record.rs
+│   │       │   └── writer.rs
 │   │       ├── background.rs
 │   │       └── background/
-│   │           ├── command_sessions.rs
-│   │           ├── subagent_sessions.rs
-│   │           └── workflow_sessions.rs
+│   │           ├── session_runtime.rs
+│   │           ├── command_session.rs
+│   │           ├── subagent_session.rs
+│   │           └── workflow_session.rs
 │   ├── eos-tool/
 │   │   └── src/
 │   │       ├── lib.rs
@@ -314,7 +319,7 @@ agent-core/
             ├── phase-03-eos-tool_SPEC.md
             ├── phase-03b-execution-lineage-materialization_SPEC.md
             ├── phase-04-eos-engine-agent-run_SPEC.md
-            ├── phase-05-agent-core-workflow-types_SPEC.md
+            ├── phase-05-agent-core-server-boundary_SPEC.md
             └── phase-06-verification-module-budget_SPEC.md
 ```
 
@@ -328,7 +333,7 @@ agent-core/
 | 3 | `phase-03-eos-tool_SPEC.md` | `eos-tool` consolidation and service surface | Tool |
 | 3B | `phase-03b-execution-lineage-materialization_SPEC.md` | request/task/workflow/agent-run lineage, DB store contract, message-record materialization | Store/materialization |
 | 4 | `phase-04-eos-engine-agent-run_SPEC.md` | engine execution and run lifecycle split over established lineage | Engine/run |
-| 5 | `phase-05-agent-core-workflow-types_SPEC.md` | request-entry runtime, workflow, types cleanup | Agent-core/workflow |
+| 5 | `phase-05-agent-core-server-boundary_SPEC.md` | backend-facing request lifecycle service boundary | Agent-core/server |
 | 6 | `phase-06-verification-module-budget_SPEC.md` | inventory reduction, tests, clippy, final cleanup | Verification |
 
 ## Progress Tracker
@@ -344,8 +349,8 @@ verification command or evidence used for that phase.
 | 2. Crate map and DAG | Implemented | final 10-crate agent-core map is active; `eos-runtime` folded into `eos-agent-core`; verified with `CARGO_TARGET_DIR=/tmp/eos-agent-core-check-runtime-fold cargo check --workspace --all-targets`, `cargo test -p eos-agent-core --all-targets`, and `cargo test -p workspace-guard` |
 | 3. `eos-tool` | Implemented | `eos-tool-ports` is gone; tool modules collapsed; hook execution is engine-owned |
 | 3B. Execution lineage/materialization | Implemented (bridge-compatible v1) | normalized `task_runs`/`parented_runs`, workflow launch lineage, request-rooted record dirs, and bounded execution-tree reader are active; verified with `cargo test -p eos-db`, `cargo test -p eos-agent-run`, `cargo test -p eos-workflow`, and `cargo test -p eos-agent-core` |
-| 4. `eos-engine` and `eos-agent-run` | In progress | records moved to `eos-engine::records`, loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`; verified with `cargo test -p eos-engine --all-targets`, `cargo test -p eos-agent-run --all-targets`, `cargo test -p eos-agent-core root_run_writes_engine_owned_records --all-targets`, `cargo check -p eos-agent-core --all-targets`, changed-crate clippy, `cargo fmt --all --check`, and depth-1 `cargo tree` edge checks |
-| 5. Agent core/workflow/types | Implemented | `eos-agent-core-server` owns backend-facing request lifecycle orchestration, backend agent-core resources live under `/api/agent-core/*`, and request-scoped cancellation is store-owned; verified with `cargo check -p eos-agent-core-server --all-targets`, `cargo check -p eos-agent-run --all-targets`, `cargo check -p eos-types --all-targets`, `cargo check -p eos-db --all-targets`, `cargo check -p eos-workflow --all-targets`, `cargo check -p eos-backend-api --all-targets`, and `cargo test -p eos-backend-api` |
+| 4. `eos-engine` and `eos-agent-run` | Implemented | records live in `eos-engine::records`, loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`, and naming is closed on `AgentLoopCompletion::terminal_outcome`, `EngineEventOutputs`, `AgentRunRecordWriter`, and `BackgroundSessionRuntimeFactory`; verified with scoped checks/tests and combined changed-crate clippy |
+| 5. Agent core server boundary | Implemented | `eos-agent-core-server` owns backend-facing request lifecycle orchestration without backend-only task/agent-run handles, backend agent-core resources live under `/api/agent-core/*`, and request-scoped cancellation is store-owned; verified with `cargo check -p eos-agent-core-server --all-targets`, `cargo check -p eos-agent-run --all-targets`, `cargo check -p eos-types --all-targets`, `cargo check -p eos-db --all-targets`, `cargo check -p eos-workflow --all-targets`, `cargo check -p eos-backend-api --all-targets`, and `cargo test -p eos-backend-api` |
 | 6. Verification and budget | Not started | module count is 150-170 and full checks pass |
 
 ## Global Acceptance Criteria

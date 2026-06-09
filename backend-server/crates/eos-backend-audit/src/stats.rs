@@ -2,20 +2,17 @@
 //! `audit_cursor`.
 //!
 //! This is the backend stats facade the Phase 7 API calls. It owns the canonical
-//! obs `kind` vocabulary (from `eos-agent-core`) and hands it to the store's typed
-//! aggregations, then composes the loss DTO from the durable `audit_cursor` totals
-//! plus a live [`PersistingSink`](crate::PersistingSink) snapshot. The matched /
-//! unmatched split keeps daemon-facing and model-facing identities distinct (AC7);
-//! the richer agent-core state join (agent name, token count, terminal outcome) is
-//! the Phase 7 read handler's job through `RuntimeServices::state_reader()`.
+//! obs `kind` vocabulary and hands it to the store's typed aggregations, then
+//! composes the loss DTO from the durable `audit_cursor` totals plus a live
+//! [`PersistingSink`](crate::PersistingSink) snapshot. The matched / unmatched
+//! split keeps daemon-facing and model-facing identities distinct (AC7).
 
-use eos_agent_core::{AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
 use eos_backend_store::{AuditCursorRepo, ObsEventRepo, StoreError};
 use eos_backend_types::{
     AgentRunStat, CorrectnessStats, ObsEvent, ObsLossStats, Page, PageResult, PerformanceStats,
 };
 
-use crate::sink::SinkLoss;
+use crate::{sink::SinkLoss, AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
 
 /// Reads `/api/stats/*` summaries from `backend.db`. Holds cheap repository clones.
 #[derive(Debug, Clone)]

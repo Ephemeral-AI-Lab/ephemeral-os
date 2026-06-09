@@ -1,6 +1,6 @@
 //! The single injected sandbox handle (spec §Core Contracts / Sandbox Gateway).
 //!
-//! [`SandboxGateway`] is the one production seam `eos-agent-core` accepts to wire
+//! [`SandboxGateway`] is the one production seam request orchestration accepts to wire
 //! sandbox access. It hands back the two narrower port objects —
 //! [`SandboxTransport`] (per-tool daemon RPC) and [`RequestProvisioner`] (request
 //! binding) — which share one registry/lifecycle inside the implementor. The

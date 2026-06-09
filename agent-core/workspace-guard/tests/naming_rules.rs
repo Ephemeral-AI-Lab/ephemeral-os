@@ -7,10 +7,7 @@ use workspace_guard::{
 
 const PORT_CRATE_ALLOWLIST: &[&str] = &["eos-sandbox-port"];
 const API_MODULE_ALLOWLIST: &[&str] = &[];
-const RUNTIME_PATH_ALLOWLIST: &[&str] = &[
-    "crates/eos-agent-core/src/runtime.rs",
-    "crates/eos-agent-core/src/runtime",
-];
+const RUNTIME_PATH_ALLOWLIST: &[&str] = &[];
 
 #[test]
 fn port_crate_names_are_limited_to_sandbox_or_migration_crates() {
@@ -34,7 +31,7 @@ fn no_nonexistent_api_facade_crate_name() {
     let workspace = Workspace::load();
     assert!(
         !workspace.crate_names().contains("eos-agent-api"),
-        "naming_rules rule violated: crate `eos-agent-api` never existed; target facade is eos-agent-core"
+        "naming_rules rule violated: crate `eos-agent-api` never existed; target service crate is eos-agent-core-server"
     );
 }
 
@@ -130,7 +127,7 @@ fn final_target_scopes_runtime_to_agent_core_runtime() {
         .filter(|path| !runtime_path_allowlisted(path, workspace.root()))
         .map(|path| {
             format!(
-                "{}: `runtime` is allowed only under eos-agent-core/src/runtime.rs or runtime/",
+                "{}: `runtime` is not part of the final agent-core crate map",
                 relative_to(&path, workspace.root())
             )
         })

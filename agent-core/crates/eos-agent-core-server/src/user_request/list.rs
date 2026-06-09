@@ -4,13 +4,13 @@ use eos_types::{Page, PageResult, RequestListFilter};
 
 use crate::dto::UserRequestSummary;
 use crate::error::AgentCoreServerError;
-use crate::request_state::RequestState;
+use crate::service::AgentCoreService;
 
 pub(crate) async fn list_user_requests(
-    state: &RequestState,
+    service: &AgentCoreService,
     page: Page,
 ) -> Result<PageResult<UserRequestSummary>, AgentCoreServerError> {
-    let page = state
+    let page = service
         .request_store
         .list(RequestListFilter::default(), page)
         .await?;

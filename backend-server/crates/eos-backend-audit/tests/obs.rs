@@ -10,11 +10,10 @@
 //!   and reboot loss.
 #![allow(clippy::unwrap_used)] // unwrap is permitted in tests
 
-use eos_agent_core::{
-    AuditEvent, AuditNode, AuditSink, AuditSource, AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED,
-    TOOL_CALL_COMPLETED,
+use eos_backend_audit::{
+    AuditEvent, AuditIngestor, AuditNode, AuditSink, AuditSource, PersistingSink, SinkLoss,
+    StatsReader, AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED, UNMATCHED_MARKER,
 };
-use eos_backend_audit::{AuditIngestor, PersistingSink, SinkLoss, StatsReader, UNMATCHED_MARKER};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{ObsSource, Page, SandboxCallCorrelation};
 use eos_protocol::audit::SCHEMA_VERSION;

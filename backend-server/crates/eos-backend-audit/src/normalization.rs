@@ -1,6 +1,7 @@
-use eos_agent_core::{from_jsonl_line, JsonObject, ObsEnvelope, ObsIds, ObsSource};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::{from_jsonl_line, JsonObject, ObsEnvelope, ObsIds, ObsSource};
 
 /// A sandbox pull response normalized for runner consumption.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -309,40 +309,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
-name = "eos-agent-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "eos-agent-run",
- "eos-db",
- "eos-engine",
- "eos-llm-client",
- "eos-sandbox-port",
- "eos-testkit",
- "eos-tool",
- "eos-types",
- "eos-workflow",
- "futures",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "eos-agent-core-server"
 version = "0.1.0"
 dependencies = [
  "eos-agent-run",
  "eos-sandbox-port",
  "eos-types",
- "serde_json",
  "thiserror",
  "tokio",
  "tracing",

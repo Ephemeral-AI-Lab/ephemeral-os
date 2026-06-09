@@ -50,8 +50,6 @@ pub async fn create(
         .create_user_request(CreateUserRequestInput {
             prompt,
             sandbox_id: sandbox_args.and_then(|args| args.sandbox_id),
-            client_label: label.clone(),
-            client_metadata: client_meta_json.clone(),
         })
         .await?;
     let request_id = output.request_id;

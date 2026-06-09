@@ -3,7 +3,7 @@
 //! `tool_use_turn` / `text_turn` helpers that fabricate one model turn.
 //!
 //! This is the single definition of `ScriptedSource` in the workspace
-//! (`TESTING_SPEC` AC3); the prior `eos-engine` and `eos-agent-core` copies are gone.
+//! (`TESTING_SPEC` AC3); the prior crate-local copies are gone.
 
 use std::collections::HashMap;
 use std::sync::Arc;

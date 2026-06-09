@@ -124,9 +124,9 @@ fn service_replacement_suggestions_stay_canonical() {
             symbol: "ToolService".to_owned(),
         },
         ServiceCandidate {
-            crate_name: "eos-agent-core".to_owned(),
-            relative_path: "crates/eos-agent-core/src/agents.rs".to_owned(),
-            symbol: "AgentService".to_owned(),
+            crate_name: "eos-agent-core-server".to_owned(),
+            relative_path: "crates/eos-agent-core-server/src/service.rs".to_owned(),
+            symbol: "AgentCoreService".to_owned(),
         },
     ];
 

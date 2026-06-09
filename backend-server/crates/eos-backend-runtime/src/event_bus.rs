@@ -35,9 +35,9 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use tokio::sync::{broadcast, mpsc};
 
-use eos_agent_core::EngineEventSink;
 use eos_backend_store::{EventLogRepo, StoreError};
 use eos_backend_types::{EventRecord, EVENT_STREAM_GAP};
+use eos_engine::EngineEventSink;
 use eos_types::{RequestId, UtcDateTime};
 
 /// Default bound on the callback→drainer queue (records in flight before overflow
@@ -120,8 +120,8 @@ impl EventBus {
     /// The returned [`EngineEventSink`] owns the only `mpsc::Sender`, so dropping it
     /// (when the run ends) closes the queue and the drainer exits.
     ///
-    /// Internal seam: the launcher registers a run; downstream code drives this
-    /// transitively through `RunLauncher`, never directly.
+    /// Internal seam: request orchestration registers a run; downstream code
+    /// reaches this through backend-owned services, never directly.
     #[must_use]
     pub(crate) fn register(&self, request_id: &RequestId) -> EngineEventSink {
         let (tx, stream) = self.open_stream(request_id);
@@ -197,7 +197,8 @@ impl EventBus {
     /// frees the broadcast sender so live subscribers observe close. Durable
     /// `event_log` rows remain replayable.
     ///
-    /// Internal seam: the reaper finishes a run; not part of the downstream API.
+    /// Internal seam: request orchestration finishes a run; not part of the
+    /// downstream API.
     pub(crate) fn finish(&self, request_id: &RequestId) {
         self.streams.lock().remove(request_id);
     }

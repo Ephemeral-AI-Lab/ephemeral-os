@@ -13,7 +13,7 @@ use std::process::Command;
 use serde_json::Value;
 
 pub const TARGET_CRATES: &[&str] = &[
-    "eos-agent-core",
+    "eos-agent-core-server",
     "eos-agent-run",
     "eos-engine",
     "eos-tool",
@@ -37,6 +37,7 @@ pub const RETIRED_CRATES: &[&str] = &[
     "eos-agent-def",
     "eos-config",
     "eos-audit",
+    "eos-agent-core",
 ];
 
 pub const FORBIDDEN_VOCABULARY: &[&str] = &["composition", "deps", "runtime_services"];
@@ -51,13 +52,13 @@ pub struct RetiredCrateRule {
 pub const RETIRED_CRATE_RULES: &[RetiredCrateRule] = &[
     RetiredCrateRule {
         retired: "eos-runtime",
-        successor: "eos-agent-core",
-        target: "fold request runtime into eos-agent-core/src/runtime/",
+        successor: "eos-agent-core-server",
+        target: "replace request runtime with AgentCoreService plus eos-agent-run/eos-engine lifecycle",
     },
     RetiredCrateRule {
         retired: "eos-agent-ports",
-        successor: "eos-agent-core",
-        target: "split shared contracts into eos-types and facade-private wiring into eos-agent-core",
+        successor: "eos-types",
+        target: "split shared contracts into eos-types and request orchestration into eos-agent-core-server",
     },
     RetiredCrateRule {
         retired: "eos-tool-ports",
@@ -86,23 +87,28 @@ pub const RETIRED_CRATE_RULES: &[RetiredCrateRule] = &[
     },
     RetiredCrateRule {
         retired: "eos-plugin-catalog",
-        successor: "eos-agent-core",
-        target: "fold plugin catalog into eos-agent-core/runtime/plugins.rs",
+        successor: "eos-tool",
+        target: "keep tool/plugin metadata with eos-tool or backend composition, not a facade runtime crate",
     },
     RetiredCrateRule {
         retired: "eos-agent-def",
-        successor: "eos-agent-core",
-        target: "move agent DTOs to eos-types and loader/validation to eos-agent-core/src/agents.rs",
+        successor: "eos-types",
+        target: "move passive agent DTOs to eos-types; runtime loading is composition-owned",
     },
     RetiredCrateRule {
         retired: "eos-config",
-        successor: "eos-agent-core",
-        target: "move config structs to owners, pure parser to eos-types, loader to eos-agent-core/runtime/config.rs",
+        successor: "eos-types",
+        target: "move config structs to owners and pure parser contracts to eos-types",
     },
     RetiredCrateRule {
         retired: "eos-audit",
-        successor: "eos-agent-core",
-        target: "fold audit sink into eos-agent-core/src/runtime/audit.rs",
+        successor: "eos-types",
+        target: "move passive audit/obs contracts to eos-types; backend persistence lives in eos-backend-audit",
+    },
+    RetiredCrateRule {
+        retired: "eos-agent-core",
+        successor: "eos-agent-core-server",
+        target: "replace the old request facade/runtime crate with the backend-facing AgentCoreService",
     },
 ];
 

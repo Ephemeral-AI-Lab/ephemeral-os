@@ -21,13 +21,12 @@
 
 use serde_json::{Map, Value};
 
-use eos_agent_core::ObsEnvelope;
 use eos_backend_store::{AuditCursorRepo, ObsEventRepo, SandboxCallCorrelationRepo, StoreError};
 use eos_backend_types::{AuditCursor, ObsEvent, ObsSource, SandboxCallCorrelation};
 use eos_protocol::CallerId;
 use eos_types::{InvocationId, SandboxId, UtcDateTime};
 
-use crate::{normalize_sandbox_pull_response, ObsNormalizationError};
+use crate::{normalize_sandbox_pull_response, ObsEnvelope, ObsNormalizationError};
 
 /// Payload marker stamped on a daemon row that has an invocation id but no
 /// correlation bridge. Visible in `/api/stats/events` without a re-join; the
