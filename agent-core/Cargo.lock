@@ -439,7 +439,6 @@ name = "eos-types"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "proptest",
  "schemars",
  "serde",
  "serde_json",
@@ -460,7 +459,6 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_yaml",
  "thiserror",
  "tokio",
  "tracing",

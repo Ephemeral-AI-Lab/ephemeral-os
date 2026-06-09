@@ -36,7 +36,7 @@ Source: `agent-core/docs/class-inventory/html/assets/inventory.json`
 | Metric | Current | Target |
 | --- | ---: | ---: |
 | Crates | 10 | 10 |
-| Modules | 168 | 150-170 |
+| Modules | 167 | 150-170 |
 | Items | 1546 | lower after crate, module, and compatibility collapse |
 | Methods | 933 | lower after service/resource split collapse |
 
@@ -45,7 +45,7 @@ Current high-module crates:
 | Crate | Current modules | Target direction |
 | --- | ---: | --- |
 | `eos-engine` | 32 | execution only; no tool ownership or service subfolder |
-| `eos-types` | 29 | passive contracts only; no generic config dumping |
+| `eos-types` | 28 | passive contracts only; no generic config dumping |
 | `eos-sandbox-port` | 23 | allowed port boundary; keep focused |
 | `eos-workflow` | 18 | workflow domain without unconsumed service vocabulary |
 | `eos-llm-client` | 15 | provider cohesion review |
@@ -349,7 +349,7 @@ verification command or evidence used for that phase.
 | 3B. Execution lineage/materialization | Implemented (bridge-compatible v1) | normalized `task_runs`/`parented_runs`, workflow launch lineage, request-rooted record dirs, and bounded execution-tree reader are active; verified with current checks over `eos-db`, `eos-agent-run`, `eos-workflow`, and the backend-facing service path |
 | 4. `eos-engine` and `eos-agent-run` | Implemented | records live in `eos-engine::records`, loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`, and naming is closed on `AgentLoopCompletion::terminal_outcome`, `EngineEventOutputs`, `AgentRunRecordWriter`, and `BackgroundSessionRuntimeFactory`; verified with scoped checks/tests and combined changed-crate clippy |
 | 5. Agent core server boundary | Implemented | `eos-agent-core-server` owns backend-facing request lifecycle orchestration, the legacy `eos-agent-core` crate is removed, backend agent-core resources live under `/api/agent-core/*`, request-scoped cancellation is store-owned, and backend `EventBus` owns replay-safe live milestone streaming; verified with `cargo check -p eos-agent-core-server --all-targets`, `cargo check -p eos-agent-run --all-targets`, `cargo check -p eos-types --all-targets`, `cargo check -p eos-backend-runtime --all-targets`, `cargo check -p eos-backend-audit --all-targets`, `cargo check -p eos-backend-api --all-targets`, and `cargo test -p workspace-guard` |
-| 6. Verification and budget | In progress | `eos-agent-core` is removed, `eos-agent-core-server` is retained, query fanout / unused workflow handles / backend-only audit contracts were removed from agent-core, stale backend inventory pages for retired runtime launcher/host/reaper were deleted, the default guard budget report is 168 modules, and `EOS_WORKSPACE_GUARD_FINAL_LAYOUT=1` now passes the strict 170-module total while keeping per-crate caps advisory; LOC cleanup remains open |
+| 6. Verification and budget | In progress | `eos-agent-core` is removed, `eos-agent-core-server` is retained, query fanout / unused workflow handles / backend-only audit contracts were removed from agent-core, stale backend inventory pages for retired runtime launcher/host/reaper were deleted, the default guard budget report is 167 modules, `EOS_WORKSPACE_GUARD_FINAL_LAYOUT=1` passes the strict 170-module total, and the source LOC table meets the expected cuts after moving source-local tests under crate `tests/` trees |
 
 ## Global Acceptance Criteria
 

@@ -28,7 +28,7 @@ for agent-run output surfaces:
 - durable `events.jsonl`,
 - live stream observations,
 - live stream sinks,
-- stream printing,
+- stream rendering,
 - the output fan-out object passed into the agent loop.
 
 After this refactor, `records` is the umbrella module, `stream` names live
@@ -84,8 +84,9 @@ module until there is a real reason to split it.
 ## 3. Goals
 
 - Remove the top-level `event` module from `eos-engine`.
-- Move live stream event types, stream sink, sink factory, printer, and output
-  fan-out under `records/stream.rs`.
+- Move live stream event types, stream sink, sink factory, stream rendering, and
+  output fan-out under `records/stream.rs`. Drop the unused printer type and keep
+  rendering as a `render_stream_event` helper.
 - Collapse durable record internals into `records/store.rs`.
 - Keep `records/error.rs` and a small `records/layout.rs`.
 - Remove engine-local duplicate layout classification (`AgentRunRecordKind` and
@@ -127,7 +128,7 @@ that no longer carry independent ownership.
 
 | Area | Current | Larger Merge Draft | Simplified Target |
 | --- | --- | --- | --- |
-| Live stream module | `event.rs` plus `event/{event,outputs,printer,sink}.rs` | `records/{stream,outputs,printer,sink}.rs` | `records/stream.rs` owns stream event, sink, sink factory, printer, and outputs |
+| Live stream module | `event.rs` plus `event/{event,outputs,printer,sink}.rs` | `records/{stream,outputs,printer,sink}.rs` | `records/stream.rs` owns stream event, sink, sink factory, rendering helper, and outputs |
 | Durable records | `records/{handle,io,record,writer}.rs` | `records/{messages,events,handle,store}.rs` | `records/store.rs` owns store, handle, row DTOs, append/read helpers |
 | Layout facts | engine-local `AgentRunRecordKind` can derive paths | keep `kind.rs` | remove target use of engine-local kind; consume `AgentRunRecordTarget` |
 | Path helper | `records/layout.rs` can format from kind | keep layout module | shrink to root-join and safe segment validation |
@@ -167,7 +168,7 @@ agent-core/crates/eos-engine/
 |   |   |-- error.rs       # AgentRunRecordError and Result
 |   |   |-- layout.rs      # root join + safe record_dir segment validation
 |   |   |-- store.rs       # durable JSONL store, handle, row DTOs, helpers
-|   |   `-- stream.rs      # live stream event, sink, sink factory, printer, outputs
+|   |   `-- stream.rs      # live stream event, sink, sink factory, rendering, outputs
 |   |-- provider_stream.rs
 |   |-- provider_stream/
 |   |   |-- messages.rs
@@ -206,12 +207,12 @@ Use these rules consistently in the moved code:
 | Rule | Applies To | Example |
 | --- | --- | --- |
 | `record` means durable disk state | store, handle, identity, finish status | `AgentRunRecordHandle` |
-| `stream` means live observation | live event enum, sink, printer, sink factory | `AgentRunStreamEvent` |
+| `stream` means live observation | live event enum, sink, sink factory, rendering | `AgentRunStreamEvent` |
 | `messages` means `messages.jsonl` | file path, byte reads, append range | `messages_path`, `MessageAppendRange` |
 | `events` means `events.jsonl` | file path, sequence reads, row append | `events_path`, `AgentRunRecordEvent` |
 | avoid `node` in Rust type/field names | record dirs and handles | `record_dir`, not `node_dir` |
 | preserve `node_*` wire values | durable event `kind` strings | `node_started` remains unchanged |
-| avoid bare `event_*` fields | every event-like name must say stream or record | `stream_sink`, `read_record_events` |
+| avoid bare `event_*` fields | every event-like name must say stream or record | `stream`, `record`, `read_record_events` |
 
 The final code should not introduce `Service`, `Manager`, `Port`, or
 inheritance-style trait names for this refactor.
@@ -221,17 +222,19 @@ inheritance-style trait names for this refactor.
 | Current | Target | Reason |
 | --- | --- | --- |
 | `EngineEventOutputs` | `AgentRunOutputs` | output aggregate covers stream and durable records |
-| `live_event_sink` | `stream_sink` | sink receives live stream events |
+| `live_event_sink` (field) | `stream` | aggregate field; the type `AgentRunStreamSink` carries the sink role |
+| `with_live_event_sink` | `with_stream` | builder attaches the stream sink |
 | `EngineEventSink` | `AgentRunStreamSink` | stream surface, not durable event rows |
 | `EngineEventSinkFactory` | `AgentRunStreamSinkFactory` | per-run stream sink factory must survive the merge |
-| `event_printer` | `stream_printer` | printer renders stream events |
-| `EngineEventPrinter` | `AgentRunStreamPrinter` | stream surface, not durable event rows |
+| `event_printer` (field) | (removed) | printer is unwired in production; no aggregate field |
+| `EngineEventPrinter` | (removed) | no production constructor; rendering folds into `render_stream_event` plus an optional printing sink |
 | `StreamEvent` | `AgentRunStreamEvent` | names the owner and live-stream role |
 | `AssistantMessageComplete` | `AssistantMessageComplete` | keep; payload name is already precise |
 | `event_outputs` | `run_outputs` | aggregate is per agent run |
 | `with_event_outputs` | `with_run_outputs` | constructor attaches all run outputs |
 | `with_live_event_sink_factory` | `with_stream_sink_factory` | factory returns stream sinks |
-| `run_record_writer` | `record_store` | reads and writes; `Writer` is too narrow |
+| `run_record_writer` (field) | `record` | aggregate field; the type `AgentRunRecordStore` carries the store role |
+| `with_run_record_writer` | `with_record` | builder attaches the record store |
 | `AgentRunRecordWriter` | `AgentRunRecordStore` | durable store over record dirs |
 | `AgentRunRecordHandle::node_dir` | `record_dir` | avoid node vocabulary in Rust API |
 | `NodeEvent` | `AgentRunRecordEvent` | durable `events.jsonl` row |
@@ -261,10 +264,10 @@ API stability requires an explicit alias.
 
 | Type | Fields |
 | --- | --- |
-| `AgentRunOutputs` | `stream_sink: Option<AgentRunStreamSink>`; `stream_printer: Option<AgentRunStreamPrinter>`; `record_store: Option<AgentRunRecordStore>` |
+| `AgentRunOutputs` | `stream: Option<AgentRunStreamSink>`; `record: Option<AgentRunRecordStore>` |
 | `AgentRunStreamEvent` | same variants and JSON shape as today's `StreamEvent`: `ReasoningDelta`, `AssistantTextDelta`, `AssistantMessageComplete`, `ToolUseDelta`, `ToolExecutionStarted`, `ToolExecutionCompleted`, `ToolExecutionProgress`, `ToolExecutionCancelled`, `SystemNotification` |
 | `AssistantMessageComplete` | `message: Message`; `usage: UsageSnapshot`; `stop_reason: Option<StopReason>` |
-| `AgentRunStreamPrinter` | closure/writer field equivalent to today's printer; no durable record fields |
+| `render_stream_event` | free fn `fn(&AgentRunStreamEvent) -> String`; a printing sink is just `Arc::new(move \|e\| writer(render_stream_event(e)))` |
 | `AgentRunStreamSink` | type alias: `Arc<dyn Fn(&AgentRunStreamEvent) + Send + Sync>` |
 | `AgentRunStreamSinkFactory` | type alias: `Arc<dyn Fn(&StartAgentLoopRequest) -> Option<AgentRunStreamSink> + Send + Sync>` |
 
@@ -273,14 +276,22 @@ API stability requires an explicit alias.
 ```rust
 impl AgentRunOutputs {
     pub fn new() -> Self;
-    pub fn with_stream_sink(self, sink: Option<AgentRunStreamSink>) -> Self;
-    pub fn with_stream_printer(self, printer: Option<AgentRunStreamPrinter>) -> Self;
-    pub fn with_record_store(self, store: Option<AgentRunRecordStore>) -> Self;
+    pub fn with_stream(self, sink: Option<AgentRunStreamSink>) -> Self;
+    pub fn with_record(self, store: Option<AgentRunRecordStore>) -> Self;
 
-    pub(crate) fn observe_stream(&self, event: &AgentRunStreamEvent);
+    pub(crate) fn observe(&self, event: &AgentRunStreamEvent);
     pub(crate) fn record_store(&self) -> Option<&AgentRunRecordStore>;
 }
 ```
+
+The aggregate fields are named by the §7 domain axis (`stream`, `record`), not by
+a role suffix. The field type already carries the structural role
+(`AgentRunStreamSink` is a push sink; `AgentRunRecordStore` is a read/write store),
+so `outputs.stream` / `outputs.record` read as two members of one set without
+stutter, while a forced shared suffix (`*_sink` or `*_store`) would misname one
+side. The accessor stays `record_store()` so the field `record` and the method do
+not collide. This two-field shape is only clean because the printer is collapsed;
+a surviving `stream_printer` field would make the bare `stream` field ambiguous.
 
 ### 9.3 `records/store.rs`
 
@@ -363,7 +374,7 @@ pub use store::{
     AgentRunRecordIdentity, AgentRunRecordStore, MessageAppendRange, MessageBytes,
 };
 pub use stream::{
-    stamp_identity, AgentRunOutputs, AgentRunStreamEvent, AgentRunStreamPrinter,
+    render_stream_event, stamp_identity, AgentRunOutputs, AgentRunStreamEvent,
     AgentRunStreamSink, AgentRunStreamSinkFactory, AssistantMessageComplete,
 };
 ```
@@ -375,8 +386,7 @@ pub mod records;
 
 pub use records::{
     stamp_identity, AgentRunOutputs, AgentRunRecordStore, AgentRunStreamEvent,
-    AgentRunStreamPrinter, AgentRunStreamSink, AgentRunStreamSinkFactory,
-    AssistantMessageComplete,
+    AgentRunStreamSink, AgentRunStreamSinkFactory, AssistantMessageComplete,
 };
 ```
 
@@ -401,12 +411,16 @@ Do not keep `pub mod event` in the final state.
 
 ### Step 2: Move stream outputs into `records/stream.rs`
 
-- Move live stream event, sink, sink factory, printer, and output fan-out into
+- Move live stream event, sink, sink factory, rendering, and output fan-out into
   `records/stream.rs`.
-- Rename `EngineEventOutputs` to `AgentRunOutputs`.
+- Rename `EngineEventOutputs` to `AgentRunOutputs` and name its fields `stream`
+  and `record` (the field types carry the sink/store role); builders become
+  `with_stream` / `with_record`.
 - Rename `EngineEventSink` to `AgentRunStreamSink`.
 - Rename `EngineEventSinkFactory` to `AgentRunStreamSinkFactory`.
-- Rename `EngineEventPrinter` to `AgentRunStreamPrinter`.
+- Drop the unused `EngineEventPrinter` type; keep its rendering as a
+  `render_stream_event` free fn and build a printing sink only where a caller
+  needs one.
 - Rename `StreamEvent` to `AgentRunStreamEvent`.
 - Update imports from `crate::event::*` to `crate::records::*`.
 - Remove `event.rs` and `event/`.
@@ -486,10 +500,14 @@ are consumed outside the scoped crates.
   implementation updates this spec with a concrete ownership reason.
 - `records/store.rs` owns durable JSONL store, handle, row DTOs, and append/read
   helpers for both `messages.jsonl` and `events.jsonl`.
-- `records/stream.rs` owns live stream event, sink, sink factory, printer, and
-  output fan-out.
+- `records/stream.rs` owns live stream event, sink, sink factory, rendering
+  helper, and output fan-out.
 - `AgentRunOutputs` is the only output aggregate passed through launcher and
   executor.
+- `AgentRunOutputs` exposes exactly two fields, named `stream` and `record`, with
+  builders `with_stream` / `with_record`.
+- No `AgentRunStreamPrinter` type exists in the final state; stream rendering is
+  the `render_stream_event` free fn.
 - `AgentRunStreamSinkFactory` remains available for backend runtime to bind a
   request-scoped live sink per loop.
 - Production code uses `stream_*` for live observations and `record_*` for
@@ -519,7 +537,7 @@ flowchart LR
 
   Stream --> Sink["AgentRunStreamSink"]
   Stream --> Factory["AgentRunStreamSinkFactory"]
-  Stream --> Printer["AgentRunStreamPrinter"]
+  Stream --> Render["render_stream_event"]
 
   Store --> Handle["AgentRunRecordHandle"]
   Handle --> Messages["messages.jsonl"]
@@ -533,7 +551,7 @@ The conceptual boundary is:
 
 | Surface | Module | Primary Names |
 | --- | --- | --- |
-| live model/tool/system observations | `records/stream.rs` | `AgentRunStreamEvent`, `AgentRunStreamSink`, `AgentRunStreamSinkFactory`, `AgentRunStreamPrinter` |
+| live model/tool/system observations | `records/stream.rs` | `AgentRunStreamEvent`, `AgentRunStreamSink`, `AgentRunStreamSinkFactory`, `render_stream_event` |
 | output fan-out for one run | `records/stream.rs` | `AgentRunOutputs` |
 | durable message rows | `records/store.rs` | `MessageAppendRange`, `MessageBytes` |
 | durable event rows | `records/store.rs` | `AgentRunRecordEvent` |

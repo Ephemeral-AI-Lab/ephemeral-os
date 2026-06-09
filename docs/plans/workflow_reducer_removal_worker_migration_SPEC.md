@@ -64,7 +64,7 @@ The workflow model becomes:
 Workflow
   -> Iteration[]
       -> Attempt[]
-          -> planner task   (TaskOutcome::Plan)
+          -> planner task   (TaskOutcome::Planner)
           -> worker task[]  (TaskOutcome::Worker)
 ```
 
@@ -100,7 +100,7 @@ their own task/parented rows; they are not aggregated into workflow outcome DTOs
 | Outcome model | One `TaskOutcome` enum (`task outcome === agent outcome === terminal tool outcome`), stored as `Task.terminal_payload`. Delete `PlanOutcome`, `WorkItemOutcome`, `AttemptOutcome`, `ExecutionTaskOutcome`, and `Task.outcomes`. |
 | Success/failure | Use `TaskStatus`, `AttemptStatus`, `IterationStatus`, `WorkflowStatus`. Do not add `status: bool`, `is_success`, or any status field to `TaskOutcome` or to aggregation projections. |
 | Outcome text | One `outcome: String` field on the execution variants (`Root`, `Worker`, `Advisor`, `Subagent`). The `Plan` variant has no free-text `outcome`; its body is `plan_spec` + `work_items`. |
-| Plan storage | The authored plan lives only in the planner task's `TaskOutcome::Plan` (single source of truth). It is materialized into worker task rows; the attempt row stores no plan copy and no task-id lists. |
+| Plan storage | The authored plan lives only in the planner task's `TaskOutcome::Planner` (single source of truth). It is materialized into worker task rows; the attempt row stores no plan copy and no task-id lists. |
 | Context data | No public context projection DTOs. Filtering is local to `eos-workflow` context render functions. |
 | Record paths | Planner records stay **task-owned** (planner has a task row). Worker records are task-owned. `format_record_dir` / `finish_task_run` are unchanged. |
 
@@ -142,8 +142,8 @@ Naming rules:
 | Workflow files | Name files after the runtime ownership they contain: `attempt_run`, `planner_run`, `work_items`, `work_items_run`, `workflow_run`, `iteration_run`. |
 | Work item execution | Use `work_items_run` for worker wave execution and settlement. Do not use `work_dag`, `plan_dag`, `node`, `stage`, or `orchestrator` names for this owner. |
 | Plan shape | Use `WorkItemSpec` for planner-authored work items. Do not introduce `PlanWorkItem`. |
-| Outcome type | One `TaskOutcome` enum, one variant per terminal tool. Persisted as the task's `terminal_payload`. Do not reintroduce per-role outcome DTOs. |
-| Terminal text | Use one `outcome` field for natural-language terminal payloads. Do not split it into `answer`, `summary`, `user_result`, `work_result`, or `review_summary`. |
+| Outcome type | Two per-family enums: `TaskOutcome {Root, Planner, Worker}` (1:1 with `TaskRole`) and `ParentedOutcome {Advisor, Subagent}` (1:1 with `ParentedAgentRunKind`). Persisted as the run's `terminal_payload`. Do not reintroduce per-role outcome DTOs or merge the two families. |
+| Terminal text | The single natural-language field is `outcome`, everywhere. **Rename** every `summary` / `failure_summary` / `review_summary` / `answer` / `user_result` / `work_result` to `outcome`; do not split or alias it. Synthesized-failure text is written to the relevant variant's `outcome` (e.g. `TaskOutcome::Worker.outcome`), not a separate `summary`. |
 | Success/failure | Use lifecycle enums. `TaskOutcome` carries no status. Model-facing inputs carry `SubmissionStatus` (maps onto `TaskStatus`). |
 | Dependencies | Use `needs` for direct work item dependencies. Do not add `direct_needs` or `direct_need_outcomes`. |
 | Worker assignment | Use `agent_name: AgentName` on `WorkItemSpec`. Do not use `agent_profile_name` or `assigned_work_item`. |
@@ -169,7 +169,7 @@ agent-core/crates/eos-types/src/
       iteration.rs               # Iteration lifecycle DTOs
       attempt.rs                 # Attempt lifecycle DTOs (no MaterializedPlan)
       work_item.rs               # WorkItemId, WorkItemSpec, worker_task_id, planner_task_id
-      outcome.rs                 # TaskOutcome enum (Root, Worker, Plan, Advisor, Subagent)
+      outcome.rs                 # TaskOutcome {Root, Planner, Worker} + ParentedOutcome {Advisor, Subagent}
 
 agent-core/crates/eos-workflow/src/
   attempt/
@@ -213,7 +213,7 @@ agent-core/crates/eos-db/         # column narrowing; edit 0001_initial.sql in p
                                   #   (contingent on no deployed DB needing migration)
   # attempts: KEEP planner_task_id; DROP generator_task_ids, reducer_task_ids,
   #           the attempt `outcomes` cache, and the attempt `deferred_goal` cache.
-  #           Plan lives in the planner task's TaskOutcome::Plan; iteration deferral
+  #           Plan lives in the planner task's TaskOutcome::Planner; iteration deferral
   #           lives in Iteration.deferred_goal_for_next_iteration.
   # task_runs CHECK: role IN ('planner','worker')
   # rows.rs: drop MaterializedPlan reconstruction + 'generator'/'reducer' parsing;
@@ -287,17 +287,18 @@ Delete or rewrite code concepts:
 | `ExecutionRole` | delete |
 | `ExecutionTaskOutcome` | delete (use `TaskOutcome` + `TaskStatus`) |
 | `Task.outcomes: Vec<ExecutionTaskOutcome>` | delete (use `Task.terminal_payload: TaskOutcome`) |
-| `MaterializedPlan` | delete (plan lives in `TaskOutcome::Plan`; workers materialized as task rows) |
+| `MaterializedPlan` | delete (plan lives in `TaskOutcome::Planner`; workers materialized as task rows) |
 | `PlanDisposition` | delete (use `Option<DeferredGoal>`) |
 | `PlanTask` | `WorkItemSpec` |
 | `PlanReducer` | delete |
 | `GeneratorId` | `WorkItemId` |
 | `ReducerId` | delete |
 | `PlannerId` | delete (derive `planner_task_id(attempt_id)`) |
-| `PlannerPlan.{planner_task_id, disposition, tasks, task_specs, reducers}` | `TaskOutcome::Plan { plan_spec, work_items, deferred_goal_for_next_iteration }` |
+| `PlannerPlan.{planner_task_id, disposition, tasks, task_specs, reducers}` | `TaskOutcome::Planner { plan_spec, work_items, deferred_goal_for_next_iteration }` |
 | `GeneratorSubmission` / `ReducerSubmission` | `WorkerOutcomeSubmission` |
 | `PlannerSubmission` / `PlannerFailureSubmission` / `PlannerFailReason` | `PlanOutcomeSubmission`; planner failure is an attempt lifecycle transition |
 | `PlanOutcome` / `WorkItemOutcome` / `AttemptOutcome` DTOs | `TaskOutcome` variants + read-side projection |
+| `summary` / `failure_summary` / `review_summary` text fields (e.g. `AgentRunReport.failure_summary`) | `outcome` — one natural-language field name everywhere |
 
 ## 5. IDs
 
@@ -337,31 +338,39 @@ pub struct WorkItemSpec {
     pub needs: Vec<WorkItemId>,
 }
 
-/// task outcome === agent outcome === terminal tool outcome.
-/// Stored verbatim as Task.terminal_payload / ParentedRun.terminal_payload.
-/// Pass/fail is NOT here — it is the owning TaskStatus. One variant per terminal.
+/// WORKFLOW-TASK family outcome (AgentType::Agent). Aligned 1:1 with TaskRole.
+/// Stored verbatim as Task.terminal_payload. Pass/fail is NOT here — it is the
+/// owning TaskStatus.
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TaskOutcome {
-    /// Root request result (user-facing).
+    /// Root request result (user-facing).            (TaskRole::Root)
     Root { outcome: String },
-    /// One worker's deliverable or blocker.
-    Worker { outcome: String },
     /// The planner's authored plan (single source of truth for the attempt plan).
-    Plan {
+    ///                                               (TaskRole::Planner)
+    Planner {
         plan_spec: String,
         work_items: Vec<WorkItemSpec>,
         /// Concrete current-iteration goal items carried to the next iteration.
         deferred_goal_for_next_iteration: Option<DeferredGoal>,
     },
-    /// Advisor review verdict + rationale.
+    /// One worker's deliverable or blocker.          (TaskRole::Worker)
+    Worker { outcome: String },
+}
+
+/// PARENTED family outcome (AgentType::{Subagent, Advisor}). Aligned 1:1 with
+/// ParentedAgentRunKind. Stored verbatim as ParentedRun.terminal_payload.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ParentedOutcome {
+    /// Advisor review verdict + rationale.           (ParentedAgentRunKind::Advisor)
     Advisor { verdict: AdvisorVerdict, outcome: String },
-    /// Subagent findings.
+    /// Subagent findings.                            (ParentedAgentRunKind::Subagent)
     Subagent { outcome: String },
 }
 
 /// Attempt lifecycle state. The plan is NOT copied here — it lives in the planner
-/// task's TaskOutcome::Plan. No MaterializedPlan.
+/// task's TaskOutcome::Planner. No MaterializedPlan.
 pub enum AttemptState {
     /// Planner task assigned; the None -> Some transition guards double-start.
     Planning { planner_task_id: Option<TaskId> },
@@ -377,7 +386,7 @@ Attempt/iteration/workflow outcomes are **read-side projections**, not stored DT
 ```rust
 // derived on read; pass/fail from TaskStatus, never from a stored boolean
 fn attempt_outcome(attempt, tasks) -> {
-    plan:    planner_task.terminal_payload,                 // TaskOutcome::Plan
+    plan:    planner_task.terminal_payload,                 // TaskOutcome::Planner
     workers: worker_tasks.map(|t| (t.status, t.terminal_payload)),  // status + TaskOutcome::Worker
 }
 ```
@@ -432,9 +441,9 @@ pub struct PlanOutcomeSubmission {
 
 Rules:
 
-- A model-submitted plan records `TaskOutcome::Plan` on the planner task and sets
+- A model-submitted plan records `TaskOutcome::Planner` on the planner task and sets
   the planner task `TaskStatus::Done`.
-- A planner that fails to return creates no `TaskOutcome::Plan`; the runtime marks
+- A planner that fails to return creates no `TaskOutcome::Planner`; the runtime marks
   the planner task `Failed` (synthesized) and the attempt closes failed.
 - `SubmitPlanOutcomeInput` has no `status` (a returned plan is success by
   construction) and the model never sends a planner task id.
@@ -500,8 +509,9 @@ Model JSON:
 pub struct SubmitAdvisorOutcomeInput { pub verdict: AdvisorVerdict, pub outcome: String }
 ```
 
-Records `TaskOutcome::Advisor { verdict, outcome }`. Renames `submit_advisor_feedback`.
-`verdict` is the advisor's review result, not a lifecycle status.
+Records `ParentedOutcome::Advisor { verdict, outcome }` (parented family). Renames
+`submit_advisor_feedback`. `verdict` is the advisor's review result, not a lifecycle
+status.
 
 ### `submit_subagent_outcome`
 
@@ -509,8 +519,8 @@ Records `TaskOutcome::Advisor { verdict, outcome }`. Renames `submit_advisor_fee
 pub struct SubmitSubagentOutcomeInput { pub outcome: String }
 ```
 
-Records `TaskOutcome::Subagent { outcome }`. Renames `submit_subagent_result`. Do
-not keep a half-typed `findings`/`references` shape.
+Records `ParentedOutcome::Subagent { outcome }` (parented family). Renames
+`submit_subagent_result`. Do not keep a half-typed `findings`/`references` shape.
 
 ## 8. Workflow Submission API
 
@@ -587,7 +597,7 @@ reducer row.
 
 Attempt:
 
-- The planner records `TaskOutcome::Plan` on its task and is marked `Done`; a
+- The planner records `TaskOutcome::Planner` on its task and is marked `Done`; a
   planner that never submits is marked `Failed` and the attempt closes failed.
 - Worker tasks are materialized from `work_items` (instruction = `work_spec`, needs
   = `needs` mapped through `worker_task_id`). Each launched worker that returns
@@ -668,7 +678,7 @@ iteration goal items intentionally carried into the next iteration.
 
 Worker context includes:
 
-- `<plan_spec>`: the planner's plan-level explanation (from `TaskOutcome::Plan`).
+- `<plan_spec>`: the planner's plan-level explanation (from `TaskOutcome::Planner`).
 - `<work_item>`: this worker's `work_item_id`, `task_id`, and `work_spec`.
 - `<needs>`: direct dependency outcomes only — each need's worker task
   `TaskOutcome::Worker.outcome`, resolved by mapping the `WorkItemId` edge through
@@ -818,17 +828,19 @@ scheduled for deletion.
   member and the model never sends a planner task id.
 - No model-facing tool named `submit_generator_outcome`, `submit_reducer_outcome`,
   or `submit_planner_outcome` is registered.
-- One `TaskOutcome` enum (Root/Worker/Plan/Advisor/Subagent) is the only terminal
-  outcome type; `PlanOutcome`, `WorkItemOutcome`, `AttemptOutcome`,
+- Two per-family outcome enums: `TaskOutcome {Root, Planner, Worker}` (1:1 with
+  `TaskRole`) and `ParentedOutcome {Advisor, Subagent}` (1:1 with
+  `ParentedAgentRunKind`); `PlanOutcome`, `WorkItemOutcome`, `AttemptOutcome`,
   `ExecutionTaskOutcome`, and `Task.outcomes` do not exist.
-- `TaskOutcome` carries no `status`/`is_success`; attempt/iteration/workflow
-  pass-fail derives from lifecycle enums only.
+- Neither outcome enum carries `status`/`is_success`/`summary`; attempt/iteration/
+  workflow pass-fail derives from lifecycle enums only, and the natural-language
+  field is named `outcome` everywhere.
 - `submit_worker_outcome` records `TaskOutcome::Worker` and updates the worker task
-  status; `submit_plan_outcome` records `TaskOutcome::Plan` on the planner task.
+  status; `submit_plan_outcome` records `TaskOutcome::Planner` on the planner task.
 - Worker task ids derive from `(AttemptId, WorkItemId)`; planner task id derives
   from `AttemptId`; no worker-task id list is persisted.
 - `MaterializedPlan` and `PlanDisposition` do not exist; the attempt plan lives in
-  the planner task's `TaskOutcome::Plan`.
+  the planner task's `TaskOutcome::Planner`.
 - Worker context contains `plan_spec`, the current work item, and direct needs
   outcomes; planner context contains the current iteration scope and exactly one
   compact prior-evidence group.
