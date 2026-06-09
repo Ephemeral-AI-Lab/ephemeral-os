@@ -236,7 +236,7 @@
                 workspace_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&amp;binding.workspace_root),
                 caller_id: <span class="rs-type">CallerId</span>(spec.caller_id.clone()),
                 invocation_id: <span class="rs-type">InvocationId</span>(spec.invocation_id.clone()),
-                snapshot: <span class="rs-type">EphemeralSnapshot</span> {
+                snapshot: <span class="rs-type">SnapshotLease</span> {
                     lease_id: lease.lease_id.clone(),
                     manifest_version: lease.manifest_version,
                     manifest_root_hash: lease.root_hash.clone(),
@@ -561,8 +561,8 @@
 <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
 <span class="rs-kw">use</span> eos_runner::{<span class="rs-type">RunMode</span>, <span class="rs-type">RunRequest</span>, <span class="rs-type">RunResult</span>, <span class="rs-type">ToolCall</span>, <span class="rs-type">WorkspaceRoot</span>};
 <span class="rs-kw">use</span> eos_workspace_runtime::ephemeral::{
-    finalize_publishable_workspace, <span class="rs-type">CallerId</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralSnapshot</span>,
-    <span class="rs-type">EphemeralWorkspace</span>, <span class="rs-type">FinalizeRequest</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">WorkspaceRoot</span> <span class="rs-kw">as</span> <span class="rs-type">EphemeralWorkspaceRoot</span>,
+    finalize_publishable_workspace, <span class="rs-type">CallerId</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralWorkspace</span>,
+    <span class="rs-type">FinalizeRequest</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">SnapshotLease</span>, <span class="rs-type">WorkspaceRoot</span> <span class="rs-kw">as</span> <span class="rs-type">EphemeralWorkspaceRoot</span>,
 };
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
@@ -722,7 +722,7 @@
                 workspace_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&amp;binding.workspace_root),
                 caller_id: <span class="rs-type">CallerId</span>(spec.caller_id.clone()),
                 invocation_id: <span class="rs-type">InvocationId</span>(spec.invocation_id.clone()),
-                snapshot: <span class="rs-type">EphemeralSnapshot</span> {
+                snapshot: <span class="rs-type">SnapshotLease</span> {
                     lease_id: lease.lease_id.clone(),
                     manifest_version: lease.manifest_version,
                     manifest_root_hash: lease.root_hash.clone(),

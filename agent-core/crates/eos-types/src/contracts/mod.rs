@@ -18,10 +18,10 @@ pub use cancellation::{AgentCoreCancellationApi, CancelError};
 pub use record::{
     format_record_dir, AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget,
     CreatedTaskAgentRun, ParentedAgentRunKind, TaskAgentRunKind, TaskExecutionIndex,
-    WorkflowCoordinates, WorkflowTaskRole,
+    WorkflowCoordinates, WorkflowNodeId, WorkflowTaskRole,
 };
 pub use workflow::{
-    OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, StartWorkflowRequest, StartedWorkflow,
-    SubmissionAck, TerminalWorkflow, WorkflowApi, WorkflowApiError, WorkflowAttemptSubmissionApi,
-    WorkflowTerminalStatus,
+    OpenDelegatedWorkflow, PlanReducer, PlanTask, PlannerPlan, StartWorkflowRequest,
+    StartedWorkflow, SubmissionAck, TerminalWorkflow, WorkflowApi, WorkflowApiError,
+    WorkflowAttemptSubmissionApi, WorkflowTerminalStatus,
 };

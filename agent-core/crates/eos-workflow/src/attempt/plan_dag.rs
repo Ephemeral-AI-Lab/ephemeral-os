@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use eos_types::{
-    AgentName, AgentRegistry, AgentType, PlanNodeId, PlannerPlan, Task, TaskId, TaskStatus,
+    AgentName, AgentRegistry, AgentType, GeneratorId, PlannerPlan, Task, TaskId, TaskStatus,
 };
 
 use crate::{Result, WorkflowError};
@@ -156,81 +156,64 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
             "plan must contain at least one reducer",
         ));
     }
-    // D1: reject a duplicate id across the union of generators and reducers
-    // (mirror `plan_dag.py` union-dedup). The tool layer only checks
-    // generator-vs-generator duplicates, so a reducer<->reducer (or
-    // generator<->reducer) collision would otherwise push duplicate task
-    // rows into `reducer_task_ids`/`generator_task_ids`.
-    let mut seen_ids: BTreeSet<&PlanNodeId> = BTreeSet::new();
-    for id in plan
-        .tasks
-        .iter()
-        .map(|task| &task.id)
-        .chain(plan.reducers.iter().map(|reducer| &reducer.id))
-    {
-        if !seen_ids.insert(id) {
+    let mut generator_ids = BTreeSet::new();
+    for task in &plan.tasks {
+        if !generator_ids.insert(&task.generator_id) {
             return Err(WorkflowError::invariant(format!(
-                "plan contains duplicate task id {id:?}"
+                "plan contains duplicate generator id {:?}",
+                task.generator_id
             )));
         }
     }
-    let generator_ids: BTreeSet<&PlanNodeId> = plan.tasks.iter().map(|task| &task.id).collect();
-    let reducer_ids: BTreeSet<&PlanNodeId> = plan.reducers.iter().map(|task| &task.id).collect();
-    let all_ids: BTreeSet<&PlanNodeId> = generator_ids.union(&reducer_ids).copied().collect();
-    for task in &plan.tasks {
-        let reducer_needs: Vec<&str> = task
-            .needs
-            .iter()
-            .filter(|need| reducer_ids.contains(*need))
-            .map(PlanNodeId::as_str)
-            .collect();
-        if !reducer_needs.is_empty() {
+
+    let mut reducer_ids = BTreeSet::new();
+    for reducer in &plan.reducers {
+        if !reducer_ids.insert(&reducer.reducer_id) {
             return Err(WorkflowError::invariant(format!(
-                "generator task {:?} cannot need reducer task(s): {reducer_needs:?}",
-                task.id
+                "plan contains duplicate reducer id {:?}",
+                reducer.reducer_id
             )));
         }
+    }
+
+    for task in &plan.tasks {
         for need in &task.needs {
-            if !all_ids.contains(need) {
+            if !generator_ids.contains(need) {
                 return Err(WorkflowError::invariant(format!(
-                    "plan task {:?} has unknown needs: {:?}",
-                    task.id, need
+                    "generator task {:?} has unknown generator needs: {:?}",
+                    task.generator_id, need
                 )));
             }
         }
     }
-    let mut downstream_by_generator: BTreeMap<&PlanNodeId, Vec<&str>> =
+    let mut downstream_by_generator: BTreeMap<&GeneratorId, Vec<&str>> =
         generator_ids.iter().map(|id| (*id, Vec::new())).collect();
     for task in &plan.tasks {
         for need in &task.needs {
-            if let Some(downstream) = downstream_by_generator.get_mut(need) {
-                downstream.push(task.id.as_str());
-            }
+            downstream_by_generator
+                .get_mut(need)
+                .expect("generator needs were validated above")
+                .push(task.generator_id.as_str());
         }
     }
     for reducer in &plan.reducers {
         if reducer.needs.is_empty() {
             return Err(WorkflowError::invariant(format!(
                 "reducer task {:?} must need at least one generator",
-                reducer.id
+                reducer.reducer_id
             )));
         }
         for need in &reducer.needs {
-            if reducer_ids.contains(need) {
+            if !generator_ids.contains(need) {
                 return Err(WorkflowError::invariant(format!(
-                    "reducer task {:?} cannot need reducer task(s)",
-                    reducer.id
+                    "reducer task {:?} has unknown generator needs: {:?}",
+                    reducer.reducer_id, need
                 )));
             }
-            if !all_ids.contains(need) {
-                return Err(WorkflowError::invariant(format!(
-                    "plan task {:?} has unknown needs: {:?}",
-                    reducer.id, need
-                )));
-            }
-            if let Some(downstream) = downstream_by_generator.get_mut(need) {
-                downstream.push(reducer.id.as_str());
-            }
+            downstream_by_generator
+                .get_mut(need)
+                .expect("reducer needs were validated above")
+                .push(reducer.reducer_id.as_str());
         }
     }
     let dangling: Vec<&str> = downstream_by_generator
@@ -263,11 +246,14 @@ pub(crate) fn validate_plan_agents(plan: &PlannerPlan, registry: &AgentRegistry)
         if agent_def.agent_type != AgentType::Agent {
             return Err(WorkflowError::invariant(format!(
                 "generator task {:?} is bound to agent {:?} with type {:?}, expected agent",
-                task.id, task.agent_name, agent_def.agent_type
+                task.generator_id, task.agent_name, agent_def.agent_type
             )));
         }
-        if !plan.task_specs.contains_key(&task.id) {
-            return Err(WorkflowError::not_found("task spec", task.id.as_str()));
+        if !plan.task_specs.contains_key(&task.generator_id) {
+            return Err(WorkflowError::not_found(
+                "task spec",
+                task.generator_id.as_str(),
+            ));
         }
     }
     let reducer_name = AgentName::new("reducer")?;
@@ -287,14 +273,8 @@ fn assert_acyclic(plan: &PlannerPlan) -> Result<()> {
     let mut by_needs: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for task in &plan.tasks {
         by_needs.insert(
-            task.id.as_str(),
-            task.needs.iter().map(PlanNodeId::as_str).collect(),
-        );
-    }
-    for reducer in &plan.reducers {
-        by_needs.insert(
-            reducer.id.as_str(),
-            reducer.needs.iter().map(PlanNodeId::as_str).collect(),
+            task.generator_id.as_str(),
+            task.needs.iter().map(GeneratorId::as_str).collect(),
         );
     }
     let mut remaining = by_needs
@@ -362,7 +342,7 @@ mod tests {
             agent_name: Some("coder".to_owned()),
             needs: needs.iter().map(|n| tid(n)).collect(),
             outcomes: Vec::new(),
-            terminal_tool_result: None,
+            terminal_payload: None,
         }
     }
 
@@ -416,22 +396,26 @@ mod tests {
     // one rejection and pairs it with the accepted baseline, so the test fails if
     // a guard is dropped (malformed -> Ok) or the baseline breaks (valid -> Err).
 
-    fn pnode(id: &str) -> PlanNodeId {
-        PlanNodeId::new(id).expect("plan node id")
+    fn gen_id(id: &str) -> eos_types::GeneratorId {
+        eos_types::GeneratorId::new(id).expect("generator id")
+    }
+
+    fn red_id(id: &str) -> eos_types::ReducerId {
+        eos_types::ReducerId::new(id).expect("reducer id")
     }
 
     fn gen(id: &str, needs: &[&str]) -> eos_types::PlanTask {
         eos_types::PlanTask {
-            id: pnode(id),
+            generator_id: gen_id(id),
             agent_name: "coder".to_owned(),
-            needs: needs.iter().map(|n| pnode(n)).collect(),
+            needs: needs.iter().map(|n| gen_id(n)).collect(),
         }
     }
 
     fn red(id: &str, needs: &[&str]) -> eos_types::PlanReducer {
         eos_types::PlanReducer {
-            id: pnode(id),
-            needs: needs.iter().map(|n| pnode(n)).collect(),
+            reducer_id: red_id(id),
+            needs: needs.iter().map(|n| gen_id(n)).collect(),
             prompt: "reduce".to_owned(),
         }
     }
@@ -442,7 +426,7 @@ mod tests {
     ) -> PlannerPlan {
         let task_specs = tasks
             .iter()
-            .map(|task| (task.id.clone(), "spec".to_owned()))
+            .map(|task| (task.generator_id.clone(), "spec".to_owned()))
             .collect();
         PlannerPlan {
             attempt_id: eos_types::AttemptId::new_v4(),
@@ -462,13 +446,13 @@ mod tests {
 
         // No reducer.
         assert!(validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![])).is_err());
-        // Duplicate id across the generator/reducer union.
+        // Duplicate generator id.
         assert!(validate_plan_shape(&shape_plan(
             vec![gen("g1", &[]), gen("g1", &[])],
             vec![red("r1", &["g1"])],
         ))
         .is_err());
-        // A generator may not depend on a reducer.
+        // A generator need must name a known generator id.
         assert!(validate_plan_shape(&shape_plan(
             vec![gen("g1", &["r1"])],
             vec![red("r1", &["g1"])],
@@ -484,7 +468,7 @@ mod tests {
         assert!(
             validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![red("r1", &[])])).is_err()
         );
-        // A reducer that depends on another reducer.
+        // A reducer need must name a known generator id.
         assert!(validate_plan_shape(&shape_plan(
             vec![gen("g1", &[])],
             vec![red("r1", &["g1"]), red("r2", &["r1"])],

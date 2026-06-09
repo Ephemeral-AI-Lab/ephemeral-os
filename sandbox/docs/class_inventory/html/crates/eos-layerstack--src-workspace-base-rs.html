@@ -194,7 +194,7 @@
 
     <span class="rs-kw">let</span> write_layer_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> layer_ref = <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#item-fn-write-base-layer-291">write_base_layer</a>(stack, &amp;entries)?;
-    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(stack, &amp;layer_ref.layer_id, &amp;root_hash)?;
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(stack, &amp;layer_ref.layer_id, &amp;root_hash)?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;workspace_base.write_layer_s&quot;,
@@ -586,11 +586,11 @@
     <h3>write_layer_digest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a> (stack : &amp; Path , layer_id : &amp; str , digest : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a> (stack : &amp; Path , layer_id : &amp; str , digest : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(stack: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(stack: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(
         stack
             .join(<span class="rs-type">LAYER_METADATA_DIR</span>)
@@ -982,7 +982,7 @@
 
     <span class="rs-kw">let</span> write_layer_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> layer_ref = <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#item-fn-write-base-layer-291">write_base_layer</a>(stack, &amp;entries)?;
-    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(stack, &amp;layer_ref.layer_id, &amp;root_hash)?;
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(stack, &amp;layer_ref.layer_id, &amp;root_hash)?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;workspace_base.write_layer_s&quot;,
@@ -1261,7 +1261,7 @@
     )
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(stack: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(stack: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(
         stack
             .join(<span class="rs-type">LAYER_METADATA_DIR</span>)

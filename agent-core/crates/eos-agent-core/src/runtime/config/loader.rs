@@ -24,15 +24,6 @@ pub fn load() -> Result<ConfigDocument, ConfigError> {
     load_layers(&[baseline_path(), local_override_path()])
 }
 
-/// Load the baseline merged with an explicit override file (the test/local seam).
-///
-/// # Errors
-/// See [`load`].
-#[allow(dead_code)]
-pub fn load_with_override(override_path: impl AsRef<Path>) -> Result<ConfigDocument, ConfigError> {
-    load_layers(&[baseline_path(), override_path.as_ref().to_path_buf()])
-}
-
 /// The committed baseline path `agent-core/config/prd.yml`.
 fn baseline_path() -> PathBuf {
     config_dir().join("prd.yml")

@@ -77,12 +77,14 @@ mod delegate_workflow {
             let service = self.workflow_service.as_ref();
             let sessions = &self.workflow_sessions;
 
-            let outstanding = service.find_outstanding_workflows(agent_run_id).await?;
-            if let Some(existing) = outstanding.first() {
+            let open_workflows = service
+                .list_open_delegated_workflows_for_agent_run(agent_run_id)
+                .await?;
+            if let Some(existing) = open_workflows.first() {
                 let payload = json!({
                     "workflow_id": existing.workflow_id.as_str(),
                     "status": "running",
-                    "message": "A delegated workflow is already outstanding for this task. \
+                    "message": "A delegated workflow is already open for this agent run. \
                         Use check_workflow_status or cancel_workflow before starting another.",
                 });
                 return Ok(ToolResult::error(payload.to_string()));

@@ -7,7 +7,7 @@ use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_tool::{ToolKey, ToolRegistry, ToolResult};
 use eos_types::{AgentRunApi, AgentRunId};
 
-use crate::background::{BackgroundManagers, BackgroundSessionTeardown};
+use crate::background::{BackgroundSessionRuntime, BackgroundSessionTeardown};
 use crate::notifications::{
     enqueue_notification_rules, make_default_notification_rules, EngineNotificationQueue,
     NotificationRule, NotificationRuleContext, SystemNotification,
@@ -48,7 +48,7 @@ pub(crate) struct AgentLoopState {
     /// Fire-once notification names already emitted.
     notification_fired: BTreeSet<String>,
     /// Run-local background managers whose completions feed the notifier.
-    background: Option<BackgroundManagers>,
+    background: Option<BackgroundSessionRuntime>,
     /// Run-local background teardown service.
     background_teardown: Option<BackgroundSessionTeardown>,
 }
@@ -122,7 +122,7 @@ impl AgentLoopState {
     pub(crate) fn terminal_tool_submitted(self, outcome: &ToolResult) -> AgentLoopOutcome {
         AgentLoopOutcome {
             kind: AgentLoopOutcomeKind::TerminalToolSubmitted {
-                submission_payload: tool_result_payload(&outcome),
+                submission_payload: tool_result_payload(outcome),
             },
             final_conversation_messages: self.conversation_messages,
             total_token_count: self.total_token_count,
@@ -192,7 +192,7 @@ impl AgentLoopState {
         }
     }
 
-    pub(crate) fn background(&self) -> Option<&BackgroundManagers> {
+    pub(crate) fn background(&self) -> Option<&BackgroundSessionRuntime> {
         self.background.as_ref()
     }
 
@@ -215,7 +215,7 @@ impl AgentLoopState {
 #[derive(Clone, Debug)]
 pub(crate) struct AgentLoopRunServices {
     notifier: EngineNotificationQueue,
-    background: Option<BackgroundManagers>,
+    background: Option<BackgroundSessionRuntime>,
     background_teardown: Option<BackgroundSessionTeardown>,
 }
 
@@ -229,7 +229,7 @@ impl AgentLoopRunServices {
     }
 
     pub(crate) fn from_background(
-        background: &BackgroundManagers,
+        background: &BackgroundSessionRuntime,
         notifier: EngineNotificationQueue,
     ) -> Self {
         Self {

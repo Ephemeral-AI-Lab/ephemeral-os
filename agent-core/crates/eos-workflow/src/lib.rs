@@ -31,7 +31,7 @@ mod support;
 
 pub use attempt::{
     AgentLaunch, AgentRunReport, AgentRunner, AttemptOrchestratorRegistry, AttemptResources,
-    ExecutionLaunch, PlannerLaunch,
+    GeneratorLaunch, PlannerLaunch, ReducerLaunch,
 };
 pub use config::{AttemptConfig, WorkflowConfig, DEFAULT_WORKFLOW_MAX_DEPTH};
 pub use context::{

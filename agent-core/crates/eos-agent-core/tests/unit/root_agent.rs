@@ -42,7 +42,7 @@ async fn state_reader_exposes_live_request_task_and_run_stores() {
         agent_name: Some("root".to_owned()),
         needs: Vec::new(),
         outcomes: Vec::new(),
-        terminal_tool_result: None,
+        terminal_payload: None,
     };
     reader.tasks().insert_task(&task).await.unwrap();
     let run_id: AgentRunId = "run-reader".parse().unwrap();
@@ -333,7 +333,7 @@ async fn run_request_mints_root_task_no_workflow() {
     // The returned outcome is the single read-back of the persisted root task
     // (step 7 contract): it mirrors the store regardless of success/failure.
     assert_eq!(outcome.status, task.status);
-    assert_eq!(outcome.terminal, task.terminal_tool_result);
+    assert_eq!(outcome.terminal, task.terminal_payload);
 
     let request = state
         .db
@@ -402,7 +402,7 @@ async fn successful_root_keeps_engine_terminal() {
         .unwrap()
         .unwrap();
     assert_eq!(task.status, TaskStatus::Done);
-    let terminal = task.terminal_tool_result.expect("terminal tool result");
+    let terminal = task.terminal_payload.expect("terminal payload");
     assert_eq!(
         terminal.get("outcome").and_then(|v| v.as_str()),
         Some("all done")
@@ -563,7 +563,7 @@ async fn root_terminal_blocked_without_advisor_approval() {
         TaskStatus::Failed,
         "the advisor gate must block the root terminal under the denying stub"
     );
-    let terminal = task.terminal_tool_result.expect("terminal tool result");
+    let terminal = task.terminal_payload.expect("terminal payload");
     assert_eq!(
         terminal.get("fail_reason").and_then(|v| v.as_str()),
         Some("root_run_exhausted")
@@ -601,7 +601,7 @@ async fn unfinished_root_sets_run_exhausted() {
         .unwrap()
         .unwrap();
     assert_eq!(task.status, TaskStatus::Failed);
-    let terminal = task.terminal_tool_result.expect("terminal tool result");
+    let terminal = task.terminal_payload.expect("terminal payload");
     assert_eq!(
         terminal.get("fail_reason").and_then(|v| v.as_str()),
         Some("root_run_exhausted")

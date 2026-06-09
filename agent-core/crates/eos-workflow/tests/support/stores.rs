@@ -468,7 +468,7 @@ impl eos_types::TaskStore for MemoryStores {
         expected: TaskStatus,
         status: TaskStatus,
         outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
+        terminal_payload: Option<&JsonObject>,
     ) -> std::result::Result<Option<Task>, CoreError> {
         self.task_writes.fetch_add(1, Ordering::Relaxed);
         let mut guard = self.tasks.lock();
@@ -478,7 +478,7 @@ impl eos_types::TaskStore for MemoryStores {
         if task.status != expected {
             return Ok(None);
         }
-        update_task(task, status, outcomes, terminal_tool_result);
+        update_task(task, status, outcomes, terminal_payload);
         Ok(Some(task.clone()))
     }
 
@@ -523,14 +523,14 @@ fn update_task(
     task: &mut Task,
     status: TaskStatus,
     outcomes: Option<&[ExecutionTaskOutcome]>,
-    terminal_tool_result: Option<&JsonObject>,
+    terminal_payload: Option<&JsonObject>,
 ) {
     task.status = status;
     if let Some(outcomes) = outcomes {
         task.outcomes = outcomes.to_vec();
     }
-    if let Some(result) = terminal_tool_result {
-        task.terminal_tool_result = Some(result.clone());
+    if let Some(result) = terminal_payload {
+        task.terminal_payload = Some(result.clone());
     }
 }
 

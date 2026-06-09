@@ -4,15 +4,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    root_task_id, workflow_task_id, AgentDefinition, AgentLoopLauncher, AgentLoopMessage,
-    AgentLoopOutcome, AgentLoopOutcomeFuture, AgentLoopOutcomeKind,
-    AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi, AgentRunError, AgentRunId,
-    AgentRunOutcome, AgentRunRecordTarget, AgentRunStatus, AgentRunStore, AgentType,
-    CreatedTaskAgentRun, Message, ParentedAgentRunKind, SpawnAgentRequest, SpawnAgentTarget,
-    TaskAgentRunKind, TaskAgentRunStore, TaskId, TaskStatus,
+    AgentDefinition, AgentLoopCompletion, AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome,
+    AgentLoopOutcomeKind, AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi,
+    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunRecordTarget, AgentRunStatus,
+    AgentRunStore, AgentType, CreatedTaskAgentRun, Message, ParentedAgentRunKind,
+    SpawnAgentRequest, SpawnAgentTarget, TaskAgentRunKind, TaskAgentRunStore, TaskStatus,
 };
 
-use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRuns};
+use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRunRegistry};
 use crate::agent_loop_request::build_start_agent_loop_request;
 use crate::agent_run_persistence::{
     completion_from_agent_run, create_compat_agent_run, finish_compat_agent_run,
@@ -34,7 +33,7 @@ pub struct AgentRunService {
     agent_run_store: Arc<dyn AgentRunStore>,
     task_agent_run_store: Arc<dyn TaskAgentRunStore>,
     message_records: Option<AgentMessageRecords>,
-    active_agent_runs: ActiveAgentRuns,
+    active_agent_runs: ActiveAgentRunRegistry,
     runtime_state_recorder: Option<RuntimeStateRecorder>,
     runtime_state_remover: Option<RuntimeStateRemover>,
 }
@@ -61,7 +60,7 @@ impl AgentRunService {
             agent_run_store,
             task_agent_run_store,
             message_records,
-            active_agent_runs: ActiveAgentRuns::new(),
+            active_agent_runs: ActiveAgentRunRegistry::new(),
             runtime_state_recorder: None,
             runtime_state_remover: None,
         }
@@ -234,16 +233,14 @@ impl AgentRunService {
             SpawnAgentTarget::Workflow {
                 request_id,
                 workflow,
-                role,
-                plan_node_id,
+                workflow_node_id,
             } => {
                 self.task_agent_run_store
                     .create_workflow_task_agent_run(
                         request_id,
                         agent_run_id,
                         workflow,
-                        *role,
-                        plan_node_id.as_ref(),
+                        workflow_node_id,
                         agent_name,
                     )
                     .await
@@ -345,10 +342,15 @@ impl AgentRunApi for AgentRunService {
         let created_run = self
             .create_task_agent_run(&request, &agent_run_id, &agent_name)
             .await?;
-        let compat_task_id = compat_agent_run_task_id(&request.target);
+        let compat_task_id = match &request.target {
+            SpawnAgentTarget::Root { .. } | SpawnAgentTarget::Workflow { .. } => {
+                Some(&created_run.task_id)
+            }
+            SpawnAgentTarget::Subagent { .. } | SpawnAgentTarget::Advisor { .. } => None,
+        };
         create_compat_agent_run(
             &*self.agent_run_store,
-            compat_task_id.as_ref(),
+            compat_task_id,
             &agent_run_id,
             agent_def.name.as_str(),
         )
@@ -372,7 +374,7 @@ impl AgentRunApi for AgentRunService {
         let service = self.clone();
         let forward_agent_run_id = agent_run_id.clone();
         tokio::spawn(async move {
-            forward_agent_loop_outcome(service, forward_agent_run_id, started.outcome).await;
+            forward_agent_loop_outcome(service, forward_agent_run_id, started.completion).await;
         });
 
         Ok(agent_run_id)
@@ -458,9 +460,9 @@ impl AgentRunApi for AgentRunService {
 async fn forward_agent_loop_outcome(
     service: AgentRunService,
     agent_run_id: AgentRunId,
-    outcome: AgentLoopOutcomeFuture,
+    loop_completion: AgentLoopCompletion,
 ) {
-    let received = outcome.await;
+    let received = loop_completion.wait().await;
     let Some(mut completion) = service.active_agent_runs.take(&agent_run_id).await else {
         return;
     };
@@ -508,19 +510,6 @@ fn agent_run_outcome_from_loop(
             token_count: total_token_count,
             error: Some(error_summary),
         },
-    }
-}
-
-fn compat_agent_run_task_id(target: &SpawnAgentTarget) -> Option<TaskId> {
-    match target {
-        SpawnAgentTarget::Root { request_id } => Some(root_task_id(request_id)),
-        SpawnAgentTarget::Workflow {
-            workflow,
-            role,
-            plan_node_id,
-            ..
-        } => workflow_task_id(&workflow.attempt_id, *role, plan_node_id.as_ref()).ok(),
-        SpawnAgentTarget::Subagent { .. } | SpawnAgentTarget::Advisor { .. } => None,
     }
 }
 

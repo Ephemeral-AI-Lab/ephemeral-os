@@ -405,131 +405,6 @@
 </details>
 
   <p class="source">crates/eos-workspace-contract/src/file_ops.rs:225</p>
-</article><article id="item-fn-read-outcome-296" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_outcome pub pub fn read_outcome (mode : WorkspaceMode , content : String , exists : bool , timings : WorkspaceTimings ,) -&gt; ReadFileOutcome crates/eos-workspace-contract/src/file_ops.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>read_outcome</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-read-outcome-296">read_outcome</a> (mode : <a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , content : String , exists : bool , timings : <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a></code>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-read-outcome-296">read_outcome</a>(
-    mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
-    content: <span class="rs-type">String</span>,
-    exists: bool,
-    timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a> {
-        mode,
-        success: <span class="rs-kw">true</span>,
-        content,
-        exists,
-        encoding: &quot;utf-8&quot;.to_owned(),
-        timings,
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:296</p>
-</article><article id="item-fn-write-conflict-313" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_conflict pub pub fn write_conflict (mode : WorkspaceMode , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; WriteFileOutcome crates/eos-workspace-contract/src/file_ops.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>write_conflict</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-write-conflict-313">write_conflict</a> (mode : <a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a></code>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-write-conflict-313">write_conflict</a>(
-    mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
-    mutation_source: &amp;str,
-    path: &amp;str,
-    status: &amp;str,
-    reason: &amp;str,
-    message: &amp;str,
-    timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a> {
-        mode,
-        success: <span class="rs-kw">false</span>,
-        published: <span class="rs-kw">false</span>,
-        status: status.to_owned(),
-        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-response-rs.html#method-path-39">path</a>(reason, path, message)),
-        conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
-        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
-        changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
-        mutation_source: mutation_source.to_owned(),
-        timings,
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:313</p>
-</article><article id="item-fn-edit-conflict-337" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_conflict pub pub fn edit_conflict (mode : WorkspaceMode , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; EditFileOutcome crates/eos-workspace-contract/src/file_ops.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>edit_conflict</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-edit-conflict-337">edit_conflict</a> (mode : <a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a></code>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-edit-conflict-337">edit_conflict</a>(
-    mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
-    mutation_source: &amp;str,
-    path: &amp;str,
-    status: &amp;str,
-    reason: &amp;str,
-    message: &amp;str,
-    timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a> {
-        mode,
-        success: <span class="rs-kw">false</span>,
-        published: <span class="rs-kw">false</span>,
-        status: status.to_owned(),
-        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-response-rs.html#method-path-39">path</a>(reason, path, message)),
-        conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
-        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
-        changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
-        mutation_source: mutation_source.to_owned(),
-        timings,
-        applied_edits: 0,
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:337</p>
-</article><article id="item-fn-insert-total-362" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_total pub pub fn insert_total (timings : &amp; mut WorkspaceTimings , verb : &amp; str , start : Instant) crates/eos-workspace-contract/src/file_ops.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>insert_total</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a> (timings : &amp; mut <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> , verb : &amp; str , start : Instant)</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
-    timings.insert(
-        format!(&quot;api.{verb}.total_s&quot;),
-        json!(start.elapsed().as_secs_f64()),
-    );
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:362</p>
 </article><article id="item-fn-apply-search-replace-390" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_search_replace pub pub fn apply_search_replace (text : &amp; str , old : &amp; str , new : &amp; str , replace_all : bool ,) -&gt; Result &lt; String , SearchReplaceError &gt; crates/eos-workspace-contract/src/file_ops.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -574,6 +449,131 @@
 </details>
 
   <p class="source">crates/eos-workspace-contract/src/file_ops.rs:390</p>
+</article><article id="item-fn-read-outcome-296" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_outcome private fn read_outcome (mode : WorkspaceMode , content : String , exists : bool , timings : WorkspaceTimings ,) -&gt; ReadFileOutcome crates/eos-workspace-contract/src/file_ops.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_outcome</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-read-outcome-296">read_outcome</a> (mode : <a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , content : String , exists : bool , timings : <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a></code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[must_use]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-read-outcome-296">read_outcome</a>(
+    mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
+    content: <span class="rs-type">String</span>,
+    exists: bool,
+    timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a> {
+    <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a> {
+        mode,
+        success: <span class="rs-kw">true</span>,
+        content,
+        exists,
+        encoding: &quot;utf-8&quot;.to_owned(),
+        timings,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:296</p>
+</article><article id="item-fn-write-conflict-313" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_conflict private fn write_conflict (mode : WorkspaceMode , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; WriteFileOutcome crates/eos-workspace-contract/src/file_ops.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_conflict</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-write-conflict-313">write_conflict</a> (mode : <a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a></code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[must_use]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-write-conflict-313">write_conflict</a>(
+    mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
+    mutation_source: &amp;str,
+    path: &amp;str,
+    status: &amp;str,
+    reason: &amp;str,
+    message: &amp;str,
+    timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a> {
+    <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a> {
+        mode,
+        success: <span class="rs-kw">false</span>,
+        published: <span class="rs-kw">false</span>,
+        status: status.to_owned(),
+        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-response-rs.html#method-path-39">path</a>(reason, path, message)),
+        conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
+        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
+        changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
+        mutation_source: mutation_source.to_owned(),
+        timings,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:313</p>
+</article><article id="item-fn-edit-conflict-337" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_conflict private fn edit_conflict (mode : WorkspaceMode , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; EditFileOutcome crates/eos-workspace-contract/src/file_ops.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>edit_conflict</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-edit-conflict-337">edit_conflict</a> (mode : <a class="symbol-link" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a></code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[must_use]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-edit-conflict-337">edit_conflict</a>(
+    mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
+    mutation_source: &amp;str,
+    path: &amp;str,
+    status: &amp;str,
+    reason: &amp;str,
+    message: &amp;str,
+    timings: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a> {
+    <a class="symbol-link rs-type" href="eos-workspace-contract--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a> {
+        mode,
+        success: <span class="rs-kw">false</span>,
+        published: <span class="rs-kw">false</span>,
+        status: status.to_owned(),
+        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-response-rs.html#method-path-39">path</a>(reason, path, message)),
+        conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
+        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
+        changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-workspace-contract--src-read-view-rs.html#method-new-12">new</a>(),
+        mutation_source: mutation_source.to_owned(),
+        timings,
+        applied_edits: 0,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:337</p>
+</article><article id="item-fn-insert-total-362" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_total private fn insert_total (timings : &amp; mut WorkspaceTimings , verb : &amp; str , start : Instant) crates/eos-workspace-contract/src/file_ops.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_total</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a> (timings : &amp; mut <a class="symbol-link" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a> , verb : &amp; str , start : Instant)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
+    timings.insert(
+        format!(&quot;api.{verb}.total_s&quot;),
+        json!(start.elapsed().as_secs_f64()),
+    );
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace-contract/src/file_ops.rs:362</p>
 </article><article id="item-fn-search-replace-message-382" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn search_replace_message private const fn search_replace_message (err : &amp; SearchReplaceError) -&gt; &amp; 'static str crates/eos-workspace-contract/src/file_ops.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -899,7 +899,7 @@
 }
 
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-read-outcome-296">read_outcome</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-read-outcome-296">read_outcome</a>(
     mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
     content: <span class="rs-type">String</span>,
     exists: bool,
@@ -916,7 +916,7 @@
 }
 
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-write-conflict-313">write_conflict</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-write-conflict-313">write_conflict</a>(
     mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
     mutation_source: &amp;str,
     path: &amp;str,
@@ -940,7 +940,7 @@
 }
 
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-edit-conflict-337">edit_conflict</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-edit-conflict-337">edit_conflict</a>(
     mode: <a class="symbol-link rs-type" href="eos-workspace-contract--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
     mutation_source: &amp;str,
     path: &amp;str,
@@ -964,7 +964,7 @@
     }
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-contract--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace-contract--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
     timings.insert(
         format!(&quot;api.{verb}.total_s&quot;),
         json!(start.elapsed().as_secs_f64()),

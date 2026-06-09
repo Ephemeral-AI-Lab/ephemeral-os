@@ -166,7 +166,7 @@ impl AttemptStageAdvancer {
             )));
         }
         let outcome = format!("agent launch failed: {summary}");
-        let terminal_tool_result = json_object("fail_reason", "agent_launch_failed");
+        let terminal_payload = json_object("fail_reason", "agent_launch_failed");
         let role = match task.role {
             TaskRole::Generator => ExecutionRole::Generator,
             TaskRole::Reducer => ExecutionRole::Reducer,
@@ -194,7 +194,7 @@ impl AttemptStageAdvancer {
                 TaskStatus::Running,
                 TaskStatus::Failed,
                 Some(&outcomes),
-                Some(&terminal_tool_result),
+                Some(&terminal_payload),
             )
             .await?;
         let Some(task) = task else {
@@ -304,7 +304,7 @@ impl AttemptStageAdvancer {
                         task_id: launch.task_id().clone(),
                         status: TaskOutcomeStatus::Failed,
                         outcome: summary.to_owned(),
-                        terminal_tool_result: exhausted,
+                        terminal_payload: exhausted,
                     })
                     .await
             }
@@ -315,7 +315,7 @@ impl AttemptStageAdvancer {
                         task_id: launch.task_id().clone(),
                         status: TaskOutcomeStatus::Failed,
                         outcome: summary.to_owned(),
-                        terminal_tool_result: exhausted,
+                        terminal_payload: exhausted,
                     })
                     .await
             }
@@ -339,8 +339,8 @@ mod tests {
     use std::sync::Arc;
 
     use eos_types::{
-        AttemptBudget, AttemptFailReason, AttemptStatus, IterationStatus, PlanDisposition,
-        PlanNodeId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowStatus,
+        AttemptBudget, AttemptFailReason, AttemptStatus, GeneratorId, IterationStatus,
+        PlanDisposition, ReducerId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowStatus,
     };
     use serde_json::json;
 
@@ -356,8 +356,12 @@ mod tests {
         AttemptBudget::try_from_u32(value).unwrap()
     }
 
-    fn node(id: &str) -> PlanNodeId {
-        PlanNodeId::new(id).unwrap()
+    fn gen_id(id: &str) -> GeneratorId {
+        GeneratorId::new(id).unwrap()
+    }
+
+    fn red_id(id: &str) -> ReducerId {
+        ReducerId::new(id).unwrap()
     }
 
     // AC-eos-workflow-08: the run is exercised entirely through the injected
@@ -381,7 +385,7 @@ mod tests {
             )
             .await
             .unwrap();
-        let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
+        let generator_id = generator_task_id(&started.attempt_id, &gen_id("g1")).unwrap();
         runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
         runner.push(ScriptedSubmission::Generator(
             eos_types::GeneratorSubmission {
@@ -389,15 +393,15 @@ mod tests {
                 task_id: generator_id.clone(),
                 status: TaskOutcomeStatus::Success,
                 outcome: "generated".to_owned(),
-                terminal_tool_result: crate::support::terminal_tool_result_fixture(),
+                terminal_payload: crate::support::terminal_payload_fixture(),
             },
         ));
         runner.push(ScriptedSubmission::Reducer(eos_types::ReducerSubmission {
             attempt_id: started.attempt_id.clone(),
-            task_id: crate::reducer_task_id(&started.attempt_id, &node("r1")).unwrap(),
+            task_id: crate::reducer_task_id(&started.attempt_id, &red_id("r1")).unwrap(),
             status: TaskOutcomeStatus::Success,
             outcome: "reduced".to_owned(),
-            terminal_tool_result: crate::support::terminal_tool_result_fixture(),
+            terminal_payload: crate::support::terminal_payload_fixture(),
         }));
         wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
@@ -440,11 +444,11 @@ mod tests {
         let attempt = stores.attempt(&started.attempt_id).unwrap();
         assert_eq!(attempt.status(), AttemptStatus::Failed);
         assert_eq!(attempt.fail_reason(), Some(AttemptFailReason::TaskFailed));
-        let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
+        let generator_id = generator_task_id(&started.attempt_id, &gen_id("g1")).unwrap();
         let task = stores.task(&generator_id).unwrap();
         assert_eq!(task.status, TaskStatus::Failed);
         assert_eq!(
-            task.terminal_tool_result.unwrap().get("fail_reason"),
+            task.terminal_payload.unwrap().get("fail_reason"),
             Some(&json!("run_exhausted"))
         );
         assert_eq!(
@@ -489,10 +493,7 @@ mod tests {
             .unwrap();
         assert_eq!(planner_task.status, TaskStatus::Failed);
         assert_eq!(
-            planner_task
-                .terminal_tool_result
-                .unwrap()
-                .get("fail_reason"),
+            planner_task.terminal_payload.unwrap().get("fail_reason"),
             Some(&json!("run_exhausted"))
         );
     }
@@ -570,8 +571,8 @@ mod tests {
             )
             .await
             .unwrap();
-        let local_id = node("missing-profile");
-        let task_id = generator_task_id(&started.attempt_id, &local_id).unwrap();
+        let generator_id = gen_id("missing-profile");
+        let task_id = generator_task_id(&started.attempt_id, &generator_id).unwrap();
         stores.seed_task(Task {
             id: task_id.clone(),
             request_id: parent.request_id,
@@ -584,7 +585,7 @@ mod tests {
             agent_name: None,
             needs: Vec::new(),
             outcomes: Vec::new(),
-            terminal_tool_result: None,
+            terminal_payload: None,
         });
         eos_types::AttemptStore::record_plan(
             stores.as_ref(),
@@ -608,7 +609,7 @@ mod tests {
         let task = stores.task(&task_id).unwrap();
         assert_eq!(task.status, TaskStatus::Failed);
         assert_eq!(
-            task.terminal_tool_result.unwrap().get("fail_reason"),
+            task.terminal_payload.unwrap().get("fail_reason"),
             Some(&json!("agent_launch_failed"))
         );
         assert_eq!(

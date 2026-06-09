@@ -342,7 +342,7 @@ verification command or evidence used for that phase.
 | 2. Crate map and DAG | Implemented | final 10-crate agent-core map is active; `eos-runtime` folded into `eos-agent-core`; verified with `CARGO_TARGET_DIR=/tmp/eos-agent-core-check-runtime-fold cargo check --workspace --all-targets`, `cargo test -p eos-agent-core --all-targets`, and `cargo test -p workspace-guard` |
 | 3. `eos-tool` | Implemented | `eos-tool-ports` is gone; tool modules collapsed; hook execution is engine-owned |
 | 3B. Execution lineage/materialization | Implemented (bridge-compatible v1) | normalized `task_runs`/`parented_runs`, workflow launch lineage, request-rooted record dirs, and bounded execution-tree reader are active; verified with `cargo test -p eos-db`, `cargo test -p eos-agent-run`, `cargo test -p eos-workflow`, and `cargo test -p eos-agent-core` |
-| 4. `eos-engine` and `eos-agent-run` | Not started | engine is execution-only; run lifecycle is isolated over established lineage |
+| 4. `eos-engine` and `eos-agent-run` | In progress | source boundary pass complete: loop contracts live in `eos-types`, engine exposes concrete launcher/event/provider/background surfaces, run lifecycle owns `ActiveAgentRunRegistry`; verified with `cargo test -p eos-engine --all-targets`, `cargo test -p eos-agent-run --all-targets`, and depth-1 `cargo tree` edge checks |
 | 5. Agent core/workflow/types | Not started | `eos-agent-core` owns request entry and hidden runtime wiring |
 | 6. Verification and budget | Not started | module count is 150-170 and full checks pass |
 

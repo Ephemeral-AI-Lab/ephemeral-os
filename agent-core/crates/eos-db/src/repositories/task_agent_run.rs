@@ -7,9 +7,9 @@ use time::OffsetDateTime;
 use eos_types::{
     format_record_dir, parented_task_id, root_task_id, workflow_task_id, AgentName, AgentRunId,
     AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget, CoreError, CreatedTaskAgentRun,
-    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, PlanNodeId, RequestId, Sealed,
-    TaskAgentRunKind, TaskAgentRunStore, TaskExecutionIndex, TaskId, TaskRole, TaskRun, TaskStatus,
-    ToolUseId, WorkflowCoordinates, WorkflowTaskRole,
+    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, Sealed, TaskAgentRunKind,
+    TaskAgentRunStore, TaskExecutionIndex, TaskId, TaskRole, TaskRun, TaskStatus, ToolUseId,
+    WorkflowCoordinates, WorkflowNodeId, WorkflowTaskRole,
 };
 
 use crate::error::DbError;
@@ -90,12 +90,12 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
         request_id: &RequestId,
         agent_run_id: &AgentRunId,
         workflow: &WorkflowCoordinates,
-        role: WorkflowTaskRole,
-        plan_node_id: Option<&PlanNodeId>,
+        workflow_node_id: &WorkflowNodeId,
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError> {
-        let task_id = workflow_task_id(&workflow.attempt_id, role, plan_node_id)?;
+        let task_id = workflow_task_id(&workflow.attempt_id, workflow_node_id)?;
         let now = OffsetDateTime::now_utc();
+        let role = workflow_node_id.role();
         let task_role = task_role_from_workflow_role(role);
         sqlx::query(
             "INSERT INTO task_runs \

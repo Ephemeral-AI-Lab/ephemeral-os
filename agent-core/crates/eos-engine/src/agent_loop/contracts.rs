@@ -12,7 +12,7 @@ use eos_types::{
 };
 use serde_json::json;
 
-use crate::background::BackgroundManagers;
+use crate::background::BackgroundSessionRuntime;
 use crate::notifications::EngineNotificationQueue;
 use crate::EngineError;
 
@@ -64,7 +64,7 @@ pub struct AgentLoopToolRegistryBuildInput {
     /// Agent-run lifecycle API for nested launches from this loop.
     pub agent_run_api: Arc<dyn AgentRunApi>,
     /// Engine-owned background aggregate for the run.
-    pub background: Option<BackgroundManagers>,
+    pub background: Option<BackgroundSessionRuntime>,
 }
 
 impl std::fmt::Debug for AgentLoopToolRegistryBuildInput {
@@ -152,12 +152,12 @@ impl BackgroundSessionInputs {
     pub(crate) fn build_managers(
         &self,
         agent_run_id: AgentRunId,
-        agent_run_api: Arc<dyn AgentRunApi>,
+        agent_run_api: &Arc<dyn AgentRunApi>,
         notifications: EngineNotificationQueue,
-    ) -> BackgroundManagers {
-        BackgroundManagers::new(
+    ) -> BackgroundSessionRuntime {
+        BackgroundSessionRuntime::new(
             agent_run_id,
-            &agent_run_api,
+            agent_run_api,
             self.command_service.clone(),
             self.completion_poll_interval,
             notifications,

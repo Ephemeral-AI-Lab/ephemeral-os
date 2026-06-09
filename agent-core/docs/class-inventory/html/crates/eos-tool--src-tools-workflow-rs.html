@@ -107,14 +107,14 @@
             <span class="rs-kw">let</span> service = <span class="rs-self">self</span>.workflow_service.as_ref();
             <span class="rs-kw">let</span> sessions = &amp;<span class="rs-self">self</span>.workflow_sessions;
 
-            <span class="rs-kw">let</span> outstanding = service
-                .find_outstanding_workflows(task_id, agent_run_id)
+            <span class="rs-kw">let</span> open_workflows = service
+                .list_open_delegated_workflows_for_agent_run(agent_run_id)
                 .<span class="rs-kw">await</span>?;
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = outstanding.first() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = open_workflows.first() {
                 <span class="rs-kw">let</span> payload = json!({
                     &quot;workflow_id&quot;: existing.workflow_id.<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-as-str-45">as_str</a>(),
                     &quot;status&quot;: &quot;running&quot;,
-                    &quot;message&quot;: &quot;<span class="rs-type">A</span> delegated workflow is already outstanding <span class="rs-kw">for</span> this task. \
+                    &quot;message&quot;: &quot;<span class="rs-type">A</span> delegated workflow is already open <span class="rs-kw">for</span> this agent run. \
                         <span class="rs-type">Use</span> check_workflow_status or cancel_workflow before starting another.&quot;,
                 });
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-556">error</a>(payload.to_string()));
@@ -552,14 +552,14 @@
             <span class="rs-kw">let</span> service = <span class="rs-self">self</span>.workflow_service.as_ref();
             <span class="rs-kw">let</span> sessions = &amp;<span class="rs-self">self</span>.workflow_sessions;
 
-            <span class="rs-kw">let</span> outstanding = service
-                .find_outstanding_workflows(task_id, agent_run_id)
+            <span class="rs-kw">let</span> open_workflows = service
+                .list_open_delegated_workflows_for_agent_run(agent_run_id)
                 .<span class="rs-kw">await</span>?;
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = outstanding.first() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = open_workflows.first() {
                 <span class="rs-kw">let</span> payload = json!({
                     &quot;workflow_id&quot;: existing.workflow_id.<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-as-str-45">as_str</a>(),
                     &quot;status&quot;: &quot;running&quot;,
-                    &quot;message&quot;: &quot;<span class="rs-type">A</span> delegated workflow is already outstanding <span class="rs-kw">for</span> this task. \
+                    &quot;message&quot;: &quot;<span class="rs-type">A</span> delegated workflow is already open <span class="rs-kw">for</span> this agent run. \
                         <span class="rs-type">Use</span> check_workflow_status or cancel_workflow before starting another.&quot;,
                 });
                 <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-struct-ToolResult-530">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tool--src-model-rs.html#method-error-556">error</a>(payload.to_string()));

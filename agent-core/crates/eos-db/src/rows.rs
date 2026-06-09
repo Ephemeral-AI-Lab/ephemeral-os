@@ -47,7 +47,8 @@ pub(crate) struct TaskRow {
     pub agent_name: Option<String>,
     pub needs: String,
     pub outcomes: String,
-    pub terminal_tool_result: Option<String>,
+    #[sqlx(rename = "terminal_tool_result")]
+    pub terminal_payload: Option<String>,
     // `created_at`/`updated_at` columns exist but the `Task` DTO has no timestamp
     // fields (matching Rust); `FromRow` ignores the extra columns.
 }
@@ -278,7 +279,7 @@ pub(crate) fn row_to_task(r: TaskRow) -> Result<Task, DbError> {
         agent_name: r.agent_name,
         needs: json_col::decode_default(Some(&r.needs))?,
         outcomes,
-        terminal_tool_result: json_col::decode_opt(r.terminal_tool_result.as_deref())?,
+        terminal_payload: json_col::decode_opt(r.terminal_payload.as_deref())?,
     })
 }
 

@@ -216,7 +216,7 @@
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
     launcher: std::sync::<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">AgentRunApi</span>&gt;,
 ) {
-    ask_advisor::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, launcher);
+    implementation::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, launcher);
 }
 </code></pre>
 </details>
@@ -248,7 +248,7 @@
         <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#item-fn-text-spec-806">text_spec</a>(
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-ask-advisor-rs.html#item-struct-AskAdvisor-276">AskAdvisor</a>,
             &amp;ask_advisor.description,
-            schema_for!(ask_advisor::<a class="symbol-link rs-type" href="eos-tool--src-tools-ask-advisor-rs.html#item-struct-AskAdvisorInput-267">AskAdvisorInput</a>),
+            schema_for!(implementation::<a class="symbol-link rs-type" href="eos-tool--src-tools-ask-advisor-rs.html#item-struct-AskAdvisorInput-267">AskAdvisorInput</a>),
         ),
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );
@@ -910,7 +910,7 @@ supporting analysis backing the payload, and residual risks.&quot;;
         (!trimmed.<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-is-empty-212">is_empty</a>()).then_some(trimmed)
     }
 }
-<span class="rs-kw">mod</span> ask_advisor {
+<span class="rs-kw">mod</span> implementation {
     <span class="rs-comment">//! The `ask_advisor` helper tool — a blocking read-only advisor audit of a</span>
     <span class="rs-comment">//! pending terminal submission.</span>
     <span class="rs-comment">//!</span>
@@ -1091,7 +1091,7 @@ supporting analysis backing the payload, and residual risks.&quot;;
     config: &amp;<span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
     launcher: std::sync::<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_types::<span class="rs-type">AgentRunApi</span>&gt;,
 ) {
-    ask_advisor::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, launcher);
+    implementation::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-register-156">register</a>(registry, config, launcher);
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-ask-advisor-rs.html#item-fn-register-schema-420">register_schema</a>(
@@ -1110,7 +1110,7 @@ supporting analysis backing the payload, and residual risks.&quot;;
         <a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#item-fn-text-spec-806">text_spec</a>(
             <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-ToolName-264">ToolName</a>::<a class="symbol-link rs-type" href="eos-tool--src-tools-ask-advisor-rs.html#item-struct-AskAdvisor-276">AskAdvisor</a>,
             &amp;ask_advisor.description,
-            schema_for!(ask_advisor::<a class="symbol-link rs-type" href="eos-tool--src-tools-ask-advisor-rs.html#item-struct-AskAdvisorInput-267">AskAdvisorInput</a>),
+            schema_for!(implementation::<a class="symbol-link rs-type" href="eos-tool--src-tools-ask-advisor-rs.html#item-struct-AskAdvisorInput-267">AskAdvisorInput</a>),
         ),
         <a class="symbol-link rs-type" href="eos-tool--src-model-rs.html#item-enum-OutputShape-582">OutputShape</a>::<span class="rs-type">Text</span>,
     );

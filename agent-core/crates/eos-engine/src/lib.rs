@@ -4,8 +4,9 @@
 
 pub mod agent_loop;
 pub mod background;
+pub mod event;
 mod notifications;
-pub mod query;
+pub mod provider_stream;
 mod support;
 mod telemetry;
 pub mod tool_call;
@@ -16,21 +17,18 @@ pub use agent_loop::{
     ToolExecutionMetadataReader,
 };
 pub use background::{
-    BackgroundCompletion, BackgroundManagers, BackgroundNotificationEmitter,
+    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSessionRuntime,
     BackgroundSessionStatus, BackgroundSessionTeardown,
 };
-pub use eos_types::{
-    AgentLoopCancellation, AgentLoopCancellationHandle, AgentLoopLauncher, AgentLoopMessage,
-    AgentLoopOutcome, AgentLoopOutcomeFuture, AgentLoopOutcomeKind, StartAgentLoopRequest,
-    StartedAgentLoop,
+pub use event::{
+    stamp_identity, AssistantMessageComplete, EngineEventPrinter, EngineEventSink, StreamEvent,
 };
 pub use notifications::{
     make_default_notification_rules, EngineNotificationQueue, NotificationRule,
     NotificationRuleContext,
 };
-pub use query::{
-    EngineEventSink, EngineStream, LlmProviderStreamSource, ProviderStreamSource,
-    ProviderStreamSourceFactory,
+pub use provider_stream::{
+    EngineStream, LlmProviderStreamSource, ProviderStreamSource, ProviderStreamSourceFactory,
 };
 pub use support::EngineError;
-pub use telemetry::{stamp_identity, AssistantMessageComplete, PromptReportRecorder, StreamEvent};
+pub use telemetry::PromptReportRecorder;

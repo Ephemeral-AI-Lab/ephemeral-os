@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentDefinition, AgentName, AgentRegistry, AgentType, Attempt, AttemptStore, IterationStore,
-    RequestId, Task, TaskId, TaskRole, TaskStore, WorkflowId, WorkflowStore,
+    AgentDefinition, AgentName, AgentRegistry, AgentType, Attempt, AttemptStore, GeneratorId,
+    IterationStore, PlannerId, ReducerId, RequestId, Task, TaskId, TaskRole, TaskStore, WorkflowId,
+    WorkflowNodeId, WorkflowStore,
 };
 
 use crate::context::{AgentEntryComposer, ContextScope};
-use crate::ids::WorkflowLifecycleConfig;
+use crate::ids::{generator_id_from_task_id, reducer_id_from_task_id, WorkflowLifecycleConfig};
 use crate::{Result, WorkflowError};
 
 use super::AttemptOrchestratorRegistry;
@@ -58,9 +59,9 @@ pub enum AgentLaunch {
     /// Planner launch.
     Planner(PlannerLaunch),
     /// Generator launch.
-    Generator(ExecutionLaunch),
+    Generator(GeneratorLaunch),
     /// Reducer launch.
-    Reducer(ExecutionLaunch),
+    Reducer(ReducerLaunch),
 }
 
 /// Launch descriptor for a planner.
@@ -68,6 +69,8 @@ pub enum AgentLaunch {
 pub struct PlannerLaunch {
     /// Task id.
     pub task_id: TaskId,
+    /// Workflow-local planner id.
+    pub planner_id: PlannerId,
     /// Request id.
     pub request_id: RequestId,
     /// Attempt id.
@@ -88,11 +91,13 @@ pub struct PlannerLaunch {
     pub skill: Option<String>,
 }
 
-/// Launch descriptor for a generator or reducer.
+/// Launch descriptor for a generator.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ExecutionLaunch {
+pub struct GeneratorLaunch {
     /// Task id.
     pub task_id: TaskId,
+    /// Workflow-local generator id.
+    pub generator_id: GeneratorId,
     /// Request id.
     pub request_id: RequestId,
     /// Attempt id.
@@ -101,8 +106,35 @@ pub struct ExecutionLaunch {
     pub workflow_id: WorkflowId,
     /// Iteration id.
     pub iteration_id: eos_types::IterationId,
-    /// Workflow task role.
-    pub role: TaskRole,
+    /// Profile name.
+    pub agent_name: String,
+    /// Rendered context row.
+    pub context: String,
+    /// Rendered task guidance row.
+    pub task_guidance: Option<String>,
+    /// Needs edges.
+    pub needs: Vec<TaskId>,
+    /// Resolved definition.
+    pub agent_def: AgentDefinition,
+    /// Skill row.
+    pub skill: Option<String>,
+}
+
+/// Launch descriptor for a reducer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReducerLaunch {
+    /// Task id.
+    pub task_id: TaskId,
+    /// Workflow-local reducer id.
+    pub reducer_id: ReducerId,
+    /// Request id.
+    pub request_id: RequestId,
+    /// Attempt id.
+    pub attempt_id: eos_types::AttemptId,
+    /// Workflow id.
+    pub workflow_id: WorkflowId,
+    /// Iteration id.
+    pub iteration_id: eos_types::IterationId,
     /// Profile name.
     pub agent_name: String,
     /// Rendered context row.
@@ -133,7 +165,24 @@ impl AgentLaunch {
     pub fn task_id(&self) -> &TaskId {
         match self {
             Self::Planner(launch) => &launch.task_id,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.task_id,
+            Self::Generator(launch) => &launch.task_id,
+            Self::Reducer(launch) => &launch.task_id,
+        }
+    }
+
+    /// Workflow node id for this launch.
+    #[must_use]
+    pub fn workflow_node_id(&self) -> WorkflowNodeId {
+        match self {
+            Self::Planner(launch) => WorkflowNodeId::Planner {
+                planner_id: launch.planner_id.clone(),
+            },
+            Self::Generator(launch) => WorkflowNodeId::Generator {
+                generator_id: launch.generator_id.clone(),
+            },
+            Self::Reducer(launch) => WorkflowNodeId::Reducer {
+                reducer_id: launch.reducer_id.clone(),
+            },
         }
     }
 
@@ -142,7 +191,8 @@ impl AgentLaunch {
     pub fn request_id(&self) -> &RequestId {
         match self {
             Self::Planner(launch) => &launch.request_id,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.request_id,
+            Self::Generator(launch) => &launch.request_id,
+            Self::Reducer(launch) => &launch.request_id,
         }
     }
 
@@ -151,7 +201,8 @@ impl AgentLaunch {
     pub fn attempt_id(&self) -> &eos_types::AttemptId {
         match self {
             Self::Planner(launch) => &launch.attempt_id,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.attempt_id,
+            Self::Generator(launch) => &launch.attempt_id,
+            Self::Reducer(launch) => &launch.attempt_id,
         }
     }
 
@@ -160,7 +211,8 @@ impl AgentLaunch {
     pub fn iteration_id(&self) -> &eos_types::IterationId {
         match self {
             Self::Planner(launch) => &launch.iteration_id,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.iteration_id,
+            Self::Generator(launch) => &launch.iteration_id,
+            Self::Reducer(launch) => &launch.iteration_id,
         }
     }
 
@@ -169,7 +221,8 @@ impl AgentLaunch {
     pub fn workflow_id(&self) -> &WorkflowId {
         match self {
             Self::Planner(launch) => &launch.workflow_id,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.workflow_id,
+            Self::Generator(launch) => &launch.workflow_id,
+            Self::Reducer(launch) => &launch.workflow_id,
         }
     }
 
@@ -178,7 +231,8 @@ impl AgentLaunch {
     pub fn agent_name(&self) -> &str {
         match self {
             Self::Planner(launch) => &launch.agent_name,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.agent_name,
+            Self::Generator(launch) => &launch.agent_name,
+            Self::Reducer(launch) => &launch.agent_name,
         }
     }
 
@@ -187,7 +241,8 @@ impl AgentLaunch {
     pub fn context(&self) -> &str {
         match self {
             Self::Planner(launch) => &launch.context,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.context,
+            Self::Generator(launch) => &launch.context,
+            Self::Reducer(launch) => &launch.context,
         }
     }
 
@@ -196,7 +251,8 @@ impl AgentLaunch {
     pub fn task_guidance(&self) -> Option<&str> {
         match self {
             Self::Planner(launch) => launch.task_guidance.as_deref(),
-            Self::Generator(launch) | Self::Reducer(launch) => launch.task_guidance.as_deref(),
+            Self::Generator(launch) => launch.task_guidance.as_deref(),
+            Self::Reducer(launch) => launch.task_guidance.as_deref(),
         }
     }
 
@@ -205,7 +261,8 @@ impl AgentLaunch {
     pub fn agent_def(&self) -> &AgentDefinition {
         match self {
             Self::Planner(launch) => &launch.agent_def,
-            Self::Generator(launch) | Self::Reducer(launch) => &launch.agent_def,
+            Self::Generator(launch) => &launch.agent_def,
+            Self::Reducer(launch) => &launch.agent_def,
         }
     }
 
@@ -214,7 +271,8 @@ impl AgentLaunch {
     pub fn skill(&self) -> Option<&str> {
         match self {
             Self::Planner(launch) => launch.skill.as_deref(),
-            Self::Generator(launch) | Self::Reducer(launch) => launch.skill.as_deref(),
+            Self::Generator(launch) => launch.skill.as_deref(),
+            Self::Reducer(launch) => launch.skill.as_deref(),
         }
     }
 }
@@ -352,6 +410,7 @@ struct LaunchBuildArgs<'a> {
     role: TaskRole,
     scope: ContextScope,
     task_id: TaskId,
+    workflow_node_id: WorkflowNodeId,
     request_id: RequestId,
     attempt_id: eos_types::AttemptId,
     iteration_id: eos_types::IterationId,
@@ -369,6 +428,7 @@ impl AgentLaunchFactory {
     pub(crate) async fn for_planner(
         &self,
         attempt: &Attempt,
+        planner_id: PlannerId,
         task_id: TaskId,
     ) -> Result<AgentLaunch> {
         let iteration = self
@@ -386,6 +446,7 @@ impl AgentLaunchFactory {
                 attempt.id.clone(),
             ),
             task_id,
+            workflow_node_id: WorkflowNodeId::Planner { planner_id },
             request_id: self.deps.request_id_for_attempt(attempt).await?,
             attempt_id: attempt.id.clone(),
             iteration_id: iteration.id,
@@ -417,6 +478,9 @@ impl AgentLaunchFactory {
                 task.id.clone(),
             ),
             task_id: task.id.clone(),
+            workflow_node_id: WorkflowNodeId::Generator {
+                generator_id: generator_id_from_task_id(&attempt.id, &task.id)?,
+            },
             request_id: task.request_id.clone(),
             attempt_id: attempt.id.clone(),
             iteration_id: iteration.id,
@@ -443,6 +507,9 @@ impl AgentLaunchFactory {
                 task.id.clone(),
             ),
             task_id: task.id.clone(),
+            workflow_node_id: WorkflowNodeId::Reducer {
+                reducer_id: reducer_id_from_task_id(&attempt.id, &task.id)?,
+            },
             request_id: task.request_id.clone(),
             attempt_id: attempt.id.clone(),
             iteration_id: iteration.id,
@@ -496,9 +563,10 @@ impl AgentLaunchFactory {
             )
         };
         let agent_name = args.base_agent_name.to_owned();
-        Ok(match args.role {
-            TaskRole::Planner => AgentLaunch::Planner(PlannerLaunch {
+        Ok(match args.workflow_node_id {
+            WorkflowNodeId::Planner { planner_id } => AgentLaunch::Planner(PlannerLaunch {
                 task_id: args.task_id,
+                planner_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
                 workflow_id: args.workflow_id,
@@ -509,27 +577,13 @@ impl AgentLaunchFactory {
                 task_guidance,
                 skill,
             }),
-            TaskRole::Generator => AgentLaunch::Generator(ExecutionLaunch {
+            WorkflowNodeId::Generator { generator_id } => AgentLaunch::Generator(GeneratorLaunch {
                 task_id: args.task_id,
+                generator_id,
                 request_id: args.request_id,
                 attempt_id: args.attempt_id,
                 workflow_id: args.workflow_id,
                 iteration_id: args.iteration_id,
-                role: TaskRole::Generator,
-                agent_name,
-                context,
-                task_guidance,
-                needs: args.needs,
-                agent_def,
-                skill,
-            }),
-            TaskRole::Reducer => AgentLaunch::Reducer(ExecutionLaunch {
-                task_id: args.task_id,
-                request_id: args.request_id,
-                attempt_id: args.attempt_id,
-                workflow_id: args.workflow_id,
-                iteration_id: args.iteration_id,
-                role: TaskRole::Reducer,
                 agent_name,
                 context,
                 task_guidance,
@@ -537,11 +591,20 @@ impl AgentLaunchFactory {
                 agent_def,
                 skill,
             }),
-            TaskRole::Root => {
-                return Err(WorkflowError::invariant(
-                    "workflow launch does not support root task role",
-                ));
-            }
+            WorkflowNodeId::Reducer { reducer_id } => AgentLaunch::Reducer(ReducerLaunch {
+                task_id: args.task_id,
+                reducer_id,
+                request_id: args.request_id,
+                attempt_id: args.attempt_id,
+                workflow_id: args.workflow_id,
+                iteration_id: args.iteration_id,
+                agent_name,
+                context,
+                task_guidance,
+                needs: args.needs,
+                agent_def,
+                skill,
+            }),
         })
     }
 }

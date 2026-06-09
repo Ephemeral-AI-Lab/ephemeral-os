@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>15</b><span>modules</span></div>
-  <div><b>116</b><span>items</span></div>
+  <div><b>118</b><span>items</span></div>
   <div><b>156</b><span>fields</span></div>
   <div><b>74</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>config.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-db--src-database-rs.html"><span>database.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-task-agent-run-rs.html"><span>task_agent_run.rs</span><small>4/11</small></a></li><li><a class="file-link" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-db--src-repositories-rs.html"><span>repositories.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-db.html"><span>config.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-db--src-database-rs.html"><span>database.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-json-col-rs.html"><span>json_col.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-db--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-db--src-model-registry-rs.html"><span>model_registry.rs</span><small>3/14</small></a></li><li><a class="file-link" href="eos-db--src-pool-rs.html"><span>pool.rs</span><small>0/3</small></a></li><li><span class="folder">repositories</span><ul class="file-tree"><li><a class="file-link" href="eos-db--src-repositories-agent-run-rs.html"><span>agent_run.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-attempt-rs.html"><span>attempt.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-iteration-rs.html"><span>iteration.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-request-task-rs.html"><span>request_task.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-db--src-repositories-task-agent-run-rs.html"><span>task_agent_run.rs</span><small>4/13</small></a></li><li><a class="file-link" href="eos-db--src-repositories-workflow-rs.html"><span>workflow.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-db--src-repositories-rs.html"><span>repositories.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-db--src-rows-rs.html"><span>rows.rs</span><small>7/28</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="model_registry crates/eos-db/src/model_registry.rs ResolvedModel ModelRegistrationRow ModelRegistry impl Sealed for ModelRegistry impl ModelRegistry impl ModelStore for ModelRegistry row_to_model redact_kwargs_json redact_secrets resolved_kwargs resolve_placeholders parse_dollar_var registry obj dollar_var_parsing_is_fullmatch resolve_placeholders_uses_lookup redaction_masks_secrets_keeps_placeholders model_registry_active_and_resolve sync_from_config_imports_and_updates_active sync_from_config_synthesizes_active_only_model">
   <div class="module-head">
     <div>
@@ -469,8 +469,10 @@
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-registry-342">registry</a>() -&gt; (tempfile::<span class="rs-type">TempDir</span>, <a class="symbol-link rs-type" href="eos-db--src-model-registry-rs.html#item-struct-ModelRegistry-56">ModelRegistry</a>) {
         <span class="rs-kw">let</span> dir = tempfile::tempdir().expect(&quot;tempdir&quot;);
         <span class="rs-kw">let</span> path = dir.path().join(&quot;models.db&quot;);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cfg = <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>::<a class="symbol-link rs-fn" href="eos-db.html#method-default-80">default</a>();
-        cfg.url = <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseUrl-13">DatabaseUrl</a>::<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>(format!(&quot;sqlite:<span class="rs-comment">//{}", path.display())).expect("url");</span>
+        <span class="rs-kw">let</span> cfg = <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseConfig-62">DatabaseConfig</a> {
+            url: <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseUrl-13">DatabaseUrl</a>::<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>(format!(&quot;sqlite:<span class="rs-comment">//{}", path.display())).expect("url"),</span>
+            ..<span class="rs-type">Default</span>::<a class="symbol-link rs-fn" href="eos-db.html#method-default-80">default</a>()
+        };
         <span class="rs-kw">let</span> pool = <span class="rs-kw">crate</span>::pool::<a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-open-pool-28">open_pool</a>(&amp;cfg).<span class="rs-kw">await</span>.expect(&quot;pool&quot;);
         (dir, <a class="symbol-link rs-type" href="eos-db--src-model-registry-rs.html#item-struct-ModelRegistry-56">ModelRegistry</a>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(pool))
     }
@@ -478,17 +480,17 @@
 </details>
 
   <p class="source">crates/eos-db/src/model_registry.rs:342</p>
-</article><article id="item-fn-obj-351" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn obj private fn obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject crates/eos-db/src/model_registry.rs  ">
+</article><article id="item-fn-obj-353" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn obj private fn obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>obj</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a> (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a> (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(pairs: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(pairs: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
         pairs
             .iter()
             .map(|(k, v)| ((*k).to_owned(), v.clone()))
@@ -497,19 +499,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:351</p>
-</article><article id="item-fn-dollar-var-parsing-is-fullmatch-358" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dollar_var_parsing_is_fullmatch private fn dollar_var_parsing_is_fullmatch () crates/eos-db/src/model_registry.rs  ">
+  <p class="source">crates/eos-db/src/model_registry.rs:353</p>
+</article><article id="item-fn-dollar-var-parsing-is-fullmatch-360" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dollar_var_parsing_is_fullmatch private fn dollar_var_parsing_is_fullmatch () crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dollar_var_parsing_is_fullmatch</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-dollar-var-parsing-is-fullmatch-358">dollar_var_parsing_is_fullmatch</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-dollar-var-parsing-is-fullmatch-360">dollar_var_parsing_is_fullmatch</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-dollar-var-parsing-is-fullmatch-358">dollar_var_parsing_is_fullmatch</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-dollar-var-parsing-is-fullmatch-360">dollar_var_parsing_is_fullmatch</a>() {
         assert_eq!(<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-parse-dollar-var-318">parse_dollar_var</a>(&quot;${<span class="rs-type">FOO</span>}&quot;), <span class="rs-type">Some</span>(&quot;<span class="rs-type">FOO</span>&quot;));
         assert_eq!(<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-parse-dollar-var-318">parse_dollar_var</a>(&quot;$<span class="rs-type">FOO_BAR</span>&quot;), <span class="rs-type">Some</span>(&quot;<span class="rs-type">FOO_BAR</span>&quot;));
         assert_eq!(<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-parse-dollar-var-318">parse_dollar_var</a>(&quot;prefix$<span class="rs-type">FOO</span>&quot;), <span class="rs-type">None</span>);
@@ -522,19 +524,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:358</p>
-</article><article id="item-fn-resolve-placeholders-uses-lookup-370" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_placeholders_uses_lookup private fn resolve_placeholders_uses_lookup () crates/eos-db/src/model_registry.rs  ">
+  <p class="source">crates/eos-db/src/model_registry.rs:360</p>
+</article><article id="item-fn-resolve-placeholders-uses-lookup-372" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_placeholders_uses_lookup private fn resolve_placeholders_uses_lookup () crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>resolve_placeholders_uses_lookup</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-resolve-placeholders-uses-lookup-370">resolve_placeholders_uses_lookup</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-resolve-placeholders-uses-lookup-372">resolve_placeholders_uses_lookup</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-resolve-placeholders-uses-lookup-370">resolve_placeholders_uses_lookup</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-resolve-placeholders-uses-lookup-372">resolve_placeholders_uses_lookup</a>() {
         <span class="rs-kw">let</span> lookup = |k: &amp;str| <span class="rs-kw">match</span> k {
             &quot;<span class="rs-type">MY_KEY</span>&quot; =&gt; <span class="rs-type">Some</span>(&quot;secret-value&quot;.to_owned()),
             _ =&gt; <span class="rs-type">None</span>,
@@ -558,20 +560,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:370</p>
-</article><article id="item-fn-redaction-masks-secrets-keeps-placeholders-393" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn redaction_masks_secrets_keeps_placeholders private fn redaction_masks_secrets_keeps_placeholders () crates/eos-db/src/model_registry.rs  ">
+  <p class="source">crates/eos-db/src/model_registry.rs:372</p>
+</article><article id="item-fn-redaction-masks-secrets-keeps-placeholders-395" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn redaction_masks_secrets_keeps_placeholders private fn redaction_masks_secrets_keeps_placeholders () crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>redaction_masks_secrets_keeps_placeholders</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-redaction-masks-secrets-keeps-placeholders-393">redaction_masks_secrets_keeps_placeholders</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-redaction-masks-secrets-keeps-placeholders-395">redaction_masks_secrets_keeps_placeholders</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-redaction-masks-secrets-keeps-placeholders-393">redaction_masks_secrets_keeps_placeholders</a>() {
-        <span class="rs-kw">let</span> map = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(&amp;[
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-redaction-masks-secrets-keeps-placeholders-395">redaction_masks_secrets_keeps_placeholders</a>() {
+        <span class="rs-kw">let</span> map = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(&amp;[
             (&quot;api_key&quot;, json!(&quot;sk-realsecret&quot;)),
             (&quot;auth_token&quot;, json!(&quot;env:<span class="rs-type">TOKEN</span>&quot;)), <span class="rs-comment">// placeholder kept visible</span>
             (&quot;model&quot;, json!(&quot;gpt-4&quot;)),          <span class="rs-comment">// non-secret kept</span>
@@ -584,19 +586,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:393</p>
-</article><article id="item-fn-model-registry-active-and-resolve-408" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn model_registry_active_and_resolve private async fn model_registry_active_and_resolve () crates/eos-db/src/model_registry.rs  ">
+  <p class="source">crates/eos-db/src/model_registry.rs:395</p>
+</article><article id="item-fn-model-registry-active-and-resolve-410" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn model_registry_active_and_resolve private async fn model_registry_active_and_resolve () crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>model_registry_active_and_resolve</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-model-registry-active-and-resolve-408">model_registry_active_and_resolve</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-model-registry-active-and-resolve-410">model_registry_active_and_resolve</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-model-registry-active-and-resolve-408">model_registry_active_and_resolve</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-model-registry-active-and-resolve-410">model_registry_active_and_resolve</a>() {
         <span class="rs-kw">let</span> env_var = &quot;<span class="rs-type">EOS_DB_TEST_MODEL_KEY_AC07</span>&quot;;
         <span class="rs-comment">// SAFETY: a uniquely-named var read only by this test.</span>
         std::env::set_var(env_var, &quot;resolved-secret&quot;);
@@ -608,7 +610,7 @@
                 &quot;a&quot;,
                 &quot;<span class="rs-type">Model</span> <span class="rs-type">A</span>&quot;,
                 &quot;pkg.<span class="rs-type">A</span>&quot;,
-                &amp;<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(&amp;[(&quot;model&quot;, json!(&quot;m-a&quot;))]),
+                &amp;<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(&amp;[(&quot;model&quot;, json!(&quot;m-a&quot;))]),
                 <span class="rs-kw">true</span>,
             )
             .<span class="rs-kw">await</span>
@@ -618,7 +620,7 @@
         assert!(a.is_active);
 
         <span class="rs-comment">// Activating b deactivates a.</span>
-        <span class="rs-kw">let</span> kwargs_b = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(&amp;[
+        <span class="rs-kw">let</span> kwargs_b = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(&amp;[
             (&quot;model&quot;, json!(&quot;m-b&quot;)),
             (&quot;api_key&quot;, json!(format!(&quot;env:{env_var}&quot;))),
         ]);
@@ -652,19 +654,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:408</p>
-</article><article id="item-fn-sync-from-config-imports-and-updates-active-463" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sync_from_config_imports_and_updates_active private async fn sync_from_config_imports_and_updates_active () crates/eos-db/src/model_registry.rs  ">
+  <p class="source">crates/eos-db/src/model_registry.rs:410</p>
+</article><article id="item-fn-sync-from-config-imports-and-updates-active-465" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sync_from_config_imports_and_updates_active private async fn sync_from_config_imports_and_updates_active () crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>sync_from_config_imports_and_updates_active</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-imports-and-updates-active-463">sync_from_config_imports_and_updates_active</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-imports-and-updates-active-465">sync_from_config_imports_and_updates_active</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-imports-and-updates-active-463">sync_from_config_imports_and_updates_active</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-imports-and-updates-active-465">sync_from_config_imports_and_updates_active</a>() {
         <span class="rs-kw">let</span> (_dir, reg) = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-registry-342">registry</a>().<span class="rs-kw">await</span>;
         <span class="rs-kw">let</span> seed: <span class="rs-type">ModelsConfig</span> = serde_json::from_value(json!({
             &quot;active&quot;: &quot;k2&quot;,
@@ -697,19 +699,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:463</p>
-</article><article id="item-fn-sync-from-config-synthesizes-active-only-model-495" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sync_from_config_synthesizes_active_only_model private async fn sync_from_config_synthesizes_active_only_model () crates/eos-db/src/model_registry.rs  ">
+  <p class="source">crates/eos-db/src/model_registry.rs:465</p>
+</article><article id="item-fn-sync-from-config-synthesizes-active-only-model-497" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sync_from_config_synthesizes_active_only_model private async fn sync_from_config_synthesizes_active_only_model () crates/eos-db/src/model_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>sync_from_config_synthesizes_active_only_model</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-synthesizes-active-only-model-495">sync_from_config_synthesizes_active_only_model</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-synthesizes-active-only-model-497">sync_from_config_synthesizes_active_only_model</a> ()</code>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-synthesizes-active-only-model-495">sync_from_config_synthesizes_active_only_model</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-synthesizes-active-only-model-497">sync_from_config_synthesizes_active_only_model</a>() {
         <span class="rs-kw">let</span> (_dir, reg) = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-registry-342">registry</a>().<span class="rs-kw">await</span>;
         <span class="rs-kw">let</span> seed: <span class="rs-type">ModelsConfig</span> = serde_json::from_value(json!({
             &quot;active&quot;: &quot;claude-sonnet-4-6&quot;
@@ -724,7 +726,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/model_registry.rs:495</p>
+  <p class="source">crates/eos-db/src/model_registry.rs:497</p>
 </article></div>
 </section></div>
 </main>
@@ -1077,13 +1079,15 @@
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-registry-342">registry</a>() -&gt; (tempfile::<span class="rs-type">TempDir</span>, <a class="symbol-link rs-type" href="eos-db--src-model-registry-rs.html#item-struct-ModelRegistry-56">ModelRegistry</a>) {
         <span class="rs-kw">let</span> dir = tempfile::tempdir().expect(&quot;tempdir&quot;);
         <span class="rs-kw">let</span> path = dir.path().join(&quot;models.db&quot;);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cfg = <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>::<a class="symbol-link rs-fn" href="eos-db.html#method-default-80">default</a>();
-        cfg.url = <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseUrl-13">DatabaseUrl</a>::<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>(format!(&quot;sqlite:<span class="rs-comment">//{}", path.display())).expect("url");</span>
+        <span class="rs-kw">let</span> cfg = <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseConfig-62">DatabaseConfig</a> {
+            url: <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-db.html#item-struct-DatabaseUrl-13">DatabaseUrl</a>::<a class="symbol-link rs-fn" href="eos-db.html#method-parse-20">parse</a>(format!(&quot;sqlite:<span class="rs-comment">//{}", path.display())).expect("url"),</span>
+            ..<span class="rs-type">Default</span>::<a class="symbol-link rs-fn" href="eos-db.html#method-default-80">default</a>()
+        };
         <span class="rs-kw">let</span> pool = <span class="rs-kw">crate</span>::pool::<a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-open-pool-28">open_pool</a>(&amp;cfg).<span class="rs-kw">await</span>.expect(&quot;pool&quot;);
         (dir, <a class="symbol-link rs-type" href="eos-db--src-model-registry-rs.html#item-struct-ModelRegistry-56">ModelRegistry</a>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-65">new</a>(pool))
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(pairs: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(pairs: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
         pairs
             .iter()
             .map(|(k, v)| ((*k).to_owned(), v.clone()))
@@ -1091,7 +1095,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-dollar-var-parsing-is-fullmatch-358">dollar_var_parsing_is_fullmatch</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-dollar-var-parsing-is-fullmatch-360">dollar_var_parsing_is_fullmatch</a>() {
         assert_eq!(<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-parse-dollar-var-318">parse_dollar_var</a>(&quot;${<span class="rs-type">FOO</span>}&quot;), <span class="rs-type">Some</span>(&quot;<span class="rs-type">FOO</span>&quot;));
         assert_eq!(<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-parse-dollar-var-318">parse_dollar_var</a>(&quot;$<span class="rs-type">FOO_BAR</span>&quot;), <span class="rs-type">Some</span>(&quot;<span class="rs-type">FOO_BAR</span>&quot;));
         assert_eq!(<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-parse-dollar-var-318">parse_dollar_var</a>(&quot;prefix$<span class="rs-type">FOO</span>&quot;), <span class="rs-type">None</span>);
@@ -1103,7 +1107,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-resolve-placeholders-uses-lookup-370">resolve_placeholders_uses_lookup</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-resolve-placeholders-uses-lookup-372">resolve_placeholders_uses_lookup</a>() {
         <span class="rs-kw">let</span> lookup = |k: &amp;str| <span class="rs-kw">match</span> k {
             &quot;<span class="rs-type">MY_KEY</span>&quot; =&gt; <span class="rs-type">Some</span>(&quot;secret-value&quot;.to_owned()),
             _ =&gt; <span class="rs-type">None</span>,
@@ -1126,8 +1130,8 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-redaction-masks-secrets-keeps-placeholders-393">redaction_masks_secrets_keeps_placeholders</a>() {
-        <span class="rs-kw">let</span> map = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(&amp;[
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-redaction-masks-secrets-keeps-placeholders-395">redaction_masks_secrets_keeps_placeholders</a>() {
+        <span class="rs-kw">let</span> map = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(&amp;[
             (&quot;api_key&quot;, json!(&quot;sk-realsecret&quot;)),
             (&quot;auth_token&quot;, json!(&quot;env:<span class="rs-type">TOKEN</span>&quot;)), <span class="rs-comment">// placeholder kept visible</span>
             (&quot;model&quot;, json!(&quot;gpt-4&quot;)),          <span class="rs-comment">// non-secret kept</span>
@@ -1141,7 +1145,7 @@
     <span class="rs-comment">// AC-eos-db-07: register/active/active_resolved, activation flips the active</span>
     <span class="rs-comment">// row, delete promotes the oldest, class_path is returned verbatim.</span>
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-model-registry-active-and-resolve-408">model_registry_active_and_resolve</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-model-registry-active-and-resolve-410">model_registry_active_and_resolve</a>() {
         <span class="rs-kw">let</span> env_var = &quot;<span class="rs-type">EOS_DB_TEST_MODEL_KEY_AC07</span>&quot;;
         <span class="rs-comment">// SAFETY: a uniquely-named var read only by this test.</span>
         std::env::set_var(env_var, &quot;resolved-secret&quot;);
@@ -1153,7 +1157,7 @@
                 &quot;a&quot;,
                 &quot;<span class="rs-type">Model</span> <span class="rs-type">A</span>&quot;,
                 &quot;pkg.<span class="rs-type">A</span>&quot;,
-                &amp;<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(&amp;[(&quot;model&quot;, json!(&quot;m-a&quot;))]),
+                &amp;<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(&amp;[(&quot;model&quot;, json!(&quot;m-a&quot;))]),
                 <span class="rs-kw">true</span>,
             )
             .<span class="rs-kw">await</span>
@@ -1163,7 +1167,7 @@
         assert!(a.is_active);
 
         <span class="rs-comment">// Activating b deactivates a.</span>
-        <span class="rs-kw">let</span> kwargs_b = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-351">obj</a>(&amp;[
+        <span class="rs-kw">let</span> kwargs_b = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-obj-353">obj</a>(&amp;[
             (&quot;model&quot;, json!(&quot;m-b&quot;)),
             (&quot;api_key&quot;, json!(format!(&quot;env:{env_var}&quot;))),
         ]);
@@ -1196,7 +1200,7 @@
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-imports-and-updates-active-463">sync_from_config_imports_and_updates_active</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-imports-and-updates-active-465">sync_from_config_imports_and_updates_active</a>() {
         <span class="rs-kw">let</span> (_dir, reg) = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-registry-342">registry</a>().<span class="rs-kw">await</span>;
         <span class="rs-kw">let</span> seed: <span class="rs-type">ModelsConfig</span> = serde_json::from_value(json!({
             &quot;active&quot;: &quot;k2&quot;,
@@ -1228,7 +1232,7 @@
     }
 
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-synthesizes-active-only-model-495">sync_from_config_synthesizes_active_only_model</a>() {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-sync-from-config-synthesizes-active-only-model-497">sync_from_config_synthesizes_active_only_model</a>() {
         <span class="rs-kw">let</span> (_dir, reg) = <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#item-fn-registry-342">registry</a>().<span class="rs-kw">await</span>;
         <span class="rs-kw">let</span> seed: <span class="rs-type">ModelsConfig</span> = serde_json::from_value(json!({
             &quot;active&quot;: &quot;claude-sonnet-4-6&quot;

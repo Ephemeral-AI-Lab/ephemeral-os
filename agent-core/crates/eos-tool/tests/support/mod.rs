@@ -104,7 +104,7 @@ impl TaskStore for FakeTaskStore {
         expected: TaskStatus,
         status: TaskStatus,
         outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
+        terminal_payload: Option<&JsonObject>,
     ) -> Result<Option<Task>, CoreError> {
         let mut tasks = self.tasks.lock().unwrap();
         let task = tasks
@@ -117,8 +117,8 @@ impl TaskStore for FakeTaskStore {
         if let Some(o) = outcomes {
             task.outcomes = o.to_vec();
         }
-        if let Some(t) = terminal_tool_result {
-            task.terminal_tool_result = Some(t.clone());
+        if let Some(t) = terminal_payload {
+            task.terminal_payload = Some(t.clone());
         }
         Ok(Some(task.clone()))
     }
@@ -137,7 +137,7 @@ impl TaskStore for FakeTaskStore {
                     && matches!(task.status, TaskStatus::Pending | TaskStatus::Running)
                 {
                     task.status = TaskStatus::Cancelled;
-                    task.terminal_tool_result = Some(terminal.clone());
+                    task.terminal_payload = Some(terminal.clone());
                 }
             }
         }

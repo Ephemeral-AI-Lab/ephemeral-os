@@ -366,13 +366,13 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/runtime.rs:79</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-command-handle-from-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_handle_from pub(super) pub(super) fn command_handle_from (layer_stack_root : &amp; std :: path :: Path , handle : WorkspaceHandle ,) -&gt; CommandHandle crates/eos-daemon/src/adapters/workspace_run/isolated/runtime.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-command-handle-from-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_handle_from pub(super) pub(super) fn command_handle_from (layer_stack_root : &amp; std :: path :: Path , handle : WorkspaceHandle ,) -&gt; IsolatedCommandHandle crates/eos-daemon/src/adapters/workspace_run/isolated/runtime.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_handle_from</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-fn-command-handle-from-320">command_handle_from</a> (layer_stack_root : &amp; std :: path :: Path , handle : WorkspaceHandle ,) -&gt; CommandHandle</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-fn-command-handle-from-320">command_handle_from</a> (layer_stack_root : &amp; std :: path :: Path , handle : WorkspaceHandle ,) -&gt; IsolatedCommandHandle</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -380,8 +380,8 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-fn-command-handle-from-320">command_handle_from</a>(
     layer_stack_root: &amp;std::path::<span class="rs-type">Path</span>,
     handle: <span class="rs-type">WorkspaceHandle</span>,
-) -&gt; <span class="rs-type">CommandHandle</span> {
-    <span class="rs-type">CommandHandle</span> {
+) -&gt; <span class="rs-type">IsolatedCommandHandle</span> {
+    <span class="rs-type">IsolatedCommandHandle</span> {
         caller_id: handle.caller_id.0,
         workspace_handle_id: handle.workspace_handle_id.0,
         layer_stack_root: layer_stack_root.to_path_buf(),
@@ -420,6 +420,8 @@
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
 
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-type">IsolatedCommandHandle</span>;
 <span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
@@ -428,8 +430,6 @@
 <span class="rs-kw">use</span> eos_workspace_runtime::isolated::{
     <span class="rs-type">IsolatedError</span>, <span class="rs-type">LayerStackSnapshotPort</span>, <span class="rs-type">NamespaceRuntimePort</span>, <span class="rs-type">SnapshotLease</span>, <span class="rs-type">WorkspaceHandle</span>,
 };
-#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">use</span> eos_workspace_runtime::<span class="rs-type">CommandHandle</span>;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> nix::fcntl::<span class="rs-type">OFlag</span>;
 #[cfg(target_os = &quot;linux&quot;)]
@@ -731,8 +731,8 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#item-fn-command-handle-from-320">command_handle_from</a>(
     layer_stack_root: &amp;std::path::<span class="rs-type">Path</span>,
     handle: <span class="rs-type">WorkspaceHandle</span>,
-) -&gt; <span class="rs-type">CommandHandle</span> {
-    <span class="rs-type">CommandHandle</span> {
+) -&gt; <span class="rs-type">IsolatedCommandHandle</span> {
+    <span class="rs-type">IsolatedCommandHandle</span> {
         caller_id: handle.caller_id.0,
         workspace_handle_id: handle.workspace_handle_id.0,
         layer_stack_root: layer_stack_root.to_path_buf(),

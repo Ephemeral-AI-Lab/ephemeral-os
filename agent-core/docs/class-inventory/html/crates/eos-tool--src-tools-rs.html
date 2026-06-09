@@ -258,13 +258,13 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-tool/src/tools.rs:199</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-default-registry-214" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry pub pub fn build_default_registry (config : &amp; ToolConfigSet , caller : &amp; CallerScope , runtime : ToolRuntime ,) -&gt; ToolRegistry crates/eos-tool/src/tools.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-default-registry-214" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry pub pub fn build_default_registry (config : &amp; ToolConfigSet , caller : &amp; CallerScope , runtime : &amp; ToolRuntime ,) -&gt; ToolRegistry crates/eos-tool/src/tools.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_default_registry</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-fn-build-default-registry-214">build_default_registry</a> (config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-CallerScope-32">CallerScope</a> , runtime : <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a> ,) -&gt; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a></code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-fn-build-default-registry-214">build_default_registry</a> (config : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tool--src-tools-rs.html#item-struct-CallerScope-32">CallerScope</a> , runtime : &amp; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a> ,) -&gt; <a class="symbol-link" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a></code>
   <p class="docstring">Build the default executable tool registry for one caller.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -274,12 +274,12 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-build-default-registry-214">build_default_registry</a>(
     config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
     caller: &amp;<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CallerScope-32">CallerScope</a>,
-    runtime: <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a>,
+    runtime: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>();
-    <span class="rs-kw">let</span> sandbox = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime);
-    <span class="rs-kw">let</span> command = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CommandHandle-66">CommandHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime);
-    <span class="rs-kw">let</span> background = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime);
+    <span class="rs-kw">let</span> sandbox = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime);
+    <span class="rs-kw">let</span> command = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CommandHandle-66">CommandHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime);
+    <span class="rs-kw">let</span> background = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime);
     <span class="rs-kw">let</span> root = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-RootSubmissionHandle-126">RootSubmissionHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime.submission.clone());
     <span class="rs-kw">let</span> attempt = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-AttemptSubmissionHandle-137">AttemptSubmissionHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime.submission);
     <span class="rs-kw">let</span> skills = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SkillHandle-152">SkillHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime.skills.clone());
@@ -670,12 +670,12 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tool--src-tools-rs.html#item-fn-build-default-registry-214">build_default_registry</a>(
     config: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolConfigSet-272">ToolConfigSet</a>,
     caller: &amp;<a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CallerScope-32">CallerScope</a>,
-    runtime: <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a>,
+    runtime: &amp;<a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRuntime-940">ToolRuntime</a>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-type" href="eos-tool--src-registry-rs.html#item-struct-ToolRegistry-142">ToolRegistry</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>();
-    <span class="rs-kw">let</span> sandbox = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime);
-    <span class="rs-kw">let</span> command = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CommandHandle-66">CommandHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime);
-    <span class="rs-kw">let</span> background = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime);
+    <span class="rs-kw">let</span> sandbox = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SandboxHandle-41">SandboxHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime);
+    <span class="rs-kw">let</span> command = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-CommandHandle-66">CommandHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime);
+    <span class="rs-kw">let</span> background = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-BackgroundHandle-91">BackgroundHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime);
     <span class="rs-kw">let</span> root = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-RootSubmissionHandle-126">RootSubmissionHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime.submission.clone());
     <span class="rs-kw">let</span> attempt = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-AttemptSubmissionHandle-137">AttemptSubmissionHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(&amp;runtime.submission);
     <span class="rs-kw">let</span> skills = <a class="symbol-link rs-type" href="eos-tool--src-tools-rs.html#item-struct-SkillHandle-152">SkillHandle</a>::<a class="symbol-link rs-fn" href="eos-tool--src-registry-rs.html#method-new-83">new</a>(runtime.skills.clone());

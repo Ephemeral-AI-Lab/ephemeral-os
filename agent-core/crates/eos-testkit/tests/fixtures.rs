@@ -1,7 +1,7 @@
 //! Public fixture-contract tests for `eos-testkit`.
 #![allow(clippy::expect_used)]
 
-use eos_engine::{EngineError, ProviderStreamSource, StartAgentLoopRequest, StreamEvent};
+use eos_engine::{EngineError, ProviderStreamSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec};
 use eos_sandbox_port::{DaemonOp, SandboxTransport};
 use eos_testkit::{
@@ -9,7 +9,7 @@ use eos_testkit::{
 };
 use eos_types::{
     AgentRunId, AgentRunRecordDir, AgentRunRecordTarget, AgentRunRuntimeSnapshot, JsonObject,
-    RequestId, SandboxId, TaskId,
+    RequestId, SandboxId, StartAgentLoopRequest, TaskId,
 };
 use futures::StreamExt;
 use serde_json::json;

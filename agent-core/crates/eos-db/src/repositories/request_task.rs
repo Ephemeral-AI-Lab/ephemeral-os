@@ -186,7 +186,7 @@ impl TaskStore for SqlRequestTaskStore {
         .bind(json_col::encode(&task.needs)?)
         .bind(json_col::encode(&task.outcomes)?)
         .bind(
-            task.terminal_tool_result
+            task.terminal_payload
                 .as_ref()
                 .map(json_col::encode)
                 .transpose()?,
@@ -214,15 +214,15 @@ impl TaskStore for SqlRequestTaskStore {
         expected: TaskStatus,
         status: TaskStatus,
         outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
+        terminal_payload: Option<&JsonObject>,
     ) -> Result<Option<Task>, CoreError> {
         let now = OffsetDateTime::now_utc();
         let outcomes_json = outcomes.map(json_col::encode).transpose()?;
-        let ttr_json = terminal_tool_result.map(json_col::encode).transpose()?;
+        let terminal_json = terminal_payload.map(json_col::encode).transpose()?;
         let updated = sqlx::query_as::<Sqlite, TaskRow>(UPDATE_TASK_STATUS_IF_CURRENT_SQL)
             .bind(enum_to_db(&status))
             .bind(outcomes_json)
-            .bind(ttr_json)
+            .bind(terminal_json)
             .bind(now)
             .bind(id.as_str())
             .bind(enum_to_db(&expected))

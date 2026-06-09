@@ -9,7 +9,7 @@ use regex::Regex;
 use serde_json::{json, Value};
 
 use crate::agent_loop::ToolCallHookStores;
-use crate::background::BackgroundManagers;
+use crate::background::BackgroundSessionRuntime;
 
 mod advisor_approval;
 mod disallow_nested_planner_deferral;
@@ -63,12 +63,15 @@ impl HookDenial {
 /// Engine-owned state used by tool-call pre-hooks.
 #[derive(Clone, Debug)]
 pub(crate) struct ToolCallHooks {
-    background: BackgroundManagers,
+    background: BackgroundSessionRuntime,
     dependencies: ToolCallHookStores,
 }
 
 impl ToolCallHooks {
-    pub(crate) fn new(background: &BackgroundManagers, dependencies: ToolCallHookStores) -> Self {
+    pub(crate) fn new(
+        background: &BackgroundSessionRuntime,
+        dependencies: ToolCallHookStores,
+    ) -> Self {
         Self {
             background: background.clone(),
             dependencies,

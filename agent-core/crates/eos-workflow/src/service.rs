@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentCoreCancellationApi, AgentRunId, AttemptClosure, IterationStatus, OutstandingWorkflow,
+    AgentCoreCancellationApi, AgentRunId, AttemptClosure, IterationStatus, OpenDelegatedWorkflow,
     StartWorkflowRequest, StartedWorkflow, TaskStore, TerminalWorkflow, WorkflowApi,
     WorkflowApiError, WorkflowId, WorkflowStatus, WorkflowTerminalStatus,
 };
@@ -116,17 +116,17 @@ impl WorkflowApi for WorkflowService {
         }))
     }
 
-    async fn find_outstanding_workflows(
+    async fn list_open_delegated_workflows_for_agent_run(
         &self,
         agent_run_id: &AgentRunId,
-    ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
+    ) -> Result<Vec<OpenDelegatedWorkflow>, WorkflowApiError> {
         Ok(self
             .workflow_store
             .list_for_launching_agent_run(agent_run_id)
             .await?
             .into_iter()
             .filter(eos_types::Workflow::is_open)
-            .map(|workflow| OutstandingWorkflow {
+            .map(|workflow| OpenDelegatedWorkflow {
                 workflow_id: workflow.id,
                 workflow_goal: workflow.workflow_goal,
             })

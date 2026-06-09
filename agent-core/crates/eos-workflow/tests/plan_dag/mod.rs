@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 
-use eos_types::{AttemptBudget, AttemptStage, PlanNodeId, TaskRole, TaskStatus, WorkflowStatus};
+use eos_types::{AttemptBudget, AttemptStage, GeneratorId, TaskRole, TaskStatus, WorkflowStatus};
 
 use crate::ids::generator_task_id;
 use crate::support::{
@@ -20,8 +20,8 @@ use crate::support::{
 };
 use crate::WorkflowStarter;
 
-fn node(id: &str) -> PlanNodeId {
-    PlanNodeId::new(id).unwrap()
+fn gen_id(id: &str) -> GeneratorId {
+    GeneratorId::new(id).unwrap()
 }
 
 #[tokio::test]
@@ -66,7 +66,7 @@ async fn plan_dag_materializes_and_parks_at_run_without_closing() {
     let plan = attempt
         .materialized_plan()
         .expect("plan materialized into the attempt");
-    let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
+    let generator_id = generator_task_id(&started.attempt_id, &gen_id("g1")).unwrap();
     assert_eq!(
         plan.generator_task_ids,
         vec![generator_id.clone()],

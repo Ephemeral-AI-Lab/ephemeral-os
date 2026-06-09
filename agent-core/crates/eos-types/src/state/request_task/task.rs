@@ -112,9 +112,9 @@ pub struct Task {
     /// Recorded execution outcomes (pre-normalized at the `eos-db` boundary).
     #[serde(default)]
     pub outcomes: Vec<ExecutionTaskOutcome>,
-    /// Flattened terminal tool result, if a terminal has stamped one.
+    /// Flattened terminal payload, if a terminal has stamped one.
     #[serde(default)]
-    pub terminal_tool_result: Option<JsonObject>,
+    pub terminal_payload: Option<JsonObject>,
 }
 
 /// Merged persisted task-agent-run row.

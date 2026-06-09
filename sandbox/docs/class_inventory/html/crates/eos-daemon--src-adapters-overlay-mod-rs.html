@@ -70,12 +70,12 @@
         <span class="rs-self">Self</span> { root }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspacePublisherPort for <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-40">DaemonPublisherPort</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-publish-upperdir-changes-51"><td>method</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-51">publish_upperdir_changes</a> (&amp; self , _root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , _path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspacePublisherPort for <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-40">DaemonPublisherPort</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-publish-upperdir-changes-51"><td>method</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-51">publish_upperdir_changes</a> (&amp; self , _root : &amp; WorkspaceRoot , snapshot : &amp; SnapshotLease , changes : &amp; [LayerChange] , _path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-51">publish_upperdir_changes</a>(
         &amp;<span class="rs-self">self</span>,
         _root: &amp;<span class="rs-type">WorkspaceRoot</span>,
-        snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
+        snapshot: &amp;<span class="rs-type">SnapshotLease</span>,
         changes: &amp;[<span class="rs-type">LayerChange</span>],
         _path_kinds: &amp;[<span class="rs-type">PathChange</span>],
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PublishOutcome</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
@@ -246,8 +246,8 @@
 <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
 <span class="rs-kw">use</span> eos_runner::{<span class="rs-type">RunRequest</span>, <span class="rs-type">RunResult</span>};
 <span class="rs-kw">use</span> eos_workspace_runtime::ephemeral::{
-    <span class="rs-type">EphemeralDirAllocator</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralSnapshot</span>, <span class="rs-type">EphemeralWorkspaceError</span>,
-    <span class="rs-type">InvocationId</span>, <span class="rs-type">PathChange</span>, <span class="rs-type">PublishOutcome</span>, <span class="rs-type">WorkspacePublisherPort</span>, <span class="rs-type">WorkspaceRoot</span>,
+    <span class="rs-type">EphemeralDirAllocator</span>, <span class="rs-type">EphemeralRunDirs</span>, <span class="rs-type">EphemeralWorkspaceError</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">PathChange</span>,
+    <span class="rs-type">PublishOutcome</span>, <span class="rs-type">SnapshotLease</span>, <span class="rs-type">WorkspacePublisherPort</span>, <span class="rs-type">WorkspaceRoot</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::occ::{
@@ -285,7 +285,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-51">publish_upperdir_changes</a>(
         &amp;<span class="rs-self">self</span>,
         _root: &amp;<span class="rs-type">WorkspaceRoot</span>,
-        snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
+        snapshot: &amp;<span class="rs-type">SnapshotLease</span>,
         changes: &amp;[<span class="rs-type">LayerChange</span>],
         _path_kinds: &amp;[<span class="rs-type">PathChange</span>],
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PublishOutcome</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {

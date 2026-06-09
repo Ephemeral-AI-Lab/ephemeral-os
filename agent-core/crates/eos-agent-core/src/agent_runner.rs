@@ -20,8 +20,8 @@ use async_trait::async_trait;
 use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
 use eos_types::{
-    AgentName as SpawnAgentName, AgentRunApi, SpawnAgentRequest, SpawnAgentTarget, TaskRole,
-    WorkflowApi, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowTaskRole,
+    AgentName as SpawnAgentName, AgentRunApi, SpawnAgentRequest, SpawnAgentTarget, WorkflowApi,
+    WorkflowAttemptSubmissionApi, WorkflowCoordinates,
 };
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
@@ -119,13 +119,12 @@ impl AgentRunner for RuntimeAgentRunner {
                 initial_messages: vec![Message::from_user_text(prompt)],
                 target: SpawnAgentTarget::Workflow {
                     request_id: launch.request_id().clone(),
-                    task_id: launch.task_id().clone(),
                     workflow: WorkflowCoordinates {
                         workflow_id: launch.workflow_id().clone(),
                         iteration_id: launch.iteration_id().clone(),
                         attempt_id: launch.attempt_id().clone(),
                     },
-                    role: workflow_task_agent_run_role(launch.role()),
+                    workflow_node_id: launch.workflow_node_id(),
                 },
                 tool_use_id: None,
                 sandbox_id: None,
@@ -145,14 +144,5 @@ impl AgentRunner for RuntimeAgentRunner {
         // (Path A-recording); the runner reports only a framework fault, which
         // the loop uses as the still-RUNNING exhaustion summary for a dead agent.
         Ok(AgentRunReport { failure_summary })
-    }
-}
-
-fn workflow_task_agent_run_role(role: TaskRole) -> WorkflowTaskRole {
-    match role {
-        TaskRole::Planner => WorkflowTaskRole::Planner,
-        TaskRole::Generator => WorkflowTaskRole::Generator,
-        TaskRole::Reducer => WorkflowTaskRole::Reducer,
-        TaskRole::Root => unreachable!("workflow task-agent-run role cannot be root"),
     }
 }

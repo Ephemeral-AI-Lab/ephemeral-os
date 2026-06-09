@@ -7,7 +7,7 @@ use eos_types::{AgentRunId, StartedWorkflow, WorkflowApi, WorkflowId, WorkflowTe
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
-use super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::runtime::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
 /// One delegated workflow tracked as background work for the owning agent run,
@@ -265,7 +265,7 @@ mod tests {
 
     use async_trait::async_trait;
     use eos_types::{
-        OutstandingWorkflow, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
+        OpenDelegatedWorkflow, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow,
         WorkflowApiError,
     };
 
@@ -311,10 +311,10 @@ mod tests {
             }))
         }
 
-        async fn find_outstanding_workflows(
+        async fn list_open_delegated_workflows_for_agent_run(
             &self,
             _agent_run_id: &AgentRunId,
-        ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError> {
+        ) -> Result<Vec<OpenDelegatedWorkflow>, WorkflowApiError> {
             Ok(Vec::new())
         }
 

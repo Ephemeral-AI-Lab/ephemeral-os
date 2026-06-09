@@ -4,9 +4,8 @@ use async_trait::async_trait;
 
 use crate::{
     AgentName, AgentRunId, AgentRunRecordIndex, CoreError, CreatedTaskAgentRun, JsonObject,
-    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, PlanNodeId, RequestId,
-    TaskExecutionIndex, TaskId, TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates,
-    WorkflowTaskRole,
+    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, TaskExecutionIndex, TaskId,
+    TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates, WorkflowNodeId,
 };
 
 use super::Sealed;
@@ -28,8 +27,7 @@ pub trait TaskAgentRunStore: Sealed + Send + Sync {
         request_id: &RequestId,
         agent_run_id: &AgentRunId,
         workflow: &WorkflowCoordinates,
-        role: WorkflowTaskRole,
-        plan_node_id: Option<&PlanNodeId>,
+        workflow_node_id: &WorkflowNodeId,
         agent_name: &AgentName,
     ) -> Result<CreatedTaskAgentRun, CoreError>;
 
@@ -96,6 +94,31 @@ pub fn root_task_id(request_id: &RequestId) -> TaskId {
     format!("root-{request_id}")
         .parse()
         .expect("root-{request_id} is non-empty, so TaskId parsing cannot fail")
+}
+
+/// Build a deterministic workflow task-agent-run task id.
+///
+/// Planner, generator, and reducer ids are derived from the attempt id plus the
+/// workflow-local id assigned for that role.
+///
+/// # Errors
+/// Returns [`CoreError`] when the derived id violates the [`TaskId`] invariant.
+pub fn workflow_task_id(
+    attempt_id: &crate::AttemptId,
+    workflow_node_id: &WorkflowNodeId,
+) -> Result<TaskId, CoreError> {
+    let value = match workflow_node_id {
+        WorkflowNodeId::Planner { planner_id } => {
+            format!("{}:planner:{}", attempt_id.as_str(), planner_id.as_str())
+        }
+        WorkflowNodeId::Generator { generator_id } => {
+            format!("{}:gen:{}", attempt_id.as_str(), generator_id.as_str())
+        }
+        WorkflowNodeId::Reducer { reducer_id } => {
+            format!("{}:red:{}", attempt_id.as_str(), reducer_id.as_str())
+        }
+    };
+    value.parse()
 }
 
 /// Build the deterministic parented-run task id from launch facts.

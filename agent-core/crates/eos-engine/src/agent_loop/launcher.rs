@@ -3,16 +3,17 @@
 use std::sync::Arc;
 
 use eos_types::{
-    AgentLoopCancellation, AgentLoopCancellationHandle, AgentLoopLauncher, AgentRunApi,
-    StartAgentLoopRequest, StartedAgentLoop,
+    AgentLoopCancellation, AgentLoopCancellationHandle, AgentLoopCompletion, AgentLoopLauncher,
+    AgentRunApi, StartAgentLoopRequest, StartedAgentLoop,
 };
 use tokio::sync::{oneshot, watch};
 
 use super::{
-    AgentLoopExecutor, AgentLoopExecutorInput, AgentLoopHooks, AgentLoopToolRegistryFactory,
-    BackgroundSessionInputs, NoopAgentLoopHooks, ToolCallHookStores, ToolExecutionMetadataReader,
+    AgentLoopExecutor, AgentLoopExecutorInput, AgentLoopToolRegistryFactory,
+    BackgroundSessionInputs, ToolCallHookStores, ToolExecutionMetadataReader,
 };
-use crate::query::{EngineEventSink, ProviderStreamSource, ProviderStreamSourceFactory};
+use crate::event::EngineEventSink;
+use crate::provider_stream::{ProviderStreamSource, ProviderStreamSourceFactory};
 
 #[derive(Clone, Debug)]
 struct WatchAgentLoopCancellation {
@@ -60,11 +61,10 @@ pub(crate) enum AgentLoopProviderStream {
 /// Tokio-backed non-blocking agent-loop launcher.
 pub struct TokioAgentLoopLauncher {
     provider_stream_source: AgentLoopProviderStream,
-    loop_hooks: Arc<dyn AgentLoopHooks>,
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-    metadata_service: Arc<dyn ToolExecutionMetadataReader>,
-    background_dependencies: Option<BackgroundSessionInputs>,
-    hook_dependencies: Option<ToolCallHookStores>,
+    metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
+    background_inputs: Option<BackgroundSessionInputs>,
+    hook_stores: Option<ToolCallHookStores>,
     event_sink: Option<EngineEventSink>,
 }
 
@@ -81,13 +81,12 @@ impl TokioAgentLoopLauncher {
     pub fn new(
         provider_stream_source: Arc<dyn ProviderStreamSource>,
         tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-        metadata_service: Arc<dyn ToolExecutionMetadataReader>,
+        metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     ) -> Self {
-        Self::with_hooks(
+        Self::new_with_provider_stream(
             AgentLoopProviderStream::Static(provider_stream_source),
-            Arc::new(NoopAgentLoopHooks),
             tool_registry_factory,
-            metadata_service,
+            metadata_reader,
         )
     }
 
@@ -96,45 +95,42 @@ impl TokioAgentLoopLauncher {
     pub fn with_provider_stream_source_factory(
         provider_stream_source_factory: ProviderStreamSourceFactory,
         tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-        metadata_service: Arc<dyn ToolExecutionMetadataReader>,
+        metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     ) -> Self {
-        Self::with_hooks(
+        Self::new_with_provider_stream(
             AgentLoopProviderStream::Factory(provider_stream_source_factory),
-            Arc::new(NoopAgentLoopHooks),
             tool_registry_factory,
-            metadata_service,
+            metadata_reader,
         )
     }
 
     #[must_use]
-    pub(crate) fn with_hooks(
+    fn new_with_provider_stream(
         provider_stream_source: AgentLoopProviderStream,
-        loop_hooks: Arc<dyn AgentLoopHooks>,
         tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-        metadata_service: Arc<dyn ToolExecutionMetadataReader>,
+        metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     ) -> Self {
         Self {
             provider_stream_source,
-            loop_hooks,
             tool_registry_factory,
-            metadata_service,
-            background_dependencies: None,
-            hook_dependencies: None,
+            metadata_reader,
+            background_inputs: None,
+            hook_stores: None,
             event_sink: None,
         }
     }
 
     /// Attach runtime contracts for engine-owned background managers.
     #[must_use]
-    pub fn with_background_dependencies(mut self, dependencies: BackgroundSessionInputs) -> Self {
-        self.background_dependencies = Some(dependencies);
+    pub fn with_background_inputs(mut self, inputs: BackgroundSessionInputs) -> Self {
+        self.background_inputs = Some(inputs);
         self
     }
 
     /// Attach runtime stores for engine-owned tool-call hooks.
     #[must_use]
-    pub fn with_hook_dependencies(mut self, dependencies: ToolCallHookStores) -> Self {
-        self.hook_dependencies = Some(dependencies);
+    pub fn with_tool_call_hook_stores(mut self, stores: ToolCallHookStores) -> Self {
+        self.hook_stores = Some(stores);
         self
     }
 
@@ -152,27 +148,26 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
         request: StartAgentLoopRequest,
         agent_run_api: Arc<dyn AgentRunApi>,
     ) -> StartedAgentLoop {
-        let (outcome_sender, outcome_receiver) = oneshot::channel();
+        let (completion_sender, completion_wait) = oneshot::channel();
         let (cancel_handle, cancel_signal) = agent_loop_cancel_pair();
         let loop_executor = AgentLoopExecutor::new(AgentLoopExecutorInput {
             provider_stream_source: self.provider_stream_source.clone(),
-            loop_hooks: Arc::clone(&self.loop_hooks),
             tool_registry_factory: Arc::clone(&self.tool_registry_factory),
-            metadata_service: Arc::clone(&self.metadata_service),
+            metadata_reader: Arc::clone(&self.metadata_reader),
             cancel_signal,
-            background_dependencies: self.background_dependencies.clone(),
-            hook_dependencies: self.hook_dependencies.clone(),
+            background_inputs: self.background_inputs.clone(),
+            hook_stores: self.hook_stores.clone(),
             event_sink: self.event_sink.clone(),
             agent_run_api,
         });
 
         tokio::spawn(async move {
             let outcome = loop_executor.execute_agent_loop(request).await;
-            let _ignored = outcome_sender.send(outcome);
+            let _ignored = completion_sender.send(outcome);
         });
 
         StartedAgentLoop {
-            outcome: Box::pin(async move { outcome_receiver.await.ok() }),
+            completion: AgentLoopCompletion::new(async move { completion_wait.await.ok() }),
             cancellation: cancel_handle,
         }
     }

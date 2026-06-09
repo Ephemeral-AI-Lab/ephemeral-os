@@ -25,7 +25,7 @@ pub trait TaskStore: Sealed + Send + Sync {
         expected: TaskStatus,
         status: TaskStatus,
         outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
+        terminal_payload: Option<&JsonObject>,
     ) -> Result<Option<Task>, CoreError>;
 
     /// Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime

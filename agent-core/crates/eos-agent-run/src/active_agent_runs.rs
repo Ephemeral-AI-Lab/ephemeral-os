@@ -10,13 +10,14 @@ use crate::records::AgentRunRecordHandle;
 
 /// Registry of active in-process agent runs.
 #[derive(Clone, Default)]
-pub struct ActiveAgentRuns {
+pub struct ActiveAgentRunRegistry {
     inner: Arc<Mutex<HashMap<AgentRunId, ActiveAgentRun>>>,
 }
 
-impl std::fmt::Debug for ActiveAgentRuns {
+impl std::fmt::Debug for ActiveAgentRunRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ActiveAgentRuns").finish_non_exhaustive()
+        f.debug_struct("ActiveAgentRunRegistry")
+            .finish_non_exhaustive()
     }
 }
 
@@ -42,7 +43,7 @@ impl ActiveAgentRunRecord {
     }
 }
 
-impl ActiveAgentRuns {
+impl ActiveAgentRunRegistry {
     /// Create an empty registry.
     #[must_use]
     pub fn new() -> Self {

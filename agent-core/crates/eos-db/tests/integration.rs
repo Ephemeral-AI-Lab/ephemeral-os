@@ -6,9 +6,9 @@ use eos_types::{
     format_record_dir, AgentName, AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage,
     AttemptStatus, DeferredGoal, ExecutionRole, ExecutionTaskOutcome, IterationCreationReason,
     IterationStatus, JsonObject, MaterializedPlan, Page, ParentAgentRunAnchor,
-    ParentedAgentRunKind, PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task,
-    TaskAgentRunKind, TaskId, TaskRole, TaskStatus, ToolUseId, UtcDateTime, WorkflowCoordinates,
-    WorkflowStatus, WorkflowTaskRole,
+    ParentedAgentRunKind, PlanDisposition, PlannerId, RequestId, RequestListFilter, RequestStatus,
+    Task, TaskAgentRunKind, TaskId, TaskRole, TaskStatus, ToolUseId, UtcDateTime,
+    WorkflowCoordinates, WorkflowNodeId, WorkflowStatus, WorkflowTaskRole,
 };
 use sqlx::Row;
 
@@ -86,7 +86,7 @@ fn sample_task(id: &str, request_id: &RequestId, instruction: &str) -> Task {
         agent_name: Some("coder".to_owned()),
         needs: Vec::new(),
         outcomes: Vec::new(),
-        terminal_tool_result: None,
+        terminal_payload: None,
     }
 }
 
@@ -400,13 +400,13 @@ async fn agent_run_roundtrip() {
     assert!(created.terminal_payload.is_none());
     assert_eq!(created.token_count, 0);
 
-    let ttr = json_obj(&[("ok", serde_json::json!(true))]);
+    let payload = json_obj(&[("ok", serde_json::json!(true))]);
     let finished = agent_runs
-        .finish_run(&run_id, Some(&ttr), 42, None)
+        .finish_run(&run_id, Some(&payload), 42, None)
         .await
         .expect("finish")
         .expect("some");
-    assert_eq!(finished.terminal_payload, Some(ttr));
+    assert_eq!(finished.terminal_payload, Some(payload));
     assert_eq!(finished.token_count, 42);
     assert!(finished.finished_at.is_some());
 
@@ -496,8 +496,9 @@ async fn task_agent_run_lineage_materializes_record_indexes() {
             &request_id,
             &planner_run,
             &workflow_coords,
-            WorkflowTaskRole::Planner,
-            None,
+            &WorkflowNodeId::Planner {
+                planner_id: PlannerId::new("planner").expect("planner id"),
+            },
             &agent_name("planner"),
         )
         .await

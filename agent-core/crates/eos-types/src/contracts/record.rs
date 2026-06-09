@@ -3,7 +3,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{AgentRunId, AttemptId, IterationId, RequestId, TaskId, WorkflowId};
+use crate::{
+    AgentRunId, AttemptId, GeneratorId, IterationId, PlannerId, ReducerId, RequestId, TaskId,
+    WorkflowId,
+};
 
 /// Workflow coordinates used by workflow task-agent-runs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -77,6 +80,49 @@ impl WorkflowTaskRole {
             Self::Planner => "planner-task",
             Self::Generator => "generator-task",
             Self::Reducer => "reducer-task",
+        }
+    }
+}
+
+/// Workflow node identity for planner/generator/reducer task-agent-runs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowNodeId {
+    /// Attempt-level planner node.
+    Planner {
+        /// Workflow-local planner id.
+        planner_id: PlannerId,
+    },
+    /// Planner-authored generator node.
+    Generator {
+        /// Workflow-local generator id from the planner-authored DAG.
+        generator_id: GeneratorId,
+    },
+    /// Planner-authored reducer node.
+    Reducer {
+        /// Workflow-local reducer id from the planner-authored DAG.
+        reducer_id: ReducerId,
+    },
+}
+
+impl WorkflowNodeId {
+    /// Workflow task role represented by this node id.
+    #[must_use]
+    pub const fn role(&self) -> WorkflowTaskRole {
+        match self {
+            Self::Planner { .. } => WorkflowTaskRole::Planner,
+            Self::Generator { .. } => WorkflowTaskRole::Generator,
+            Self::Reducer { .. } => WorkflowTaskRole::Reducer,
+        }
+    }
+
+    /// Workflow-local role id as a borrowed string.
+    #[must_use]
+    pub fn role_id(&self) -> &str {
+        match self {
+            Self::Planner { planner_id } => planner_id.as_str(),
+            Self::Generator { generator_id } => generator_id.as_str(),
+            Self::Reducer { reducer_id } => reducer_id.as_str(),
         }
     }
 }

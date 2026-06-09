@@ -10,7 +10,7 @@ mod agent_run_records;
 mod agent_run_service;
 pub mod records;
 
-pub use active_agent_runs::ActiveAgentRuns;
+pub use active_agent_runs::ActiveAgentRunRegistry;
 pub use agent_run_service::AgentRunService;
 pub use eos_types::{
     AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,

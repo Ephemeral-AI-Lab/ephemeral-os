@@ -18,9 +18,26 @@ use eos_sandbox_port::Intent;
 use eos_types::JsonObject;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use super::names::PluginToolName;
+/// A fully-qualified built-in plugin tool name such as `lsp.hover`.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, JsonSchema)]
+#[serde(transparent)]
+#[schemars(transparent)]
+pub struct PluginToolName(String);
+
+impl PluginToolName {
+    #[must_use]
+    pub(crate) fn new(s: impl Into<String>) -> Self {
+        Self(s.into())
+    }
+
+    /// The underlying tool name as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
 
 /// A catalog-native, model-facing tool-spec **source** (not an
 /// `eos_llm_client::ToolSpec`). `eos-agent-core` binds this into a real `ToolSpec`

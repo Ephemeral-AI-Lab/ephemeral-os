@@ -2,8 +2,8 @@
 use std::sync::Arc;
 
 use eos_types::{
-    AttemptBudget, AttemptClosure, ExecutionTaskOutcome, IterationCreationReason, MaterializedPlan,
-    PlanDisposition, PlanNodeId, RequestId, Task, TaskOutcomeStatus,
+    AttemptBudget, AttemptClosure, ExecutionTaskOutcome, GeneratorId, IterationCreationReason,
+    MaterializedPlan, PlanDisposition, ReducerId, RequestId, Task, TaskOutcomeStatus,
 };
 
 use super::*;
@@ -24,8 +24,12 @@ fn budget(value: u32) -> AttemptBudget {
     AttemptBudget::try_from_u32(value).unwrap()
 }
 
-fn node(id: &str) -> PlanNodeId {
-    PlanNodeId::new(id).unwrap()
+fn gen_id(id: &str) -> GeneratorId {
+    GeneratorId::new(id).unwrap()
+}
+
+fn red_id(id: &str) -> ReducerId {
+    ReducerId::new(id).unwrap()
 }
 
 fn outcome(
@@ -73,7 +77,7 @@ fn exec_task(
         ),
         needs,
         outcomes,
-        terminal_tool_result: None,
+        terminal_payload: None,
     });
 }
 
@@ -120,25 +124,23 @@ async fn build_planner_context_matches_source() {
         )
         .await;
     let previous_attempt = stores.seed_attempt(&current.id, &workflow.id, 1).await;
-    let gen_node = node("api");
-    let red_node = node("verify_api");
-    let gen_id = generator_task_id(&previous_attempt.id, &gen_node).unwrap();
-    let red_id = reducer_task_id(&previous_attempt.id, &red_node).unwrap();
+    let gen_task_id = generator_task_id(&previous_attempt.id, &gen_id("api")).unwrap();
+    let red_task_id = reducer_task_id(&previous_attempt.id, &red_id("verify_api")).unwrap();
     eos_types::AttemptStore::record_plan(
         stores.as_ref(),
         &previous_attempt.id,
         &MaterializedPlan {
             planner_task_id: crate::planner_task_id(&previous_attempt.id).unwrap(),
             disposition: PlanDisposition::Complete,
-            generator_task_ids: vec![gen_id.clone()],
-            reducer_task_ids: vec![red_id.clone()],
+            generator_task_ids: vec![gen_task_id.clone()],
+            reducer_task_ids: vec![red_task_id.clone()],
         },
     )
     .await
     .unwrap();
     exec_task(
         &stores,
-        &gen_id,
+        &gen_task_id,
         &request_id,
         TaskRole::Generator,
         "Implement API.",
@@ -147,23 +149,23 @@ async fn build_planner_context_matches_source() {
         vec![outcome(
             TaskOutcomeStatus::Success,
             ExecutionRole::Generator,
-            &gen_id,
+            &gen_task_id,
             "API endpoints were implemented.",
         )],
         &previous_attempt,
     );
     exec_task(
         &stores,
-        &red_id,
+        &red_task_id,
         &request_id,
         TaskRole::Reducer,
         "Verify API.",
         TaskStatus::Failed,
-        vec![gen_id.clone()],
+        vec![gen_task_id.clone()],
         vec![outcome(
             TaskOutcomeStatus::Failed,
             ExecutionRole::Reducer,
-            &red_id,
+            &red_task_id,
             "Verification failed because the CLI command still calls the old endpoint.",
         )],
         &previous_attempt,
@@ -208,11 +210,11 @@ async fn build_planner_context_matches_source() {
     assert!(xml.contains("<attempt sequence=\"1\" status=\"failed\">"));
     assert!(xml.contains(&format!(
         "<task task_id=\"{}\" role=\"generator\" status=\"success\">",
-        gen_id.as_str()
+        gen_task_id.as_str()
     )));
     assert!(xml.contains(&format!(
         "<task task_id=\"{}\" role=\"reducer\" status=\"failed\">",
-        red_id.as_str()
+        red_task_id.as_str()
     )));
     assert!(!xml.contains("<outcomes>"));
     // Planner outcomes are omitted from prior history.
@@ -243,8 +245,8 @@ async fn build_generator_context_is_dependencies_plus_assigned_task() {
         )
         .await;
     let attempt = stores.seed_attempt(&iteration.id, &workflow.id, 1).await;
-    let dep_id = generator_task_id(&attempt.id, &node("storage")).unwrap();
-    let task_id = generator_task_id(&attempt.id, &node("api")).unwrap();
+    let dep_id = generator_task_id(&attempt.id, &gen_id("storage")).unwrap();
+    let task_id = generator_task_id(&attempt.id, &gen_id("api")).unwrap();
     exec_task(
         &stores,
         &dep_id,
@@ -315,8 +317,8 @@ async fn build_reducer_context_uses_assigned_task() {
         )
         .await;
     let attempt = stores.seed_attempt(&iteration.id, &workflow.id, 1).await;
-    let dep_id = generator_task_id(&attempt.id, &node("api")).unwrap();
-    let task_id = reducer_task_id(&attempt.id, &node("verify_api")).unwrap();
+    let dep_id = generator_task_id(&attempt.id, &gen_id("api")).unwrap();
+    let task_id = reducer_task_id(&attempt.id, &red_id("verify_api")).unwrap();
     exec_task(
         &stores,
         &dep_id,

@@ -5,13 +5,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AgentName, AgentRunId, AttemptId, IterationId, JsonObject, Message, PlanNodeId, RequestId,
-    SandboxId, TaskId, ToolUseId, WorkflowId,
+    AgentName, AgentRunId, AttemptId, IterationId, JsonObject, Message, RequestId, SandboxId,
+    TaskId, ToolUseId, WorkflowId,
 };
 
-use super::record::{
-    ParentedAgentRunKind, TaskAgentRunKind, WorkflowCoordinates, WorkflowTaskRole,
-};
+use super::record::{ParentedAgentRunKind, TaskAgentRunKind, WorkflowCoordinates, WorkflowNodeId};
 
 /// Request to spawn any agent kind.
 #[derive(Debug, Clone)]
@@ -83,12 +81,8 @@ pub enum SpawnAgentTarget {
         request_id: RequestId,
         /// Owning workflow coordinates.
         workflow: WorkflowCoordinates,
-        /// Workflow task role.
-        role: WorkflowTaskRole,
-        /// Planner-local node id for generator/reducer launches.
-        ///
-        /// Planner launches do not have a planner-local node id.
-        plan_node_id: Option<PlanNodeId>,
+        /// Workflow node id, including the planner/generator/reducer role.
+        workflow_node_id: WorkflowNodeId,
     },
     /// Parent-launched subagent run.
     Subagent {
@@ -126,9 +120,13 @@ impl SpawnAgentTarget {
     pub fn task_agent_run_kind(&self) -> TaskAgentRunKind {
         match self {
             Self::Root { .. } => TaskAgentRunKind::Root,
-            Self::Workflow { workflow, role, .. } => TaskAgentRunKind::Workflow {
+            Self::Workflow {
+                workflow,
+                workflow_node_id,
+                ..
+            } => TaskAgentRunKind::Workflow {
                 workflow: workflow.clone(),
-                role: *role,
+                role: workflow_node_id.role(),
             },
             Self::Subagent { parent } => TaskAgentRunKind::Parented {
                 parent_agent_run_id: parent.agent_run_id.clone(),

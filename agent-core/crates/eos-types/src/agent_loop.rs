@@ -9,9 +9,35 @@ use crate::contracts::AgentRunRecordTarget;
 use crate::json::JsonObject;
 use crate::llm::Message;
 
-/// Boxed terminal outcome future returned after an agent loop is launched.
-pub type AgentLoopOutcomeFuture =
-    Pin<Box<dyn Future<Output = Option<AgentLoopOutcome>> + Send + 'static>>;
+/// Awaitable terminal completion returned after an agent loop is launched.
+pub struct AgentLoopCompletion {
+    inner: Pin<Box<dyn Future<Output = Option<AgentLoopOutcome>> + Send + 'static>>,
+}
+
+impl AgentLoopCompletion {
+    /// Wrap an engine-loop completion future.
+    #[must_use]
+    pub fn new<F>(completion: F) -> Self
+    where
+        F: Future<Output = Option<AgentLoopOutcome>> + Send + 'static,
+    {
+        Self {
+            inner: Box::pin(completion),
+        }
+    }
+
+    /// Wait for the loop to publish its terminal outcome.
+    pub async fn wait(self) -> Option<AgentLoopOutcome> {
+        self.inner.await
+    }
+}
+
+impl std::fmt::Debug for AgentLoopCompletion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentLoopCompletion")
+            .finish_non_exhaustive()
+    }
+}
 
 /// Shared cancellation handle for a running agent loop.
 pub type AgentLoopCancellationHandle = Arc<dyn AgentLoopCancellation>;
@@ -77,7 +103,7 @@ pub trait AgentLoopCancellation: Send + Sync {
 /// Handle returned after an agent loop has been started.
 pub struct StartedAgentLoop {
     /// Resolves when the loop publishes a terminal outcome.
-    pub outcome: AgentLoopOutcomeFuture,
+    pub completion: AgentLoopCompletion,
     /// Cooperative cancellation handle for the running loop.
     pub cancellation: AgentLoopCancellationHandle,
 }

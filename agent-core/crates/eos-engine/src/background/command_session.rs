@@ -9,7 +9,7 @@ use serde_json::Value;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
-use super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::runtime::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
 /// One tracked background command session.

@@ -15,4 +15,7 @@ pub use outcomes::{
     execution_outcome_for_submission, present_status, ExecutionRole, ExecutionTaskOutcome,
     TaskOutcomeStatus, NO_OUTCOME,
 };
-pub use plan::{AttemptBudget, DeferredGoal, MaterializedPlan, PlanDisposition, PlanNodeId};
+pub use plan::{
+    AttemptBudget, DeferredGoal, GeneratorId, MaterializedPlan, PlanDisposition, PlannerId,
+    ReducerId,
+};

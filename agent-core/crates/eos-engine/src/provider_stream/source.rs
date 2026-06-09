@@ -1,14 +1,36 @@
-//! Production provider stream source: adapt `LlmClient` events into engine events.
+//! Provider stream source contracts and production LLM adapter.
 
+use std::pin::Pin;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_llm_client::{LlmClient, LlmRequest, LlmStreamEvent};
-use futures::StreamExt;
+use eos_types::{AgentRunRuntimeSnapshot, StartAgentLoopRequest};
+use futures::{Stream, StreamExt};
 
-use crate::query::EngineStream;
-use crate::telemetry::{AssistantMessageComplete, StreamEvent};
+use crate::event::{AssistantMessageComplete, StreamEvent};
 use crate::EngineError;
+
+/// The engine stream returned by one model turn.
+pub type EngineStream = Pin<Box<dyn Stream<Item = Result<StreamEvent, EngineError>> + Send>>;
+
+/// Per-loop provider stream source factory.
+pub type ProviderStreamSourceFactory = Arc<
+    dyn Fn(&StartAgentLoopRequest, &AgentRunRuntimeSnapshot) -> Arc<dyn ProviderStreamSource>
+        + Send
+        + Sync,
+>;
+
+/// A per-agent stream source. Production adapts an `LlmClient`; tests can replay
+/// scripted engine events while still exercising the real loop.
+#[async_trait]
+pub trait ProviderStreamSource: Send + Sync {
+    /// Open one model turn for `request`.
+    ///
+    /// # Errors
+    /// Returns [`EngineError`] for request construction or stream setup faults.
+    async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError>;
+}
 
 /// LLM-backed provider stream source.
 #[derive(Clone)]
@@ -74,7 +96,7 @@ fn adapt_event(event: LlmStreamEvent) -> Result<StreamEvent, EngineError> {
 }
 
 #[async_trait]
-impl crate::query::ProviderStreamSource for LlmProviderStreamSource {
+impl ProviderStreamSource for LlmProviderStreamSource {
     async fn stream(&self, request: &LlmRequest) -> Result<EngineStream, EngineError> {
         let stream = self.client.stream_message(request.clone()).await?;
         Ok(Box::pin(stream.map(|item| match item {
@@ -95,8 +117,6 @@ mod tests {
     };
     use futures::StreamExt;
     use serde_json::json;
-
-    use crate::query::ProviderStreamSource;
 
     use super::*;
 

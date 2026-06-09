@@ -8,13 +8,13 @@ use eos_types::{AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, JsonObject, To
 use futures::StreamExt;
 
 use super::{
-    AgentLoopCancelSignal, AgentLoopHooks, AgentLoopMessage, AgentLoopOutcome,
-    AgentLoopOutcomeKind, AgentLoopProviderStream, AgentLoopRunServices, AgentLoopState,
-    AgentLoopToolRegistryFactory, BackgroundSessionInputs, ExecutionMetadataBuildInput,
-    StartAgentLoopRequest, ToolCallHookStores, ToolExecutionMetadataReader,
+    AgentLoopCancelSignal, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind,
+    AgentLoopProviderStream, AgentLoopRunServices, AgentLoopState, AgentLoopToolRegistryFactory,
+    BackgroundSessionInputs, ExecutionMetadataBuildInput, StartAgentLoopRequest,
+    ToolCallHookStores, ToolExecutionMetadataReader,
 };
 use crate::notifications::EngineNotificationQueue;
-use crate::query::{provider_messages::build_provider_messages, ProviderStreamSource};
+use crate::provider_stream::{messages::build_provider_messages, ProviderStreamSource};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
 };
@@ -23,26 +23,24 @@ use crate::{stamp_identity, EngineError, StreamEvent};
 /// Executes a full agent loop from request to terminal outcome.
 pub(crate) struct AgentLoopExecutor {
     provider_stream_source: AgentLoopProviderStream,
-    loop_hooks: Arc<dyn AgentLoopHooks>,
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-    metadata_service: Arc<dyn ToolExecutionMetadataReader>,
+    metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     cancel_signal: AgentLoopCancelSignal,
-    background_dependencies: Option<BackgroundSessionInputs>,
-    hook_dependencies: Option<ToolCallHookStores>,
-    event_sink: Option<crate::query::EngineEventSink>,
+    background_inputs: Option<BackgroundSessionInputs>,
+    hook_stores: Option<ToolCallHookStores>,
+    event_sink: Option<crate::event::EngineEventSink>,
     agent_run_api: Arc<dyn AgentRunApi>,
 }
 
 /// Dependencies for one agent-loop executor.
 pub(crate) struct AgentLoopExecutorInput {
     pub(crate) provider_stream_source: AgentLoopProviderStream,
-    pub(crate) loop_hooks: Arc<dyn AgentLoopHooks>,
     pub(crate) tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
-    pub(crate) metadata_service: Arc<dyn ToolExecutionMetadataReader>,
+    pub(crate) metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     pub(crate) cancel_signal: AgentLoopCancelSignal,
-    pub(crate) background_dependencies: Option<BackgroundSessionInputs>,
-    pub(crate) hook_dependencies: Option<ToolCallHookStores>,
-    pub(crate) event_sink: Option<crate::query::EngineEventSink>,
+    pub(crate) background_inputs: Option<BackgroundSessionInputs>,
+    pub(crate) hook_stores: Option<ToolCallHookStores>,
+    pub(crate) event_sink: Option<crate::event::EngineEventSink>,
     pub(crate) agent_run_api: Arc<dyn AgentRunApi>,
 }
 
@@ -56,12 +54,11 @@ impl AgentLoopExecutor {
     pub(crate) fn new(input: AgentLoopExecutorInput) -> Self {
         Self {
             provider_stream_source: input.provider_stream_source,
-            loop_hooks: input.loop_hooks,
             tool_registry_factory: input.tool_registry_factory,
-            metadata_service: input.metadata_service,
+            metadata_reader: input.metadata_reader,
             cancel_signal: input.cancel_signal,
-            background_dependencies: input.background_dependencies,
-            hook_dependencies: input.hook_dependencies,
+            background_inputs: input.background_inputs,
+            hook_stores: input.hook_stores,
             event_sink: input.event_sink,
             agent_run_api: input.agent_run_api,
         }
@@ -72,7 +69,7 @@ impl AgentLoopExecutor {
         request: StartAgentLoopRequest,
     ) -> AgentLoopOutcome {
         let event_identity = match self
-            .metadata_service
+            .metadata_reader
             .agent_run_snapshot(&request.record_target.agent_run_id)
             .await
         {
@@ -107,28 +104,21 @@ impl AgentLoopExecutor {
             }
         };
 
-        self.loop_hooks.on_start(&state).await;
-
         loop {
             if let Some(reason) = self.cancel_signal.reason() {
                 state
                     .teardown_background(&format!("agent loop cancelled: {reason}"))
                     .await;
-                let outcome = state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
-                self.loop_hooks.on_complete(&outcome).await;
-                return outcome;
+                return state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
             }
             if state.turn_limit_reached() {
                 state
                     .teardown_background("agent loop exited without a terminal tool submission")
                     .await;
                 let summary = state.terminal_not_submitted_summary();
-                let outcome = state.loop_failed_summary(summary);
-                self.loop_hooks.on_complete(&outcome).await;
-                return outcome;
+                return state.loop_failed_summary(summary);
             }
 
-            self.loop_hooks.on_step(&state).await;
             self.drain_notifications(&mut state, &event_identity).await;
             let turn_result = match self
                 .execute_assistant_turn(&provider_stream_source, &event_identity, &mut state)
@@ -139,9 +129,7 @@ impl AgentLoopExecutor {
                     state
                         .teardown_background(&format!("agent loop failed: {error}"))
                         .await;
-                    let outcome = state.loop_failed(&error);
-                    self.loop_hooks.on_complete(&outcome).await;
-                    return outcome;
+                    return state.loop_failed(&error);
                 }
             };
 
@@ -151,9 +139,7 @@ impl AgentLoopExecutor {
                     state
                         .teardown_background("parent agent submitted its terminal")
                         .await;
-                    let outcome = state.terminal_tool_submitted(&outcome);
-                    self.loop_hooks.on_complete(&outcome).await;
-                    return outcome;
+                    return state.terminal_tool_submitted(&outcome);
                 }
             }
         }
@@ -308,7 +294,7 @@ impl AgentLoopExecutor {
         let tool_name = ToolName::from_wire(&call.name)
             .ok_or_else(|| EngineError::UnknownTool(call.name.clone()))?;
         let metadata = self
-            .metadata_service
+            .metadata_reader
             .build_execution_metadata(ExecutionMetadataBuildInput {
                 agent_run_id: state.agent_run_id.clone(),
                 tool_name,
@@ -325,9 +311,9 @@ impl AgentLoopExecutor {
             tool_use_id: call.tool_use_id.clone(),
         });
         let hooks = state.background().and_then(|background| {
-            self.hook_dependencies
+            self.hook_stores
                 .clone()
-                .map(|dependencies| crate::tool_call::ToolCallHooks::new(background, dependencies))
+                .map(|stores| crate::tool_call::ToolCallHooks::new(background, stores))
         });
         let result = execute_tool_once(tool, &call.input, &metadata, hooks.as_ref()).await?;
         self.emit_event(&StreamEvent::ToolExecutionCompleted {
@@ -344,15 +330,12 @@ impl AgentLoopExecutor {
     }
 
     fn build_run_services(&self, agent_run_id: &AgentRunId) -> AgentLoopRunServices {
-        let Some(dependencies) = &self.background_dependencies else {
+        let Some(inputs) = &self.background_inputs else {
             return AgentLoopRunServices::inert();
         };
         let notifier = EngineNotificationQueue::new();
-        let background = dependencies.build_managers(
-            agent_run_id.clone(),
-            &self.agent_run_api,
-            notifier.clone(),
-        );
+        let background =
+            inputs.build_managers(agent_run_id.clone(), &self.agent_run_api, notifier.clone());
         AgentLoopRunServices::from_background(&background, notifier)
     }
 

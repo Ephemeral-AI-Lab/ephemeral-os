@@ -1,8 +1,10 @@
 //! Engine-local background session accounting for one agent run.
 
-mod background_session_manager;
+mod command_session;
 mod notification;
+mod runtime;
+mod subagent_session;
+mod workflow_session;
 
-pub use background_session_manager::BackgroundSessionStatus;
-pub use background_session_manager::{BackgroundManagers, BackgroundSessionTeardown};
 pub use notification::{BackgroundCompletion, BackgroundNotificationEmitter};
+pub use runtime::{BackgroundSessionRuntime, BackgroundSessionStatus, BackgroundSessionTeardown};

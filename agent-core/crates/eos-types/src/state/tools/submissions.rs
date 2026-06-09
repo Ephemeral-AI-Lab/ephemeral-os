@@ -52,8 +52,8 @@ pub struct GeneratorSubmission {
     pub status: TaskOutcomeStatus,
     /// Free-text outcome summary.
     pub outcome: String,
-    /// Flattened terminal tool result (always present on a terminal submit).
-    pub terminal_tool_result: JsonObject,
+    /// Flattened terminal payload (always present on a terminal submit).
+    pub terminal_payload: JsonObject,
 }
 
 /// Validated terminal outcome for one reducer task (Rust `ReducerSubmission`).
@@ -67,6 +67,6 @@ pub struct ReducerSubmission {
     pub status: TaskOutcomeStatus,
     /// Free-text outcome summary.
     pub outcome: String,
-    /// Flattened terminal tool result (always present on a terminal submit).
-    pub terminal_tool_result: JsonObject,
+    /// Flattened terminal payload (always present on a terminal submit).
+    pub terminal_payload: JsonObject,
 }

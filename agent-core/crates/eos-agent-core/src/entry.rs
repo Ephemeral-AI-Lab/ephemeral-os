@@ -40,7 +40,7 @@ use crate::runtime::{
 pub struct RequestOutcome {
     /// Authoritative final status of the root task (`Done` or `Failed`).
     pub status: TaskStatus,
-    /// The root's persisted terminal payload (`Task.terminal_tool_result`): the
+    /// The root's persisted terminal payload (`Task.terminal_payload`): the
     /// agent's submitted outcome on success, or `{ fail_reason, summary }`
     /// written by the guard on failure. `Some(_)` on every normal-or-guarded
     /// completion.
@@ -191,7 +191,7 @@ pub async fn run_request(
             agent_name: Some("root".to_owned()),
             needs: Vec::new(),
             outcomes: Vec::new(),
-            terminal_tool_result: None,
+            terminal_payload: None,
         })
         .await
         .context("creating the root task")?;
@@ -203,8 +203,8 @@ pub async fn run_request(
         .context("recording the root task id")?;
 
     // [3][4][5] RUN — task-trigger the root through the runner-owned
-    // AgentRunApi. The runner owns the durable row lifecycle and receives loop
-    // completion through the `AgentLoopLauncher` outcome channel.
+    // AgentRunApi. The runner owns the durable row lifecycle and consumes
+    // `StartedAgentLoop::completion`.
     let summary = match AgentName::new("root") {
         Ok(root_name) => {
             let agent_runs = Arc::new(
@@ -284,7 +284,7 @@ pub async fn run_request(
         .context("root task row missing after the run")?;
     Ok(RequestOutcome {
         status: task.status,
-        terminal: task.terminal_tool_result,
+        terminal: task.terminal_payload,
     })
 }
 
@@ -292,7 +292,7 @@ pub async fn run_request(
 /// finish the request as `Failed`. Called unconditionally after the root agent
 /// has completed or failed; a no-op once `submit_root_outcome` has closed the
 /// task. The root role is not in `ExecutionRole`, so the summary rides in
-/// `terminal_tool_result` rather than a typed outcome row (documented deviation;
+/// `terminal_payload` rather than a typed outcome row (documented deviation;
 /// the typed outcome column is left empty for root).
 async fn fail_unfinished_root(
     services: &AgentCoreRuntime,

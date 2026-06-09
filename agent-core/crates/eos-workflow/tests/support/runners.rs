@@ -11,8 +11,8 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use eos_types::{
     AgentDefinition, AgentName, AgentRegistry, AgentRegistryBuilder, AgentType, DeferredGoal,
-    GeneratorSubmission, JsonObject, PlanDisposition, PlanNodeId, ReducerSubmission, RequestId,
-    Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,
+    GeneratorId, GeneratorSubmission, JsonObject, PlanDisposition, ReducerId, ReducerSubmission,
+    RequestId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,
 };
 use eos_types::{PlanReducer, PlanTask, PlannerPlan, WorkflowAttemptSubmissionApi};
 use parking_lot::Mutex;
@@ -24,8 +24,12 @@ use crate::{AttemptSubmissionAdapter, Result};
 
 use super::stores::MemoryStores;
 
-fn node(id: &str) -> PlanNodeId {
-    PlanNodeId::new(id).unwrap()
+fn gen_id(id: &str) -> GeneratorId {
+    GeneratorId::new(id).unwrap()
+}
+
+fn red_id(id: &str) -> ReducerId {
+    ReducerId::new(id).unwrap()
 }
 
 /// A scripted terminal submission a test double records via the recording
@@ -218,16 +222,16 @@ impl ScriptedRunner {
         }
         let tasks = (0..self.generators)
             .map(|i| PlanTask {
-                id: node(&format!("g{i}")),
+                generator_id: gen_id(&format!("g{i}")),
                 agent_name: "coder".to_owned(),
                 needs: Vec::new(),
             })
             .collect();
         let task_specs = (0..self.generators)
-            .map(|i| (node(&format!("g{i}")), format!("do work {i}")))
+            .map(|i| (gen_id(&format!("g{i}")), format!("do work {i}")))
             .collect();
         let reducer_needs = (0..self.generators)
-            .map(|i| node(&format!("g{i}")))
+            .map(|i| gen_id(&format!("g{i}")))
             .collect();
         PlannerPlan {
             attempt_id: launch.attempt_id().clone(),
@@ -240,7 +244,7 @@ impl ScriptedRunner {
             tasks,
             task_specs,
             reducers: vec![PlanReducer {
-                id: node("r1"),
+                reducer_id: red_id("r1"),
                 needs: reducer_needs,
                 prompt: "reduce".to_owned(),
             }],
@@ -266,7 +270,7 @@ impl AgentRunner for ScriptedRunner {
                     task_id: launch.task_id().clone(),
                     status: TaskOutcomeStatus::Success,
                     outcome: "generated".to_owned(),
-                    terminal_tool_result: terminal_tool_result_fixture(),
+                    terminal_payload: terminal_payload_fixture(),
                 })
             }
             TaskRole::Reducer => {
@@ -278,7 +282,7 @@ impl AgentRunner for ScriptedRunner {
                     task_id: launch.task_id().clone(),
                     status: self.reducer_status,
                     outcome: "reduced".to_owned(),
-                    terminal_tool_result: terminal_tool_result_fixture(),
+                    terminal_payload: terminal_payload_fixture(),
                 })
             }
             other => panic!("ScriptedRunner does not serve role {other:?}"),
@@ -358,11 +362,11 @@ pub(crate) fn root_task(id: &str, status: TaskStatus) -> Task {
         agent_name: Some("root".to_owned()),
         needs: Vec::new(),
         outcomes: Vec::new(),
-        terminal_tool_result: None,
+        terminal_payload: None,
     }
 }
 
-pub(crate) fn terminal_tool_result_fixture() -> JsonObject {
+pub(crate) fn terminal_payload_fixture() -> JsonObject {
     json!({"ok": true}).as_object().unwrap().clone()
 }
 
@@ -373,14 +377,14 @@ pub(crate) fn one_step_plan(started: &crate::StartedWorkflow) -> PlannerPlan {
         planner_task_id: crate::planner_task_id(&started.attempt_id).unwrap(),
         disposition: PlanDisposition::Complete,
         tasks: vec![PlanTask {
-            id: node("g1"),
+            generator_id: gen_id("g1"),
             agent_name: "coder".to_owned(),
             needs: Vec::new(),
         }],
-        task_specs: [(node("g1"), "do work".to_owned())].into_iter().collect(),
+        task_specs: [(gen_id("g1"), "do work".to_owned())].into_iter().collect(),
         reducers: vec![PlanReducer {
-            id: node("r1"),
-            needs: vec![node("g1")],
+            reducer_id: red_id("r1"),
+            needs: vec![gen_id("g1")],
             prompt: "reduce".to_owned(),
         }],
     }

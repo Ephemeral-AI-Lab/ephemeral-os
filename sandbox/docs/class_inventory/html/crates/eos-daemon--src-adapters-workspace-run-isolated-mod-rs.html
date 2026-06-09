@@ -243,18 +243,18 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/adapters/workspace_run/isolated/mod.rs:139</p>
-</article><article id="item-fn-command-handle-for-args-173" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_handle_for_args pub(crate) pub(crate) fn command_handle_for_args (args : &amp; Value) -&gt; Option &lt; CommandHandle &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/mod.rs  ">
+</article><article id="item-fn-command-handle-for-args-173" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_handle_for_args pub(crate) pub(crate) fn command_handle_for_args (args : &amp; Value) -&gt; Option &lt; IsolatedCommandHandle &gt; crates/eos-daemon/src/adapters/workspace_run/isolated/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_handle_for_args</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-173">command_handle_for_args</a> (args : &amp; Value) -&gt; Option &lt; CommandHandle &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-173">command_handle_for_args</a> (args : &amp; Value) -&gt; Option &lt; IsolatedCommandHandle &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-173">command_handle_for_args</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandHandle</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-173">command_handle_for_args</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">IsolatedCommandHandle</span>&gt; {
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
         .and_then(<span class="rs-type">Value</span>::as_str)
@@ -461,7 +461,7 @@
 
 <span class="rs-kw">use</span> eos_workspace_runtime::isolated::{<span class="rs-type">CallerId</span>, <span class="rs-type">IsolatedError</span>};
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_workspace_runtime::<span class="rs-type">CommandHandle</span>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> eos_workspace_runtime::<span class="rs-type">IsolatedCommandHandle</span>;
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::adapters::workspace_run;
@@ -611,7 +611,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-173">command_handle_for_args</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandHandle</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-173">command_handle_for_args</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">IsolatedCommandHandle</span>&gt; {
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
         .and_then(<span class="rs-type">Value</span>::as_str)

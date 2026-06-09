@@ -3,13 +3,13 @@
 use std::sync::Arc;
 
 use eos_types::{
-    AttemptBudget, AttemptStatus, GeneratorSubmission, IterationStatus, PlanNodeId,
+    AttemptBudget, AttemptStatus, GeneratorId, GeneratorSubmission, IterationStatus, ReducerId,
     ReducerSubmission, TaskOutcomeStatus, TaskStatus, WorkflowStatus,
 };
 
 use crate::ids::{generator_task_id, reducer_task_id};
 use crate::support::{
-    one_step_plan, root_task, terminal_tool_result_fixture, wait_for_workflow_status, MemoryStores,
+    one_step_plan, root_task, terminal_payload_fixture, wait_for_workflow_status, MemoryStores,
     QueueRunner, ScriptedSubmission,
 };
 use crate::WorkflowStarter;
@@ -18,8 +18,12 @@ fn budget(value: u32) -> AttemptBudget {
     AttemptBudget::try_from_u32(value).unwrap()
 }
 
-fn node(id: &str) -> PlanNodeId {
-    PlanNodeId::new(id).unwrap()
+fn gen_id(id: &str) -> GeneratorId {
+    GeneratorId::new(id).unwrap()
+}
+
+fn red_id(id: &str) -> ReducerId {
+    ReducerId::new(id).unwrap()
 }
 
 // AC-eos-workflow-06 (reducer exit gate): all generators DONE + all reducers
@@ -43,22 +47,22 @@ async fn reducer_is_exit_gate() {
         )
         .await
         .unwrap();
-    let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
-    let reducer_id = reducer_task_id(&started.attempt_id, &node("r1")).unwrap();
+    let generator_id = generator_task_id(&started.attempt_id, &gen_id("g1")).unwrap();
+    let reducer_id = reducer_task_id(&started.attempt_id, &red_id("r1")).unwrap();
     runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
     runner.push(ScriptedSubmission::Generator(GeneratorSubmission {
         attempt_id: started.attempt_id.clone(),
         task_id: generator_id,
         status: TaskOutcomeStatus::Success,
         outcome: "generated".to_owned(),
-        terminal_tool_result: terminal_tool_result_fixture(),
+        terminal_payload: terminal_payload_fixture(),
     }));
     runner.push(ScriptedSubmission::Reducer(ReducerSubmission {
         attempt_id: started.attempt_id.clone(),
         task_id: reducer_id,
         status: TaskOutcomeStatus::Success,
         outcome: "reduced".to_owned(),
-        terminal_tool_result: terminal_tool_result_fixture(),
+        terminal_payload: terminal_payload_fixture(),
     }));
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
@@ -98,22 +102,22 @@ async fn failed_reducer_closes_attempt_failed() {
         )
         .await
         .unwrap();
-    let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
-    let reducer_id = reducer_task_id(&started.attempt_id, &node("r1")).unwrap();
+    let generator_id = generator_task_id(&started.attempt_id, &gen_id("g1")).unwrap();
+    let reducer_id = reducer_task_id(&started.attempt_id, &red_id("r1")).unwrap();
     runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
     runner.push(ScriptedSubmission::Generator(GeneratorSubmission {
         attempt_id: started.attempt_id.clone(),
         task_id: generator_id,
         status: TaskOutcomeStatus::Success,
         outcome: "generated".to_owned(),
-        terminal_tool_result: terminal_tool_result_fixture(),
+        terminal_payload: terminal_payload_fixture(),
     }));
     runner.push(ScriptedSubmission::Reducer(ReducerSubmission {
         attempt_id: started.attempt_id.clone(),
         task_id: reducer_id,
         status: TaskOutcomeStatus::Failed,
         outcome: "reduction failed".to_owned(),
-        terminal_tool_result: terminal_tool_result_fixture(),
+        terminal_payload: terminal_payload_fixture(),
     }));
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Failed).await;
 
@@ -135,14 +139,18 @@ async fn failed_reducer_closes_attempt_failed() {
 #[tokio::test]
 async fn record_plan_rejects_bad_shape_with_real_ack() {
     use eos_types::{
-        PlanDisposition, PlanNodeId, PlanReducer, PlanTask, PlannerPlan, SubmissionAck,
+        GeneratorId, PlanDisposition, PlanReducer, PlanTask, PlannerPlan, ReducerId, SubmissionAck,
         WorkflowAttemptSubmissionApi,
     };
 
     use crate::AttemptSubmissionAdapter;
 
-    fn node(id: &str) -> PlanNodeId {
-        PlanNodeId::new(id).unwrap()
+    fn gen_id(id: &str) -> GeneratorId {
+        GeneratorId::new(id).unwrap()
+    }
+
+    fn red_id(id: &str) -> ReducerId {
+        ReducerId::new(id).unwrap()
     }
 
     let stores = Arc::new(MemoryStores::default());
@@ -167,7 +175,7 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
         planner_task_id: planner_task_id.clone(),
         disposition: PlanDisposition::Complete,
         tasks,
-        task_specs: [(node("g1"), "do work".to_owned())].into_iter().collect(),
+        task_specs: [(gen_id("g1"), "do work".to_owned())].into_iter().collect(),
         reducers,
     };
 
@@ -175,13 +183,13 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     let ack = adapter
         .apply_plan(plan(
             vec![PlanTask {
-                id: node("g1"),
+                generator_id: gen_id("g1"),
                 agent_name: "helper-subagent".to_owned(),
                 needs: Vec::new(),
             }],
             vec![PlanReducer {
-                id: node("r1"),
-                needs: vec![node("g1")],
+                reducer_id: red_id("r1"),
+                needs: vec![gen_id("g1")],
                 prompt: "reduce".to_owned(),
             }],
         ))
@@ -193,23 +201,23 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     );
 
     // D1: a duplicate reducer id slips past the tool's generator-only dup
-    // check but is rejected by the orchestrator's union-dedup.
+    // check but is rejected by the orchestrator's role-specific dedup.
     let ack = adapter
         .apply_plan(plan(
             vec![PlanTask {
-                id: node("g1"),
+                generator_id: gen_id("g1"),
                 agent_name: "coder".to_owned(),
                 needs: Vec::new(),
             }],
             vec![
                 PlanReducer {
-                    id: node("r1"),
-                    needs: vec![node("g1")],
+                    reducer_id: red_id("r1"),
+                    needs: vec![gen_id("g1")],
                     prompt: "a".to_owned(),
                 },
                 PlanReducer {
-                    id: node("r1"),
-                    needs: vec![node("g1")],
+                    reducer_id: red_id("r1"),
+                    needs: vec![gen_id("g1")],
                     prompt: "b".to_owned(),
                 },
             ],
@@ -217,8 +225,8 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
         .await
         .unwrap();
     assert!(
-        matches!(ack, SubmissionAck::Rejected(ref m) if m.contains("duplicate task id")),
-        "D1 union-dedup: {ack:?}"
+        matches!(ack, SubmissionAck::Rejected(ref m) if m.contains("duplicate reducer id")),
+        "D1 role-specific dedup: {ack:?}"
     );
 
     // The attempt is untouched by either rejection (still in PLAN, no plan
@@ -236,14 +244,18 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
 #[tokio::test]
 async fn record_plan_rejects_late_agent_without_orphan_rows() {
     use eos_types::{
-        PlanDisposition, PlanNodeId, PlanReducer, PlanTask, PlannerPlan, SubmissionAck,
+        GeneratorId, PlanDisposition, PlanReducer, PlanTask, PlannerPlan, ReducerId, SubmissionAck,
         WorkflowAttemptSubmissionApi,
     };
 
     use crate::AttemptSubmissionAdapter;
 
-    fn node(id: &str) -> PlanNodeId {
-        PlanNodeId::new(id).unwrap()
+    fn gen_id(id: &str) -> GeneratorId {
+        GeneratorId::new(id).unwrap()
+    }
+
+    fn red_id(id: &str) -> ReducerId {
+        ReducerId::new(id).unwrap()
     }
 
     let stores = Arc::new(MemoryStores::default());
@@ -273,25 +285,25 @@ async fn record_plan_rejects_late_agent_without_orphan_rows() {
             disposition: PlanDisposition::Complete,
             tasks: vec![
                 PlanTask {
-                    id: node("g1"),
+                    generator_id: gen_id("g1"),
                     agent_name: "coder".to_owned(),
                     needs: Vec::new(),
                 },
                 PlanTask {
-                    id: node("g2"),
+                    generator_id: gen_id("g2"),
                     agent_name: "ghost".to_owned(),
                     needs: Vec::new(),
                 },
             ],
             task_specs: [
-                (node("g1"), "do work 1".to_owned()),
-                (node("g2"), "do work 2".to_owned()),
+                (gen_id("g1"), "do work 1".to_owned()),
+                (gen_id("g2"), "do work 2".to_owned()),
             ]
             .into_iter()
             .collect(),
             reducers: vec![PlanReducer {
-                id: node("r1"),
-                needs: vec![node("g1"), node("g2")],
+                reducer_id: red_id("r1"),
+                needs: vec![gen_id("g1"), gen_id("g2")],
                 prompt: "reduce".to_owned(),
             }],
         })
@@ -304,10 +316,10 @@ async fn record_plan_rejects_late_agent_without_orphan_rows() {
 
     // No orphan rows: neither generator task row was persisted.
     assert!(stores
-        .task(&generator_task_id(&started.attempt_id, &node("g1")).unwrap())
+        .task(&generator_task_id(&started.attempt_id, &gen_id("g1")).unwrap())
         .is_none());
     assert!(stores
-        .task(&generator_task_id(&started.attempt_id, &node("g2")).unwrap())
+        .task(&generator_task_id(&started.attempt_id, &gen_id("g2")).unwrap())
         .is_none());
     let attempt = stores.attempt(&started.attempt_id).unwrap();
     assert_eq!(attempt.stage(), eos_types::AttemptStage::Plan);

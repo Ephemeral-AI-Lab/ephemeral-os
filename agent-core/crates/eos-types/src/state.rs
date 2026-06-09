@@ -17,7 +17,7 @@ pub use tools::{
 pub use workflow::{
     execution_outcome_for_submission, present_status, Attempt, AttemptBudget, AttemptClosure,
     AttemptFailReason, AttemptStage, AttemptState, AttemptStatus, DeferredGoal, ExecutionRole,
-    ExecutionTaskOutcome, Iteration, IterationCreationReason, IterationOutcome, IterationStatus,
-    MaterializedPlan, PlanDisposition, PlanNodeId, TaskOutcomeStatus, Workflow, WorkflowOutcome,
-    WorkflowStatus, NO_OUTCOME,
+    ExecutionTaskOutcome, GeneratorId, Iteration, IterationCreationReason, IterationOutcome,
+    IterationStatus, MaterializedPlan, PlanDisposition, PlannerId, ReducerId, TaskOutcomeStatus,
+    Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
 };

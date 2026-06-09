@@ -7,60 +7,82 @@ use serde::{Deserialize, Serialize};
 
 use crate::{CoreError, TaskId};
 
-/// Planner-local DAG node id.
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(transparent)]
-pub struct PlanNodeId(String);
+macro_rules! workflow_role_id {
+    ($(#[$meta:meta])* $name:ident, $label:literal) => {
+        $(#[$meta])*
+        #[derive(
+            Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
+        )]
+        #[serde(transparent)]
+        pub struct $name(String);
 
-impl PlanNodeId {
-    /// Construct a nonblank planner-local node id.
-    ///
-    /// # Errors
-    /// Returns [`CoreError`] when the id is blank.
-    pub fn new(value: impl Into<String>) -> Result<Self, CoreError> {
-        let value = value.into();
-        if value.trim().is_empty() {
-            return Err(CoreError::Store("plan node id must be nonblank".to_owned()));
+        impl $name {
+            #[doc = concat!("Construct a nonblank ", $label, ".")]
+            ///
+            /// # Errors
+            /// Returns [`CoreError`] when the id is blank.
+            pub fn new(value: impl Into<String>) -> Result<Self, CoreError> {
+                let value = value.into();
+                if value.trim().is_empty() {
+                    return Err(CoreError::Store(concat!($label, " must be nonblank").to_owned()));
+                }
+                Ok(Self(value))
+            }
+
+            #[doc = concat!("Borrow the raw ", $label, ".")]
+            #[must_use]
+            pub fn as_str(&self) -> &str {
+                &self.0
+            }
+
+            #[doc = concat!("Consume the value and return the raw ", $label, ".")]
+            #[must_use]
+            pub fn into_string(self) -> String {
+                self.0
+            }
         }
-        Ok(Self(value))
-    }
 
-    /// Borrow the raw node id.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
 
-    /// Consume the value and return the raw node id.
-    #[must_use]
-    pub fn into_string(self) -> String {
-        self.0
-    }
+        impl TryFrom<String> for $name {
+            type Error = CoreError;
+
+            fn try_from(value: String) -> Result<Self, Self::Error> {
+                Self::new(value)
+            }
+        }
+
+        impl TryFrom<&str> for $name {
+            type Error = CoreError;
+
+            fn try_from(value: &str) -> Result<Self, Self::Error> {
+                Self::new(value.to_owned())
+            }
+        }
+    };
 }
 
-impl std::fmt::Display for PlanNodeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
+workflow_role_id!(
+    /// Attempt-local planner identity.
+    PlannerId,
+    "planner id"
+);
 
-impl TryFrom<String> for PlanNodeId {
-    type Error = CoreError;
+workflow_role_id!(
+    /// Planner-authored generator identity.
+    GeneratorId,
+    "generator id"
+);
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::new(value)
-    }
-}
-
-impl TryFrom<&str> for PlanNodeId {
-    type Error = CoreError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::new(value.to_owned())
-    }
-}
+workflow_role_id!(
+    /// Planner-authored reducer identity.
+    ReducerId,
+    "reducer id"
+);
 
 /// Goal carried to the next workflow iteration.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -137,7 +159,7 @@ impl PlanDisposition {
         }
     }
 
-    /// The legacy planner-result label stored in terminal result metadata.
+    /// The legacy planner-result label stored in terminal payload metadata.
     #[must_use]
     pub const fn kind_label(&self) -> &'static str {
         match self {

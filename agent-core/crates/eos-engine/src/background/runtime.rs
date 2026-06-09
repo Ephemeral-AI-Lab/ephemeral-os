@@ -1,7 +1,3 @@
-mod command_session_manager;
-mod subagent_session_manager;
-mod workflow_session_manager;
-
 use std::future::Future;
 use std::hash::Hash;
 use std::pin::Pin;
@@ -16,10 +12,10 @@ use eos_types::{
     WorkflowApi,
 };
 
-use self::command_session_manager::{CommandSessionManager, CommandSessionMonitor};
-use self::subagent_session_manager::{SubagentSessionManager, SubagentSessionMonitor};
-use self::workflow_session_manager::{WorkflowSessionManager, WorkflowSessionMonitor};
+use super::command_session::{CommandSessionManager, CommandSessionMonitor};
 use super::notification::BackgroundNotificationEmitter;
+use super::subagent_session::{SubagentSessionManager, SubagentSessionMonitor};
+use super::workflow_session::{WorkflowSessionManager, WorkflowSessionMonitor};
 use crate::notifications::EngineNotificationQueue;
 
 type BackgroundTeardownFuture = Pin<Box<dyn Future<Output = BackgroundSessionCounts> + Send>>;
@@ -54,14 +50,14 @@ impl BackgroundSessionStatus {
     }
 }
 
-trait BackgroundSession {
+pub(in crate::background) trait BackgroundSession {
     type Id: Eq + Hash + Clone + Send + Sync + 'static;
 
     fn id(&self) -> &Self::Id;
 }
 
 #[async_trait]
-trait BackgroundSessionManager {
+pub(in crate::background) trait BackgroundSessionManager {
     type Session: BackgroundSession + Send + 'static;
     type Completion: Send + 'static;
 
@@ -72,7 +68,7 @@ trait BackgroundSessionManager {
 }
 
 /// Per-agent-run aggregate for background session accounting and lifecycle.
-pub(super) struct BackgroundSessionRuntime {
+struct BackgroundSessionRuntimeState {
     agent_run_id: AgentRunId,
     subagent_session_manager: SubagentSessionManager,
     workflow_session_manager: WorkflowSessionManager,
@@ -82,8 +78,8 @@ pub(super) struct BackgroundSessionRuntime {
     _command_monitor: CommandSessionMonitor,
 }
 
-impl BackgroundSessionRuntime {
-    pub(super) fn new(
+impl BackgroundSessionRuntimeState {
+    fn new(
         agent_run_id: AgentRunId,
         agent_run_service: &Arc<dyn AgentRunApi>,
         command_service: Arc<dyn SandboxCommandApi>,
@@ -156,19 +152,19 @@ impl BackgroundSessionRuntime {
 
 /// Cloneable aggregate for one agent run's background session runtime.
 #[derive(Clone)]
-pub struct BackgroundManagers {
-    runtime: Arc<BackgroundSessionRuntime>,
+pub struct BackgroundSessionRuntime {
+    state: Arc<BackgroundSessionRuntimeState>,
 }
 
-impl std::fmt::Debug for BackgroundManagers {
+impl std::fmt::Debug for BackgroundSessionRuntime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BackgroundManagers")
-            .field("agent_run_id", self.runtime.agent_run_id())
+        f.debug_struct("BackgroundSessionRuntime")
+            .field("agent_run_id", self.state.agent_run_id())
             .finish_non_exhaustive()
     }
 }
 
-impl BackgroundManagers {
+impl BackgroundSessionRuntime {
     #[must_use]
     pub fn new(
         agent_run_id: AgentRunId,
@@ -179,7 +175,7 @@ impl BackgroundManagers {
         workflow_service: Arc<dyn WorkflowApi>,
     ) -> Self {
         Self {
-            runtime: Arc::new(BackgroundSessionRuntime::new(
+            state: Arc::new(BackgroundSessionRuntimeState::new(
                 agent_run_id,
                 agent_run_service,
                 command_service,
@@ -192,50 +188,50 @@ impl BackgroundManagers {
 
     #[must_use]
     pub fn agent_run_id(&self) -> &AgentRunId {
-        self.runtime.agent_run_id()
+        self.state.agent_run_id()
     }
 
     pub async fn teardown(&self, reason: &str) -> BackgroundSessionCounts {
-        self.runtime.subagent_session_manager().cancel(reason).await;
-        self.runtime.workflow_session_manager().cancel(reason).await;
-        self.runtime.command_session_manager().cancel(reason).await;
-        self.runtime.count().await
+        self.state.subagent_session_manager().cancel(reason).await;
+        self.state.workflow_session_manager().cancel(reason).await;
+        self.state.command_session_manager().cancel(reason).await;
+        self.state.count().await
     }
 
     pub(crate) async fn count(&self) -> BackgroundSessionCounts {
-        self.runtime.count().await
+        self.state.count().await
     }
 
     pub(crate) async fn flush_completions(&self) {
         for completion in self
-            .runtime
+            .state
             .subagent_session_manager()
             .poll_completions()
             .await
         {
-            self.runtime
+            self.state
                 .subagent_session_manager()
                 .push_notification_on_completion(completion)
                 .await;
         }
         for completion in self
-            .runtime
+            .state
             .workflow_session_manager()
             .poll_completions()
             .await
         {
-            self.runtime
+            self.state
                 .workflow_session_manager()
                 .push_notification_on_completion(completion)
                 .await;
         }
         for completion in self
-            .runtime
+            .state
             .command_session_manager()
             .poll_completions()
             .await
         {
-            self.runtime
+            self.state
                 .command_session_manager()
                 .push_notification_on_completion(completion)
                 .await;
@@ -243,7 +239,7 @@ impl BackgroundManagers {
     }
 
     pub(crate) async fn cancel_all_subagents(&self, reason: &str) {
-        self.runtime
+        self.state
             .subagent_session_manager()
             .cancel_all_background_sessions(reason)
             .await;
@@ -260,9 +256,9 @@ impl BackgroundManagers {
 }
 
 #[async_trait]
-impl BackgroundSessionControl for BackgroundManagers {
+impl BackgroundSessionControl for BackgroundSessionRuntime {
     async fn register_subagent_run(&self, run: AgentRunId) -> Result<(), ToolError> {
-        self.runtime
+        self.state
             .subagent_session_manager()
             .register_background_session(&run)
             .await;
@@ -274,7 +270,7 @@ impl BackgroundSessionControl for BackgroundManagers {
         id: CommandSessionId,
         sandbox: SandboxId,
     ) -> Result<(), ToolError> {
-        self.runtime
+        self.state
             .command_session_manager()
             .register_background_session(&id, &sandbox)
             .await;
@@ -282,7 +278,7 @@ impl BackgroundSessionControl for BackgroundManagers {
     }
 
     async fn register_workflow_session(&self, started: StartedWorkflow) -> Result<(), ToolError> {
-        self.runtime
+        self.state
             .workflow_session_manager()
             .register_background_session(&started)
             .await;
@@ -291,7 +287,7 @@ impl BackgroundSessionControl for BackgroundManagers {
 
     async fn cancel_subagent_run(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError> {
         Ok(self
-            .runtime
+            .state
             .subagent_session_manager()
             .cancel_background_agent_run(&run, reason)
             .await)

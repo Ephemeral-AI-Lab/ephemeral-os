@@ -101,10 +101,7 @@ async fn cancel_workflow_cancels_child_state_without_touching_parent() {
     let planner_task = stores.task(attempt.planner_task_id().unwrap()).unwrap();
     assert_eq!(planner_task.status, TaskStatus::Cancelled);
     assert_eq!(
-        planner_task
-            .terminal_tool_result
-            .unwrap()
-            .get("fail_reason"),
+        planner_task.terminal_payload.unwrap().get("fail_reason"),
         Some(&json!("cancelled"))
     );
     // `cancel_workflow` must never mutate the parent task (anchor §3).

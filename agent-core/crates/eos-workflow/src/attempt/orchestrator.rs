@@ -12,7 +12,7 @@ use crate::attempt::plan_dag::{validate_plan_agents, validate_plan_shape};
 use crate::attempt::{
     AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptResources, AttemptStageAdvancer,
 };
-use crate::ids::{generator_task_id, planner_task_id, reducer_task_id};
+use crate::ids::{generator_task_id, planner_id, planner_task_id_for, reducer_task_id};
 use crate::util::json_object;
 use crate::{Result, WorkflowError};
 
@@ -22,17 +22,7 @@ struct ExecutionMark {
     outcome_role: ExecutionRole,
     status: TaskOutcomeStatus,
     outcome: String,
-    terminal_tool_result: eos_types::JsonObject,
-}
-
-/// One generator/reducer row to materialize. Unifies the two near-identical
-/// plan-materialization loops behind a single role-tagged path.
-struct PlanRowSpec {
-    local_id: eos_types::PlanNodeId,
-    role: TaskRole,
-    agent_name: String,
-    instruction: String,
-    needs: Vec<eos_types::PlanNodeId>,
+    terminal_payload: eos_types::JsonObject,
 }
 
 /// State machine for one Attempt.
@@ -78,9 +68,10 @@ impl AttemptOrchestrator {
                 attempt.id.as_str()
             )));
         }
-        let task_id = planner_task_id(&attempt.id)?;
+        let planner_id = planner_id();
+        let task_id = planner_task_id_for(&attempt.id, &planner_id)?;
         let launch = AgentLaunchFactory::new(self.deps.clone())
-            .for_planner(&attempt, task_id.clone())
+            .for_planner(&attempt, planner_id, task_id.clone())
             .await?;
         self.deps.orchestrator_registry.register(Arc::clone(self))?;
         let result: Result<()> = async {
@@ -98,7 +89,7 @@ impl AttemptOrchestrator {
                     agent_name: Some(launch.agent_name().to_owned()),
                     needs: Vec::new(),
                     outcomes: Vec::new(),
-                    terminal_tool_result: None,
+                    terminal_payload: None,
                 })
                 .await?;
             self.deps
@@ -232,59 +223,71 @@ impl AttemptOrchestrator {
         // materialize") and Rust `build_planner_submission`, which resolves all
         // agents up front before creating tasks.
         validate_plan_agents(plan, &self.deps.agent_registry)?;
-        let mut local_to_task = BTreeMap::new();
+        let mut generator_to_task = BTreeMap::new();
         for task in &plan.tasks {
-            let id = generator_task_id(&attempt.id, &task.id)?;
-            local_to_task.insert(task.id.clone(), id);
+            let id = generator_task_id(&attempt.id, &task.generator_id)?;
+            generator_to_task.insert(task.generator_id.clone(), id);
         }
+        let mut reducer_to_task = BTreeMap::new();
         for reducer in &plan.reducers {
-            let id = reducer_task_id(&attempt.id, &reducer.id)?;
-            local_to_task.insert(reducer.id.clone(), id);
-        }
-
-        // Build every row spec first — generators (submission order) then
-        // reducers — so the fallible `task_specs` lookup happens before any write
-        // and a missing spec can never leave half-materialized rows.
-        let mut specs = Vec::with_capacity(plan.tasks.len() + plan.reducers.len());
-        for task in &plan.tasks {
-            let instruction = plan
-                .task_specs
-                .get(&task.id)
-                .ok_or_else(|| WorkflowError::not_found("task spec", task.id.as_str()))?
-                .clone();
-            specs.push(PlanRowSpec {
-                local_id: task.id.clone(),
-                role: TaskRole::Generator,
-                agent_name: task.agent_name.clone(),
-                instruction,
-                needs: task.needs.clone(),
-            });
-        }
-        for reducer in &plan.reducers {
-            specs.push(PlanRowSpec {
-                local_id: reducer.id.clone(),
-                role: TaskRole::Reducer,
-                agent_name: "reducer".to_owned(),
-                instruction: reducer.prompt.clone(),
-                needs: reducer.needs.clone(),
-            });
+            let id = reducer_task_id(&attempt.id, &reducer.reducer_id)?;
+            reducer_to_task.insert(reducer.reducer_id.clone(), id);
         }
 
         let mut generator_ids = Vec::with_capacity(plan.tasks.len());
-        let mut reducer_ids = Vec::with_capacity(plan.reducers.len());
-        for spec in specs {
-            let id = local_to_task
-                .get(&spec.local_id)
+        for task in &plan.tasks {
+            let instruction = plan
+                .task_specs
+                .get(&task.generator_id)
+                .ok_or_else(|| WorkflowError::not_found("task spec", task.generator_id.as_str()))?
+                .clone();
+            let id = generator_to_task
+                .get(&task.generator_id)
                 .cloned()
-                .ok_or_else(|| WorkflowError::not_found("plan node", spec.local_id.as_str()))?;
-            let needs = spec
+                .ok_or_else(|| WorkflowError::not_found("generator", task.generator_id.as_str()))?;
+            let needs =
+                task.needs
+                    .iter()
+                    .map(|need| {
+                        generator_to_task.get(need).cloned().ok_or_else(|| {
+                            WorkflowError::not_found("generator need", need.as_str())
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+            self.deps
+                .task_store
+                .insert_task(&Task {
+                    id: id.clone(),
+                    request_id: planner_task.request_id.clone(),
+                    role: TaskRole::Generator,
+                    instruction,
+                    status: TaskStatus::Pending,
+                    workflow_id: Some(attempt.workflow_id.clone()),
+                    iteration_id: Some(attempt.iteration_id.clone()),
+                    attempt_id: Some(attempt.id.clone()),
+                    agent_name: Some(task.agent_name.clone()),
+                    needs,
+                    outcomes: Vec::new(),
+                    terminal_payload: None,
+                })
+                .await?;
+            generator_ids.push(id);
+        }
+
+        let mut reducer_ids = Vec::with_capacity(plan.reducers.len());
+        for reducer in &plan.reducers {
+            let id = reducer_to_task
+                .get(&reducer.reducer_id)
+                .cloned()
+                .ok_or_else(|| WorkflowError::not_found("reducer", reducer.reducer_id.as_str()))?;
+            let needs = reducer
                 .needs
                 .iter()
                 .map(|need| {
-                    local_to_task
+                    generator_to_task
                         .get(need)
                         .cloned()
-                        .ok_or_else(|| WorkflowError::not_found("plan need", need.as_str()))
+                        .ok_or_else(|| WorkflowError::not_found("reducer need", need.as_str()))
                 })
                 .collect::<Result<Vec<_>>>()?;
             self.deps
@@ -292,23 +295,19 @@ impl AttemptOrchestrator {
                 .insert_task(&Task {
                     id: id.clone(),
                     request_id: planner_task.request_id.clone(),
-                    role: spec.role,
-                    instruction: spec.instruction,
+                    role: TaskRole::Reducer,
+                    instruction: reducer.prompt.clone(),
                     status: TaskStatus::Pending,
                     workflow_id: Some(attempt.workflow_id.clone()),
                     iteration_id: Some(attempt.iteration_id.clone()),
                     attempt_id: Some(attempt.id.clone()),
-                    agent_name: Some(spec.agent_name),
+                    agent_name: Some("reducer".to_owned()),
                     needs,
                     outcomes: Vec::new(),
-                    terminal_tool_result: None,
+                    terminal_payload: None,
                 })
                 .await?;
-            match spec.role {
-                TaskRole::Generator => generator_ids.push(id),
-                TaskRole::Reducer => reducer_ids.push(id),
-                TaskRole::Root | TaskRole::Planner => {}
-            }
+            reducer_ids.push(id);
         }
 
         Ok(PlannerSubmission {
@@ -406,7 +405,7 @@ impl AttemptOrchestrator {
                 outcome_role: ExecutionRole::Generator,
                 status: submission.status,
                 outcome: submission.outcome,
-                terminal_tool_result: submission.terminal_tool_result,
+                terminal_payload: submission.terminal_payload,
             },
         )
         .await
@@ -433,7 +432,7 @@ impl AttemptOrchestrator {
                 outcome_role: ExecutionRole::Reducer,
                 status: submission.status,
                 outcome: submission.outcome,
-                terminal_tool_result: submission.terminal_tool_result,
+                terminal_payload: submission.terminal_payload,
             },
         )
         .await
@@ -484,7 +483,7 @@ impl AttemptOrchestrator {
                 TaskStatus::Running,
                 task_status,
                 Some(&[result]),
-                Some(&mark.terminal_tool_result),
+                Some(&mark.terminal_payload),
             )
             .await?
             .ok_or_else(|| {

@@ -5,28 +5,28 @@ use std::collections::BTreeMap;
 use async_trait::async_trait;
 
 use crate::{
-    AgentRunId, AttemptId, CoreError, GeneratorSubmission, PlanDisposition, PlanNodeId,
+    AgentRunId, AttemptId, CoreError, GeneratorId, GeneratorSubmission, PlanDisposition, ReducerId,
     ReducerSubmission, TaskId, ToolUseId, WorkflowId,
 };
 
 /// One planner-authored generator task.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanTask {
-    /// Caller-assigned task id.
-    pub id: PlanNodeId,
+    /// Caller-assigned generator id.
+    pub generator_id: GeneratorId,
     /// Bound subagent profile name.
     pub agent_name: String,
-    /// Ids this task depends on.
-    pub needs: Vec<PlanNodeId>,
+    /// Generator ids this task depends on.
+    pub needs: Vec<GeneratorId>,
 }
 
 /// One planner-authored reducer task.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanReducer {
     /// Caller-assigned reducer id.
-    pub id: PlanNodeId,
-    /// Ids this reducer depends on.
-    pub needs: Vec<PlanNodeId>,
+    pub reducer_id: ReducerId,
+    /// Generator ids this reducer depends on.
+    pub needs: Vec<GeneratorId>,
     /// The reducer's instruction prompt.
     pub prompt: String,
 }
@@ -42,8 +42,8 @@ pub struct PlannerPlan {
     pub disposition: PlanDisposition,
     /// The generator tasks, in submission order.
     pub tasks: Vec<PlanTask>,
-    /// Per-task instruction specs, keyed by task id.
-    pub task_specs: BTreeMap<PlanNodeId, String>,
+    /// Per-generator instruction specs, keyed by generator id.
+    pub task_specs: BTreeMap<GeneratorId, String>,
     /// The reducer tasks, in submission order.
     pub reducers: Vec<PlanReducer>,
 }
@@ -118,9 +118,9 @@ pub struct TerminalWorkflow {
     pub status: WorkflowTerminalStatus,
 }
 
-/// One outstanding workflow launched by a parent task.
+/// One open delegated workflow launched by an agent run.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OutstandingWorkflow {
+pub struct OpenDelegatedWorkflow {
     /// The persisted workflow id.
     pub workflow_id: WorkflowId,
     /// The workflow goal.
@@ -169,11 +169,11 @@ pub trait WorkflowApi: Send + Sync {
         workflow_id: &WorkflowId,
     ) -> Result<Option<TerminalWorkflow>, WorkflowApiError>;
 
-    /// All workflows this launching agent run still has outstanding.
-    async fn find_outstanding_workflows(
+    /// List open delegated workflows launched by this agent run.
+    async fn list_open_delegated_workflows_for_agent_run(
         &self,
         agent_run_id: &AgentRunId,
-    ) -> Result<Vec<OutstandingWorkflow>, WorkflowApiError>;
+    ) -> Result<Vec<OpenDelegatedWorkflow>, WorkflowApiError>;
 
     /// The delegation-ancestry depth of `workflow_id` (1 = top-level).
     async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, WorkflowApiError>;

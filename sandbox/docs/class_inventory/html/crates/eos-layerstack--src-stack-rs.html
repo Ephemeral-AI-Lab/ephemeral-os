@@ -112,17 +112,17 @@
             <span class="rs-kw">match</span> std::fs::symlink_metadata(&amp;target) {
                 <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() =&gt; {
                     <span class="rs-kw">let</span> target = std::fs::read_link(&amp;target)
-                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
+                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(target.to_string_lossy().as_bytes().to_vec()), <span class="rs-kw">true</span>));
                 }
                 <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.is_file() =&gt; {
                     <span class="rs-kw">let</span> bytes = std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-220">read</a>(&amp;target)
-                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
+                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(bytes), <span class="rs-kw">true</span>));
                 }
-                <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-743">stale_layer_error_value</a>(layer, rel.as_str())),
+                <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-741">stale_layer_error_value</a>(layer, rel.as_str())),
                 <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
-                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err)),
+                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer, rel.as_str(), &amp;err)),
             }
         }
         <span class="rs-type">Ok</span>((<span class="rs-type">None</span>, <span class="rs-kw">false</span>))
@@ -286,7 +286,7 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-release-lease-272">release_lease</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, lease_id)
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, lease_id)
     }
 </code></pre>
 </details></td></tr><tr id="method-can-squash-286"><td>method</td><td>can_squash</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-can-squash-286">can_squash</a> (&amp; self , max_depth : usize) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Whether a squash would reduce manifest depth below `max_depth`.<br># Errors<br>Returns [`LayerStackError`] when manifest reads or squash planning fail.</p><details class="function-source">
@@ -378,7 +378,7 @@
         }
         <span class="rs-kw">let</span> release = {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, &amp;squash_lease.lease_id)
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, &amp;squash_lease.lease_id)
         };
         <span class="rs-kw">match</span> (outcome, release) {
             (<span class="rs-type">Err</span>(err), _) =&gt; <span class="rs-type">Err</span>(err),
@@ -454,7 +454,7 @@
         }
 
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
-        <span class="rs-kw">let</span> projection = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a>()?;
+        <span class="rs-kw">let</span> projection = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-625">commit_projection_dir</a>()?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
         <span class="rs-kw">let</span> outcome = (|| {
             <span class="rs-kw">let</span> project_start = <span class="rs-type">Instant</span>::now();
@@ -549,7 +549,7 @@
         }
 
         <span class="rs-kw">let</span> digest = layer_digest(changes);
-        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-610">head_layer_digest</a>(&amp;active)? == <span class="rs-type">Some</span>(digest.clone()) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-608">head_layer_digest</a>(&amp;active)? == <span class="rs-type">Some</span>(digest.clone()) {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(active);
         }
 
@@ -558,7 +558,7 @@
         std::fs::create_dir_all(&amp;staging_dir)?;
         <span class="rs-comment">// Persist the staged layer (files, then the staging dir) BEFORE the</span>
         <span class="rs-comment">// rename so the renamed layer dir never references unflushed contents.</span>
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-694">write_layer_changes</a>(&amp;staging_dir, changes)
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-692">write_layer_changes</a>(&amp;staging_dir, changes)
             .and_then(|()| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(&amp;staging_dir))
             .and_then(|()| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(&amp;staging_dir))
         {
@@ -575,7 +575,7 @@
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(parent)?;
         }
 
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(&amp;layer_id, &amp;digest) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(&amp;layer_id, &amp;digest) {
             <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;layer_dir);
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
         }
@@ -630,14 +630,12 @@
 </details></td></tr><tr id="method-layer-digest-path-604"><td>method</td><td>layer_digest_path</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-layer-digest-path-604">layer_digest_path</a> (&amp; self , layer_id : &amp; str) -&gt; PathBuf</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-layer-digest-path-604">layer_digest_path</a>(&amp;<span class="rs-self">self</span>, layer_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
-        <span class="rs-self">self</span>.storage_root
-            .join(<span class="rs-type">LAYER_METADATA_DIR</span>)
-            .join(format!(&quot;{layer_id}.digest&quot;))
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a>(&amp;<span class="rs-self">self</span>.storage_root, layer_id)
     }
 </code></pre>
-</details></td></tr><tr id="method-head-layer-digest-610"><td>method</td><td>head_layer_digest</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-610">head_layer_digest</a> (&amp; self , manifest : &amp; Manifest) -&gt; Result &lt; Option &lt; String &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-head-layer-digest-608"><td>method</td><td>head_layer_digest</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-608">head_layer_digest</a> (&amp; self , manifest : &amp; Manifest) -&gt; Result &lt; Option &lt; String &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-610">head_layer_digest</a>(&amp;<span class="rs-self">self</span>, manifest: &amp;<span class="rs-type">Manifest</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-608">head_layer_digest</a>(&amp;<span class="rs-self">self</span>, manifest: &amp;<span class="rs-type">Manifest</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(head) = manifest.layers.first() <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
         };
@@ -649,16 +647,16 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-write-layer-digest-622"><td>method</td><td>write_layer_digest</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a> (&amp; self , layer_id : &amp; str , digest : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-write-layer-digest-620"><td>method</td><td>write_layer_digest</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a> (&amp; self , layer_id : &amp; str , digest : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(&amp;<span class="rs-self">self</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(&amp;<span class="rs-self">self</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-layer-digest-path-604">layer_digest_path</a>(layer_id);
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(path, digest.as_bytes())
     }
 </code></pre>
-</details></td></tr><tr id="method-commit-projection-dir-627"><td>method</td><td>commit_projection_dir</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a> (&amp; self) -&gt; Result &lt; PathBuf , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-commit-projection-dir-625"><td>method</td><td>commit_projection_dir</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-625">commit_projection_dir</a> (&amp; self) -&gt; Result &lt; PathBuf , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-625">commit_projection_dir</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> parent = <span class="rs-self">self</span>.storage_root.join(&quot;runtime&quot;).join(&quot;commit&quot;);
         std::fs::create_dir_all(&amp;parent)?;
         <span class="rs-kw">for</span> _ <span class="rs-kw">in</span> 0..100 {
@@ -705,17 +703,17 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-layerstack/src/stack.rs:188</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-release-lease-locked-648" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn release_lease_locked private fn release_lease_locked (storage_root : &amp; Path , leases : &amp; mut LeaseRegistry , lease_id : &amp; str ,) -&gt; Result &lt; bool , LayerStackError &gt; crates/eos-layerstack/src/stack.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-release-lease-locked-646" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn release_lease_locked private fn release_lease_locked (storage_root : &amp; Path , leases : &amp; mut LeaseRegistry , lease_id : &amp; str ,) -&gt; Result &lt; bool , LayerStackError &gt; crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>release_lease_locked</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a> (storage_root : &amp; Path , leases : &amp; mut <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> , lease_id : &amp; str ,) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a> (storage_root : &amp; Path , leases : &amp; mut <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> , lease_id : &amp; str ,) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a>(
     storage_root: &amp;<span class="rs-type">Path</span>,
     leases: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
     lease_id: &amp;str,
@@ -724,25 +722,25 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     };
     <span class="rs-kw">let</span> active = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>))?;
-    <span class="rs-kw">let</span> removable = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-662">unreferenced_layers</a>(&amp;lease.manifest.layers, &amp;active, leases);
-    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-675">remove_layers</a>(storage_root, &amp;removable)?;
+    <span class="rs-kw">let</span> removable = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-660">unreferenced_layers</a>(&amp;lease.manifest.layers, &amp;active, leases);
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-673">remove_layers</a>(storage_root, &amp;removable)?;
     <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:648</p>
-</article><article id="item-fn-unreferenced-layers-662" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unreferenced_layers private fn unreferenced_layers (candidates : &amp; [LayerRef] , active : &amp; Manifest , leases : &amp; LeaseRegistry ,) -&gt; Vec &lt; LayerRef &gt; crates/eos-layerstack/src/stack.rs  ">
+  <p class="source">crates/eos-layerstack/src/stack.rs:646</p>
+</article><article id="item-fn-unreferenced-layers-660" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unreferenced_layers private fn unreferenced_layers (candidates : &amp; [LayerRef] , active : &amp; Manifest , leases : &amp; LeaseRegistry ,) -&gt; Vec &lt; LayerRef &gt; crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>unreferenced_layers</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-662">unreferenced_layers</a> (candidates : &amp; [LayerRef] , active : &amp; Manifest , leases : &amp; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> ,) -&gt; Vec &lt; LayerRef &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-660">unreferenced_layers</a> (candidates : &amp; [LayerRef] , active : &amp; Manifest , leases : &amp; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> ,) -&gt; Vec &lt; LayerRef &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-662">unreferenced_layers</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-660">unreferenced_layers</a>(
     candidates: &amp;[<span class="rs-type">LayerRef</span>],
     active: &amp;<span class="rs-type">Manifest</span>,
     leases: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
@@ -757,22 +755,22 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:662</p>
-</article><article id="item-fn-remove-layers-675" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remove_layers private fn remove_layers (storage_root : &amp; Path , layers : &amp; [LayerRef]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack.rs  ">
+  <p class="source">crates/eos-layerstack/src/stack.rs:660</p>
+</article><article id="item-fn-remove-layers-673" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remove_layers private fn remove_layers (storage_root : &amp; Path , layers : &amp; [LayerRef]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>remove_layers</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-675">remove_layers</a> (storage_root : &amp; Path , layers : &amp; [LayerRef]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-673">remove_layers</a> (storage_root : &amp; Path , layers : &amp; [LayerRef]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-675">remove_layers</a>(storage_root: &amp;<span class="rs-type">Path</span>, layers: &amp;[<span class="rs-type">LayerRef</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-673">remove_layers</a>(storage_root: &amp;<span class="rs-type">Path</span>, layers: &amp;[<span class="rs-type">LayerRef</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> layers {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(layer)?;
         <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;storage_root.join(&amp;layer.path))?;
-        <span class="rs-kw">match</span> std::fs::remove_file(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-688">layer_digest_path_at</a>(storage_root, &amp;layer.layer_id)) {
+        <span class="rs-kw">match</span> std::fs::remove_file(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a>(storage_root, &amp;layer.layer_id)) {
             <span class="rs-type">Ok</span>(()) =&gt; {}
             <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
@@ -783,18 +781,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:675</p>
-</article><article id="item-fn-layer-digest-path-at-688" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_digest_path_at private fn layer_digest_path_at (storage_root : &amp; Path , layer_id : &amp; str) -&gt; PathBuf crates/eos-layerstack/src/stack.rs  ">
+  <p class="source">crates/eos-layerstack/src/stack.rs:673</p>
+</article><article id="item-fn-layer-digest-path-at-686" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_digest_path_at private fn layer_digest_path_at (storage_root : &amp; Path , layer_id : &amp; str) -&gt; PathBuf crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>layer_digest_path_at</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-688">layer_digest_path_at</a> (storage_root : &amp; Path , layer_id : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a> (storage_root : &amp; Path , layer_id : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-688">layer_digest_path_at</a>(storage_root: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a>(storage_root: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
     storage_root
         .join(<span class="rs-type">LAYER_METADATA_DIR</span>)
         .join(format!(&quot;{layer_id}.digest&quot;))
@@ -802,18 +800,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:688</p>
-</article><article id="item-fn-write-layer-changes-694" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_layer_changes private fn write_layer_changes (layer_dir : &amp; Path , changes : &amp; [LayerChange]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack.rs  ">
+  <p class="source">crates/eos-layerstack/src/stack.rs:686</p>
+</article><article id="item-fn-write-layer-changes-692" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_layer_changes private fn write_layer_changes (layer_dir : &amp; Path , changes : &amp; [LayerChange]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_layer_changes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-694">write_layer_changes</a> (layer_dir : &amp; Path , changes : &amp; [LayerChange]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-692">write_layer_changes</a> (layer_dir : &amp; Path , changes : &amp; [LayerChange]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-694">write_layer_changes</a>(layer_dir: &amp;<span class="rs-type">Path</span>, changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-692">write_layer_changes</a>(layer_dir: &amp;<span class="rs-type">Path</span>, changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">for</span> change <span class="rs-kw">in</span> aggregate_layer_changes(changes) {
         <span class="rs-kw">match</span> change {
             <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { path, content } =&gt; {
@@ -854,18 +852,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:694</p>
-</article><article id="item-fn-stale-layer-error-736" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stale_layer_error private fn stale_layer_error (layer : &amp; LayerRef , rel : &amp; str , err : &amp; std :: io :: Error) -&gt; LayerStackError crates/eos-layerstack/src/stack.rs  ">
+  <p class="source">crates/eos-layerstack/src/stack.rs:692</p>
+</article><article id="item-fn-stale-layer-error-734" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stale_layer_error private fn stale_layer_error (layer : &amp; LayerRef , rel : &amp; str , err : &amp; std :: io :: Error) -&gt; LayerStackError crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>stale_layer_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a> (layer : &amp; LayerRef , rel : &amp; str , err : &amp; std :: io :: Error) -&gt; <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a> (layer : &amp; LayerRef , rel : &amp; str , err : &amp; std :: io :: Error) -&gt; <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str, err: &amp;std::io::<span class="rs-type">Error</span>) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str, err: &amp;std::io::<span class="rs-type">Error</span>) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
     <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(format!(
         &quot;layer no longer present <span class="rs-kw">while</span> reading {rel}: {} ({err})&quot;,
         layer.layer_id
@@ -874,18 +872,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:736</p>
-</article><article id="item-fn-stale-layer-error-value-743" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stale_layer_error_value private fn stale_layer_error_value (layer : &amp; LayerRef , rel : &amp; str) -&gt; LayerStackError crates/eos-layerstack/src/stack.rs  ">
+  <p class="source">crates/eos-layerstack/src/stack.rs:734</p>
+</article><article id="item-fn-stale-layer-error-value-741" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stale_layer_error_value private fn stale_layer_error_value (layer : &amp; LayerRef , rel : &amp; str) -&gt; LayerStackError crates/eos-layerstack/src/stack.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>stale_layer_error_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-743">stale_layer_error_value</a> (layer : &amp; LayerRef , rel : &amp; str) -&gt; <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-741">stale_layer_error_value</a> (layer : &amp; LayerRef , rel : &amp; str) -&gt; <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-743">stale_layer_error_value</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-741">stale_layer_error_value</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
     <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(format!(
         &quot;layer no longer present <span class="rs-kw">while</span> reading {rel}: {}&quot;,
         layer.layer_id
@@ -894,7 +892,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-layerstack/src/stack.rs:743</p>
+  <p class="source">crates/eos-layerstack/src/stack.rs:741</p>
 </article></div>
 </section></div>
 </main>
@@ -1002,17 +1000,17 @@
             <span class="rs-kw">match</span> std::fs::symlink_metadata(&amp;target) {
                 <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() =&gt; {
                     <span class="rs-kw">let</span> target = std::fs::read_link(&amp;target)
-                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
+                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(target.to_string_lossy().as_bytes().to_vec()), <span class="rs-kw">true</span>));
                 }
                 <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.is_file() =&gt; {
                     <span class="rs-kw">let</span> bytes = std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-220">read</a>(&amp;target)
-                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
+                        .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(bytes), <span class="rs-kw">true</span>));
                 }
-                <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-743">stale_layer_error_value</a>(layer, rel.as_str())),
+                <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-741">stale_layer_error_value</a>(layer, rel.as_str())),
                 <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
-                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err)),
+                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer, rel.as_str(), &amp;err)),
             }
         }
         <span class="rs-type">Ok</span>((<span class="rs-type">None</span>, <span class="rs-kw">false</span>))
@@ -1185,7 +1183,7 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-release-lease-272">release_lease</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, lease_id)
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, lease_id)
     }
 
     <span class="rs-comment">/// Whether a squash would reduce manifest depth below `max_depth`.</span>
@@ -1273,7 +1271,7 @@
         }
         <span class="rs-kw">let</span> release = {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, &amp;squash_lease.lease_id)
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, &amp;squash_lease.lease_id)
         };
         <span class="rs-kw">match</span> (outcome, release) {
             (<span class="rs-type">Err</span>(err), _) =&gt; <span class="rs-type">Err</span>(err),
@@ -1341,7 +1339,7 @@
         }
 
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
-        <span class="rs-kw">let</span> projection = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a>()?;
+        <span class="rs-kw">let</span> projection = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-625">commit_projection_dir</a>()?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
         <span class="rs-kw">let</span> outcome = (|| {
             <span class="rs-kw">let</span> project_start = <span class="rs-type">Instant</span>::now();
@@ -1430,7 +1428,7 @@
         }
 
         <span class="rs-kw">let</span> digest = layer_digest(changes);
-        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-610">head_layer_digest</a>(&amp;active)? == <span class="rs-type">Some</span>(digest.clone()) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-608">head_layer_digest</a>(&amp;active)? == <span class="rs-type">Some</span>(digest.clone()) {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(active);
         }
 
@@ -1439,7 +1437,7 @@
         std::fs::create_dir_all(&amp;staging_dir)?;
         <span class="rs-comment">// Persist the staged layer (files, then the staging dir) BEFORE the</span>
         <span class="rs-comment">// rename so the renamed layer dir never references unflushed contents.</span>
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-694">write_layer_changes</a>(&amp;staging_dir, changes)
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-692">write_layer_changes</a>(&amp;staging_dir, changes)
             .and_then(|()| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(&amp;staging_dir))
             .and_then(|()| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(&amp;staging_dir))
         {
@@ -1456,7 +1454,7 @@
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(parent)?;
         }
 
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(&amp;layer_id, &amp;digest) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(&amp;layer_id, &amp;digest) {
             <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;layer_dir);
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
         }
@@ -1507,12 +1505,10 @@
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-layer-digest-path-604">layer_digest_path</a>(&amp;<span class="rs-self">self</span>, layer_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
-        <span class="rs-self">self</span>.storage_root
-            .join(<span class="rs-type">LAYER_METADATA_DIR</span>)
-            .join(format!(&quot;{layer_id}.digest&quot;))
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a>(&amp;<span class="rs-self">self</span>.storage_root, layer_id)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-610">head_layer_digest</a>(&amp;<span class="rs-self">self</span>, manifest: &amp;<span class="rs-type">Manifest</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-head-layer-digest-608">head_layer_digest</a>(&amp;<span class="rs-self">self</span>, manifest: &amp;<span class="rs-type">Manifest</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(head) = manifest.layers.first() <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
         };
@@ -1524,12 +1520,12 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-622">write_layer_digest</a>(&amp;<span class="rs-self">self</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-write-layer-digest-620">write_layer_digest</a>(&amp;<span class="rs-self">self</span>, layer_id: &amp;str, digest: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-layer-digest-path-604">layer_digest_path</a>(layer_id);
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(path, digest.as_bytes())
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-625">commit_projection_dir</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> parent = <span class="rs-self">self</span>.storage_root.join(&quot;runtime&quot;).join(&quot;commit&quot;);
         std::fs::create_dir_all(&amp;parent)?;
         <span class="rs-kw">for</span> _ <span class="rs-kw">in</span> 0..100 {
@@ -1550,7 +1546,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-646">release_lease_locked</a>(
     storage_root: &amp;<span class="rs-type">Path</span>,
     leases: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
     lease_id: &amp;str,
@@ -1559,12 +1555,12 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     };
     <span class="rs-kw">let</span> active = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>))?;
-    <span class="rs-kw">let</span> removable = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-662">unreferenced_layers</a>(&amp;lease.manifest.layers, &amp;active, leases);
-    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-675">remove_layers</a>(storage_root, &amp;removable)?;
+    <span class="rs-kw">let</span> removable = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-660">unreferenced_layers</a>(&amp;lease.manifest.layers, &amp;active, leases);
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-673">remove_layers</a>(storage_root, &amp;removable)?;
     <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-662">unreferenced_layers</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-unreferenced-layers-660">unreferenced_layers</a>(
     candidates: &amp;[<span class="rs-type">LayerRef</span>],
     active: &amp;<span class="rs-type">Manifest</span>,
     leases: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
@@ -1577,11 +1573,11 @@
         .collect()
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-675">remove_layers</a>(storage_root: &amp;<span class="rs-type">Path</span>, layers: &amp;[<span class="rs-type">LayerRef</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-remove-layers-673">remove_layers</a>(storage_root: &amp;<span class="rs-type">Path</span>, layers: &amp;[<span class="rs-type">LayerRef</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> layers {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(layer)?;
         <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;storage_root.join(&amp;layer.path))?;
-        <span class="rs-kw">match</span> std::fs::remove_file(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-688">layer_digest_path_at</a>(storage_root, &amp;layer.layer_id)) {
+        <span class="rs-kw">match</span> std::fs::remove_file(<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a>(storage_root, &amp;layer.layer_id)) {
             <span class="rs-type">Ok</span>(()) =&gt; {}
             <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
@@ -1590,13 +1586,13 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-688">layer_digest_path_at</a>(storage_root: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-layer-digest-path-at-686">layer_digest_path_at</a>(storage_root: &amp;<span class="rs-type">Path</span>, layer_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
     storage_root
         .join(<span class="rs-type">LAYER_METADATA_DIR</span>)
         .join(format!(&quot;{layer_id}.digest&quot;))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-694">write_layer_changes</a>(layer_dir: &amp;<span class="rs-type">Path</span>, changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-write-layer-changes-692">write_layer_changes</a>(layer_dir: &amp;<span class="rs-type">Path</span>, changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">for</span> change <span class="rs-kw">in</span> aggregate_layer_changes(changes) {
         <span class="rs-kw">match</span> change {
             <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { path, content } =&gt; {
@@ -1638,14 +1634,14 @@
 <span class="rs-kw">static</span> <span class="rs-type">NEXT_LAYER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0);
 <span class="rs-kw">static</span> <span class="rs-type">NEXT_TMP_WRITE</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0);
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str, err: &amp;std::io::<span class="rs-type">Error</span>) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-734">stale_layer_error</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str, err: &amp;std::io::<span class="rs-type">Error</span>) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
     <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(format!(
         &quot;layer no longer present <span class="rs-kw">while</span> reading {rel}: {} ({err})&quot;,
         layer.layer_id
     ))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-743">stale_layer_error_value</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-value-741">stale_layer_error_value</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
     <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(format!(
         &quot;layer no longer present <span class="rs-kw">while</span> reading {rel}: {}&quot;,
         layer.layer_id

@@ -67,7 +67,7 @@ mod planner {
 
     use async_trait::async_trait;
     use eos_types::JsonObject;
-    use eos_types::{DeferredGoal, PlanDisposition, PlanNodeId};
+    use eos_types::{DeferredGoal, GeneratorId, PlanDisposition, ReducerId};
     use schemars::{schema_for, JsonSchema};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
@@ -184,12 +184,12 @@ mod planner {
                 .into_iter()
                 .map(|task| {
                     Ok(PlanTask {
-                        id: PlanNodeId::new(task.id)?,
+                        generator_id: GeneratorId::new(task.id)?,
                         agent_name: task.agent_name,
                         needs: task
                             .needs
                             .into_iter()
-                            .map(PlanNodeId::new)
+                            .map(GeneratorId::new)
                             .collect::<Result<Vec<_>, _>>()?,
                     })
                 })
@@ -197,18 +197,18 @@ mod planner {
             task_specs: parsed
                 .task_specs
                 .into_iter()
-                .map(|(key, value)| PlanNodeId::new(key).map(|key| (key, value)))
+                .map(|(key, value)| GeneratorId::new(key).map(|key| (key, value)))
                 .collect::<Result<BTreeMap<_, _>, _>>()?,
             reducers: parsed
                 .reducers
                 .into_iter()
                 .map(|reducer| {
                     Ok(PlanReducer {
-                        id: PlanNodeId::new(reducer.id)?,
+                        reducer_id: ReducerId::new(reducer.id)?,
                         needs: reducer
                             .needs
                             .into_iter()
-                            .map(PlanNodeId::new)
+                            .map(GeneratorId::new)
                             .collect::<Result<Vec<_>, _>>()?,
                         prompt: reducer.prompt,
                     })
@@ -269,7 +269,19 @@ mod planner {
         let mut seen = BTreeSet::new();
         for task in &input.tasks {
             if !seen.insert(task.id.as_str()) {
-                return Err(format!("Plan contains duplicate task id '{}'.", task.id));
+                return Err(format!(
+                    "Plan contains duplicate generator id '{}'.",
+                    task.id
+                ));
+            }
+        }
+        let mut seen = BTreeSet::new();
+        for reducer in &input.reducers {
+            if !seen.insert(reducer.id.as_str()) {
+                return Err(format!(
+                    "Plan contains duplicate reducer id '{}'.",
+                    reducer.id
+                ));
             }
         }
         let task_ids: BTreeSet<&str> = input.tasks.iter().map(|task| task.id.as_str()).collect();
@@ -504,7 +516,7 @@ mod root {
                 agent_name: Some("root".to_owned()),
                 needs: Vec::new(),
                 outcomes: Vec::new(),
-                terminal_tool_result: None,
+                terminal_payload: None,
             }
         }
 
@@ -683,7 +695,7 @@ mod generator {
                 task_id: task_id.clone(),
                 status: parsed.status.outcome_status(),
                 outcome: parsed.outcome.clone(),
-                terminal_tool_result: meta_obj(&[("generator_role", json!("generator"))]),
+                terminal_payload: meta_obj(&[("generator_role", json!("generator"))]),
             };
             let ack = self.service.api.submit_generator(submission).await?;
             Ok(submission_ack_result(
@@ -781,7 +793,7 @@ mod reducer {
                 task_id: task_id.clone(),
                 status: parsed.status.outcome_status(),
                 outcome: parsed.outcome.clone(),
-                terminal_tool_result: JsonObject::new(),
+                terminal_payload: JsonObject::new(),
             };
             let ack = self.service.api.apply_reducer(submission).await?;
             Ok(submission_ack_result(

@@ -238,12 +238,12 @@ Add or preserve these launch-lineage columns:
 | --- | --- | --- |
 | `id` | yes | `WorkflowId` |
 | `request_id` | yes | request anchor |
-| `launched_by_agent_run_id` | yes | agent run that executed the workflow tool call; **source of truth** for launch lineage; the `find_outstanding_workflows` query key |
+| `launched_by_agent_run_id` | yes | agent run that executed the workflow tool call; **source of truth** for launch lineage; the `list_open_delegated_workflows_for_agent_run` query key |
 | `parent_task_id` | yes | denormalized child-grouping index for `workflow_ids` materialization; derivable from `launched_by_agent_run_id` via the 1:1 invariant (Redundancy Rules R4) |
 | `tool_use_id` | nullable | exact model tool-use id that launched the workflow |
 | lifecycle fields | existing | workflow status, iteration ids, attempt ids |
 
-`WorkflowService::find_outstanding_workflows` must query by
+`WorkflowService::list_open_delegated_workflows_for_agent_run` must query by
 `launched_by_agent_run_id`. It must not accept an agent-run id and then ignore
 it; the launching run is now a durable column, so the query is exact.
 
@@ -928,7 +928,7 @@ Resolved redundancies (from the review's Round 2 audit; ids are stable reference
 | R1 | `AgentLoopExecutionRequest.agent_run_id` | **removed** — duplicated `record_target.agent_run_id`; the engine reads it from the target |
 | R2 | `TaskExecutionNode.index` | **removed** — duplicated `task_run` ids + `subagents`/`advisors`/`workflow_ids`; `TaskExecutionIndex` stays a standalone flat-query type only |
 | R3 | `parented_runs.parent_task_id` | **kept as a labeled denormalized grouping index**; `parent_agent_run_id` is the source of truth (derivable via the 1:1 invariant) |
-| R4 | `workflows.parent_task_id` | **kept as a labeled denormalized grouping index**; `launched_by_agent_run_id` is the source of truth and the `find_outstanding_workflows` key |
+| R4 | `workflows.parent_task_id` | **kept as a labeled denormalized grouping index**; `launched_by_agent_run_id` is the source of truth and the `list_open_delegated_workflows_for_agent_run` key |
 | R5 | `initial_messages` / `message_history` row columns | **removed** — `messages.jsonl` is canonical for model input and replay |
 | R6 | `outcomes` + `terminal_tool_result` | **collapsed** into one `terminal_payload`; workflow-specific `ExecutionTaskOutcome` is derived where workflow context needs it |
 
@@ -971,7 +971,7 @@ contract in this spec are identical across both branches.
    `create_parented_task_agent_run`, validate the profile's `AgentType` against
    `SpawnAgentTarget`, and resolve `AgentRunRecordTarget` before engine startup.
 7. Update workflow start APIs to persist `launched_by_agent_run_id` and
-   `tool_use_id`, and `find_outstanding_workflows` to query by
+   `tool_use_id`, and `list_open_delegated_workflows_for_agent_run` to query by
    `launched_by_agent_run_id`.
 8. Update workflow planner startup to call
    `spawn_agent(Workflow { role: Planner, .. })`.
@@ -1047,8 +1047,8 @@ remain the Phase 03B exit contract.
   `task_runs` rows exist.
 - Every task that enters the agent loop has its merged `task_run` row.
 - Workflow start persists `parent_task_id`, `launched_by_agent_run_id`, and
-  `tool_use_id` when available; `find_outstanding_workflows` queries by
-  `launched_by_agent_run_id`.
+  `tool_use_id` when available; `list_open_delegated_workflows_for_agent_run`
+  queries by `launched_by_agent_run_id`.
 - Planner, generator, and reducer runs are `task_runs` rows with workflow,
   iteration, attempt, and role coordinates.
 - Subagent and advisor launches produce `parented_runs` rows with their own
