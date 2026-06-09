@@ -135,8 +135,8 @@
 
 <h1>Workflow Reducer-Removal — Classes, Schema &amp; Field Population Paths</h1>
 <p class="muted">Consolidated design state after the reducer→worker fold + the co-design decisions:
-full plan in <code>TaskOutcome::Planner</code> JSON (approach A), opaque store-minted <code>task_id</code>,
-and the <code>AttemptExecutionTree</code> as the attempt↔task index (no <code>attempt_id</code> on the task store).
+full plan on the attempt, opaque store-minted <code>task_id</code> confined to task/run records,
+and the <code>AttemptExecutionTree</code> as the work-item DAG + worker outcome index.
 Companion to <code>workflow_reducer_removal_worker_migration_REVIEW.md</code>.</p>
 
 <div class="legend note">
@@ -150,14 +150,14 @@ Companion to <code>workflow_reducer_removal_worker_migration_REVIEW.md</code>.</
 <h2>1 · Entity hierarchy</h2>
 <div class="mermaid">
 flowchart TD
-  REQ["Request<br/>id, request_prompt, root_task_id, status"]
-  ROOT["task_runs (role=root)<br/>TaskOutcome::Root"]
+  REQ["Request<br/>id, request_prompt, root_agent_run_id, status"]
+  ROOT["agent_runs (role=root)<br/>raw terminal payload"]
   WF["Workflow<br/>workflow_goal, status, iteration_ids"]
   IT["Iteration<br/>iteration_goal, status, attempt_budget"]
   AT["Attempt<br/>plan_id, stage, status,<br/>execution_tree"]
-  PL["task_runs (role=planner)<br/>TaskOutcome::Planner = FULL plan"]
-  W1["task_runs (role=worker)<br/>TaskOutcome::Worker"]
-  W2["task_runs (role=worker)<br/>TaskOutcome::Worker"]
+  PL["agent_runs (role=planner)<br/>raw terminal payload"]
+  W1["agent_runs (role=worker)<br/>raw terminal payload"]
+  W2["agent_runs (role=worker)<br/>raw terminal payload"]
   PR["parented_runs<br/>ParentedOutcome (advisor/subagent)"]
 
   REQ --> ROOT
@@ -173,8 +173,8 @@ flowchart TD
 </div>
 <p class="muted">The <b>workflow store</b> is <code>workflows · iterations · attempts</code> (lifecycle authority).
 Agent <b>runs</b> (root / planner / worker) are <code>task_runs</code> rows; advisor / subagent are <code>parented_runs</code>.
-An attempt links to its planner + worker runs through its <code>execution_tree</code>, not through an
-<code>attempt_id</code> column on the runs.</p>
+Workflow lifecycle state does not persist task ids; attempts own planner and worker outcomes by
+<code>plan_id</code> / <code>work_item_id</code>.</p>
 
 <!-- ============================================================ -->
 <h2>2 · End-to-end value population flow</h2>
@@ -201,29 +201,29 @@ sequenceDiagram
   participant WK as Worker run
 
   Root->>WF: create workflow
-  Note over Root,WF: workflow_goal<br/>parent_task_id + parent_agent_run_id
+  Note over Root,WF: workflow_goal<br/>parent_agent_run_id + tool_use_id
   WF->>IT: create iteration #1
   Note over WF,IT: iteration_goal = workflow_goal
   IT->>AT: create attempt
   Note over IT,AT: MINT plan_id<br/>execution_tree = empty
   AT->>TS: spawn planner
   Note over AT,TS: Workflow{role=planner, coords, plan_id}
-  TS-->>AT: bind planner task_id
-  Note over TS,AT: opaque task_id → execution_tree.planner_task_id
+  TS-->>PL: create planner task/run row
+  Note over TS,PL: opaque task_id stays in task/run records
   PL->>PL: author plan
   PL->>AT: submit plan outcome
-  Note over PL,AT: writes terminal_payload + task_outcome = TaskOutcome::Planner (FULL plan)<br/>plan_spec + work_items[] + deferred_goal?
-  Note over PL,AT: materializes execution_tree.nodes<br/>[{work_item_id, needs, task_id=None}]
+  Note over PL,AT: writes Attempt.planner_outcome<br/>plan_spec + work_items[] + deferred_goal?
+  Note over PL,AT: materializes execution_tree.nodes<br/>[{work_item_id, needs, status, worker_outcome=None}]
   loop until all nodes Done / quiescent
     SCH->>AT: read tree + statuses
     SCH->>TS: spawn worker
     Note over SCH,TS: Workflow{role=worker, coords, plan_id, work_item_id}
-    TS-->>AT: bind worker task_id
-    Note over TS,AT: opaque task_id → node.task_id
-    Note over SCH,WK: instruction = work_spec, agent = agent_name<br/>(read from TaskOutcome::Planner.work_items by work_item_id)
+    TS-->>WK: create worker task/run row
+    Note over TS,WK: opaque task_id stays in task/run records
+    Note over SCH,WK: instruction = work_spec, agent = agent_name<br/>(read from Attempt.planner_outcome.work_items by work_item_id)
     WK->>WK: do the work
-    WK->>WK: submit outcome
-    Note over WK: is_pass + outcome<br/>→ terminal_payload + task_outcome = TaskOutcome::Worker + TaskStatus
+    WK->>WK: submit status
+    Note over WK: is_pass<br/>→ worker node status + raw terminal audit payload
   end
   AT->>IT: close attempt
   Note over AT,IT: status from worker is_pass
@@ -240,7 +240,7 @@ sequenceDiagram
 <table>
 <tr><th>Type</th><th>Shape</th><th>Origin</th></tr>
 <tr><td><code>RequestId</code> · <code>WorkflowId</code> · <code>IterationId</code> · <code>AttemptId</code></td><td>string newtypes</td><td>minted by their owning store at creation</td></tr>
-<tr><td><code>TaskId</code></td><td>string newtype — <b>opaque</b></td><td><span class="src">minted by the task store inside <code>spawn_agent</code></span> for every <code>agent_type=agent</code> run (root/planner/worker). <b>No</b> <code>{attempt}:…</code> composition; not derivable from work_item_id.</td></tr>
+<tr><td><code>TaskId</code></td><td>string newtype — <b>opaque</b></td><td><span class="src">minted by the task store inside <code>spawn_agent</code></span> for every <code>agent_type=agent</code> run (root/planner/worker). <b>No</b> workflow lifecycle row stores it.</td></tr>
 <tr><td><code>AgentRunId</code></td><td>UUID v4</td><td>minted at <code>spawn_agent</code> (the random id; distinct from <code>task_id</code>)</td></tr>
 <tr><td><code>PlanId</code></td><td>string newtype</td><td><span class="src">minted by the <code>Attempt</code> at creation</span> (one per attempt)</td></tr>
 <tr><td><code>WorkItemId</code></td><td>string newtype</td><td><span class="src">authored by the planner</span> in <code>submit_plan_outcome</code>; unique within the plan</td></tr>
@@ -252,7 +252,6 @@ sequenceDiagram
 <pre><span class="kw">pub struct</span> <span class="ty">Workflow</span> {
     <span class="kw">pub</span> id: WorkflowId,
     <span class="kw">pub</span> request_id: RequestId,
-    <span class="kw">pub</span> parent_task_id: TaskId,            <span class="cm">// the task that launched the workflow (root task)</span>
     <span class="kw">pub</span> parent_agent_run_id: AgentRunId,   <span class="cm">// RENAMED from launched_by_agent_run_id</span>
     <span class="kw">pub</span> tool_use_id: Option&lt;ToolUseId&gt;,
     <span class="kw">pub</span> workflow_goal: String,             <span class="cm">// RENAMED from goal</span>
@@ -281,52 +280,41 @@ sequenceDiagram
     <span class="kw">pub</span> workflow_id: WorkflowId,            <span class="cm">// denormalized; derivable via iteration_id</span>
     <span class="kw">pub</span> attempt_sequence_no: i64,
     <span class="kw">pub</span> plan_id: PlanId,                    <span class="cm">// MINTED by the Attempt at creation</span>
-    <span class="kw">pub</span> execution_tree: AttemptExecutionTree,<span class="cm"> // the attempt↔task index (see below)</span>
+    <span class="kw">pub</span> planner_outcome: Option&lt;PlannerOutcome&gt;,
+    <span class="kw">pub</span> execution_tree: AttemptExecutionTree,<span class="cm"> // work-item DAG + worker outcomes</span>
     <span class="kw">pub</span> state: AttemptState,                <span class="cm">// Planning{started} | Running | Closed{closure}</span>
     <span class="kw">pub</span> created_at / updated_at,
 }</pre>
 
-<h3>AttemptExecutionTree (replaces <code>tasks.attempt_id</code> + the old MaterializedPlan)</h3>
+<h3>AttemptExecutionTree (work-item DAG + worker outcomes)</h3>
 <pre><span class="kw">pub struct</span> <span class="ty">AttemptExecutionTree</span> {
     <span class="kw">pub</span> plan_id: PlanId,
-    <span class="kw">pub</span> planner_task_id: Option&lt;TaskId&gt;,    <span class="cm">// bound when the planner is spawned</span>
     <span class="kw">pub</span> nodes: Vec&lt;ExecutionNode&gt;,           <span class="cm">// materialized on submit_plan_outcome</span>
 }
 <span class="kw">pub struct</span> <span class="ty">ExecutionNode</span> {
     <span class="kw">pub</span> work_item_id: WorkItemId,
     <span class="kw">pub</span> needs: Vec&lt;WorkItemId&gt;,             <span class="cm">// DAG edges (for scheduling)</span>
-    <span class="kw">pub</span> task_id: Option&lt;TaskId&gt;,             <span class="cm">// bound when THIS work item's worker is spawned</span>
+    <span class="kw">pub</span> status: WorkItemStatus,
+    <span class="kw">pub</span> worker_outcome: Option&lt;WorkerOutcome&gt;,
 }</pre>
-<div class="note">The tree is the single place that answers <i>"which tasks belong to this attempt"</i> and
-<i>"which task ran work item w2"</i>. Because the scheduler needs the <code>work_item → task</code> bindings
-anyway, the tree is not extra overhead — it makes <code>tasks.attempt_id</code> redundant.</div>
+<div class="note">The tree is the single place that answers <i>"which work items belong to this attempt"</i>
+and <i>"what happened to work item w2"</i>. It deliberately has no task-id fields; task ids stay
+inside the task/run record subsystem.</div>
 
-<h3>Task, AgentRun &amp; ParentedRun rows</h3>
-<pre><span class="kw">pub struct</span> <span class="ty">Task</span> {                 <span class="cm">// PURE execution state — NO workflow lineage</span>
-    <span class="kw">pub</span> id: TaskId,
-    <span class="kw">pub</span> request_id: RequestId,
-    <span class="kw">pub</span> role: TaskRole,                    <span class="cm">// Root | Planner | Worker</span>
-    <span class="kw">pub</span> instruction: String,                <span class="cm">// the runner input (worker = work_spec)</span>
-    <span class="kw">pub</span> status: TaskStatus,
-    <span class="kw">pub</span> agent_name: Option&lt;String&gt;,
-    <span class="kw">pub</span> task_outcome: Option&lt;TaskOutcome&gt;,   <span class="cm">// full info incl is_pass when terminal</span>
-}   <span class="cm">// DROPPED: attempt_id, workflow_id, iteration_id, needs, work_item_id, outcomes</span>
-
-<span class="kw">pub struct</span> <span class="ty">AgentRun</span> {             <span class="cm">// root / planner / worker — AgentType::Agent family</span>
-    <span class="kw">pub</span> task_id: TaskId,
+<h3>AgentRun &amp; ParentedRun rows</h3>
+<pre><span class="kw">pub struct</span> <span class="ty">AgentRun</span> {             <span class="cm">// root / planner / worker — AgentType::Agent family</span>
     <span class="kw">pub</span> agent_run_id: AgentRunId,
     <span class="kw">pub</span> request_id: RequestId,
-    <span class="kw">pub</span> role: TaskRole,                    <span class="cm">// Root | Planner | Worker</span>
-    <span class="kw">pub</span> status: TaskStatus,
+    <span class="kw">pub</span> role: AgentRunRole,                <span class="cm">// Root | Planner | Worker</span>
+    <span class="kw">pub</span> status: RunStatus,
     <span class="kw">pub</span> agent_name: AgentName,
-    <span class="kw">pub</span> terminal_payload: Option&lt;JsonObject&gt;,<span class="cm"> // raw terminal tool result</span>
-    <span class="kw">pub</span> task_outcome: Option&lt;TaskOutcome&gt;,   <span class="cm">// typed mirror of terminal_payload</span>
+    <span class="kw">pub</span> terminal_payload: Option&lt;JsonObject&gt;,<span class="cm"> // raw terminal tool result only</span>
     <span class="kw">pub</span> token_count, error, timestamps,
 }
 
 <span class="kw">pub struct</span> <span class="ty">ParentedRun</span> {          <span class="cm">// advisor / subagent — separate family</span>
     <span class="kw">pub</span> task_id, agent_run_id, request_id, status,
-    <span class="kw">pub</span> parent_agent_run_id: AgentRunId, <span class="kw">pub</span> parent_task_id: TaskId,
+    <span class="kw">pub</span> parent_agent_run_id: AgentRunId,
     <span class="kw">pub</span> kind: ParentedAgentRunKind,        <span class="cm">// Subagent | Advisor</span>
     <span class="kw">pub</span> tool_use_id: Option&lt;ToolUseId&gt;, <span class="kw">pub</span> agent_name: AgentName,
     <span class="kw">pub</span> terminal_payload: Option&lt;JsonObject&gt;,<span class="cm"> // raw terminal tool result</span>
@@ -335,22 +323,14 @@ anyway, the tree is not extra overhead — it makes <code>tasks.attempt_id</code
 }</pre>
 
 <!-- ============================================================ -->
-<h2>4 · Outcome model — one JSON union per family</h2>
+<h2>4 · Workflow Results — no task/run outcome union</h2>
 <div class="two">
 <div>
-<h3>TaskOutcome <span class="tag">(Task / task_runs rows)</span></h3>
-<pre><span class="cm">#[serde(tag="kind")]</span>
-<span class="kw">pub enum</span> <span class="ty">TaskOutcome</span> {
-  <span class="cm">// == root_outcome</span>
-  Root    { is_pass: bool, outcome: String },
-  <span class="cm">// == planner_outcome (FULL plan; no is_pass — a returned plan is success)</span>
-  Planner {
-    plan_spec: String,
-    work_items: Vec&lt;WorkItemSpec&gt;,
-    deferred_goal_for_next_iteration: Option&lt;DeferredGoal&gt;,
-  },
-  <span class="cm">// == worker_outcome (work_item_outcome)</span>
-  Worker  { is_pass: bool, outcome: String },
+<h3>PlannerOutcome <span class="tag">(attempt row)</span></h3>
+<pre><span class="kw">pub struct</span> <span class="ty">PlannerOutcome</span> {
+  plan_spec: String,
+  work_items: Vec&lt;WorkItemSpec&gt;,
+  deferred_goal_for_next_iteration: Option&lt;DeferredGoal&gt;,
 }
 <span class="kw">pub struct</span> <span class="ty">WorkItemSpec</span> {
   id: WorkItemId, agent_name: AgentName,
@@ -358,45 +338,38 @@ anyway, the tree is not extra overhead — it makes <code>tasks.attempt_id</code
 }</pre>
 </div>
 <div>
-<h3>ParentedOutcome <span class="tag">(parented_runs rows)</span></h3>
-<pre><span class="cm">#[serde(tag="kind")]</span>
+<h3>Worker / Parented Results</h3>
+<pre><span class="kw">pub struct</span> <span class="ty">WorkerOutcome</span> {
+  is_pass: bool,
+}
 <span class="kw">pub enum</span> <span class="ty">ParentedOutcome</span> {
-  Advisor  { verdict: AdvisorVerdict, outcome: String },
-  Subagent { outcome: String },
+  Advisor  { verdict: AdvisorVerdict },
+  Subagent {},
 }
 <span class="kw">pub enum</span> <span class="ty">AdvisorVerdict</span> { Approve, Reject }
 </pre>
-<div class="note warnbox">Two families, two row types, <b>not</b> merged. <code>TaskOutcome</code> is 1:1 with
-<code>TaskRole</code>; <code>ParentedOutcome</code> is 1:1 with <code>ParentedAgentRunKind</code>.
-Agent-run rows keep the raw <code>terminal_payload</code> and expose typed outcome mirrors beside it:
-<code>AgentRun.task_outcome</code> and <code>ParentedRun.parented_outcome</code>.</div>
+<div class="note warnbox">No <code>TaskOutcome</code>, no <code>RunOutcome</code>, and no structured
+<code>outcome</code> field. Agent-run rows keep only raw <code>terminal_payload</code> for audit;
+workflow-owned typed state lives on the attempt and execution-tree nodes.</div>
 </div>
 </div>
-
-<p class="muted">Stored JSON examples (raw terminal payload and typed outcome mirrors, discriminated by <code>kind</code>):</p>
-<pre>{ "kind":"root",    "is_pass":true,  "outcome":"Answered the request." }
-{ "kind":"planner", "plan_spec":"…", "work_items":[{"id":"w1","agent_name":"executor","work_spec":"…","needs":[]}],
-                    "deferred_goal_for_next_iteration":null }
-{ "kind":"worker",  "is_pass":true,  "outcome":"Implemented and verified the change." }
-{ "kind":"advisor", "verdict":"approve", "outcome":"Looks correct." }       <span class="cm">// parented_runs</span>
-{ "kind":"subagent","outcome":"Found 3 call sites." }                        <span class="cm">// parented_runs</span></pre>
 
 <h3>Outcome taxonomy — two layers</h3>
-<p class="muted"><b>Layer 1 — per-run deliverable</b> (the actual data an agent run produced; stored as terminal payload plus typed outcome mirror). Folded into the two enums:</p>
+<p class="muted"><b>Layer 1 — workflow-owned typed results</b> (no task/run outcome mirror):</p>
 <table>
 <tr><th>Conceptual name</th><th>=</th><th>Stored on</th></tr>
-<tr><td><code>RootOutcome</code></td><td><code>TaskOutcome::Root { is_pass, outcome }</code></td><td>root <code>task_runs</code></td></tr>
-<tr><td><code>PlannerOutcome</code></td><td><code>TaskOutcome::Planner { plan_spec, work_items, deferred_goal_for_next_iteration }</code></td><td>planner <code>task_runs</code></td></tr>
-<tr><td><code>WorkerOutcome</code> <span class="tag">(work_item_outcome)</span></td><td><code>TaskOutcome::Worker { is_pass, outcome }</code></td><td>worker <code>task_runs</code></td></tr>
+<tr><td><code>Root</code></td><td>request/run status only</td><td><code>requests</code> + <code>agent_runs</code></td></tr>
+<tr><td><code>PlannerOutcome</code></td><td><code>{ plan_spec, work_items, deferred_goal_for_next_iteration }</code></td><td><code>attempts.planner_outcome</code></td></tr>
+<tr><td><code>WorkerOutcome</code></td><td><code>{ is_pass }</code></td><td><code>execution_tree.nodes[].worker_outcome</code></td></tr>
 <tr><td><code>Advisor/Subagent</code></td><td><code>ParentedOutcome::{Advisor,Subagent}</code></td><td><code>parented_runs</code></td></tr>
 </table>
 
-<p class="muted"><b>Layer 2 — aggregation projections</b> (READ-SIDE; computed from the runs, <b>never stored</b>). Recursive; <code>status</code> rolls up bottom-up. <i>"returned" = the last attempt / iteration after which no further retry / continuation was spawned (the terminal one).</i></p>
-<pre><span class="cm">// PlannerOutcome ≡ TaskOutcome::Planner payload;  WorkerOutcome ≡ TaskOutcome::Worker payload.</span>
+<p class="muted"><b>Layer 2 — aggregation projections</b> (READ-SIDE; computed from workflow-owned results, <b>never stored</b>). Recursive; <code>status</code> rolls up bottom-up. <i>"returned" = the last attempt / iteration after which no further retry / continuation was spawned (the terminal one).</i></p>
+<pre><span class="cm">// PlannerOutcome lives on Attempt; WorkerOutcome lives on execution-tree nodes.</span>
 <span class="kw">pub struct</span> <span class="ty">AttemptOutcome</span> {
     <span class="kw">pub</span> status: bool,                         <span class="cm">// planner returned a plan AND every worker is_pass</span>
-    <span class="kw">pub</span> planner_outcome: PlannerOutcome,      <span class="cm">// the attempt's TaskOutcome::Planner</span>
-    <span class="kw">pub</span> worker_outcomes: Vec&lt;WorkerOutcome&gt;,  <span class="cm">// each execution_tree node's TaskOutcome::Worker</span>
+    <span class="kw">pub</span> planner_outcome: PlannerOutcome,
+    <span class="kw">pub</span> worker_outcomes: Vec&lt;WorkerOutcome&gt;,
 }
 <span class="kw">pub struct</span> <span class="ty">IterationOutcome</span> {
     <span class="kw">pub</span> status: bool,                         <span class="cm">// = returned_attempt.status</span>
@@ -419,12 +392,12 @@ flowchart BT
 </div>
 <table>
 <tr><th>Projection</th><th><code>status</code> rule</th><th>children</th><th>extra</th></tr>
-<tr><td><code>AttemptOutcome</code></td><td><code>plan_returned && worker_outcomes.all(is_pass)</code> <span class="tag">(empty workers + failed planner ⇒ false)</span></td><td>worker outcomes (via <code>execution_tree.nodes[].task_id</code>)</td><td><code>planner_outcome</code> (via <code>execution_tree.planner_task_id</code>)</td></tr>
+<tr><td><code>AttemptOutcome</code></td><td><code>plan_returned && worker_outcomes.all(is_pass)</code> <span class="tag">(empty workers + failed planner ⇒ false)</span></td><td>worker outcomes from <code>execution_tree.nodes[].worker_outcome</code></td><td><code>Attempt.planner_outcome</code></td></tr>
 <tr><td><code>IterationOutcome</code></td><td><code>= returned_attempt.status</code></td><td>all attempts (via <code>iteration.attempt_ids</code>)</td><td><code>deferred_goal</code> extracted from the returned attempt's <code>planner_outcome</code></td></tr>
 <tr><td><code>WorkflowOutcome</code></td><td><code>= returned_iteration.status</code></td><td>all iterations (via <code>workflow.iteration_ids</code>)</td><td>—</td></tr>
 </table>
 <div class="note">These three <b>replace</b> the old lifecycle disposition enums (<code>IterationOutcome::Complete/Continue/Failed</code>, <code>WorkflowOutcome::Succeeded/Failed</code>): "continue vs complete" is now just <code>deferred_goal.is_some()</code>. They are computed on read — never stored. The stored lifecycle status (<code>TaskStatus</code> · <code>AttemptStatus</code> · <code>IterationStatus</code> · <code>WorkflowStatus</code>) stays as the <b>in-flight / scheduling</b> authority; the projection <code>status: bool</code> is the <b>terminal pass/fail</b> roll-up of the returned child.</div>
-<div class="note warnbox"><b>Consequence — single source for the deferred goal:</b> <code>IterationOutcome.deferred_goal</code> is <em>extracted from the planner_outcome</em>, so <code>TaskOutcome::Planner.deferred_goal_for_next_iteration</code> is the only stored copy ⇒ <b>DROP the <code>iterations.deferred_goal_for_next_iteration</code> column</b> (derive it when creating the next iteration). <b>Edge:</b> <code>worker_outcomes.all(..)</code> is vacuously <code>true</code> on an empty list, so an attempt whose planner failed (no plan, no workers) must short-circuit to <code>status=false</code>.</div>
+<div class="note warnbox"><b>Consequence — single workflow source for the deferred goal:</b> <code>IterationOutcome.deferred_goal</code> is <em>extracted from the planner_outcome</em>, so <code>Attempt.planner_outcome.deferred_goal_for_next_iteration</code> is the workflow-owned stored copy ⇒ <b>DROP the <code>iterations.deferred_goal_for_next_iteration</code> column</b> (derive it when creating the next iteration). <b>Edge:</b> <code>worker_outcomes.all(..)</code> is vacuously <code>true</code> on an empty list, so an attempt whose planner failed (no plan, no workers) must short-circuit to <code>status=false</code>.</div>
 
 <h3>Status enums (lifecycle authority — never duplicated onto outcomes except <code>is_pass</code>)</h3>
 <table>
@@ -443,7 +416,6 @@ flowchart BT
 CREATE TABLE workflows (
   id                  TEXT PRIMARY KEY,
   request_id          TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
-  parent_task_id      TEXT NOT NULL,
   parent_agent_run_id TEXT NOT NULL,            <span class="cm">-- ← launched_by_agent_run_id</span>
   tool_use_id         TEXT,
   workflow_goal       TEXT NOT NULL,            <span class="cm">-- ← goal</span>
@@ -477,11 +449,11 @@ CREATE TABLE attempts (
   stage               TEXT NOT NULL,            <span class="cm">-- Plan | Run | Closed</span>
   status              TEXT NOT NULL,
   plan_id             TEXT NOT NULL,            <span class="cm">-- minted by the Attempt</span>
-  execution_tree      TEXT NOT NULL DEFAULT '{}',<span class="cm"> -- AttemptExecutionTree JSON (THE attempt↔task index)</span>
+  execution_tree      TEXT NOT NULL DEFAULT '{}',<span class="cm"> -- AttemptExecutionTree JSON (work-item DAG + worker outcomes)</span>
   fail_reason         TEXT,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT,
   UNIQUE (iteration_id, attempt_sequence_no)
-  <span class="cm">-- DROP planner_task_id (→ tree) · generator_task_ids · reducer_task_ids · work_item_ids · outcomes · deferred_goal</span>
+  <span class="cm">-- DROP planner_task_id · generator_task_ids · reducer_task_ids · work_item_ids · outcomes · deferred_goal</span>
 );
 
 <span class="cm">-- AGENT-RUN ROWS -------------------------------------------------</span>
@@ -493,17 +465,16 @@ CREATE TABLE task_runs (                        <span class="cm">-- root + plann
   status           TEXT NOT NULL,
   agent_name       TEXT NOT NULL,
   terminal_payload TEXT,                         <span class="cm">-- raw terminal tool result</span>
-  task_outcome TEXT,                              <span class="cm">-- typed mirror: TaskOutcome JSON</span>
   token_count INTEGER NOT NULL DEFAULT 0, error TEXT,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT
-  <span class="cm">-- DROP attempt_id · workflow_id · iteration_id · work_item_id (the attempt↔task link is attempts.execution_tree)</span>
+  <span class="cm">-- DROP attempt_id · workflow_id · iteration_id · work_item_id (workflow rows carry no task linkage)</span>
 );
 
 CREATE TABLE parented_runs (                    <span class="cm">-- advisor + subagent</span>
   task_id TEXT PRIMARY KEY, agent_run_id TEXT NOT NULL UNIQUE,
   request_id TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
   status TEXT NOT NULL,
-  parent_agent_run_id TEXT NOT NULL, parent_task_id TEXT NOT NULL,
+  parent_agent_run_id TEXT NOT NULL,
   kind TEXT NOT NULL CHECK (kind IN ('subagent','advisor')),
   tool_use_id TEXT, agent_name TEXT NOT NULL,
   terminal_payload TEXT,                          <span class="cm">-- raw terminal tool result</span>
@@ -511,8 +482,7 @@ CREATE TABLE parented_runs (                    <span class="cm">-- advisor + su
   token_count INTEGER NOT NULL DEFAULT 0, error TEXT,
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT
 );
-<span class="cm">-- `tasks` (schedulable) mirrors task_runs: id, request_id, role, instruction, status, agent_name,
---  task_outcome — also with NO lineage columns.</span></pre>
+<span class="cm">-- DROP `tasks` / `task_runs`; agent_runs are keyed by agent_run_id and have no typed outcome mirror.</span></pre>
 
 <!-- ============================================================ -->
 <h2>6 · Field / column value-population matrix</h2>
@@ -522,7 +492,7 @@ CREATE TABLE parented_runs (                    <span class="cm">-- advisor + su
 
 <tr><td colspan="4"><b>Workflow</b></td></tr>
 <tr><td><code>workflow_goal</code></td><td>workflow-launch tool</td><td class="when">workflow created</td><td class="src">goal text from the launching root agent</td></tr>
-<tr><td><code>parent_task_id</code> / <code>parent_agent_run_id</code> / <code>tool_use_id</code></td><td>spawn machinery</td><td class="when">workflow created</td><td class="src">the launching root task / run / tool call</td></tr>
+<tr><td><code>parent_agent_run_id</code> / <code>tool_use_id</code></td><td>spawn machinery</td><td class="when">workflow created</td><td class="src">the launching root run / tool call</td></tr>
 <tr><td><code>iteration_ids</code></td><td>iteration store</td><td class="when">each iteration created</td><td class="src">append child IterationId</td></tr>
 <tr><td><code>status</code></td><td>workflow lifecycle</td><td class="when">transitions / close</td><td class="src">derived from latest terminal iteration + deferred-goal</td></tr>
 
@@ -531,13 +501,13 @@ CREATE TABLE parented_runs (                    <span class="cm">-- advisor + su
 <tr><td><code>iteration_goal</code></td><td>iteration store</td><td class="when">iteration created</td><td class="src">#1 = workflow_goal; continuation = <b>derived</b> from the previous iteration's returned-attempt <code>planner_outcome.deferred_goal_for_next_iteration</code></td></tr>
 <tr><td><code>attempt_budget</code></td><td>iteration store</td><td class="when">iteration created</td><td class="src"><code>WorkflowLifecycleConfig.default_attempt_budget</code></td></tr>
 <tr><td><code>attempt_ids</code></td><td>iteration store</td><td class="when">each attempt created</td><td class="src">append child AttemptId</td></tr>
-<tr><td>deferred goal <span class="tag">(no stored column)</span></td><td>—</td><td class="when">read-side</td><td class="src">derived: returned attempt's <code>TaskOutcome::Planner.deferred_goal_for_next_iteration</code> (single source)</td></tr>
+<tr><td>deferred goal <span class="tag">(no stored column)</span></td><td>—</td><td class="when">read-side</td><td class="src">derived: returned attempt's <code>planner_outcome.deferred_goal_for_next_iteration</code> (single workflow source)</td></tr>
 
 <tr><td colspan="4"><b>Attempt</b></td></tr>
 <tr><td><code>plan_id</code></td><td><b>Attempt</b> (class)</td><td class="when">attempt created</td><td class="src">freshly minted (one per attempt)</td></tr>
-<tr><td><code>execution_tree.planner_task_id</code></td><td>spawn flow</td><td class="when">planner spawned</td><td class="src">the opaque <code>task_id</code> the task store mints</td></tr>
 <tr><td><code>execution_tree.nodes[]</code> (<code>work_item_id</code>, <code>needs</code>)</td><td><code>submit_plan_outcome</code></td><td class="when">planner submits</td><td class="src">the planner-authored <code>work_items[]</code> (ids + needs)</td></tr>
-<tr><td><code>execution_tree.nodes[].task_id</code></td><td>spawn flow</td><td class="when">that worker spawned</td><td class="src">the opaque worker <code>task_id</code></td></tr>
+<tr><td><code>planner_outcome</code></td><td><code>submit_plan_outcome</code></td><td class="when">planner submits</td><td class="src">the planner terminal result, stored on the attempt</td></tr>
+<tr><td><code>execution_tree.nodes[].worker_outcome</code></td><td><code>submit_worker_outcome</code></td><td class="when">that worker finishes</td><td class="src">the worker terminal result, keyed by <code>work_item_id</code></td></tr>
 <tr><td><code>stage</code> / <code>status</code> / <code>fail_reason</code></td><td>attempt lifecycle</td><td class="when">plan→run→close</td><td class="src">DAG quiescence over node statuses (all Done = Passed)</td></tr>
 
 <tr><td colspan="4"><b>task_runs</b> (root / planner / worker)</td></tr>
@@ -547,10 +517,10 @@ CREATE TABLE parented_runs (                    <span class="cm">-- advisor + su
 <tr><td><code>instruction</code></td><td>spawn flow</td><td class="when">run spawned</td><td class="src">root = request; planner = rendered planner context; worker = <code>work_spec</code> (from plan by <code>work_item_id</code>)</td></tr>
 <tr><td><code>agent_name</code></td><td>spawn flow</td><td class="when">run spawned</td><td class="src">root/planner = fixed profile; worker = <code>WorkItemSpec.agent_name</code></td></tr>
 <tr><td><code>status</code></td><td>terminal tool / runtime</td><td class="when">terminal / exhaustion</td><td class="src"><code>is_pass</code> → Done/Failed; or synthesized Failed if the run died without submitting</td></tr>
-<tr><td><code>terminal_payload</code> / <code>task_outcome</code></td><td>terminal tool</td><td class="when">submit_*</td><td class="src">same terminal tool result, raw JSON plus typed <code>TaskOutcome::{Root,Planner,Worker}</code></td></tr>
+<tr><td><code>terminal_payload</code></td><td>terminal tool</td><td class="when">submit_*</td><td class="src">raw audit payload only; no typed outcome mirror</td></tr>
 
 <tr><td colspan="4"><b>parented_runs</b> (advisor / subagent)</td></tr>
-<tr><td><code>parent_agent_run_id</code> / <code>parent_task_id</code> / <code>kind</code></td><td>spawn flow</td><td class="when">run spawned</td><td class="src">the spawning agent run + <code>ask_advisor</code>/subagent tool</td></tr>
+<tr><td><code>parent_agent_run_id</code> / <code>kind</code></td><td>spawn flow</td><td class="when">run spawned</td><td class="src">the spawning agent run + <code>ask_advisor</code>/subagent tool</td></tr>
 <tr><td><code>terminal_payload</code> / <code>parented_outcome</code></td><td>terminal tool</td><td class="when">submit_advisor/subagent_outcome</td><td class="src">same terminal tool result, raw JSON plus typed <code>ParentedOutcome::{Advisor,Subagent}</code></td></tr>
 </table>
 
@@ -566,24 +536,24 @@ CREATE TABLE parented_runs (                    <span class="cm">-- advisor + su
 <span class="cm">// spawn_agent(target): agent_run_id = v4; task store mints the OPAQUE task_id; creates the run row.</span>
 
 <span class="kw">pub struct</span> <span class="ty">AgentLaunch</span> {        <span class="cm">// ephemeral; one struct + kind (was 3 structs + ~11 match accessors)</span>
-  task_id, request_id, coords: WorkflowCoordinates,
+  request_id, coords: WorkflowCoordinates,
   agent_name, context, task_guidance, agent_def, skill,
   kind: AgentLaunchKind,
 }
 <span class="kw">pub enum</span> <span class="ty">AgentLaunchKind</span> { Planner { plan_id: PlanId }, Worker { work_item_id: WorkItemId } }</pre>
 <div class="note">The lineage (<code>WorkflowCoordinates</code> = workflow_id + iteration_id + attempt_id) rides on the
 <b>ephemeral</b> launch / spawn target (needed for the record path), never on the persisted <code>Task</code>.
-The persisted attempt↔task link is the <code>execution_tree</code>.</div>
+There is no persisted attempt↔task link.</div>
 
 <!-- ============================================================ -->
 <h2>8 · Terminal tools → outcome mapping</h2>
 <table>
 <tr><th>Terminal tool</th><th>Wire input</th><th>Records</th><th>On row</th></tr>
-<tr><td><code>submit_root_task_outcome</code></td><td>{ status, outcome }</td><td><code>TaskOutcome::Root { is_pass, outcome }</code></td><td>root <code>task_runs</code> (+ RequestStatus)</td></tr>
-<tr><td><code>submit_plan_outcome</code></td><td>{ plan_spec, work_items[], deferred_goal? }</td><td><code>TaskOutcome::Planner {…}</code> + materialize <code>execution_tree</code></td><td>planner <code>task_runs</code> + <code>attempts</code></td></tr>
-<tr><td><code>submit_worker_outcome</code></td><td>{ status, outcome }</td><td><code>TaskOutcome::Worker { is_pass, outcome }</code></td><td>worker <code>task_runs</code></td></tr>
-<tr><td><code>submit_advisor_outcome</code></td><td>{ verdict, outcome }</td><td><code>ParentedOutcome::Advisor {…}</code></td><td><code>parented_runs</code></td></tr>
-<tr><td><code>submit_subagent_outcome</code></td><td>{ outcome }</td><td><code>ParentedOutcome::Subagent {…}</code></td><td><code>parented_runs</code></td></tr>
+<tr><td><code>submit_root_outcome</code></td><td>{ status }</td><td>request/root-run status</td><td><code>requests</code> + root <code>agent_runs</code></td></tr>
+<tr><td><code>submit_plan_outcome</code></td><td>{ plan_spec, work_items[], deferred_goal? }</td><td><code>PlannerOutcome</code> + materialize <code>execution_tree</code></td><td><code>attempts</code> + planner <code>task_runs</code> mirror</td></tr>
+<tr><td><code>submit_worker_outcome</code></td><td>{ status }</td><td><code>WorkerOutcome { is_pass }</code></td><td><code>execution_tree.nodes[]</code> + raw worker run payload</td></tr>
+<tr><td><code>submit_advisor_outcome</code></td><td>{ verdict }</td><td><code>ParentedOutcome::Advisor { verdict }</code></td><td><code>parented_runs</code></td></tr>
+<tr><td><code>submit_subagent_outcome</code></td><td>{}</td><td><code>ParentedOutcome::Subagent {}</code></td><td><code>parented_runs</code></td></tr>
 </table>
 <p class="muted"><code>status</code> (wire <code>SubmissionStatus {Success,Failed}</code>) maps to the stored
 <code>is_pass: bool</code> <em>and</em> to <code>TaskStatus</code> (Done/Failed) so the two stay consistent.

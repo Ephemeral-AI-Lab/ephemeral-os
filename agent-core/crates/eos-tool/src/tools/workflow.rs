@@ -73,6 +73,7 @@ mod delegate_workflow {
                 return Ok(ToolResult::error("goal must be nonblank"));
             }
             let agent_run_id = ctx.require_agent_run_id()?;
+            let request_id = ctx.require_request_id()?;
             let service = self.workflow_service.as_ref();
             let sessions = &self.workflow_sessions;
 
@@ -91,6 +92,7 @@ mod delegate_workflow {
 
             let started = service
                 .start_workflow(StartWorkflowRequest {
+                    request_id: request_id.clone(),
                     agent_run_id: agent_run_id.clone(),
                     tool_use_id: ctx.tool_use_id.clone(),
                     workflow_goal: parsed.goal.clone(),

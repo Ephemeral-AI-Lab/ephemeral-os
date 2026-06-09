@@ -131,10 +131,7 @@ mod metadata {
     use std::sync::Arc;
 
     use eos_types::Message;
-    use eos_types::{
-        AgentRunId, AttemptId, InvocationId, RequestId, SandboxId, ToolUseId, WorkItemId,
-        WorkflowId,
-    };
+    use eos_types::{AgentRunId, InvocationId, RequestId, SandboxId, ToolUseId};
 
     use crate::ToolError;
 
@@ -148,12 +145,6 @@ mod metadata {
         pub agent_run_id: Option<AgentRunId>,
         /// Owning request, when set.
         pub request_id: Option<RequestId>,
-        /// Owning attempt, when set.
-        pub attempt_id: Option<AttemptId>,
-        /// Owning workflow, when set.
-        pub workflow_id: Option<WorkflowId>,
-        /// Planner-authored work item id, when this is a worker run.
-        pub work_item_id: Option<WorkItemId>,
         /// Per-call tool-use id.
         pub tool_use_id: Option<ToolUseId>,
         /// In-flight sandbox correlation id, when set.
@@ -174,9 +165,6 @@ mod metadata {
                 .field("agent_name", &self.agent_name)
                 .field("agent_run_id", &self.agent_run_id)
                 .field("request_id", &self.request_id)
-                .field("attempt_id", &self.attempt_id)
-                .field("workflow_id", &self.workflow_id)
-                .field("work_item_id", &self.work_item_id)
                 .field("tool_use_id", &self.tool_use_id)
                 .field("sandbox_id", &self.sandbox_id)
                 .field(
@@ -222,26 +210,6 @@ mod metadata {
             self.agent_run_id
                 .as_ref()
                 .ok_or(ToolError::MissingContext("agent_run_id"))
-        }
-
-        /// Require the owning attempt id, else a framework fault.
-        ///
-        /// # Errors
-        /// Returns [`ToolError::MissingContext`] when no attempt id is set.
-        pub fn require_attempt_id(&self) -> Result<&AttemptId, ToolError> {
-            self.attempt_id
-                .as_ref()
-                .ok_or(ToolError::MissingContext("attempt_id"))
-        }
-
-        /// Require the current work item id, else a framework fault.
-        ///
-        /// # Errors
-        /// Returns [`ToolError::MissingContext`] when no work item id is set.
-        pub fn require_work_item_id(&self) -> Result<&WorkItemId, ToolError> {
-            self.work_item_id
-                .as_ref()
-                .ok_or(ToolError::MissingContext("work_item_id"))
         }
     }
 }

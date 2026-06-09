@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>7</b><span>modules</span></div>
-  <div><b>51</b><span>items</span></div>
+  <div><b>49</b><span>items</span></div>
   <div><b>20</b><span>fields</span></div>
-  <div><b>34</b><span>methods</span></div>
+  <div><b>28</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-cancellation-rs.html"><span>cancellation.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-completion-rs.html"><span>completion.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-persistence-rs.html"><span>persistence.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>5/10</small></a></li><li><a class="file-link" href="eos-agent-run--src-spawn-rs.html"><span>spawn.rs</span><small>0/5</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-cancellation-rs.html"><span>cancellation.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-completion-rs.html"><span>completion.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-persistence-rs.html"><span>persistence.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>5/8</small></a></li><li><a class="file-link" href="eos-agent-run--src-spawn-rs.html"><span>spawn.rs</span><small>0/5</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="persistence crates/eos-agent-run/src/persistence.rs finish_agent_run completion_from_agent_run completion_from_parts is_cancelled_payload decode_submission_outcome">
   <div class="module-head">
     <div>
@@ -229,8 +229,8 @@
   <pre class="file-source"><code><span class="rs-comment">//! Agent-run persistence helpers owned by the runner.</span>
 
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">AgentRun</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">AgentRunStore</span>, <span class="rs-type">JsonObject</span>,
-    <span class="rs-type">SubmissionOutcome</span>, <span class="rs-type">ExecutionStatus</span>,
+    <span class="rs-type">AgentRun</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">AgentRunStore</span>, <span class="rs-type">ExecutionStatus</span>,
+    <span class="rs-type">JsonObject</span>, <span class="rs-type">SubmissionOutcome</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<span class="rs-type">AgentRunError</span>;

@@ -1,8 +1,8 @@
 //! Agent-run persistence helpers owned by the runner.
 
 use eos_types::{
-    AgentRun, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, JsonObject,
-    SubmissionOutcome, ExecutionStatus,
+    AgentRun, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, ExecutionStatus,
+    JsonObject, SubmissionOutcome,
 };
 
 use crate::AgentRunError;

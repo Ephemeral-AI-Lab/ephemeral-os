@@ -10,7 +10,7 @@ use eos_engine::run_output::{
 use eos_types::{
     format_record_dir, AgentRunId, AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget,
     AttemptId, ContentBlock, IterationId, Message, MessageRole, ParentedAgentRunKind, RequestId,
-    TaskAgentRunKind, TaskId, ToolUseId, WorkflowCoordinates, WorkflowId, WorkflowAgentRole,
+    TaskAgentRunKind, TaskId, ToolUseId, WorkflowAgentRole, WorkflowCoordinates, WorkflowId,
 };
 use serde_json::{json, Value};
 

@@ -2,7 +2,7 @@
 
 use eos_types::{
     AgentLoopCompletion, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind, AgentRunError,
-    AgentRunId, AgentRunOutcome, AgentRunStatus, Message, ExecutionStatus,
+    AgentRunId, AgentRunOutcome, AgentRunStatus, ExecutionStatus, Message,
 };
 
 use crate::persistence::{completion_from_agent_run, finish_agent_run};

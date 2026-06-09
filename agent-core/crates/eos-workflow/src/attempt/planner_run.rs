@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use eos_types::{
-    AttemptFailReason, AttemptStage, PlanOutcomeSubmission, Task, TaskId, SubmissionOutcome, TaskRole,
-    ExecutionStatus,
+    AgentRunId, AttemptFailReason, AttemptStage, PlanOutcomeSubmission, SubmissionOutcome,
 };
 
 use crate::{Result, WorkflowError};
@@ -24,51 +23,30 @@ impl PlannerRun {
     pub(crate) async fn start(&self) -> Result<()> {
         self.attempt_run.validate_run_concurrency()?;
         let attempt = self.attempt_run.assert_stage(AttemptStage::Plan).await?;
-        if attempt.planner_task_id().is_some() {
+        if attempt.planner_started() {
             return Err(WorkflowError::invariant(format!(
-                "attempt {:?} already has a planner task",
+                "attempt {:?} already started its planner",
                 attempt.id.as_str()
             )));
         }
 
-        let task_id = TaskId::new_v4();
+        let agent_run_id = AgentRunId::new_v4();
         let launch = AgentLaunchFactory::new(self.attempt_run.deps().clone())
-            .for_planner(&attempt, task_id.clone())
+            .for_planner(&attempt, agent_run_id.clone())
+            .await?;
+        self.attempt_run
+            .deps()
+            .attempt_store
+            .mark_planner_started(&attempt.id)
             .await?;
         self.attempt_run
             .deps()
             .active_attempt_runs
             .register(Arc::clone(&self.attempt_run))?;
-
-        let result: Result<()> = async {
-            self.attempt_run
-                .deps()
-                .task_store
-                .insert_task(&Task {
-                    id: task_id.clone(),
-                    request_id: launch.request_id.clone(),
-                    role: TaskRole::Planner,
-                    instruction: launch.instruction.clone(),
-                    status: ExecutionStatus::Running,
-                    agent_name: Some(launch.agent_name.as_str().to_owned()),
-                    submission_outcome: None,
-                })
-                .await?;
-            self.attempt_run
-                .deps()
-                .attempt_store
-                .bind_planner_task(&attempt.id, &task_id)
-                .await?;
-            Ok(())
-        }
-        .await;
-        if result.is_err() {
-            self.attempt_run
-                .deps()
-                .active_attempt_runs
-                .deregister(&attempt.id);
-        }
-        result?;
+        self.attempt_run
+            .deps()
+            .active_attempt_runs
+            .register_agent_run(agent_run_id, Arc::clone(&self.attempt_run))?;
         self.spawn_planner_run(launch);
         Ok(())
     }
@@ -77,60 +55,29 @@ impl PlannerRun {
         &self,
         submission: PlanOutcomeSubmission,
     ) -> Result<()> {
-        self.attempt_run
-            .assert_submission_attempt(&submission.attempt_id)?;
         self.attempt_run.validate_run_concurrency()?;
         let attempt = self.attempt_run.assert_stage(AttemptStage::Plan).await?;
-        let planner_task_id = attempt.planner_task_id().cloned().ok_or_else(|| {
-            WorkflowError::invariant(format!(
-                "attempt {:?} has no planner task",
+        if !attempt.planner_started() {
+            return Err(WorkflowError::invariant(format!(
+                "attempt {:?} has not started its planner",
                 attempt.id.as_str()
-            ))
-        })?;
+            )));
+        }
         validate_work_items(
             &submission.work_items,
             &self.attempt_run.deps().agent_registry,
         )?;
-        let planner_task = self
-            .attempt_run
-            .deps()
-            .task_store
-            .get(&planner_task_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("planner task", planner_task_id.as_str()))?;
-        if planner_task.role != TaskRole::Planner || planner_task.status != ExecutionStatus::Running {
-            return Err(WorkflowError::invariant(format!(
-                "planner task {:?} is not running",
-                planner_task_id.as_str()
-            )));
-        }
 
-        let submission_outcome = SubmissionOutcome::Planner {
-            plan_spec: submission.plan_spec.clone(),
+        let outcome = SubmissionOutcome::Planner {
+            plan_spec: submission.plan_spec,
             work_items: submission.work_items.clone(),
-            deferred_goal_for_next_iteration: submission.deferred_goal_for_next_iteration.clone(),
+            deferred_goal_for_next_iteration: submission.deferred_goal_for_next_iteration,
         };
-        self.attempt_run
-            .deps()
-            .task_store
-            .set_task_status_if_current(
-                &planner_task_id,
-                ExecutionStatus::Running,
-                ExecutionStatus::Done,
-                Some(&submission_outcome),
-            )
-            .await?
-            .ok_or_else(|| {
-                WorkflowError::invariant(format!(
-                    "planner task {:?} is no longer running",
-                    planner_task_id.as_str()
-                ))
-            })?;
         let nodes = execution_nodes(&submission.work_items);
         self.attempt_run
             .deps()
             .attempt_store
-            .record_plan_nodes(&attempt.id, &nodes)
+            .record_plan_outcome(&attempt.id, &outcome, &nodes)
             .await?;
         WorkItemsRun::new(Arc::clone(&self.attempt_run))
             .advance()
@@ -156,67 +103,31 @@ impl PlannerRun {
         launch: AgentLaunch,
         report: Result<AgentRunReport>,
     ) -> Result<()> {
-        if let Err(err) = &report {
+        let failed = match report {
+            Ok(report) => report.failure_summary,
+            Err(err) => Some(err.to_string()),
+        };
+        if let Some(summary) = failed {
             tracing::warn!(
                 attempt_id = %self.attempt_run.attempt_id().as_str(),
-                task_id = %launch.task_id.as_str(),
-                error = %err,
-                "planner run failed"
+                agent_run_id = %launch.agent_run_id.as_str(),
+                %summary,
+                "planner run reported a failure summary"
             );
         }
-        if let Ok(report) = &report {
-            if let Some(summary) = &report.failure_summary {
-                tracing::warn!(
-                    attempt_id = %self.attempt_run.attempt_id().as_str(),
-                    task_id = %launch.task_id.as_str(),
-                    %summary,
-                    "planner run reported a failure summary"
-                );
-            }
+
+        let attempt = self.attempt_run.fresh_attempt().await?;
+        if attempt.is_closed() {
+            return Ok(());
+        }
+        if attempt.execution_tree.planner_outcome.is_some() {
+            return WorkItemsRun::new(Arc::clone(&self.attempt_run))
+                .advance()
+                .await;
         }
 
-        let Some(task) = self
-            .attempt_run
-            .deps()
-            .task_store
-            .get(&launch.task_id)
-            .await?
-        else {
-            return Err(WorkflowError::not_found(
-                "planner task",
-                launch.task_id.as_str(),
-            ));
-        };
-        match task.status {
-            ExecutionStatus::Done => {
-                WorkItemsRun::new(Arc::clone(&self.attempt_run))
-                    .advance()
-                    .await
-            }
-            ExecutionStatus::Failed | ExecutionStatus::Blocked | ExecutionStatus::Cancelled => {
-                self.attempt_run
-                    .close_attempt_failed(AttemptFailReason::WorkItemFailed)
-                    .await
-            }
-            ExecutionStatus::Pending | ExecutionStatus::Running => {
-                self.synthesize_planner_failure(&launch).await
-            }
-        }
-    }
-
-    async fn synthesize_planner_failure(&self, launch: &AgentLaunch) -> Result<()> {
         self.attempt_run
-            .deps()
-            .task_store
-            .set_task_status_if_current(
-                &launch.task_id,
-                ExecutionStatus::Running,
-                ExecutionStatus::Failed,
-                None,
-            )
-            .await?;
-        self.attempt_run
-            .close_attempt_failed(AttemptFailReason::WorkItemFailed)
+            .close_attempt_failed(AttemptFailReason::AgentRunFailed)
             .await
     }
 }

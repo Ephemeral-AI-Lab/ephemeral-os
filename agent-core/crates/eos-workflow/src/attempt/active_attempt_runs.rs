@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use eos_types::{AttemptId, IterationId};
+use eos_types::{AgentRunId, AttemptId, IterationId};
 use parking_lot::Mutex;
 
 use crate::iteration_run::IterationRunCoordinator;
@@ -13,12 +13,14 @@ use super::AttemptRun;
 #[derive(Default)]
 pub struct ActiveAttemptRuns {
     by_attempt_id: Mutex<HashMap<AttemptId, Arc<AttemptRun>>>,
+    by_agent_run_id: Mutex<HashMap<AgentRunId, Arc<AttemptRun>>>,
 }
 
 impl std::fmt::Debug for ActiveAttemptRuns {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ActiveAttemptRuns")
-            .field("len", &self.by_attempt_id.lock().len())
+            .field("attempts", &self.by_attempt_id.lock().len())
+            .field("agent_runs", &self.by_agent_run_id.lock().len())
             .finish()
     }
 }
@@ -45,14 +47,43 @@ impl ActiveAttemptRuns {
         Ok(())
     }
 
+    pub(crate) fn register_agent_run(
+        &self,
+        agent_run_id: AgentRunId,
+        run: Arc<AttemptRun>,
+    ) -> Result<()> {
+        let mut guard = self.by_agent_run_id.lock();
+        if let Some(current) = guard.get(&agent_run_id) {
+            if !Arc::ptr_eq(current, &run) {
+                return Err(WorkflowError::invariant(format!(
+                    "agent run {:?} is already registered for another attempt",
+                    agent_run_id.as_str()
+                )));
+            }
+        }
+        guard.insert(agent_run_id, run);
+        Ok(())
+    }
+
     /// Look up an active attempt run.
     #[must_use]
     pub fn get(&self, attempt_id: &AttemptId) -> Option<Arc<AttemptRun>> {
         self.by_attempt_id.lock().get(attempt_id).cloned()
     }
 
+    /// Look up the active attempt run that owns an agent run.
+    #[must_use]
+    pub fn get_by_agent_run_id(&self, agent_run_id: &AgentRunId) -> Option<Arc<AttemptRun>> {
+        self.by_agent_run_id.lock().get(agent_run_id).cloned()
+    }
+
     pub(crate) fn deregister(&self, attempt_id: &AttemptId) {
-        self.by_attempt_id.lock().remove(attempt_id);
+        let Some(run) = self.by_attempt_id.lock().remove(attempt_id) else {
+            return;
+        };
+        self.by_agent_run_id
+            .lock()
+            .retain(|_, current| !Arc::ptr_eq(current, &run));
     }
 }
 

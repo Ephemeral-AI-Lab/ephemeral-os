@@ -3,15 +3,13 @@
 use std::sync::LazyLock;
 
 use eos_tool::{ExecutionMetadata, Hook, ToolError, ToolResult};
-use eos_types::{BackgroundSessionCounts, JsonObject, WorkflowId};
+use eos_types::{BackgroundSessionCounts, JsonObject};
 use regex::Regex;
 use serde_json::{json, Value};
 
-use crate::agent_loop::ToolCallHookStores;
 use crate::background::BackgroundSessionRuntime;
 
 mod advisor_approval;
-mod disallow_nested_planner_deferral;
 mod require_no_background_sessions;
 
 /// The outcome of running one hook.
@@ -63,17 +61,12 @@ impl HookDenial {
 #[derive(Clone, Debug)]
 pub(crate) struct ToolCallHooks {
     background: BackgroundSessionRuntime,
-    dependencies: ToolCallHookStores,
 }
 
 impl ToolCallHooks {
-    pub(crate) fn new(
-        background: &BackgroundSessionRuntime,
-        dependencies: ToolCallHookStores,
-    ) -> Self {
+    pub(crate) fn new(background: &BackgroundSessionRuntime) -> Self {
         Self {
             background: background.clone(),
-            dependencies,
         }
     }
 
@@ -84,28 +77,6 @@ impl ToolCallHooks {
     pub(super) async fn cancel_all_subagents(&self, reason: &str) -> Result<(), ToolError> {
         self.background.cancel_all_subagents(reason).await;
         Ok(())
-    }
-
-    pub(super) async fn workflow_depth_for_call(
-        &self,
-        ctx: &ExecutionMetadata,
-    ) -> Result<Option<u32>, ToolError> {
-        let Some(workflow_id) = self.workflow_id_for_call(ctx).await? else {
-            return Ok(None);
-        };
-        self.workflow_depth(&workflow_id).await.map(Some)
-    }
-
-    async fn workflow_id_for_call(
-        &self,
-        ctx: &ExecutionMetadata,
-    ) -> Result<Option<WorkflowId>, ToolError> {
-        Ok(ctx.workflow_id.clone())
-    }
-
-    async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, ToolError> {
-        let _ = self.dependencies.workflow_store.get(workflow_id).await?;
-        Ok(1)
     }
 }
 
@@ -126,15 +97,6 @@ pub(super) async fn run_hook(
             require_no_background_sessions::run_require_no_background_sessions(tool, hooks).await
         }
         Hook::AdvisorApproval { tool } => advisor_approval::run_advisor_approval(tool, ctx).await,
-        Hook::DisallowNestedPlannerDeferral { max_depth, .. } => {
-            let hooks = hooks.ok_or_else(|| {
-                ToolError::Internal("tool-call hook dependencies not initialized".to_owned())
-            })?;
-            disallow_nested_planner_deferral::run_disallow_nested_planner_deferral(
-                max_depth, raw_input, ctx, hooks,
-            )
-            .await
-        }
         _ => Err(ToolError::Internal("unsupported hook variant".to_owned())),
     }
 }

@@ -19,14 +19,6 @@ pub enum Hook {
         /// The protected tool.
         tool: ToolName,
     },
-    /// Refuse a planner that sets a deferred goal while its workflow depth
-    /// exceeds `max_depth`.
-    DisallowNestedPlannerDeferral {
-        /// The protected tool.
-        tool: ToolName,
-        /// Deepest workflow depth still allowed to defer.
-        max_depth: u32,
-    },
     /// Refuse git working-tree / metadata mutation shell commands.
     DestructiveGitShell {
         /// The protected tool.
@@ -51,7 +43,6 @@ impl Hook {
         match self {
             Hook::RequireNoBackgroundSessions { tool }
             | Hook::AdvisorApproval { tool }
-            | Hook::DisallowNestedPlannerDeferral { tool, .. }
             | Hook::DestructiveGitShell { tool }
             | Hook::DestructiveShell { tool }
             | Hook::BlockInIsolatedMode { tool } => tool,
@@ -64,7 +55,6 @@ impl Hook {
         match self {
             Hook::RequireNoBackgroundSessions { .. } => "no_background_sessions",
             Hook::AdvisorApproval { .. } => "advisor_approval",
-            Hook::DisallowNestedPlannerDeferral { .. } => "disallow_nested_planner_deferral",
             Hook::DestructiveGitShell { .. } => "destructive_git_shell",
             Hook::DestructiveShell { .. } => "destructive_shell",
             Hook::BlockInIsolatedMode { .. } => "block_in_isolated_mode",
@@ -78,9 +68,6 @@ impl Hook {
         match self {
             Hook::RequireNoBackgroundSessions { .. } => format!("no_background_sessions:{tool}"),
             Hook::AdvisorApproval { .. } => format!("advisor_approval:{tool}"),
-            Hook::DisallowNestedPlannerDeferral { .. } => {
-                format!("no_nested_planner_deferral:{tool}")
-            }
             Hook::DestructiveGitShell { .. } => format!("sandbox_shell:destructive_git:{tool}"),
             Hook::DestructiveShell { .. } => format!("sandbox_shell:destructive_shell:{tool}"),
             Hook::BlockInIsolatedMode { .. } => format!("block_in_isolated_mode:{tool}"),

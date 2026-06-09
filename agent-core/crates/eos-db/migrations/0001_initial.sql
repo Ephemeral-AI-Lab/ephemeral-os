@@ -33,7 +33,7 @@ CREATE INDEX ix_workflows_parent_agent_run_id ON workflows(parent_agent_run_id);
 CREATE TABLE agent_runs (
     agent_run_id     TEXT PRIMARY KEY,
     request_id        TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
-    agent_type        TEXT NOT NULL CHECK (agent_type IN ('agent', 'subagent', 'advisor')),
+    agent_type        TEXT NOT NULL CHECK (agent_type IN ('main', 'worker', 'planner', 'subagent', 'advisor')),
     status            TEXT NOT NULL,
     agent_name        TEXT NOT NULL,
     parent_agent_run_id TEXT,

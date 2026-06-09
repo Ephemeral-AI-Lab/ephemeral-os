@@ -1,8 +1,6 @@
 #![allow(clippy::expect_used)]
 
-use eos_types::{
-    format_record_dir, AgentRunId, AgentRunRecordIndex, RequestId,
-};
+use eos_types::{format_record_dir, AgentRunId, AgentRunRecordIndex, RequestId};
 
 fn id<T>(value: &str) -> T
 where
@@ -26,10 +24,7 @@ fn root_record_dir_is_request_rooted() {
 
     let dir = format_record_dir(&index(&request_id, &agent_run_id));
 
-    assert_eq!(
-        dir.as_str(),
-        "requests/req-1/agent-runs/agent-run-run-1"
-    );
+    assert_eq!(dir.as_str(), "requests/req-1/agent-runs/agent-run-run-1");
 }
 
 #[test]

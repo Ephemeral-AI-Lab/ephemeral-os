@@ -1,7 +1,7 @@
 //! Agent-run cancellation orchestration.
 
 use eos_types::{
-    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, JsonObject, ExecutionStatus,
+    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, ExecutionStatus, JsonObject,
 };
 
 use crate::persistence::finish_agent_run;

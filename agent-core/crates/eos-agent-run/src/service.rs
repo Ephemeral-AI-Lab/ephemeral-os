@@ -73,9 +73,6 @@ impl AgentRunApi for AgentRunService {
 }
 
 #[cfg(test)]
-use crate::spawn::expected_agent_type;
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashMap;
@@ -89,36 +86,10 @@ mod tests {
         format_record_dir, AgentDefinition, AgentLoopCancellation, AgentLoopCompletion,
         AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind, AgentName,
         AgentRegistryBuilder, AgentRun, AgentRunApi, AgentRunRecordIndex, AgentRunRecordTarget,
-        AgentRunStatus, AgentType, ContentBlock, CoreError, CreatedTaskAgentRun, JsonObject,
-        Message, ParentAgentRunAnchor, ParentedAgentRunKind, ParentedOutcome, ParentedRun, PlanId,
-        RequestId, RunningRequestAgentRun, SpawnAgentRequest, SpawnAgentTarget,
-        StartAgentLoopRequest, StartedAgentLoop, TaskAgentRunKind, TaskAgentRunStore,
-        TaskExecutionIndex, TaskId, SubmissionOutcome, TaskRole, ExecutionStatus, ToolUseId, UtcDateTime,
-        WorkItemId, WorkflowCoordinates, WorkflowAgentRole,
+        AgentRunStatus, AgentRunStore, AgentType, ContentBlock, CoreError, CreatedAgentRun,
+        ExecutionStatus, JsonObject, Message, RequestId, RunningRequestAgentRun, SpawnAgentRequest,
+        StartAgentLoopRequest, StartedAgentLoop, SubmissionOutcome, ToolUseId, UtcDateTime,
     };
-
-    #[test]
-    fn agent_run_kind_declares_required_agent_type() {
-        let parent_agent_run_id = AgentRunId::new_v4();
-        assert_eq!(
-            expected_agent_type(&TaskAgentRunKind::Root),
-            AgentType::Agent
-        );
-        assert_eq!(
-            expected_agent_type(&TaskAgentRunKind::Parented {
-                parent_agent_run_id: parent_agent_run_id.clone(),
-                kind: ParentedAgentRunKind::Subagent,
-            }),
-            AgentType::Subagent
-        );
-        assert_eq!(
-            expected_agent_type(&TaskAgentRunKind::Parented {
-                parent_agent_run_id,
-                kind: ParentedAgentRunKind::Advisor,
-            }),
-            AgentType::Advisor
-        );
-    }
 
     #[tokio::test]
     async fn engine_completion_finalizes_once_and_publishes_waiters() {
@@ -196,7 +167,7 @@ mod tests {
     struct ServiceHarness {
         service: AgentRunService,
         launcher: Arc<ControlledLauncher>,
-        agent_run_store: Arc<FakeTaskAgentRunStore>,
+        agent_run_store: Arc<FakeAgentRunStore>,
     }
 
     impl ServiceHarness {
@@ -204,7 +175,7 @@ mod tests {
             let mut registry = AgentRegistryBuilder::new();
             registry.add(root_agent_definition());
             let launcher = Arc::new(ControlledLauncher::default());
-            let agent_run_store = Arc::new(FakeTaskAgentRunStore::default());
+            let agent_run_store = Arc::new(FakeAgentRunStore::default());
             let service = AgentRunService::new(
                 Arc::new(registry.build()),
                 launcher.clone(),
@@ -225,7 +196,7 @@ mod tests {
             system_prompt: Some("system".to_owned()),
             model: Some("test-model".to_owned()),
             tool_call_limit: NonZeroU32::new(4).expect("non-zero"),
-            agent_type: AgentType::Agent,
+            agent_type: AgentType::Main,
             allowed_tools: Vec::new(),
             terminals: Vec::new(),
             notification_triggers: Vec::new(),
@@ -236,11 +207,12 @@ mod tests {
 
     fn root_spawn_request() -> SpawnAgentRequest {
         SpawnAgentRequest {
+            agent_run_id: AgentRunId::new_v4(),
             agent_name: AgentName::new("root").expect("valid agent name"),
+            agent_type: AgentType::Main,
+            request_id: RequestId::new_v4(),
+            parent_agent_run_id: None,
             initial_messages: vec![Message::from_user_text("start")],
-            target: SpawnAgentTarget::Root {
-                request_id: RequestId::new_v4(),
-            },
             tool_use_id: None,
             sandbox_id: None,
             workspace_root: "/workspace".to_owned(),
@@ -327,68 +299,55 @@ mod tests {
     }
 
     #[derive(Default)]
-    struct FakeTaskAgentRunStore {
+    struct FakeAgentRunStore {
         indexes: StdMutex<HashMap<AgentRunId, AgentRunRecordIndex>>,
         runs: StdMutex<HashMap<AgentRunId, AgentRun>>,
         finish_count: AtomicUsize,
     }
 
-    impl FakeTaskAgentRunStore {
+    impl FakeAgentRunStore {
         fn finish_count(&self) -> usize {
             self.finish_count.load(Ordering::SeqCst)
         }
     }
 
-    impl eos_types::Sealed for FakeTaskAgentRunStore {}
+    impl eos_types::Sealed for FakeAgentRunStore {}
 
     #[async_trait]
-    impl TaskAgentRunStore for FakeTaskAgentRunStore {
-        async fn create_root_agent_run(
+    impl AgentRunStore for FakeAgentRunStore {
+        async fn create_agent_run(
             &self,
-            request_id: &RequestId,
             agent_run_id: &AgentRunId,
-            _agent_name: &AgentName,
-        ) -> Result<CreatedTaskAgentRun, CoreError> {
+            request_id: &RequestId,
+            agent_name: &AgentName,
+            agent_type: AgentType,
+            parent_agent_run_id: Option<&AgentRunId>,
+            tool_use_id: Option<&ToolUseId>,
+        ) -> Result<CreatedAgentRun, CoreError> {
             let index = AgentRunRecordIndex {
                 request_id: request_id.clone(),
                 agent_run_id: agent_run_id.clone(),
-                task_id: TaskId::new_v4(),
-                kind: TaskAgentRunKind::Root,
-                parent_record_dir: None,
             };
             lock(&self.indexes).insert(agent_run_id.clone(), index.clone());
             lock(&self.runs).insert(
                 agent_run_id.clone(),
-                task_run_from_index(&index, ExecutionStatus::Running, None, 0, None),
+                agent_run_from_index(
+                    &index,
+                    agent_type,
+                    agent_name.clone(),
+                    parent_agent_run_id.cloned(),
+                    tool_use_id.cloned(),
+                    ExecutionStatus::Running,
+                    None,
+                    None,
+                    0,
+                    None,
+                ),
             );
             Ok(created_from_index(&index))
         }
 
-        async fn create_workflow_agent_run(
-            &self,
-            _request_id: &RequestId,
-            _agent_run_id: &AgentRunId,
-            _coords: &WorkflowCoordinates,
-            _role: WorkflowAgentRole,
-            _plan_id: &PlanId,
-            _work_item_id: Option<&WorkItemId>,
-            _agent_name: &AgentName,
-        ) -> Result<CreatedTaskAgentRun, CoreError> {
-            Err(CoreError::Store("workflow fake not implemented".to_owned()))
-        }
-
-        async fn create_parented_agent_run(
-            &self,
-            _agent_run_id: &AgentRunId,
-            _parent: &ParentAgentRunAnchor,
-            _kind: ParentedAgentRunKind,
-            _tool_use_id: Option<&ToolUseId>,
-            _agent_name: &AgentName,
-        ) -> Result<CreatedTaskAgentRun, CoreError> {
-            Err(CoreError::Store("parented fake not implemented".to_owned()))
-        }
-
-        async fn finish_task_run(
+        async fn finish_agent_run(
             &self,
             agent_run_id: &AgentRunId,
             status: ExecutionStatus,
@@ -401,13 +360,22 @@ mod tests {
             let Some(index) = lock(&self.indexes).get(agent_run_id).cloned() else {
                 return Ok(None);
             };
+            let existing = lock(&self.runs).get(agent_run_id).cloned();
             let run = AgentRun {
-                task_id: index.task_id.clone(),
                 agent_run_id: index.agent_run_id.clone(),
                 request_id: index.request_id.clone(),
-                role: task_role_from_index(&index),
+                agent_type: existing
+                    .as_ref()
+                    .map_or(AgentType::Main, |run| run.agent_type),
                 status,
-                agent_name: AgentName::new("root").expect("valid agent name"),
+                agent_name: existing.as_ref().map_or_else(
+                    || AgentName::new("root").expect("valid agent name"),
+                    |run| run.agent_name.clone(),
+                ),
+                parent_agent_run_id: existing
+                    .as_ref()
+                    .and_then(|run| run.parent_agent_run_id.clone()),
+                tool_use_id: existing.as_ref().and_then(|run| run.tool_use_id.clone()),
                 terminal_payload: terminal_payload.cloned(),
                 submission_outcome: submission_outcome.cloned(),
                 token_count,
@@ -418,18 +386,6 @@ mod tests {
             };
             lock(&self.runs).insert(agent_run_id.clone(), run.clone());
             Ok(Some(run))
-        }
-
-        async fn finish_parented_run(
-            &self,
-            _agent_run_id: &AgentRunId,
-            _status: ExecutionStatus,
-            _terminal_payload: Option<&JsonObject>,
-            _parented_outcome: Option<&ParentedOutcome>,
-            _token_count: i64,
-            _error: Option<&str>,
-        ) -> Result<Option<ParentedRun>, CoreError> {
-            Err(CoreError::Store("parented fake not implemented".to_owned()))
         }
 
         async fn record_index_for_agent_run(
@@ -446,28 +402,14 @@ mod tests {
             Ok(lock(&self.runs).get(agent_run_id).cloned())
         }
 
-        async fn get_parented_run(
-            &self,
-            _agent_run_id: &AgentRunId,
-        ) -> Result<Option<ParentedRun>, CoreError> {
-            Ok(None)
-        }
-
-        async fn get_task_run(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError> {
-            Ok(lock(&self.runs)
-                .values()
-                .find(|run| &run.task_id == task_id)
-                .cloned())
-        }
-
-        async fn list_task_runs_for_request(
+        async fn list_agent_runs_for_request(
             &self,
             request_id: &RequestId,
         ) -> Result<Vec<AgentRun>, CoreError> {
-            Ok(lock(&self.indexes)
+            Ok(lock(&self.runs)
                 .values()
-                .filter(|index| &index.request_id == request_id)
-                .map(|index| task_run_from_index(index, ExecutionStatus::Running, None, 0, None))
+                .filter(|run| &run.request_id == request_id)
+                .cloned()
                 .collect())
         }
 
@@ -480,83 +422,64 @@ mod tests {
                 .filter(|index| &index.request_id == request_id)
                 .map(|index| RunningRequestAgentRun {
                     request_id: index.request_id.clone(),
-                    task_id: index.task_id.clone(),
                     agent_run_id: index.agent_run_id.clone(),
                     status: ExecutionStatus::Running,
                 })
                 .collect())
         }
 
-        async fn list_parented_runs_for_parent_task(
+        async fn list_child_agent_runs_for_parent_agent_run(
             &self,
-            _parent_task_id: &TaskId,
-            _kind: ParentedAgentRunKind,
-        ) -> Result<Vec<ParentedRun>, CoreError> {
-            Err(CoreError::Store(
-                "list parented fake not implemented".to_owned(),
-            ))
-        }
-
-        async fn task_execution_index(
-            &self,
-            _task_id: &TaskId,
-        ) -> Result<Option<TaskExecutionIndex>, CoreError> {
-            Err(CoreError::Store(
-                "task execution index fake not implemented".to_owned(),
-            ))
+            parent_agent_run_id: &AgentRunId,
+            agent_type: Option<AgentType>,
+        ) -> Result<Vec<AgentRun>, CoreError> {
+            Ok(lock(&self.runs)
+                .values()
+                .filter(|run| run.parent_agent_run_id.as_ref() == Some(parent_agent_run_id))
+                .filter(|run| agent_type.is_none_or(|agent_type| run.agent_type == agent_type))
+                .cloned()
+                .collect())
         }
     }
 
-    fn created_from_index(index: &AgentRunRecordIndex) -> CreatedTaskAgentRun {
-        CreatedTaskAgentRun {
+    fn created_from_index(index: &AgentRunRecordIndex) -> CreatedAgentRun {
+        CreatedAgentRun {
             agent_run_id: index.agent_run_id.clone(),
-            task_id: index.task_id.clone(),
             record_target: AgentRunRecordTarget {
                 request_id: index.request_id.clone(),
                 agent_run_id: index.agent_run_id.clone(),
-                task_id: index.task_id.clone(),
-                agent_run_kind: index.kind.clone(),
                 record_dir: format_record_dir(index),
             },
         }
     }
 
-    fn task_run_from_index(
+    fn agent_run_from_index(
         index: &AgentRunRecordIndex,
+        agent_type: AgentType,
+        agent_name: AgentName,
+        parent_agent_run_id: Option<AgentRunId>,
+        tool_use_id: Option<ToolUseId>,
         status: ExecutionStatus,
         terminal_payload: Option<&JsonObject>,
+        submission_outcome: Option<&SubmissionOutcome>,
         token_count: i64,
         error: Option<&str>,
     ) -> AgentRun {
         AgentRun {
-            task_id: index.task_id.clone(),
             agent_run_id: index.agent_run_id.clone(),
             request_id: index.request_id.clone(),
-            role: TaskRole::Root,
+            agent_type,
             status,
-            agent_name: AgentName::new("root").expect("valid agent name"),
+            agent_name,
+            parent_agent_run_id,
+            tool_use_id,
             terminal_payload: terminal_payload.cloned(),
-            submission_outcome: None,
+            submission_outcome: submission_outcome.cloned(),
             token_count,
             error: error.map(str::to_owned),
             created_at: UtcDateTime::now(),
             updated_at: UtcDateTime::now(),
             finished_at: status.is_terminal().then_some(UtcDateTime::now()),
-        }
-    }
-
-    fn task_role_from_index(index: &AgentRunRecordIndex) -> TaskRole {
-        match &index.kind {
-            TaskAgentRunKind::Root => TaskRole::Root,
-            TaskAgentRunKind::Workflow {
-                role: WorkflowAgentRole::Planner,
-                ..
-            } => TaskRole::Planner,
-            TaskAgentRunKind::Workflow {
-                role: WorkflowAgentRole::Worker,
-                ..
-            } => TaskRole::Worker,
-            TaskAgentRunKind::Parented { .. } => TaskRole::Root,
         }
     }
 

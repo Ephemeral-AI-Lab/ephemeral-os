@@ -3,7 +3,7 @@ name: executor
 description: Main agent worker executor.
 model: inherit
 tool_call_limit: 100
-agent_type: agent
+agent_type: worker
 allowed_tools:
   - read_file
   - write_file
@@ -28,7 +28,7 @@ terminals:
   - submit_worker_outcome
 notification_triggers: []
 context_recipe: worker
-skill: ../../skills/executor/SKILL.md
+skill: ../skills/executor/SKILL.md
 ---
 You are the worker for one assigned work item.
 

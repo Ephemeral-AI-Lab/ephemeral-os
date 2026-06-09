@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::CoreError;
 use crate::{
-    AgentRunId, AttemptId, IterationId, PlanId, SubmissionOutcome, ExecutionStatus, UtcDateTime, WorkItemId,
-    WorkflowId,
+    AgentRunId, AttemptId, ExecutionStatus, IterationId, PlanId, SubmissionOutcome, UtcDateTime,
+    WorkItemId, WorkflowId,
 };
 
 /// Validated attempt budget.
@@ -123,7 +123,7 @@ impl AttemptStatus {
 #[serde(rename_all = "snake_case")]
 pub enum AttemptFailReason {
     /// A worker task in the plan failed.
-    WorkItemFailed,
+    AgentRunFailed,
     /// The attempt failed to start up.
     StartupFailed,
 }
@@ -232,14 +232,14 @@ impl AttemptState {
     }
 }
 
-/// Attempt-owned mapping from planner/work item ids to agent runs and outcomes.
+/// Attempt-owned mapping from work item ids to agent runs and outcomes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct AttemptExecutionTree {
     /// Attempt-local plan id.
     pub plan_id: PlanId,
-    /// Planner agent run id, bound when the planner is spawned.
+    /// Whether the attempt planner has been spawned.
     #[serde(default)]
-    pub planner_agent_run_id: Option<AgentRunId>,
+    pub planner_started: bool,
     /// Planner terminal outcome, recorded by `submit_plan_outcome`.
     #[serde(default)]
     pub planner_outcome: Option<SubmissionOutcome>,
@@ -254,7 +254,7 @@ impl AttemptExecutionTree {
     pub fn new(plan_id: PlanId) -> Self {
         Self {
             plan_id,
-            planner_agent_run_id: None,
+            planner_started: false,
             planner_outcome: None,
             nodes: Vec::new(),
         }
@@ -339,10 +339,10 @@ impl Attempt {
         matches!(self.state, AttemptState::Closed { .. })
     }
 
-    /// Planner agent-run id, if bound.
+    /// Whether this attempt has already spawned its planner.
     #[must_use]
-    pub const fn planner_agent_run_id(&self) -> Option<&AgentRunId> {
-        self.execution_tree.planner_agent_run_id.as_ref()
+    pub const fn planner_started(&self) -> bool {
+        self.execution_tree.planner_started
     }
 
     /// Bound worker agent-run ids.

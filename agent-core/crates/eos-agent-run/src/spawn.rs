@@ -69,7 +69,7 @@ async fn create_agent_run(
             request.tool_use_id.as_ref(),
         )
         .await
-    .map_err(|err| AgentRunError::Internal(err.to_string()))
+        .map_err(|err| AgentRunError::Internal(err.to_string()))
 }
 
 /// Build the thin engine loop request for one resolved agent.
@@ -113,7 +113,9 @@ fn initial_loop_messages(
 
 const fn agent_type_value(agent_type: AgentType) -> &'static str {
     match agent_type {
-        AgentType::Agent => "agent",
+        AgentType::Main => "main",
+        AgentType::Planner => "planner",
+        AgentType::Worker => "worker",
         AgentType::Subagent => "subagent",
         AgentType::Advisor => "advisor",
     }

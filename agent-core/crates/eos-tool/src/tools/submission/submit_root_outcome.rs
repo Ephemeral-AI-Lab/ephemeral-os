@@ -1,4 +1,4 @@
-//! The `submit_root_submission_outcome` terminal tool.
+//! The `submit_root_outcome` terminal tool.
 
 use std::sync::Arc;
 
@@ -17,33 +17,32 @@ use crate::{
 use super::support::{is_blank, meta_obj};
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
-pub(super) struct SubmitRootSubmissionOutcomeInput {
+pub(super) struct SubmitRootOutcomeInput {
     status: eos_types::SubmissionStatus,
     outcome: String,
 }
 
-struct SubmitRootSubmissionOutcome {
+struct SubmitRootOutcome {
     service: RootSubmissionHandle,
 }
 
-impl SubmitRootSubmissionOutcome {
+impl SubmitRootOutcome {
     fn new(service: RootSubmissionHandle) -> Self {
         Self { service }
     }
 }
 
 #[async_trait]
-impl ToolExecutor for SubmitRootSubmissionOutcome {
+impl ToolExecutor for SubmitRootOutcome {
     async fn execute(
         &self,
         input: &JsonObject,
         ctx: &ExecutionMetadata,
     ) -> Result<ToolResult, ToolError> {
-        let parsed: SubmitRootSubmissionOutcomeInput =
-            match parse_input(ToolName::SubmitRootSubmissionOutcome, input) {
-                Ok(v) => v,
-                Err(err) => return Ok(err),
-            };
+        let parsed: SubmitRootOutcomeInput = match parse_input(ToolName::SubmitRootOutcome, input) {
+            Ok(v) => v,
+            Err(err) => return Ok(err),
+        };
         if is_blank(&parsed.outcome) {
             return Ok(ToolResult::error("outcome must be nonblank"));
         }
@@ -79,31 +78,31 @@ pub(super) fn register(
     config: &ToolConfigSet,
     root_submission: RootSubmissionHandle,
 ) {
-    let root = config.get(ToolName::SubmitRootSubmissionOutcome);
+    let root = config.get(ToolName::SubmitRootOutcome);
     crate::tools::register_tool(
         registry,
-        ToolName::SubmitRootSubmissionOutcome,
+        ToolName::SubmitRootOutcome,
         root,
         text_spec(
-            ToolName::SubmitRootSubmissionOutcome,
+            ToolName::SubmitRootOutcome,
             &root.description,
-            schema_for!(SubmitRootSubmissionOutcomeInput),
+            schema_for!(SubmitRootOutcomeInput),
         ),
         OutputShape::Text,
-        Arc::new(SubmitRootSubmissionOutcome::new(root_submission)),
+        Arc::new(SubmitRootOutcome::new(root_submission)),
     );
 }
 
 pub(super) fn register_schema(registry: &mut ToolRegistry, config: &ToolConfigSet) {
-    let root = config.get(ToolName::SubmitRootSubmissionOutcome);
+    let root = config.get(ToolName::SubmitRootOutcome);
     crate::tools::register_schema_tool(
         registry,
-        ToolName::SubmitRootSubmissionOutcome,
+        ToolName::SubmitRootOutcome,
         root,
         text_spec(
-            ToolName::SubmitRootSubmissionOutcome,
+            ToolName::SubmitRootOutcome,
             &root.description,
-            schema_for!(SubmitRootSubmissionOutcomeInput),
+            schema_for!(SubmitRootOutcomeInput),
         ),
         OutputShape::Text,
     );

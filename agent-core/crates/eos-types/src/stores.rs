@@ -144,8 +144,8 @@ mod workflow {
 
     use crate::{
         AgentRunId, Attempt, AttemptBudget, AttemptClosure, AttemptId, CoreError, ExecutionNode,
-        Iteration, IterationCreationReason, IterationId, IterationStatus, RequestId,
-        ToolUseId, UtcDateTime, WorkItemId, Workflow, WorkflowId, WorkflowStatus,
+        Iteration, IterationCreationReason, IterationId, IterationStatus, RequestId, ToolUseId,
+        UtcDateTime, WorkItemId, Workflow, WorkflowId, WorkflowStatus,
     };
 
     use super::Sealed;
@@ -254,12 +254,8 @@ mod workflow {
         /// Load an attempt by id.
         async fn get(&self, id: &AttemptId) -> Result<Option<Attempt>, CoreError>;
 
-        /// Bind the planner agent run assigned to this attempt.
-        async fn bind_planner_agent_run(
-            &self,
-            id: &AttemptId,
-            planner_agent_run_id: &AgentRunId,
-        ) -> Result<Attempt, CoreError>;
+        /// Mark the single planner for this attempt as spawned.
+        async fn mark_planner_started(&self, id: &AttemptId) -> Result<Attempt, CoreError>;
 
         /// Record the planner-authored outcome and execution tree nodes.
         async fn record_plan_outcome(
@@ -307,8 +303,8 @@ mod workflow {
     }
 }
 
-pub use model_registry::ModelStore;
 pub use agent_run::AgentRunStore;
+pub use model_registry::ModelStore;
 pub use request::RequestStore;
 pub use workflow::{AttemptStore, IterationStore, WorkflowStore};
 

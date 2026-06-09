@@ -10,7 +10,7 @@ use tokio::sync::{oneshot, watch};
 
 use super::{
     AgentLoopExecutor, AgentLoopExecutorInput, AgentLoopToolRegistryFactory,
-    BackgroundSessionRuntimeFactory, ToolCallHookStores, ToolExecutionMetadataReader,
+    BackgroundSessionRuntimeFactory, ToolExecutionMetadataReader,
 };
 use crate::provider_stream::{ProviderStreamSource, ProviderStreamSourceFactory};
 use crate::{AgentRunOutputs, AgentRunStreamSinkFactory};
@@ -90,7 +90,6 @@ pub struct TokioAgentLoopLauncher {
     tool_registry_factory: Arc<dyn AgentLoopToolRegistryFactory>,
     execution_metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     background_sessions: Option<BackgroundSessionRuntimeFactory>,
-    hook_stores: Option<ToolCallHookStores>,
     run_outputs: AgentRunOutputs,
     stream_sink_factory: Option<AgentRunStreamSinkFactory>,
 }
@@ -142,7 +141,6 @@ impl TokioAgentLoopLauncher {
             tool_registry_factory,
             execution_metadata_reader,
             background_sessions: None,
-            hook_stores: None,
             run_outputs: AgentRunOutputs::new(),
             stream_sink_factory: None,
         }
@@ -152,13 +150,6 @@ impl TokioAgentLoopLauncher {
     #[must_use]
     pub fn with_background_sessions(mut self, inputs: BackgroundSessionRuntimeFactory) -> Self {
         self.background_sessions = Some(inputs);
-        self
-    }
-
-    /// Attach runtime stores for engine-owned tool-call hooks.
-    #[must_use]
-    pub fn with_tool_call_hook_stores(mut self, stores: ToolCallHookStores) -> Self {
-        self.hook_stores = Some(stores);
         self
     }
 
@@ -199,7 +190,6 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
             execution_metadata_reader: Arc::clone(&self.execution_metadata_reader),
             cancel_signal,
             background_sessions: self.background_sessions.clone(),
-            hook_stores: self.hook_stores.clone(),
             run_outputs,
             agent_run_api,
         });

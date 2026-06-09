@@ -123,21 +123,16 @@
         <span class="rs-type">Ok</span>(row.map(row_to_attempt).transpose()?)
     }
 </code></pre>
-</details></td></tr><tr id="method-bind-planner-agent-run-79"><td>method</td><td>bind_planner_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-bind-planner-agent-run-79">bind_planner_agent_run</a> (&amp; self , id : &amp; AttemptId , planner_agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-mark-planner-started-79"><td>method</td><td>mark_planner_started</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-mark-planner-started-79">mark_planner_started</a> (&amp; self , id : &amp; AttemptId) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-bind-planner-agent-run-79">bind_planner_agent_run</a>(
-        &amp;<span class="rs-self">self</span>,
-        id: &amp;<span class="rs-type">AttemptId</span>,
-        planner_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-mark-planner-started-79">mark_planner_started</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptRow-59">AttemptRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> attempts \
-             <span class="rs-type">SET</span> execution_tree = json_set(execution_tree, &#x27;$.planner_agent_run_id&#x27;, ?), \
+             <span class="rs-type">SET</span> execution_tree = json_set(execution_tree, &#x27;$.planner_started&#x27;, json(&#x27;<span class="rs-kw">true</span>&#x27;)), \
                  updated_at = ? \
              <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
         )
-        .bind(planner_agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
         .bind(now)
         .bind(id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
         .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
@@ -146,9 +141,9 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 </code></pre>
-</details></td></tr><tr id="method-record-plan-outcome-100"><td>method</td><td>record_plan_outcome</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-record-plan-outcome-100">record_plan_outcome</a> (&amp; self , id : &amp; AttemptId , planner_outcome : &amp; SubmissionOutcome , nodes : &amp; [ExecutionNode] ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-record-plan-outcome-95"><td>method</td><td>record_plan_outcome</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-record-plan-outcome-95">record_plan_outcome</a> (&amp; self , id : &amp; AttemptId , planner_outcome : &amp; SubmissionOutcome , nodes : &amp; [ExecutionNode] ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-plan-outcome-100">record_plan_outcome</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-plan-outcome-95">record_plan_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         id: &amp;<span class="rs-type">AttemptId</span>,
         planner_outcome: &amp;<span class="rs-type">SubmissionOutcome</span>,
@@ -172,9 +167,9 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 </code></pre>
-</details></td></tr><tr id="method-bind-worker-agent-run-124"><td>method</td><td>bind_worker_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-bind-worker-agent-run-124">bind_worker_agent_run</a> (&amp; self , id : &amp; AttemptId , work_item_id : &amp; WorkItemId , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-bind-worker-agent-run-119"><td>method</td><td>bind_worker_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-bind-worker-agent-run-119">bind_worker_agent_run</a> (&amp; self , id : &amp; AttemptId , work_item_id : &amp; WorkItemId , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-bind-worker-agent-run-124">bind_worker_agent_run</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-bind-worker-agent-run-119">bind_worker_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         id: &amp;<span class="rs-type">AttemptId</span>,
         work_item_id: &amp;<span class="rs-type">WorkItemId</span>,
@@ -208,9 +203,9 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 </code></pre>
-</details></td></tr><tr id="method-record-worker-outcome-158"><td>method</td><td>record_worker_outcome</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-record-worker-outcome-158">record_worker_outcome</a> (&amp; self , id : &amp; AttemptId , work_item_id : &amp; WorkItemId , status : ExecutionStatus , outcome : &amp; SubmissionOutcome ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-record-worker-outcome-153"><td>method</td><td>record_worker_outcome</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-record-worker-outcome-153">record_worker_outcome</a> (&amp; self , id : &amp; AttemptId , work_item_id : &amp; WorkItemId , status : ExecutionStatus , outcome : &amp; SubmissionOutcome ,) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-worker-outcome-158">record_worker_outcome</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-worker-outcome-153">record_worker_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         id: &amp;<span class="rs-type">AttemptId</span>,
         work_item_id: &amp;<span class="rs-type">WorkItemId</span>,
@@ -245,9 +240,9 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 </code></pre>
-</details></td></tr><tr id="method-close-193"><td>method</td><td>close</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-close-193">close</a> (&amp; self , id : &amp; AttemptId , closure : AttemptClosure) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-close-188"><td>method</td><td>close</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-close-188">close</a> (&amp; self , id : &amp; AttemptId , closure : AttemptClosure) -&gt; Result &lt; Attempt , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-close-193">close</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>, closure: <span class="rs-type">AttemptClosure</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-close-188">close</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>, closure: <span class="rs-type">AttemptClosure</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptRow-59">AttemptRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> attempts <span class="rs-type">SET</span> stage = &#x27;closed&#x27;, status = ?, fail_reason = ?, \
@@ -265,9 +260,9 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 </code></pre>
-</details></td></tr><tr id="method-list-for-iteration-211"><td>method</td><td>list_for_iteration</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-list-for-iteration-211">list_for_iteration</a> (&amp; self , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Vec &lt; Attempt &gt; , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-list-for-iteration-206"><td>method</td><td>list_for_iteration</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-list-for-iteration-206">list_for_iteration</a> (&amp; self , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Vec &lt; Attempt &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-list-for-iteration-211">list_for_iteration</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-list-for-iteration-206">list_for_iteration</a>(
         &amp;<span class="rs-self">self</span>,
         iteration_id: &amp;<span class="rs-type">IterationId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Attempt</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
@@ -284,9 +279,9 @@
             .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?)
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-open-attempts-for-request-228"><td>method</td><td>cancel_open_attempts_for_request</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-cancel-open-attempts-for-request-228">cancel_open_attempts_for_request</a> (&amp; self , request_id : &amp; RequestId ,) -&gt; Result &lt; usize , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-open-attempts-for-request-223"><td>method</td><td>cancel_open_attempts_for_request</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-cancel-open-attempts-for-request-223">cancel_open_attempts_for_request</a> (&amp; self , request_id : &amp; RequestId ,) -&gt; Result &lt; usize , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-cancel-open-attempts-for-request-228">cancel_open_attempts_for_request</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-cancel-open-attempts-for-request-223">cancel_open_attempts_for_request</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;<span class="rs-type">RequestId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;usize, <span class="rs-type">CoreError</span>&gt; {
@@ -325,8 +320,8 @@
 
 <span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">AgentRunId</span>, <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptClosure</span>, <span class="rs-type">AttemptExecutionTree</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">AttemptStage</span>,
-    <span class="rs-type">AttemptStore</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">ExecutionNode</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">PlanId</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">Sealed</span>, <span class="rs-type">SubmissionOutcome</span>,
-    <span class="rs-type">ExecutionStatus</span>, <span class="rs-type">WorkItemId</span>, <span class="rs-type">WorkflowId</span>,
+    <span class="rs-type">AttemptStore</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">ExecutionNode</span>, <span class="rs-type">ExecutionStatus</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">PlanId</span>, <span class="rs-type">RequestId</span>,
+    <span class="rs-type">Sealed</span>, <span class="rs-type">SubmissionOutcome</span>, <span class="rs-type">WorkItemId</span>, <span class="rs-type">WorkflowId</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
@@ -395,19 +390,14 @@
         <span class="rs-type">Ok</span>(row.map(row_to_attempt).transpose()?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-bind-planner-agent-run-79">bind_planner_agent_run</a>(
-        &amp;<span class="rs-self">self</span>,
-        id: &amp;<span class="rs-type">AttemptId</span>,
-        planner_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-mark-planner-started-79">mark_planner_started</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptRow-59">AttemptRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> attempts \
-             <span class="rs-type">SET</span> execution_tree = json_set(execution_tree, &#x27;$.planner_agent_run_id&#x27;, ?), \
+             <span class="rs-type">SET</span> execution_tree = json_set(execution_tree, &#x27;$.planner_started&#x27;, json(&#x27;<span class="rs-kw">true</span>&#x27;)), \
                  updated_at = ? \
              <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
         )
-        .bind(planner_agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
         .bind(now)
         .bind(id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
         .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
@@ -416,7 +406,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-plan-outcome-100">record_plan_outcome</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-plan-outcome-95">record_plan_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         id: &amp;<span class="rs-type">AttemptId</span>,
         planner_outcome: &amp;<span class="rs-type">SubmissionOutcome</span>,
@@ -440,7 +430,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-bind-worker-agent-run-124">bind_worker_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-bind-worker-agent-run-119">bind_worker_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         id: &amp;<span class="rs-type">AttemptId</span>,
         work_item_id: &amp;<span class="rs-type">WorkItemId</span>,
@@ -474,7 +464,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-worker-outcome-158">record_worker_outcome</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-record-worker-outcome-153">record_worker_outcome</a>(
         &amp;<span class="rs-self">self</span>,
         id: &amp;<span class="rs-type">AttemptId</span>,
         work_item_id: &amp;<span class="rs-type">WorkItemId</span>,
@@ -509,7 +499,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-close-193">close</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>, closure: <span class="rs-type">AttemptClosure</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-close-188">close</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>, closure: <span class="rs-type">AttemptClosure</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Attempt</span>, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptRow-59">AttemptRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> attempts <span class="rs-type">SET</span> stage = &#x27;closed&#x27;, status = ?, fail_reason = ?, \
@@ -527,7 +517,7 @@
         <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-attempt-164">row_to_attempt</a>(row.ok_or_else(|| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-not-found-28">not_found</a>(id))?)?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-list-for-iteration-211">list_for_iteration</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-list-for-iteration-206">list_for_iteration</a>(
         &amp;<span class="rs-self">self</span>,
         iteration_id: &amp;<span class="rs-type">IterationId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Attempt</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
@@ -544,7 +534,7 @@
             .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-cancel-open-attempts-for-request-228">cancel_open_attempts_for_request</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-cancel-open-attempts-for-request-223">cancel_open_attempts_for_request</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;<span class="rs-type">RequestId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;usize, <span class="rs-type">CoreError</span>&gt; {

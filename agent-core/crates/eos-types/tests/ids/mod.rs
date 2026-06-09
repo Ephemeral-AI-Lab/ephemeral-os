@@ -54,7 +54,6 @@ macro_rules! roundtrip_suite {
 }
 
 roundtrip_suite!(request_id, RequestId);
-roundtrip_suite!(task_id, TaskId);
 roundtrip_suite!(workflow_id, WorkflowId);
 roundtrip_suite!(iteration_id, IterationId);
 roundtrip_suite!(attempt_id, AttemptId);
@@ -67,12 +66,15 @@ roundtrip_suite!(command_session_id, CommandSessionId);
 // AC-types-02: transparent serde, no key duplication (GC-types-01).
 #[test]
 fn id_serde_transparent_single_key() {
-    let id: TaskId = "t1".parse().unwrap();
-    assert_eq!(serde_json::to_value(&id).unwrap(), serde_json::json!("t1"));
-    let back: TaskId = serde_json::from_value(serde_json::json!("t1")).unwrap();
+    let id: AgentRunId = "run1".parse().unwrap();
+    assert_eq!(
+        serde_json::to_value(&id).unwrap(),
+        serde_json::json!("run1")
+    );
+    let back: AgentRunId = serde_json::from_value(serde_json::json!("run1")).unwrap();
     assert_eq!(back, id);
 
-    let empty = serde_json::from_value::<TaskId>(serde_json::json!(""));
+    let empty = serde_json::from_value::<AgentRunId>(serde_json::json!(""));
     assert!(
         empty.is_err(),
         "transparent id serde must preserve the non-empty invariant"
@@ -80,22 +82,22 @@ fn id_serde_transparent_single_key() {
 
     #[derive(serde::Serialize)]
     struct Row {
-        id: TaskId,
+        id: AgentRunId,
     }
     let row = serde_json::to_value(Row {
-        id: "t1".parse().unwrap(),
+        id: "run1".parse().unwrap(),
     })
     .unwrap();
-    assert_eq!(row, serde_json::json!({ "id": "t1" }));
-    // The id appears under exactly one key (no `id` + `task_id` duplication).
+    assert_eq!(row, serde_json::json!({ "id": "run1" }));
+    // The id appears under exactly one key.
     assert_eq!(row.as_object().unwrap().len(), 1);
 }
 
 #[test]
 fn try_from_and_parse_agree() {
-    let a: TaskId = "x".parse().unwrap();
-    let b = TaskId::try_from("x").unwrap();
-    let c = TaskId::try_from(String::from("x")).unwrap();
+    let a: AgentRunId = "x".parse().unwrap();
+    let b = AgentRunId::try_from("x").unwrap();
+    let c = AgentRunId::try_from(String::from("x")).unwrap();
     assert_eq!(a, b);
     assert_eq!(b, c);
     assert_eq!(a.as_str(), "x");
@@ -111,7 +113,7 @@ fn try_from_error_type_is_core_error() {
         T: TryFrom<&'static str, Error = crate::error::CoreError>,
     {
     }
-    assert_core_error::<TaskId>();
+    assert_core_error::<AgentRunId>();
 }
 
 #[test]
@@ -137,7 +139,6 @@ fn json_schema_ids_are_strings() {
         }};
     }
     assert_string_schema!(RequestId);
-    assert_string_schema!(TaskId);
     assert_string_schema!(WorkflowId);
     assert_string_schema!(IterationId);
     assert_string_schema!(AttemptId);

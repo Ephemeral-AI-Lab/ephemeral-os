@@ -9,13 +9,17 @@ use std::sync::Arc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// Runtime class of an agent profile.
+/// Runtime role of an agent profile.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentType {
-    /// A regular agent.
+    /// A top-level request agent.
     #[default]
-    Agent,
+    Main,
+    /// A workflow planner agent.
+    Planner,
+    /// A workflow worker agent.
+    Worker,
     /// A worker subagent targetable by `run_subagent`.
     Subagent,
     /// A blocking read-only advisor targetable by `ask_advisor`.
@@ -88,7 +92,7 @@ pub struct AgentDefinition {
     pub model: Option<String>,
     /// Per-run cap on tool dispatches.
     pub tool_call_limit: NonZeroU32,
-    /// Regular agent, worker subagent, or advisor helper.
+    /// Runtime role for this profile.
     #[serde(default)]
     pub agent_type: AgentType,
     /// Tools the agent may call.

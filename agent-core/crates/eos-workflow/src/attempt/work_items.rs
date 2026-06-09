@@ -38,9 +38,9 @@ pub(crate) fn validate_work_items(
                 item.agent_name.as_str()
             )));
         };
-        if agent.agent_type != AgentType::Agent {
+        if agent.agent_type != AgentType::Worker {
             return Err(WorkflowError::AgentDefinition(format!(
-                "work item {:?} references agent {:?} with type {:?}, expected agent",
+                "work item {:?} references agent {:?} with type {:?}, expected worker",
                 item.id.as_str(),
                 item.agent_name.as_str(),
                 agent.agent_type
@@ -88,18 +88,16 @@ pub(crate) async fn planner_outcome_for_attempt(
     _deps: &AttemptResources,
     attempt: &Attempt,
 ) -> Result<PlannerOutcome> {
-    attempt.planner_agent_run_id().ok_or_else(|| {
-        WorkflowError::invariant(format!(
-            "attempt {:?} has no planner agent run",
-            attempt.id.as_str()
-        ))
-    })?;
-    let outcome = attempt.execution_tree.planner_outcome.as_ref().ok_or_else(|| {
-        WorkflowError::invariant(format!(
-            "attempt {:?} has no planner outcome",
-            attempt.id.as_str()
-        ))
-    })?;
+    let outcome = attempt
+        .execution_tree
+        .planner_outcome
+        .as_ref()
+        .ok_or_else(|| {
+            WorkflowError::invariant(format!(
+                "attempt {:?} has no planner outcome",
+                attempt.id.as_str()
+            ))
+        })?;
     outcome.clone().planner_outcome().ok_or_else(|| {
         WorkflowError::invariant(format!(
             "attempt {:?} did not record a planner outcome",
@@ -163,7 +161,7 @@ mod tests {
 
         validate_work_items(
             &work_items,
-            &registry([agent("executor", AgentType::Agent)]),
+            &registry([agent("executor", AgentType::Worker)]),
         )
         .expect("valid work item plan");
 
@@ -177,7 +175,7 @@ mod tests {
     #[test]
     fn rejects_duplicate_unknown_cycle_and_non_worker_agent() {
         let agents = registry([
-            agent("executor", AgentType::Agent),
+            agent("executor", AgentType::Worker),
             agent("reviewer", AgentType::Advisor),
         ]);
 

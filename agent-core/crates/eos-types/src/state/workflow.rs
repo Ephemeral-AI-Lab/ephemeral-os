@@ -13,8 +13,8 @@ pub use attempt::{
 };
 pub use iteration::{Iteration, IterationCreationReason, IterationStatus};
 pub use outcome::{
-    AdvisorVerdict, AttemptOutcome, IterationOutcome, PlannerOutcome, SubmissionOutcome, WorkerOutcome,
-    WorkflowOutcome, NO_OUTCOME,
+    AdvisorVerdict, AttemptOutcome, IterationOutcome, PlannerOutcome, SubmissionOutcome,
+    WorkerOutcome, WorkflowOutcome, NO_OUTCOME,
 };
 pub use work_item::{DeferredGoal, PlanId, WorkItemId, WorkItemSpec};
 pub use workflow_dto::{Workflow, WorkflowStatus};

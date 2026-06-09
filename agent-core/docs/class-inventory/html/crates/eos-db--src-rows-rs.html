@@ -306,7 +306,7 @@
         status,
         fail_reason,
         closed_at,
-        execution_tree.planner_agent_run_id.is_some(),
+        execution_tree.planner_started,
     )?;
     <span class="rs-type">Ok</span>(<span class="rs-type">Attempt</span> {
         id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;attempts.id&quot;, &amp;r.id)?,
@@ -436,8 +436,8 @@
 
 <span class="rs-kw">use</span> eos_types::{
     <span class="rs-type">Attempt</span>, <span class="rs-type">AttemptBudget</span>, <span class="rs-type">AttemptClosure</span>, <span class="rs-type">AttemptExecutionTree</span>, <span class="rs-type">AttemptFailReason</span>, <span class="rs-type">AttemptStage</span>,
-    <span class="rs-type">AttemptState</span>, <span class="rs-type">AttemptStatus</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">Iteration</span>, <span class="rs-type">PlanId</span>, <span class="rs-type">Request</span>, <span class="rs-type">RequestStatus</span>,
-    <span class="rs-type">UtcDateTime</span>, <span class="rs-type">Workflow</span>,
+    <span class="rs-type">AttemptState</span>, <span class="rs-type">AttemptStatus</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">Iteration</span>, <span class="rs-type">PlanId</span>, <span class="rs-type">Request</span>, <span class="rs-type">RequestStatus</span>, <span class="rs-type">UtcDateTime</span>,
+    <span class="rs-type">Workflow</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
@@ -611,7 +611,7 @@
         status,
         fail_reason,
         closed_at,
-        execution_tree.planner_agent_run_id.is_some(),
+        execution_tree.planner_started,
     )?;
     <span class="rs-type">Ok</span>(<span class="rs-type">Attempt</span> {
         id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;attempts.id&quot;, &amp;r.id)?,

@@ -8,9 +8,9 @@ use crate::{Result, WorkflowError};
 pub(crate) fn wrap_task_guidance(prose: &str, agent_def: &AgentDefinition) -> String {
     let body = prose.trim_end();
     if let Some(block) = terminal_selection_block(agent_def) {
-        format!("<Task Guidance>\n{body}\n\n{block}\n</Task Guidance>")
+        format!("<Assignment Guidance>\n{body}\n\n{block}\n</Assignment Guidance>")
     } else {
-        format!("<Task Guidance>\n{body}\n</Task Guidance>")
+        format!("<Assignment Guidance>\n{body}\n</Assignment Guidance>")
     }
 }
 

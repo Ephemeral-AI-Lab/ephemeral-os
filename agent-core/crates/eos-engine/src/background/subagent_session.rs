@@ -409,8 +409,8 @@ fn trace_background_tool(
     tracing::debug!(
         target: "eos_engine::diagnostics",
         event_type,
-        background_task_id = agent_run_id.as_str(),
-        task_kind = "subagent",
+        background_agent_run_id = agent_run_id.as_str(),
+        agent_type = "subagent",
         tool_name = "run_subagent",
         agent_run_id = agent_run_id.as_str(),
         status = status_value(status),

@@ -39,13 +39,11 @@ impl ToolExecutor for SubmitWorkerOutcome {
         if is_blank(&parsed.outcome) {
             return Ok(ToolResult::error("outcome must be nonblank"));
         }
-        let attempt_id = ctx.require_attempt_id()?.clone();
-        let work_item_id = ctx.require_work_item_id()?.clone();
+        let agent_run_id = ctx.require_agent_run_id()?.clone();
         let is_pass = parsed.status.is_pass();
         let outcome = parsed.outcome.clone();
         let submission = WorkerOutcomeSubmission {
-            attempt_id,
-            work_item_id: work_item_id.clone(),
+            agent_run_id: agent_run_id.clone(),
             status: parsed.status,
             outcome: parsed.outcome,
         };
@@ -57,11 +55,7 @@ impl ToolExecutor for SubmitWorkerOutcome {
                 ("kind", json!("worker")),
                 ("is_pass", json!(is_pass)),
                 ("outcome", json!(outcome)),
-                ("work_item_id", json!(work_item_id.as_str())),
-                (
-                    "attempt_id",
-                    json!(ctx.attempt_id.as_ref().map(eos_types::AttemptId::as_str)),
-                ),
+                ("agent_run_id", json!(agent_run_id.as_str())),
             ]),
         ))
     }

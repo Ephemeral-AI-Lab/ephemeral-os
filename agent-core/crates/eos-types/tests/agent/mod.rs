@@ -22,8 +22,12 @@ fn def(name: &str, agent_type: AgentType) -> AgentDefinition {
 
 #[test]
 fn agent_type_serde_values() {
-    let agent = serde_json::to_value(AgentType::Agent).unwrap();
-    assert_eq!(agent, serde_json::json!("agent"));
+    let main = serde_json::to_value(AgentType::Main).unwrap();
+    assert_eq!(main, serde_json::json!("main"));
+    let planner = serde_json::to_value(AgentType::Planner).unwrap();
+    assert_eq!(planner, serde_json::json!("planner"));
+    let worker = serde_json::to_value(AgentType::Worker).unwrap();
+    assert_eq!(worker, serde_json::json!("worker"));
     let subagent = serde_json::to_value(AgentType::Subagent).unwrap();
     assert_eq!(subagent, serde_json::json!("subagent"));
     let advisor = serde_json::to_value(AgentType::Advisor).unwrap();
@@ -45,7 +49,7 @@ fn agent_name_trims_and_rejects_empty() {
 fn registry_lists_dispatchable_subagents() {
     let registry: AgentRegistry = [
         def("zeta", AgentType::Subagent),
-        def("root", AgentType::Agent),
+        def("root", AgentType::Main),
         def("alpha", AgentType::Subagent),
     ]
     .into_iter()
@@ -62,8 +66,8 @@ fn registry_lists_dispatchable_subagents() {
 #[test]
 fn registry_get_and_replace() {
     let mut builder = AgentRegistryBuilder::new();
-    builder.add(def("root", AgentType::Agent));
-    builder.add(def("root", AgentType::Agent));
+    builder.add(def("root", AgentType::Main));
+    builder.add(def("root", AgentType::Main));
     let registry = builder.build();
     assert!(registry.get(&AgentName::new("root").unwrap()).is_some());
     assert_eq!(registry.list().count(), 1);

@@ -7,48 +7,32 @@ binary→singular folding, the resulting file/class/field shape, and naming.
 
 ---
 
-## DECISION UPDATE (supersedes §4) — the planner KEEPS its TaskStore row
+## DECISION UPDATE (supersedes §4 and the prior top update) — workflow state carries NO task fields
 
-After review, the spec's decision *"planner has no TaskId, no TaskStore row"*
-(spec §2/§5, acceptance §14) is **reversed**. The planner keeps a task row.
+The corrected model removes every task-related field from workflow lifecycle
+state. Planner and worker task rows may still exist as task/run record subjects,
+but workflows, iterations, attempts, context scopes, and `AttemptExecutionTree`
+must not persist `TaskId` values.
 
-**Why.** A task row does two independent jobs: (a) **DAG membership** (`needs`,
-readiness, the worker wave) and (b) **record anchor** (the folder under which the
-agent run's `messages.jsonl`/`events.jsonl` + nested `workflows`/`subagents`/
-`advisors` live). The planner needs (b), not (a). The recorder is task-rooted:
-`records/writer.rs:51` + `handle.rs:110-111` write `{messages,events}.jsonl` into
-the `format_record_dir` path, and `records/kind.rs:32-41` records the planner as a
-`WorkflowTask` node (`workflow_planner`) keyed by `task_id`. Every `AgentType::Agent`
-run (root, planner, worker) is task-anchored; even subagents/advisors carry a
-`ParentedRun.task_id` (`task.rs:177`). Removing the planner's row makes it the lone
-homeless agent run — which is exactly the `format_record_dir` / `finish_task_run`
-break this review's §4 flagged as the #1 blocker. Keeping the row means that
-blocker **never exists**.
+**Why.** The earlier correction solved recorder anchoring by threading task ids
+back into workflow state. That recreates the same coupling the migration is meant
+to delete: lifecycle settlement starts depending on task/run row identity. The
+cleaner ownership split is:
 
-**The spec was half-right:** killing `PlannerId` is correct (one planner per
-attempt → derive `planner_task_id(attempt_id)`); killing the *row* was the
-overreach. The planner is task-owned for recording, but is **never** a member of
-the worker DAG (`plan_task_records` enumerates only worker ids — `orchestrator.rs:553-569`).
+| Surface | Corrected rule |
+|---|---|
+| `task_runs` / `tasks` | May keep opaque store-minted `task_id` as the run/record primary key. |
+| `workflows` / `iterations` / `attempts` | No `parent_task_id`, `planner_task_id`, worker `task_id`, task-id lists, or task-derived ids. |
+| `AttemptExecutionTree` | Work-item DAG + worker status index: `{ plan_id, nodes:[{ work_item_id, needs, status, worker_outcome?: { is_pass } }] }`. |
+| Planner result | Stored on `Attempt.planner_outcome`; the planner task/run row may mirror the same payload for records. |
+| Worker result | Stored on `ExecutionNode.worker_outcome` keyed by `work_item_id`; it has no structured `outcome` text field. |
+| Cancellation / live control | Uses in-process active-run handles keyed by workflow coordinates + `work_item_id`, not persisted task ids. |
+| Spawn / record path | Carries workflow coordinates ephemerally; durable workflow rows do not remember task ids. |
 
-**Corrected deltas (these override the relevant rows in §2, §3, §4, §7, §8 below):**
-
-| Surface | §4 (planner-no-row) said | Corrected |
-|---|---|---|
-| `TaskRole` | `Root \| Worker` (4→2) | **`Root \| Planner \| Worker` (4→3)**; `TASK_AGENT_ROLES [;3]` |
-| `WorkflowTaskRole` | delete | **keep at `{ Planner, Worker }`** (node_type + path prefix) |
-| `TaskAgentRunKind::Workflow { role }` | split → `WorkflowPlanner`/`WorkflowWorker` | **unchanged** (no split) |
-| `task_runs` CHECK | `role IN ('worker')` | **`role IN ('planner','worker')`** |
-| `AttemptState::Planning` | `Planning {}` | **`Planning { planner_task_id: Option<TaskId> }` unchanged** — the `None`→`Some` transition is `start()`'s double-start guard (`orchestrator.rs:62-70`) |
-| `WorkflowNodeId` | delete | may still die, **but** the spawn target must then carry `WorkflowTaskRole` + worker `work_item_id` (don't orphan `agent_run.rs:127`) |
-| `AgentLaunch` | `task_id` in `Worker` kind only | **`task_id` in common fields** (both have it); `kind = Planner \| Worker { work_item_id, needs }`; `task_id()` infallible |
-| planner id | — | drop `PlannerId`; add `planner_task_id(attempt_id) -> TaskId` |
-| record path / finish / `settle_planner` | breaks (the seam) | **all unchanged** — the planner machinery is preserved |
-
-Net: **Axis B (planner↔worker) is no longer a "widening"** — both stay task-owned.
-The only planner-side change is dropping the redundant `PlannerId`. Everything on
-**Axis A (generator+reducer→worker)** is unchanged from this review. Read §4 below
-as historical analysis of *why* the planner-no-row option fails, not as the
-recommendation.
+Net: **Axis B stays ownership-separated.** Planner/worker runs are task-owned for
+recording, while workflow lifecycle is attempt/work-item-owned. Read the old §4
+analysis below as historical evidence of the recorder seam, not as a requirement
+to persist task ids in workflow state.
 
 ---
 

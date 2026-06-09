@@ -97,7 +97,7 @@
         .spawn_agent(<span class="rs-type">SpawnAgentRequest</span> {
             agent_run_id: root_agent_run_id,
             agent_name: service.settings.root_agent_name.clone(),
-            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
+            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Main</span>,
             request_id: request_id.clone(),
             parent_agent_run_id: <span class="rs-type">None</span>,
             initial_messages: vec![<span class="rs-type">Message</span>::from_user_text(input.prompt)],
@@ -189,7 +189,7 @@
         .spawn_agent(<span class="rs-type">SpawnAgentRequest</span> {
             agent_run_id: root_agent_run_id,
             agent_name: service.settings.root_agent_name.clone(),
-            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span>,
+            agent_type: <span class="rs-type">AgentType</span>::<span class="rs-type">Main</span>,
             request_id: request_id.clone(),
             parent_agent_run_id: <span class="rs-type">None</span>,
             initial_messages: vec![<span class="rs-type">Message</span>::from_user_text(input.prompt)],

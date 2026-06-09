@@ -8,11 +8,10 @@
 mod agent_run {
     //! Agent-run lifecycle launch contracts.
 
-    use async_trait::async_trait;
     use crate::{
-        AgentName, AgentRunId, AgentType, AttemptId, IterationId, JsonObject, Message, RequestId,
-        SandboxId, ToolUseId, WorkflowId,
+        AgentName, AgentRunId, AgentType, JsonObject, Message, RequestId, SandboxId, ToolUseId,
     };
+    use async_trait::async_trait;
 
     /// Request to spawn any agent kind.
     #[derive(Debug, Clone)]
@@ -48,12 +47,6 @@ mod agent_run {
         pub agent_name: String,
         /// Owning request id.
         pub request_id: Option<RequestId>,
-        /// Owning workflow id.
-        pub workflow_id: Option<WorkflowId>,
-        /// Owning workflow iteration id.
-        pub iteration_id: Option<IterationId>,
-        /// Owning attempt id.
-        pub attempt_id: Option<AttemptId>,
         /// Bound sandbox id.
         pub sandbox_id: Option<SandboxId>,
         /// Request-visible workspace root.
@@ -196,7 +189,7 @@ pub use agent_run::{
 pub use cancellation::{AgentCoreCancellationApi, CancelError};
 pub use record::{
     format_record_dir, AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget,
-    CreatedAgentRun, WorkflowCoordinates, WorkflowAgentRole,
+    CreatedAgentRun,
 };
 pub use workflow::{
     OpenDelegatedWorkflow, StartWorkflowRequest, StartedWorkflow, SubmissionAck, TerminalWorkflow,

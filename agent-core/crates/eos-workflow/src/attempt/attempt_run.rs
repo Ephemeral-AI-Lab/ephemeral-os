@@ -123,17 +123,6 @@ impl AttemptRun {
         Ok(attempt)
     }
 
-    pub(crate) fn assert_submission_attempt(&self, attempt_id: &AttemptId) -> Result<()> {
-        if attempt_id != &self.attempt_id {
-            return Err(WorkflowError::invariant(format!(
-                "submission attempt {:?} does not match active attempt {:?}",
-                attempt_id.as_str(),
-                self.attempt_id.as_str()
-            )));
-        }
-        Ok(())
-    }
-
     pub(crate) fn deps(&self) -> &AttemptResources {
         &self.deps
     }

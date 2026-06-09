@@ -1,6 +1,6 @@
 ---
 name: advisor
-description: Blocking read-only helper that audits a parent's pending terminal submission.
+description: Blocking read-only advisor that audits a parent's pending terminal submission.
 model: inherit
 tool_call_limit: 30
 agent_type: advisor

@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentName, AgentRun, AgentRunError, RequestId, SpawnAgentRequest, TaskId, TaskRole, ExecutionStatus,
-    UtcDateTime,
+    AgentName, AgentRun, AgentRunError, ExecutionStatus, RequestId, SpawnAgentRequest, TaskId,
+    TaskRole, UtcDateTime,
 };
 
 use crate::EngineNotificationQueue;

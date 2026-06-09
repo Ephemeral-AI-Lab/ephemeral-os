@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{AttemptId, DeferredGoal, WorkItemId, WorkItemSpec};
+use crate::{AgentRunId, DeferredGoal, WorkItemSpec};
 
 /// Model-facing pass/fail status used by terminal outcome tools.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -35,8 +35,8 @@ impl SubmissionStatus {
 /// Validated planner plan submission.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct PlanOutcomeSubmission {
-    /// Owning attempt.
-    pub attempt_id: AttemptId,
+    /// Planner agent run that submitted the plan.
+    pub agent_run_id: AgentRunId,
     /// Planner-level explanation of the work item plan.
     pub plan_spec: String,
     /// Planner-authored work items.
@@ -49,10 +49,8 @@ pub struct PlanOutcomeSubmission {
 /// Validated terminal outcome for one worker.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct WorkerOutcomeSubmission {
-    /// Owning attempt.
-    pub attempt_id: AttemptId,
-    /// Planner-authored work item id.
-    pub work_item_id: WorkItemId,
+    /// Worker agent run that submitted the outcome.
+    pub agent_run_id: AgentRunId,
     /// Success or failure.
     pub status: SubmissionStatus,
     /// Natural-language deliverable or blocker.

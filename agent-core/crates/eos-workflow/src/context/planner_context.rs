@@ -3,12 +3,11 @@ use eos_types::Attempt;
 use crate::attempt::AttemptResources;
 use crate::{Result, WorkflowError};
 
-use super::{AgentContext, ContextRole, ContextSection};
+use super::{AgentContext, ContextSection};
 
 pub(crate) async fn render_planner_agent_context(
     deps: &AttemptResources,
     attempt: &Attempt,
-    planner_agent_run_id: &eos_types::AgentRunId,
 ) -> Result<AgentContext> {
     let iteration = deps
         .iteration_store
@@ -29,7 +28,6 @@ pub(crate) async fn render_planner_agent_context(
         .filter(|candidate| candidate.id != attempt.id)
         .map(|candidate| {
             ContextSection::new("attempt").with_attrs(vec![
-                ("attempt_id".to_owned(), candidate.id.as_str().to_owned()),
                 (
                     "sequence_no".to_owned(),
                     candidate.attempt_sequence_no.to_string(),
@@ -40,38 +38,26 @@ pub(crate) async fn render_planner_agent_context(
         .collect::<Vec<_>>();
 
     Ok(AgentContext {
-        role: ContextRole::Planner,
         sections: vec![
             ContextSection::new("workflow")
-                .with_attrs(vec![
-                    ("workflow_id".to_owned(), workflow.id.as_str().to_owned()),
-                    (
-                        "request_id".to_owned(),
-                        workflow.request_id.as_str().to_owned(),
-                    ),
-                ])
                 .with_children(vec![
                     ContextSection::new("workflow_goal").with_text(workflow.workflow_goal)
                 ]),
-            ContextSection::new("current_iteration")
-                .with_attrs(vec![
-                    ("iteration_id".to_owned(), iteration.id.as_str().to_owned()),
-                    ("attempt_id".to_owned(), attempt.id.as_str().to_owned()),
-                    (
-                        "planner_agent_run_id".to_owned(),
-                        planner_agent_run_id.as_str().to_owned(),
-                    ),
-                ])
-                .with_children(vec![
-                    ContextSection::new("workflow_goal").with_text(iteration.workflow_goal),
-                    ContextSection::new("iteration_goal").with_text(iteration.iteration_goal),
-                ]),
+            ContextSection::new("current_iteration").with_children(vec![
+                ContextSection::new("workflow_goal").with_text(iteration.workflow_goal),
+                ContextSection::new("iteration_goal").with_text(iteration.iteration_goal),
+            ]),
             ContextSection::new("prior_attempts").with_children(prior_attempts),
+        ],
+        guidance_contents: vec![
+            "- <workflow>: workflow goal and current planning frame".to_owned(),
+            "- <current_iteration>: current iteration goal".to_owned(),
+            "- <prior_attempts>: earlier attempt status for this iteration".to_owned(),
         ],
         directive: "Author a worker plan and finish with submit_plan_outcome.".to_owned(),
         context_limits: vec![
             "Do not execute work items yourself; create worker work_items.".to_owned(),
-            "Use work_item_id values that are unique within this plan.".to_owned(),
+            "Order work_items so dependency references can use their list positions.".to_owned(),
         ],
     })
 }

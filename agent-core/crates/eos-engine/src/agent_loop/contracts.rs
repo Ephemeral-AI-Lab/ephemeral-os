@@ -8,7 +8,6 @@ use eos_sandbox_port::SandboxCommandApi;
 use eos_tool::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
 use eos_types::{
     AgentRunApi, AgentRunId, AgentRunRuntimeSnapshot, JsonObject, Message, ToolUseId, WorkflowApi,
-    WorkflowStore,
 };
 use serde_json::json;
 
@@ -87,27 +86,6 @@ pub trait AgentLoopToolRegistryFactory: Send + Sync {
         &self,
         input: AgentLoopToolRegistryBuildInput,
     ) -> Result<ToolRegistry, EngineError>;
-}
-
-/// Runtime-supplied stores used by engine-owned tool-call hooks.
-#[derive(Clone)]
-pub struct ToolCallHookStores {
-    /// Workflow rows used to inspect delegated workflow ancestry.
-    pub(crate) workflow_store: Arc<dyn WorkflowStore>,
-}
-
-impl std::fmt::Debug for ToolCallHookStores {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ToolCallHookStores").finish_non_exhaustive()
-    }
-}
-
-impl ToolCallHookStores {
-    /// Build hook dependencies from runtime-owned stores.
-    #[must_use]
-    pub fn new(workflow_store: Arc<dyn WorkflowStore>) -> Self {
-        Self { workflow_store }
-    }
 }
 
 /// Runtime-supplied contracts needed by engine-owned background managers.

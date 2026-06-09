@@ -5,9 +5,9 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_types::{
-    format_record_dir, AgentName, AgentRun, AgentRunId, AgentRunRecordIndex,
-    AgentRunRecordTarget, AgentRunStore, CoreError, CreatedAgentRun, RequestId,
-    RunningRequestAgentRun, Sealed, SubmissionOutcome, ExecutionStatus, ToolUseId, AgentType,
+    format_record_dir, AgentName, AgentRun, AgentRunId, AgentRunRecordIndex, AgentRunRecordTarget,
+    AgentRunStore, AgentType, CoreError, CreatedAgentRun, ExecutionStatus, RequestId,
+    RunningRequestAgentRun, Sealed, SubmissionOutcome, ToolUseId,
 };
 
 use crate::error::DbError;
@@ -116,12 +116,13 @@ impl AgentRunStore for SqlAgentRunStore {
         &self,
         agent_run_id: &AgentRunId,
     ) -> Result<Option<AgentRun>, CoreError> {
-        let row =
-            sqlx::query_as::<Sqlite, AgentRunRow>("SELECT * FROM agent_runs WHERE agent_run_id = ?")
-                .bind(agent_run_id.as_str())
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(DbError::from)?;
+        let row = sqlx::query_as::<Sqlite, AgentRunRow>(
+            "SELECT * FROM agent_runs WHERE agent_run_id = ?",
+        )
+        .bind(agent_run_id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(DbError::from)?;
         row.map(row_to_agent_run).transpose().map_err(Into::into)
     }
 
@@ -165,28 +166,27 @@ impl AgentRunStore for SqlAgentRunStore {
         parent_agent_run_id: &AgentRunId,
         agent_type: Option<AgentType>,
     ) -> Result<Vec<AgentRun>, CoreError> {
-        let rows = match agent_type {
-            Some(agent_type) => {
-                sqlx::query_as::<Sqlite, AgentRunRow>(
+        let rows =
+            match agent_type {
+                Some(agent_type) => sqlx::query_as::<Sqlite, AgentRunRow>(
                     "SELECT * FROM agent_runs WHERE parent_agent_run_id = ? AND agent_type = ? \
                      ORDER BY created_at ASC, agent_run_id ASC",
                 )
                 .bind(parent_agent_run_id.as_str())
                 .bind(enum_to_db(&agent_type))
                 .fetch_all(&self.pool)
-                .await
-            }
-            None => {
-                sqlx::query_as::<Sqlite, AgentRunRow>(
-                    "SELECT * FROM agent_runs WHERE parent_agent_run_id = ? \
+                .await,
+                None => {
+                    sqlx::query_as::<Sqlite, AgentRunRow>(
+                        "SELECT * FROM agent_runs WHERE parent_agent_run_id = ? \
                      ORDER BY created_at ASC, agent_run_id ASC",
-                )
-                .bind(parent_agent_run_id.as_str())
-                .fetch_all(&self.pool)
-                .await
+                    )
+                    .bind(parent_agent_run_id.as_str())
+                    .fetch_all(&self.pool)
+                    .await
+                }
             }
-        }
-        .map_err(DbError::from)?;
+            .map_err(DbError::from)?;
         rows.into_iter()
             .map(row_to_agent_run)
             .collect::<Result<Vec<_>, DbError>>()

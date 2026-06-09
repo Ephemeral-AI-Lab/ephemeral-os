@@ -11,7 +11,7 @@
 #[non_exhaustive]
 pub enum CoreError {
     /// An identifier `FromStr` rejected an empty string. `kind` is the newtype
-    /// name (e.g. `"TaskId"`) so callers can report which id failed.
+    /// name (e.g. `"AgentRunId"`) so callers can report which id failed.
     #[error("empty {kind} identifier")]
     EmptyId {
         /// The newtype kind whose `FromStr` received the empty string.

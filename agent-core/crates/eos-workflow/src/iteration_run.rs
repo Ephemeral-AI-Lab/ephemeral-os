@@ -195,9 +195,7 @@ impl IterationRunCoordinator {
                 Some(eos_types::UtcDateTime::now()),
             )
             .await?;
-        let outcome = if let Some(deferred_goal) =
-            returned_attempt_deferred_goal(&self.deps, attempt).await?
-        {
+        let outcome = if let Some(deferred_goal) = returned_attempt_deferred_goal(attempt) {
             IterationRunOutcome::Continue(deferred_goal)
         } else {
             IterationRunOutcome::Complete
@@ -280,21 +278,11 @@ impl IterationRunCoordinator {
     }
 }
 
-pub(crate) async fn returned_attempt_deferred_goal(
-    deps: &AttemptResources,
-    attempt: &Attempt,
-) -> Result<Option<DeferredGoal>> {
-    let Some(planner_task_id) = attempt.planner_task_id() else {
-        return Ok(None);
-    };
-    let Some(task) = deps.task_store.get(planner_task_id).await? else {
-        return Ok(None);
-    };
-    let Some(outcome) = task
-        .submission_outcome
-        .and_then(|outcome| outcome.planner_outcome())
-    else {
-        return Ok(None);
-    };
-    Ok(outcome.deferred_goal_for_next_iteration)
+pub(crate) fn returned_attempt_deferred_goal(attempt: &Attempt) -> Option<DeferredGoal> {
+    attempt
+        .execution_tree
+        .planner_outcome
+        .as_ref()
+        .and_then(|outcome| outcome.clone().planner_outcome())
+        .and_then(|outcome| outcome.deferred_goal_for_next_iteration)
 }

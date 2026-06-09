@@ -1,50 +1,6 @@
 //! Execution-lineage record contracts.
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use crate::{AgentRunId, AttemptId, IterationId, RequestId, WorkflowId};
-
-/// Workflow coordinates used by workflow task-agent-runs.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct WorkflowCoordinates {
-    /// Owning workflow id.
-    pub workflow_id: WorkflowId,
-    /// Owning iteration id.
-    pub iteration_id: IterationId,
-    /// Owning attempt id.
-    pub attempt_id: AttemptId,
-}
-
-/// Workflow task role used for agent-run path labels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum WorkflowAgentRole {
-    /// Planner task.
-    Planner,
-    /// Worker task.
-    Worker,
-}
-
-impl WorkflowAgentRole {
-    /// The canonical record/task path label.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Planner => "planner",
-            Self::Worker => "worker",
-        }
-    }
-
-    /// The run path segment prefix for this workflow role.
-    #[must_use]
-    pub const fn run_segment_prefix(self) -> &'static str {
-        match self {
-            Self::Planner => "planner-run",
-            Self::Worker => "worker-run",
-        }
-    }
-}
+use crate::{AgentRunId, RequestId};
 
 /// Input to record-dir resolution for an agent run.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -112,9 +68,7 @@ pub struct CreatedAgentRun {
 pub fn format_record_dir(index: &AgentRunRecordIndex) -> AgentRunRecordDir {
     let request_root = format!("requests/{}", index.request_id.as_str());
     let agent_run_segment = prefixed("agent-run", index.agent_run_id.as_str());
-    AgentRunRecordDir::new(format!(
-        "{request_root}/agent-runs/{agent_run_segment}"
-    ))
+    AgentRunRecordDir::new(format!("{request_root}/agent-runs/{agent_run_segment}"))
 }
 
 fn prefixed(prefix: &str, id: &str) -> String {

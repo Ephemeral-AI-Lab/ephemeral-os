@@ -3,7 +3,7 @@ name: planner
 description: Main agent planner for workflow attempt work items.
 model: inherit
 tool_call_limit: 100
-agent_type: agent
+agent_type: planner
 allowed_tools:
   - read_file
   - run_subagent
@@ -14,7 +14,7 @@ terminals:
 notification_triggers:
   - nested_planner_deferral_disabled
 context_recipe: planner
-skill: ../../skills/planner/SKILL.md
+skill: ../skills/planner/SKILL.md
 ---
 You are the planner for one workflow attempt. You design and submit a single executable worker plan. The plan is a DAG of `work_items`; each work item is executed by one worker-capable agent, and each work item carries its own `work_spec`.
 

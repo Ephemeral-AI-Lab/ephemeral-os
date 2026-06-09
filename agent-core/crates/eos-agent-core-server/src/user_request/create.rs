@@ -40,7 +40,7 @@ pub(crate) async fn create_user_request(
         .spawn_agent(SpawnAgentRequest {
             agent_run_id: root_agent_run_id,
             agent_name: service.settings.root_agent_name.clone(),
-            agent_type: AgentType::Agent,
+            agent_type: AgentType::Main,
             request_id: request_id.clone(),
             parent_agent_run_id: None,
             initial_messages: vec![Message::from_user_text(input.prompt)],

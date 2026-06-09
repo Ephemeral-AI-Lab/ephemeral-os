@@ -5,8 +5,8 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_types::{
-    AgentRunId, CoreError, IterationId, RequestId, Sealed, ToolUseId, UtcDateTime,
-    Workflow, WorkflowId, WorkflowStatus, WorkflowStore,
+    AgentRunId, CoreError, IterationId, RequestId, Sealed, ToolUseId, UtcDateTime, Workflow,
+    WorkflowId, WorkflowStatus, WorkflowStore,
 };
 
 use crate::error::DbError;

@@ -9,7 +9,7 @@ mod state;
 pub use config::{EngineRuntimeConfig, DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS};
 pub use contracts::{
     AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory, BackgroundSessionRuntimeFactory,
-    ExecutionMetadataBuildInput, ToolCallHookStores, ToolExecutionMetadataReader,
+    ExecutionMetadataBuildInput, ToolExecutionMetadataReader,
 };
 pub(crate) use eos_types::{
     AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind, StartAgentLoopRequest,

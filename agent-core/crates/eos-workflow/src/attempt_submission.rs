@@ -40,10 +40,13 @@ impl WorkflowAttemptSubmissionApi for AttemptSubmissionAdapter {
         &self,
         submission: PlanOutcomeSubmission,
     ) -> Result<SubmissionAck, CoreError> {
-        let Some(run) = self.active_attempt_runs.get(&submission.attempt_id) else {
+        let Some(run) = self
+            .active_attempt_runs
+            .get_by_agent_run_id(&submission.agent_run_id)
+        else {
             return Ok(SubmissionAck::Rejected(format!(
-                "attempt {:?} is not active",
-                submission.attempt_id.as_str()
+                "agent run {:?} is not attached to an active attempt",
+                submission.agent_run_id.as_str()
             )));
         };
         submission_ack(run.record_plan_outcome(submission).await)
@@ -53,10 +56,13 @@ impl WorkflowAttemptSubmissionApi for AttemptSubmissionAdapter {
         &self,
         submission: WorkerOutcomeSubmission,
     ) -> Result<SubmissionAck, CoreError> {
-        let Some(run) = self.active_attempt_runs.get(&submission.attempt_id) else {
+        let Some(run) = self
+            .active_attempt_runs
+            .get_by_agent_run_id(&submission.agent_run_id)
+        else {
             return Ok(SubmissionAck::Rejected(format!(
-                "attempt {:?} is not active",
-                submission.attempt_id.as_str()
+                "agent run {:?} is not attached to an active attempt",
+                submission.agent_run_id.as_str()
             )));
         };
         submission_ack(run.record_worker_outcome(submission).await)

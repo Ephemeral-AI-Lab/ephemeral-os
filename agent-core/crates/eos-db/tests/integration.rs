@@ -4,10 +4,10 @@
 use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_types::{
     AdvisorVerdict, AgentName, AttemptBudget, AttemptClosure, DeferredGoal, ExecutionNode,
-    IterationCreationReason, IterationStatus, JsonObject, ParentAgentRunAnchor,
-    ParentedAgentRunKind, ParentedOutcome, PlanId, RequestId, RequestStatus, Task,
-    TaskAgentRunKind, SubmissionOutcome, TaskRole, ExecutionStatus, ToolUseId, UtcDateTime, WorkItemId,
-    WorkItemSpec, WorkflowCoordinates, WorkflowStatus, WorkflowAgentRole,
+    ExecutionStatus, IterationCreationReason, IterationStatus, JsonObject, ParentAgentRunAnchor,
+    ParentedAgentRunKind, ParentedOutcome, PlanId, RequestId, RequestStatus, SubmissionOutcome,
+    Task, TaskAgentRunKind, TaskRole, ToolUseId, UtcDateTime, WorkItemId, WorkItemSpec,
+    WorkflowAgentRole, WorkflowCoordinates, WorkflowStatus,
 };
 use serde_json::json;
 use sqlx::Row;

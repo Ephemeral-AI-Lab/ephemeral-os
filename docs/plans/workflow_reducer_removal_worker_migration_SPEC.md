@@ -1,6 +1,6 @@
 # Workflow Reducer Removal And Worker Migration - SPEC
 
-Status: Proposed (rev 3)
+Status: Proposed (rev 5)
 Date: 2026-06-09
 Owner: eos-workflow / eos-types / eos-tool / eos-agent-run / eos-db / agent profiles
 
@@ -17,55 +17,48 @@ Scope:
 > Consolidated reference: `workflow_reducer_removal_worker_migration_DESIGN.html`
 > (class/field catalog, DB schema, and field-population diagrams).
 
-## 0. Revision 3 — adopted model
+## 0. Revision 5 — adopted model
 
-Rev 3 keeps rev 2's core fold (delete reducer, generator → worker, two outcome
+Rev 5 keeps rev 4's core fold (delete reducer, generator → worker, two outcome
 families) and supersedes the rev-2 points below. The structural decisions that
 drive everything else:
 
-1. **Opaque `task_id`.** Every `AgentType::Agent` run (root, planner, worker) gets
-   a `task_id` minted by the **task store** inside `spawn_agent` — uniform across
-   the three roles. The id does **not** encode `attempt_id`/`work_item_id` and is
-   never parsed. This deletes the deterministic `worker_task_id(attempt_id,
-   work_item_id)` / `planner_task_id(attempt_id)` derivation, the `{attempt}:gen:` /
-   `{attempt}:red:` encoding, the `generator_id_from_task_id` / `reducer_id_from_task_id`
-   reverse parsers, and `WorkflowNodeId`. (Supersedes rev-2 §5 deterministic ids.)
+1. **No durable task abstraction.** Delete the target `Task` store, `TaskId`,
+   `TaskRole`, `TaskStatus`, `TaskOutcome`, `task_runs`, and deterministic task-id
+   helpers. Durable run identity is `AgentRunId`; durable execution rows are
+   `agent_runs` and `parented_runs`. Workflow lifecycle rows, context scopes, and
+   run rows carry **no task-related fields**.
 
 2. **`plan_id` + `AttemptExecutionTree`.** The `Attempt` mints a `plan_id` at
    creation. The planner authors `work_item_id`s in `submit_plan_outcome`. The
-   attempt carries an `AttemptExecutionTree` — `{ plan_id, planner_task_id?,
-   nodes:[{ work_item_id, needs, task_id? }] }` — materialized on
-   `submit_plan_outcome`, with each `task_id` bound when its run is spawned. **The
-   tree is the attempt↔task index**: worker tasks are inferred from it, not from a
-   `tasks.attempt_id` column.
+   attempt carries an `AttemptExecutionTree` — `{ plan_id,
+   nodes:[{ work_item_id, needs, status, worker_outcome? }] }` — materialized on
+   `submit_plan_outcome`. **The tree is the workflow DAG + worker outcome index**,
+   not an attempt↔task index.
 
-3. **Lean, lineage-free `Task`.** `Task` is pure execution state
-   (`id, request_id, role, instruction, status, agent_name, task_outcome`).
-   `attempt_id`, `workflow_id`, `iteration_id`, `needs`, `work_item_id`, and
-   `outcomes` are all **dropped** from the task store; the attempt↔task linkage is
-   the `AttemptExecutionTree` and lineage derives tree → attempt → iteration →
-   workflow. (Supersedes rev-2, which kept `attempt_id` on `Task`.)
+3. **Agent runs replace task rows.** `agent_runs` stores root/planner/worker
+   runtime state (`agent_run_id, request_id, role, instruction, status, agent_name,
+   terminal_payload`). It has no typed outcome mirror, no `task_id`, no workflow lineage
+   columns, no `needs`, and no `work_item_id`.
 
-4. **Full plan in `TaskOutcome::Planner` JSON (approach A).** The plan (`plan_spec`
-   + `work_items` + `deferred_goal_for_next_iteration`) lives only in the planner
-   run's terminal result (`terminal_payload` / typed `task_outcome`). There is
-   **no** `work_items` table and no attempt plan copy. The `execution_tree`
-   materializes the node ids + edges + bindings for scheduling.
+4. **Full plan on the attempt.** The plan (`plan_spec` + `work_items` +
+   `deferred_goal_for_next_iteration`) is recorded as the attempt's
+   `planner_outcome`. The planner run may mirror the same terminal payload for
+   recording, but workflow lifecycle and aggregation never look up an agent-run
+   row. There is **no** `work_items` table.
 
-5. **`is_pass` on root/worker outcomes.** `TaskOutcome::Root` and
-   `TaskOutcome::Worker` carry `is_pass: bool` + `outcome: String`; `TaskOutcome::Planner`
-   carries the plan (no `is_pass` — a returned plan is success by construction). The
-   terminal records `is_pass` **and** maps it onto `TaskStatus` (Done/Failed) so the
-   two stay consistent. (Supersedes rev-2's "pass/fail is never stored on an
-   outcome.")
+5. **`is_pass` only where workflow owns a leaf result.** `WorkerOutcome` carries
+   `is_pass: bool` only; `PlannerOutcome` carries the plan (no
+   `is_pass` — a returned plan is success by construction). Root success is request
+   state, not a workflow task outcome. There is no per-run typed outcome enum.
 
 6. **Aggregation outcomes are recursive read-side projections** (computed, never
    stored): `AttemptOutcome`, `IterationOutcome`, `WorkflowOutcome` (§11). Each
    carries a rolled-up `status: bool`. They **replace** the lifecycle disposition
    enums (`IterationOutcome::{Complete,Continue,Failed}`,
    `WorkflowOutcome::{Succeeded,Failed,Cancelled}`); "continue vs complete" is
-   `deferred_goal.is_some()`. The deferred goal's single source is
-   `TaskOutcome::Planner.deferred_goal_for_next_iteration`, so the
+   `deferred_goal.is_some()`. The deferred goal's single workflow source is
+   `Attempt.planner_outcome.deferred_goal_for_next_iteration`, so the
    `iterations.deferred_goal_for_next_iteration` column is **dropped** (derived on
    next-iteration creation). The stored `*Status` enums remain the in-flight /
    scheduling authority. (Supersedes rev-2's "no status on aggregation projections.")
@@ -74,19 +67,18 @@ drive everything else:
    `workflows.goal → workflow_goal`; `iterations.goal → iteration_goal` plus a
    denormalized `iterations.workflow_goal` (context locality).
 
-Carried unchanged from rev 2: the planner keeps its own task-anchored run; two
-outcome families split by `AgentType` (`TaskOutcome` for `Agent`, `ParentedOutcome`
-for `Subagent`/`Advisor`) — **do not merge them**; delete `MaterializedPlan`,
-`PlanDisposition`, `ExecutionRole`, `ExecutionTaskOutcome`, `PlanOutcome`,
-`WorkItemOutcome`; collapse the context layer; the single natural-language field is
-`outcome`.
+Carried unchanged from rev 2: the planner keeps its own agent run for recording
+only; advisor/subagent retain `ParentedOutcome`; delete `TaskOutcome`, `RunOutcome`,
+`MaterializedPlan`, `PlanDisposition`, `ExecutionRole`, `ExecutionTaskOutcome`,
+`PlanOutcome`, and `WorkItemOutcome`; collapse the context layer. Worker typed
+state has no natural-language `outcome`.
 
 ## 1. Intent
 
 This is an aggressive cleanup migration. The target removes reducer as a workflow
 role, converts generator terminology to worker terminology, removes the binary
 generator/reducer execution model, and unifies every terminal payload under one
-`TaskOutcome` type per family.
+workflow-owned status/result fields.
 
 The workflow model becomes:
 
@@ -94,22 +86,22 @@ The workflow model becomes:
 Workflow
   -> Iteration[]
       -> Attempt[]   (mints plan_id; owns an AttemptExecutionTree)
-          -> planner run   (TaskOutcome::Planner = full plan)
-          -> worker run[]  (TaskOutcome::Worker)
+          -> planner run   (raw terminal record only)
+          -> worker run[]  (raw terminal record only)
 ```
 
-Every terminal agent run is a `task_runs` row carrying the terminal tool result
-as both the raw agent payload (`terminal_payload`) and typed `task_outcome`; the
-`task_id` is opaque (store-minted at spawn). The plan lives
-in the planner's `TaskOutcome::Planner`; the attempt's `execution_tree` maps each
-authored `work_item_id` to the opaque `task_id` of the worker that ran it.
+Every terminal agent run is an `agent_runs` row keyed by `agent_run_id`, carrying
+the raw terminal tool result (`terminal_payload`) for record/audit compatibility.
+The plan lives on the attempt as `planner_outcome`;
+the attempt's `execution_tree` stores the planner-authored `work_item_id` DAG and
+each worker's lifecycle status/outcome.
 
 The question "did it succeed?" is answered two ways: in-flight by the lifecycle
 state, and as a terminal roll-up by `is_pass` on the leaf outcomes:
 
 ```text
-TaskStatus · AttemptStatus · IterationStatus · WorkflowStatus   (in-flight / scheduling)
-TaskOutcome::{Root,Worker}.is_pass                              (terminal pass/fail of a run)
+RunStatus · AttemptStatus · IterationStatus · WorkflowStatus    (in-flight / scheduling)
+WorkerOutcome.is_pass                                           (terminal pass/fail of a work item)
 AttemptOutcome/IterationOutcome/WorkflowOutcome.status          (read-side roll-up)
 ```
 
@@ -122,19 +114,19 @@ rows; advisor/subagent use `ParentedOutcome` on `parented_runs`.
 | --- | --- |
 | Reducer role | Delete. No reducer rows, tasks, launches, outcomes, context recipes, terminal tools, or reducer profile/skill files. |
 | Generator role | Replace with worker. Public workflow contracts use `Worker` / `WorkItem`; no `Generator` public contract remains. |
-| Planner identity | Planner keeps its task-anchored run (recording anchor) but is never a worker-DAG member. The planner run's `task_id` is opaque and lives in `execution_tree.planner_task_id`. The model never sends a planner task id. |
-| Task id | **Opaque, store-minted at `spawn_agent`**, uniform for root/planner/worker. Not composed, not parsed. No `worker_task_id`/`planner_task_id` derivation, no `WorkflowNodeId`, no reverse parsers. |
+| Planner identity | Planner keeps an agent run for recording, but workflow state has no planner run field. The attempt is the planner lifecycle owner through `planner_outcome`. The model never sends a task or run id. |
+| Task abstraction | Delete from the target model. No `Task`, `TaskId`, `TaskRole`, `TaskStatus`, `TaskOutcome`, `task_runs`, `worker_task_id`, `planner_task_id`, `WorkflowNodeId`, or reverse parsers. |
 | Plan id | `plan_id` is minted by the `Attempt` at creation (the plan's identity). |
-| Attempt↔task linkage | The `AttemptExecutionTree` (on the attempt) maps `work_item_id → task_id` and holds `planner_task_id`. Worker tasks are inferred from it. `Task`/`task_runs` carry **no** `attempt_id`. |
-| Task shape | `Task` is pure execution state: `id, request_id, role, instruction, status, agent_name, task_outcome: Option<TaskOutcome>`. No lineage, `needs`, `work_item_id`, or `outcomes`. |
-| Plan payload | Full plan (`plan_spec` + `work_items` + `deferred_goal_for_next_iteration`) in the planner run's `TaskOutcome::Planner`. No `work_items` table, no attempt plan copy, no `task_specs`, no `reducers`, no `disposition`. |
+| Attempt↔run linkage | None in workflow persistence. The `AttemptExecutionTree` is a work-item DAG and worker-outcome index only. `agent_runs` carry **no** `attempt_id`, and attempts carry **no** run ids. |
+| Agent run shape | `AgentRun` is runtime/record state: `agent_run_id, request_id, role, instruction, status, agent_name, terminal_payload`. No typed outcome mirror, workflow lineage, `needs`, or `work_item_id`. |
+| Plan payload | Full plan (`plan_spec` + `work_items` + `deferred_goal_for_next_iteration`) in `Attempt.planner_outcome`. The planner run keeps only the raw terminal payload for recording. No `work_items` table, no `task_specs`, no `reducers`, no `disposition`. |
 | Work item payload | Each `WorkItemSpec` carries its own `work_spec` (the worker's instruction), `agent_name`, and `needs`. |
-| Outcome model | Per-run: `TaskOutcome {Root,Planner,Worker}` (`Agent` rows) and `ParentedOutcome {Advisor,Subagent}` (parented rows). `Task` exposes only `task_outcome`; `AgentRun` / `ParentedRun` keep the raw terminal payload and the typed outcome (`task_outcome` / `parented_outcome`) side by side. Delete `PlanOutcome`, `WorkItemOutcome`, `ExecutionTaskOutcome`, and `Task.outcomes`. |
-| Success/failure | `is_pass: bool` on `TaskOutcome::{Root,Worker}` (model-reported, also mapped onto `TaskStatus`). Aggregation `status: bool` is a read-side roll-up (§11). Stored `*Status` enums remain the in-flight authority. Do not add `is_successful`, `is_success`, or `has_structured_outcome`. |
-| Outcome text | One `outcome: String` field on the run variants (`Root`, `Worker`, `Advisor`, `Subagent`). The `Planner` variant has no free-text `outcome`; its body is `plan_spec` + `work_items` + `deferred_goal_for_next_iteration`. |
+| Outcome model | Workflow-owned typed outcomes only: `PlannerOutcome` on `Attempt`, `WorkerOutcome` on `ExecutionNode`, and `ParentedOutcome` on parented runs. `AgentRun` keeps only raw terminal payload. Delete `TaskOutcome`, `RunOutcome`, `PlanOutcome`, `WorkItemOutcome`, `ExecutionTaskOutcome`, and `Task.outcomes`. |
+| Success/failure | `is_pass: bool` on `WorkerOutcome`; aggregation `status: bool`; lifecycle `*Status` enums for scheduling. Model-facing inputs carry `SubmissionStatus` (maps onto worker node status and run status where a run exists). Do not add `is_successful`, `is_success`, or `has_structured_outcome`. |
+| Outcome text | No structured `outcome` field anywhere in the target contracts. Free-text terminal details, if retained, stay only inside raw audit payloads. Planner body is `plan_spec` + `work_items` + `deferred_goal_for_next_iteration`. |
 | Aggregation | `AttemptOutcome`/`IterationOutcome`/`WorkflowOutcome` are recursive read-side projections; they replace the lifecycle disposition enums. Not stored. |
 | Context data | No public context projection DTOs. Filtering is local to `eos-workflow` context render functions. |
-| Record paths | Planner and worker records are run-owned. `format_record_dir` / `finish_task_run` use lineage from the spawn context (the ephemeral launch carries `WorkflowCoordinates`), not from a task column. |
+| Record paths | Planner and worker records are run-owned. `format_record_dir` / run finish use lineage from the spawn context (the ephemeral launch carries `WorkflowCoordinates`), not from a task column. |
 
 Do not introduce these names:
 
@@ -148,10 +140,11 @@ Do not introduce these names:
 - `direct_needs`, `direct_need_outcomes`, `assigned_work_item`, `agent_profile_name`
 - `ContextOutcomeSlice`, `ContextOutcomeView`, `AttemptOutcomeForContext`, `IterationOutcomeForContext`
 - `WorkflowNodeId`, `MaterializedPlan`, `ExecutionRole`, `ExecutionTaskOutcome`
-- `PlanOutcome` / `WorkItemOutcome` (folded into `TaskOutcome`)
+- `Task`, `TaskId`, `TaskRole`, `TaskStatus`, `TaskOutcome`, `task_runs`
+- `RunOutcome`, `PlanOutcome`, `WorkItemOutcome`
 - `worker_task_id` / `planner_task_id` **derivation functions**, `generator_id_from_task_id`,
   `reducer_id_from_task_id`, and any `{attempt}:{...}` task-id encoding
-- `tasks.attempt_id` / `tasks.workflow_id` / `tasks.iteration_id` (lineage columns on the task store)
+- `tasks.attempt_id` / `tasks.workflow_id` / `tasks.iteration_id` (the task store is removed)
 
 `AttemptOutcome` / `IterationOutcome` / `WorkflowOutcome` are **allowed** as read-side
 projection types (§11) — not stored DTOs and not lifecycle disposition enums.
@@ -163,13 +156,13 @@ Naming rules:
 | Workflow files | Name files after the runtime ownership they contain: `attempt_run`, `planner_run`, `work_items`, `work_items_run`, `workflow_run`, `iteration_run`. |
 | Work item execution | Use `work_items_run` for worker wave execution and settlement. Do not use `work_dag`, `plan_dag`, `node`, `stage`, or `orchestrator` names for this owner. |
 | Plan shape | Use `WorkItemSpec` for planner-authored work items. Do not introduce `PlanWorkItem`. |
-| Outcome type | Two per-family enums: `TaskOutcome {Root, Planner, Worker}` and `ParentedOutcome {Advisor, Subagent}`. `AgentRun` / `ParentedRun` retain the terminal payload while exposing typed outcome fields beside it. Do not merge the two families. |
-| Terminal text | The single natural-language field is `outcome`, everywhere. Rename every `summary` / `failure_summary` / `review_summary` / `answer` / `user_result` / `work_result` to `outcome`. |
-| Success/failure | `is_pass: bool` on `TaskOutcome::{Root,Worker}`; aggregation `status: bool`; lifecycle `*Status` enums for scheduling. Model-facing inputs carry `SubmissionStatus` (maps onto `is_pass` + `TaskStatus`). |
+| Outcome type | Do not introduce a per-run agent outcome enum. Workflow typed results are `PlannerOutcome` and `WorkerOutcome`; parented runs use `ParentedOutcome`. |
+| Terminal text | Do not add typed `outcome` text to any target DTO. Free-text terminal details, if retained, stay only inside raw audit payloads. |
+| Success/failure | `is_pass: bool` on `WorkerOutcome`; aggregation `status: bool`; lifecycle `*Status` enums for scheduling. Model-facing inputs carry `SubmissionStatus`. |
 | Dependencies | Use `needs` for direct work item dependencies (on `WorkItemSpec` and `ExecutionNode`). Do not add `direct_needs` or `direct_need_outcomes`. |
 | Worker assignment | Use `agent_name: AgentName` on `WorkItemSpec`. Do not use `agent_profile_name` or `assigned_work_item`. |
-| Deferred goal | Typed `DeferredGoal` newtype on internal contracts; single stored source is `TaskOutcome::Planner.deferred_goal_for_next_iteration`. Raw `String` only on the model-facing `*Input` wire DTOs. |
-| Task mapping | The attempt↔task and work_item↔task bindings live in `AttemptExecutionTree`. Do not persist `attempt_id` on the task store and do not derive task ids. |
+| Deferred goal | Typed `DeferredGoal` newtype on internal contracts; single workflow source is `Attempt.planner_outcome.deferred_goal_for_next_iteration`. Raw `String` only on the model-facing `*Input` wire DTOs. |
+| Task mapping | Do not add task mapping to workflow state. `AttemptExecutionTree` is keyed by `work_item_id` and stores worker status/outcome only. |
 
 ## 3. Resulting File And Folder Structure
 
@@ -178,13 +171,13 @@ Target structure under `agent-core`:
 ```text
 agent-core/crates/eos-types/src/
   contracts/
-    record.rs                    # TaskAgentRunKind; WorkflowTaskRole = {Planner, Worker};
+    record.rs                    # AgentRunKind; workflow coordinates ride on spawn/record target
                                  #   SpawnAgentTarget::Workflow { coords, role, plan_id, work_item_id? }
     workflow.rs                  # WorkflowApi + 2-method attempt submission API
   state/
-    request_task/
-      task.rs                    # TaskRole::{Root, Planner, Worker}; TaskStatus::is_terminal;
-                                 #   lean Task with typed task_outcome (no lineage / needs / work_item_id / outcomes)
+    request_agent_run/
+      agent_run.rs               # AgentRunRole::{Root, Planner, Worker}; RunStatus::is_terminal;
+                                 #   AgentRun with raw terminal_payload only (no typed outcome mirror / lineage / needs / work_item_id)
     tools/
       submissions.rs             # PlanOutcomeSubmission, WorkerOutcomeSubmission, SubmissionStatus
     workflow/
@@ -193,9 +186,9 @@ agent-core/crates/eos-types/src/
       attempt.rs                 # AttemptState, AttemptClosure, AttemptStatus, Attempt,
                                  #   AttemptExecutionTree, ExecutionNode, AttemptBudget
       work_item.rs               # WorkItemId, PlanId, WorkItemSpec, DeferredGoal
-      outcome.rs                 # TaskOutcome {Root,Planner,Worker}; ParentedOutcome {Advisor,Subagent};
+      outcome.rs                 # PlannerOutcome, WorkerOutcome, ParentedOutcome {Advisor,Subagent};
                                  #   AdvisorVerdict; read-side AttemptOutcome/IterationOutcome/WorkflowOutcome
-  # Task-id minting lives in the existing TaskAgentRunStore surface (stores.rs); no eos-workflow ids.
+  # Agent-run id minting lives in the run store surface (stores.rs); no eos-workflow ids.
 
 agent-core/crates/eos-workflow/src/
   attempt/
@@ -222,11 +215,11 @@ agent-core/crates/eos-tool/src/
   model.rs                       # ToolName submit_* rename set (6 -> 5 terminals)
   registry.rs
   tools/
-    terminal.rs                  # TerminalTool::{RootTask, Plan, Worker, Advisor, Subagent}
+    terminal.rs                  # TerminalTool::{Root, Plan, Worker, Advisor, Subagent}
     submission/
       mod.rs
       support.rs                 # SubmissionStatus (wire), OutcomeInput, shared helpers
-      submit_root_task_outcome.rs
+      submit_root_outcome.rs
       submit_plan_outcome.rs
       submit_worker_outcome.rs
       submit_advisor_outcome.rs
@@ -237,11 +230,11 @@ agent-core/crates/eos-db/         # edit 0001_initial.sql in place (contingent o
   # iterations: goal -> iteration_goal; ADD workflow_goal; drop outcomes; drop deferred_goal_for_next_iteration
   # attempts: ADD plan_id, execution_tree; drop planner_task_id, generator_task_ids, reducer_task_ids,
   #           outcomes, deferred_goal
-  # task_runs / tasks: task_id OPAQUE; role IN ('root','planner','worker'); drop attempt_id, workflow_id,
-  #           iteration_id, work_item_id, needs, outcomes (+ the coordinate indexes)
+  # agent_runs: agent_run_id PRIMARY KEY; role IN ('root','planner','worker'); drop task_id,
+  #           attempt_id, workflow_id, iteration_id, work_item_id, needs, outcomes (+ coordinate indexes)
   # rows.rs: drop MaterializedPlan reconstruction + 'generator'/'reducer' parsing + outcome normalizer;
-  #          tasks drop terminal_tool_result in favor of task_outcome;
-  #          AgentRun / ParentedRun keep terminal_payload plus typed outcome mirrors
+  #          drop tasks table/store; agent_runs keep terminal_payload only;
+  #          ParentedRun keeps terminal_payload plus parented_outcome
 ```
 
 Remove the old mechanism-oriented file names from the target workflow path:
@@ -278,7 +271,7 @@ Replace with:
 ```text
 .eos-agents/tools/submit_worker_outcome.md
 .eos-agents/tools/submit_plan_outcome.md
-.eos-agents/tools/submit_root_task_outcome.md
+.eos-agents/tools/submit_root_outcome.md
 .eos-agents/tools/submit_advisor_outcome.md
 .eos-agents/tools/submit_subagent_outcome.md
 ```
@@ -294,19 +287,19 @@ Delete or rewrite code concepts:
 | `WorkflowNodeId` | delete (spawn target carries `WorkflowTaskRole` + `plan_id` + `work_item_id?`) |
 | `workflow_task_id(attempt, WorkflowNodeId)` / `generator_task_id` / `reducer_task_id` | delete (task ids are opaque store mints) |
 | `generator_id_from_task_id` / `reducer_id_from_task_id` (reverse parsers) | delete |
-| `ExecutionRole` / `ExecutionTaskOutcome` | delete (use `TaskOutcome` + `is_pass`) |
-| `Task.outcomes` / `Task.attempt_id` / `Task.workflow_id` / `Task.iteration_id` / `Task.needs` | delete (lean Task; linkage via `AttemptExecutionTree`) |
-| `MaterializedPlan` | delete (plan in `TaskOutcome::Planner`; bindings in `AttemptExecutionTree`) |
+| `ExecutionRole` / `ExecutionTaskOutcome` | delete (use `WorkerOutcome.is_pass` + worker node status) |
+| `Task` / `TaskId` / task store | delete; `AgentRunId` is the durable run id |
+| `MaterializedPlan` | delete (plan in `Attempt.planner_outcome`; DAG and worker outcomes in `AttemptExecutionTree`) |
 | `PlanDisposition` | delete (use `Option<DeferredGoal>`) |
 | `PlanTask` | `WorkItemSpec` |
 | `PlanReducer` | delete |
 | `GeneratorId` | `WorkItemId` |
 | `ReducerId` / `PlannerId` | delete |
-| `PlannerPlan.{planner_task_id, disposition, tasks, task_specs, reducers}` | `TaskOutcome::Planner { plan_spec, work_items, deferred_goal_for_next_iteration }` |
+| `PlannerPlan.{planner_task_id, disposition, tasks, task_specs, reducers}` | `PlannerOutcome { plan_spec, work_items, deferred_goal_for_next_iteration }` on the attempt |
 | `GeneratorSubmission` / `ReducerSubmission` | `WorkerOutcomeSubmission` |
 | `PlannerSubmission` / `PlannerFailureSubmission` / `PlannerFailReason` | `PlanOutcomeSubmission`; planner failure is an attempt lifecycle transition |
 | `IterationOutcome` / `WorkflowOutcome` lifecycle enums | read-side projections (§11) |
-| `summary` / `failure_summary` / `review_summary` text fields | `outcome` |
+| `summary` / `failure_summary` / `review_summary` / `outcome` text fields | delete from structured target DTOs |
 
 ## 5. IDs
 
@@ -320,25 +313,25 @@ Delete or rewrite code concepts:
 | `AttemptId` / `IterationId` / `WorkflowId` | keep | Lifecycle aggregation keys (on the lifecycle rows, not on the task store). |
 
 No deterministic task-id functions, no reverse parsers, no `{attempt}:{...}` encoding.
-The attempt↔task and work_item↔task bindings are materialized in the
-`AttemptExecutionTree`:
+No workflow lifecycle type stores task ids. The `AttemptExecutionTree` is the
+work-item DAG and worker outcome index:
 
 ```rust
 pub struct AttemptExecutionTree {
     pub plan_id: PlanId,
-    pub planner_task_id: Option<TaskId>,    // bound when the planner is spawned
     pub nodes: Vec<ExecutionNode>,          // materialized on submit_plan_outcome
 }
 pub struct ExecutionNode {
     pub work_item_id: WorkItemId,
     pub needs: Vec<WorkItemId>,             // DAG edges
-    pub task_id: Option<TaskId>,            // bound when this work item's worker is spawned
+    pub status: WorkItemStatus,             // Pending | Running | Done | Failed | Cancelled
+    pub worker_outcome: Option<WorkerOutcome>,
 }
 ```
 
-Enumerate an attempt's worker tasks from `execution_tree.nodes[].task_id`; find the
-worker for `work_item_id` by node lookup. The only query that filtered tasks by
-attempt (`latch_attempt_tasks_cancelled`) now reads task ids from the tree.
+Find a worker by `work_item_id` through the node lookup. Cancellation and
+in-process control use the active-run registry keyed by workflow coordinates and
+`work_item_id`, not persisted task ids.
 
 ## 6. Target Contracts
 
@@ -354,56 +347,41 @@ pub struct WorkItemSpec {
     pub needs: Vec<WorkItemId>,
 }
 
-/// WORKFLOW-TASK family outcome (AgentType::Agent). Stored as task_outcome JSON.
+/// Planner result owned by the attempt, not by an agent-run row.
 #[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum TaskOutcome {
-    /// Root request result (user-facing).            (TaskRole::Root)
-    Root { is_pass: bool, outcome: String },
-    /// The planner's full plan (single source of truth for the attempt plan).
-    ///                                               (TaskRole::Planner)
-    Planner {
-        plan_spec: String,
-        work_items: Vec<WorkItemSpec>,
-        /// Concrete current-iteration goal items carried to the next iteration.
-        deferred_goal_for_next_iteration: Option<DeferredGoal>,
-    },
-    /// One worker's deliverable or blocker.          (TaskRole::Worker)
-    Worker { is_pass: bool, outcome: String },
+pub struct PlannerOutcome {
+    pub plan_spec: String,
+    pub work_items: Vec<WorkItemSpec>,
+    /// Concrete current-iteration goal items carried to the next iteration.
+    pub deferred_goal_for_next_iteration: Option<DeferredGoal>,
+}
+
+/// Worker result owned by an execution-tree node keyed by work_item_id.
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct WorkerOutcome {
+    pub is_pass: bool,
 }
 
 /// PARENTED family outcome (AgentType::{Subagent, Advisor}). Stored as parented_runs.parented_outcome.
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ParentedOutcome {
-    Advisor  { verdict: AdvisorVerdict, outcome: String },
-    Subagent { outcome: String },
+    Advisor  { verdict: AdvisorVerdict },
+    Subagent {},
 }
 
 pub enum AdvisorVerdict { Approve, Reject }   // promoted from the tool-private Verdict; homed in outcome.rs
 
-/// Lean, lineage-free persisted task (Task store).
-pub struct Task {
-    pub id: TaskId,                      // opaque, store-minted
-    pub request_id: RequestId,
-    pub role: TaskRole,                  // Root | Planner | Worker
-    pub instruction: String,             // universal runner input (worker = work_spec)
-    pub status: TaskStatus,
-    pub agent_name: Option<String>,
-    pub task_outcome: Option<TaskOutcome>,
-}
-
 /// Root/planner/worker agent-run row. The raw terminal payload is kept for agent-run
-/// compatibility; task_outcome is the typed mirror of that same terminal tool result.
+/// record/audit compatibility; typed workflow outcomes live on Attempt/ExecutionNode.
 pub struct AgentRun {
-    pub task_id: TaskId,
     pub agent_run_id: AgentRunId,
     pub request_id: RequestId,
-    pub role: TaskRole,                  // Root | Planner | Worker
-    pub status: TaskStatus,
+    pub role: AgentRunRole,              // Root | Planner | Worker
+    pub instruction: String,
+    pub status: RunStatus,
     pub agent_name: AgentName,
     pub terminal_payload: Option<JsonObject>,
-    pub task_outcome: Option<TaskOutcome>,
     pub token_count: i64,
     pub error: Option<String>,
     pub created_at: UtcDateTime,
@@ -413,12 +391,10 @@ pub struct AgentRun {
 
 /// Advisor/subagent run row. Parented outcome is the typed mirror of the raw payload.
 pub struct ParentedRun {
-    pub task_id: TaskId,
     pub agent_run_id: AgentRunId,
     pub request_id: RequestId,
-    pub status: TaskStatus,
+    pub status: RunStatus,
     pub parent_agent_run_id: AgentRunId,
-    pub parent_task_id: TaskId,
     pub kind: ParentedAgentRunKind,       // Advisor | Subagent
     pub tool_use_id: Option<ToolUseId>,
     pub agent_name: AgentName,
@@ -431,20 +407,21 @@ pub struct ParentedRun {
     pub finished_at: Option<UtcDateTime>,
 }
 
-/// Attempt lifecycle. The plan lives in the planner's TaskOutcome::Planner; the
-/// execution tree is the attempt↔task index. No MaterializedPlan, no planner_task_id field.
+/// Attempt lifecycle. The plan lives on the attempt; the execution tree is the
+/// work-item DAG and worker outcome index. No MaterializedPlan and no task-id fields.
 pub struct Attempt {
     pub id: AttemptId,
     pub iteration_id: IterationId,
     pub workflow_id: WorkflowId,         // denormalized; derivable via iteration_id
     pub attempt_sequence_no: i64,
     pub plan_id: PlanId,                 // minted at creation
+    pub planner_outcome: Option<PlannerOutcome>,
     pub execution_tree: AttemptExecutionTree,
     pub state: AttemptState,
 }
 
 pub enum AttemptState {
-    Planning { started: bool },          // started guards double-start (the planner_task_id lives in the tree)
+    Planning { started: bool },          // started guards double-start
     Running,
     Closed { closure: AttemptClosure },
 }
@@ -459,11 +436,10 @@ pub enum AttemptClosure {                // no stored outcomes Vec
 Aggregation outcomes are **read-side projections** (recursive; computed, not stored):
 
 ```rust
-// PlannerOutcome ≡ TaskOutcome::Planner payload; WorkerOutcome ≡ TaskOutcome::Worker payload.
 pub struct AttemptOutcome {
     pub status: bool,                        // plan returned AND every worker is_pass (empty workers => false)
-    pub planner_outcome: PlannerOutcome,     // via execution_tree.planner_task_id
-    pub worker_outcomes: Vec<WorkerOutcome>, // via execution_tree.nodes[].task_id
+    pub planner_outcome: PlannerOutcome,     // from Attempt.planner_outcome
+    pub worker_outcomes: Vec<WorkerOutcome>, // from execution_tree.nodes[].worker_outcome
 }
 pub struct IterationOutcome {
     pub status: bool,                        // = returned_attempt.status
@@ -483,18 +459,19 @@ scheduling; the projection `status` is the terminal pass/fail roll-up.
 
 ## 7. Model-Facing Tool Contracts
 
-Each terminal keeps a small model-facing input, maps it onto the owning `TaskStatus`,
-and records the raw terminal payload plus the equivalent typed outcome on the run.
-The schedulable `Task` exposes only the typed `task_outcome`.
+Each terminal keeps a small model-facing input and records the raw terminal payload
+on the run record. Typed workflow results are written only to the workflow-owned
+fields (`Attempt.planner_outcome`, `ExecutionNode.worker_outcome`, request status,
+or `ParentedRun.parented_outcome`).
 
-### `submit_root_task_outcome`
+### `submit_root_outcome`
 
 ```rust
-pub struct SubmitRootTaskOutcomeInput { pub status: SubmissionStatus, pub outcome: String }
+pub struct SubmitRootOutcomeInput { pub status: SubmissionStatus }
 ```
 
-Maps `SubmissionStatus` onto the root task `TaskStatus` (+ `RequestStatus`) and
-records `TaskOutcome::Root { is_pass, outcome }` (`is_pass = status == Success`).
+Maps `SubmissionStatus` onto the root run status and `RequestStatus`; there is no
+typed root outcome mirror.
 
 ### `submit_plan_outcome`
 
@@ -528,11 +505,12 @@ pub struct PlanOutcomeSubmission {
 
 Rules:
 
-- A model-submitted plan records `TaskOutcome::Planner` on the planner run and sets
-  the planner `TaskStatus::Done`, **and materializes the attempt's
-  `execution_tree.nodes`** from `work_items` (`work_item_id` + `needs`, `task_id = None`).
-- A planner that fails to return creates no `TaskOutcome::Planner`; the runtime marks
-  the planner task `Failed` (synthesized) and the attempt closes failed.
+- A model-submitted plan records the raw terminal payload on the planner run, sets
+  the planner `RunStatus::Done`, records `Attempt.planner_outcome`, **and materializes
+  the attempt's `execution_tree.nodes`** from `work_items` (`work_item_id` + `needs`,
+  initial status).
+- A planner that fails to return creates no `PlannerOutcome`; the runtime marks
+  the planner run `Failed` (synthesized) and the attempt closes failed.
 - `SubmitPlanOutcomeInput` has no `status` (a returned plan is success by
   construction) and the model never sends a task id.
 - Terminal metadata may include `attempt_id` and
@@ -554,7 +532,7 @@ Model JSON:
 ### `submit_worker_outcome`
 
 ```rust
-pub struct SubmitWorkerOutcomeInput { pub status: SubmissionStatus, pub outcome: String }
+pub struct SubmitWorkerOutcomeInput { pub status: SubmissionStatus }
 ```
 
 Internal submission:
@@ -562,39 +540,36 @@ Internal submission:
 ```rust
 pub struct WorkerOutcomeSubmission {
     pub attempt_id: AttemptId,
-    pub task_id: TaskId,
     pub work_item_id: WorkItemId,
-    pub status: SubmissionStatus,   // maps onto is_pass + the worker task's TaskStatus
-    pub outcome: String,
+    pub status: SubmissionStatus,   // maps onto is_pass + the worker node/run status
 }
 ```
 
 Rules:
 
-- Records `TaskOutcome::Worker { is_pass, outcome }` and updates the worker
-  `TaskStatus` (`is_pass = status == Success`).
+- Records `WorkerOutcome { is_pass }` on
+  `execution_tree.nodes[work_item_id]` and updates the worker run status.
 - A worker that fails to return is synthesized by workflow runtime as a failed worker
-  whose `TaskOutcome::Worker.outcome` explains the missing terminal.
-- The worker is keyed by both opaque `task_id` and planner-authored `work_item_id`;
-  the runtime knows both from the launch context.
-- Terminal metadata may include `attempt_id`, `task_id`, `work_item_id`; it must not
-  include `submission_kind`.
+  with `is_pass = false`; diagnostic text stays in run error/raw terminal audit fields.
+- The worker is keyed in workflow state by planner-authored `work_item_id`.
+- Terminal metadata may include `attempt_id` and `work_item_id`; it must not include
+  any task/run id or `submission_kind`.
 
 ### `submit_advisor_outcome`
 
 ```rust
-pub struct SubmitAdvisorOutcomeInput { pub verdict: AdvisorVerdict, pub outcome: String }
+pub struct SubmitAdvisorOutcomeInput { pub verdict: AdvisorVerdict }
 ```
 
-Records `ParentedOutcome::Advisor { verdict, outcome }`. Renames `submit_advisor_feedback`.
+Records `ParentedOutcome::Advisor { verdict }`. Renames `submit_advisor_feedback`.
 
 ### `submit_subagent_outcome`
 
 ```rust
-pub struct SubmitSubagentOutcomeInput { pub outcome: String }
+pub struct SubmitSubagentOutcomeInput {}
 ```
 
-Records `ParentedOutcome::Subagent { outcome }`. Renames `submit_subagent_result`.
+Records `ParentedOutcome::Subagent {}`. Renames `submit_subagent_result`.
 Do not keep a half-typed `findings`/`references` shape.
 
 ## 8. Workflow Submission API
@@ -616,7 +591,7 @@ Delete `apply_plan` / `submit_generator` / `apply_reducer`.
 
 | Current | Target | Action |
 | --- | --- | --- |
-| `submit_root_outcome` | `submit_root_task_outcome` | rename |
+| `submit_root_task_outcome` | `submit_root_outcome` | remove `Task` from the terminal name |
 | `submit_planner_outcome` | `submit_plan_outcome` | rename; no planner task id from the model |
 | `submit_generator_outcome` | `submit_worker_outcome` | replace |
 | `submit_reducer_outcome` | none | delete |
@@ -626,13 +601,13 @@ Delete `apply_plan` / `submit_generator` / `apply_reducer`.
 Terminal tool enum target:
 
 ```rust
-pub enum TerminalTool { RootTask, Plan, Worker, Advisor, Subagent }
+pub enum TerminalTool { Root, Plan, Worker, Advisor, Subagent }
 ```
 
 `ToolName::ALL` shrinks by one terminal after deleting reducer:
 
 ```text
-SubmitRootTaskOutcome · SubmitPlanOutcome · SubmitWorkerOutcome · SubmitAdvisorOutcome · SubmitSubagentOutcome
+SubmitRootOutcome · SubmitPlanOutcome · SubmitWorkerOutcome · SubmitAdvisorOutcome · SubmitSubagentOutcome
 ```
 
 ## 10. Work Item Plan Contract
@@ -670,10 +645,8 @@ runs + the `AttemptExecutionTree`; never stored). Status rolls up bottom-up.
 
 Attempt (`AttemptOutcome`):
 
-- `planner_outcome` = the planner run's `TaskOutcome::Planner` (via
-  `execution_tree.planner_task_id`).
-- `worker_outcomes` = each node's worker `TaskOutcome::Worker` (via
-  `execution_tree.nodes[].task_id`).
+- `planner_outcome` = `Attempt.planner_outcome`.
+- `worker_outcomes` = each node's `worker_outcome`.
 - `status` = the planner returned a plan **and** every worker `is_pass`. An attempt
   whose planner failed (no plan, no workers) is `status = false` — do not read the
   vacuously-true empty-`all()`.
@@ -700,7 +673,7 @@ enums. "Continue vs complete" for an iteration is `deferred_goal.is_some()`.
 
 ## 12. Context Recipe Design
 
-Context renders role-specific text directly from workflow state + run `TaskOutcome`s.
+Context renders role-specific text directly from workflow state.
 No public `ContextOutcomeSlice`/`ContextOutcomeView` contract.
 
 ```rust
@@ -712,7 +685,6 @@ pub enum ContextScope {
         workflow_id: WorkflowId,
         iteration_id: IterationId,
         attempt_id: AttemptId,
-        task_id: TaskId,
         work_item_id: WorkItemId,
     },
 }
@@ -731,7 +703,7 @@ Planner context always includes `<workflow_goal>` and `<current_iteration_goal>`
 plus **exactly one** of:
 
 - `<previous_attempts>`: retry evidence from failed attempts in the current
-  iteration (read from those attempts' worker `TaskOutcome::Worker` via the tree).
+  iteration (read from those attempts' `WorkerOutcome`s via the tree).
 - `<latest_iteration>`: continuation evidence from the latest successful previous
   iteration.
 
@@ -747,17 +719,16 @@ iteration goal items intentionally carried into the next iteration.
 
 Worker context includes:
 
-- `<plan_spec>`: the planner's plan-level explanation (from `TaskOutcome::Planner`).
-- `<work_item>`: this worker's `work_item_id`, `task_id`, and `work_spec`.
-- `<needs>`: direct dependency outcomes only — each need's worker
-  `TaskOutcome::Worker.outcome`, resolved by mapping the `WorkItemId` edge through the
-  attempt's `execution_tree` (`work_item_id -> task_id`).
+- `<plan_spec>`: the planner's plan-level explanation (from `Attempt.planner_outcome`).
+- `<work_item>`: this worker's `work_item_id` and `work_spec`.
+- `<needs>`: direct dependency statuses only, resolved by `WorkItemId` edge lookup
+  in the attempt's `execution_tree`.
 
 Worker directive:
 
 ```text
 Complete <work_item> using <plan_spec> and direct <needs>. Submit exactly one
-worker outcome.
+worker status.
 ```
 
 Worker render shape:
@@ -766,11 +737,11 @@ Worker render shape:
 <context role="worker">
   <plan_spec>The planner-level explanation of how this attempt is structured.</plan_spec>
   <needs>
-    <work_item id="w1" task_id="...">
-      <outcome>Direct dependency outcome.</outcome>
+    <work_item id="w1">
+      <status>success</status>
     </work_item>
   </needs>
-  <work_item id="w2" task_id="...">
+  <work_item id="w2">
     <agent_name>executor</agent_name>
     <work_spec>The exact instruction for this worker only.</work_spec>
   </work_item>
@@ -786,22 +757,22 @@ only, not `w1`, unless the planner sets `"needs": ["w1", "w2"]`. Filtering lives
 ### Phase 1 - Types, DB, And Records
 
 - Add `WorkItemId`, `PlanId`, `WorkItemSpec`, `AttemptExecutionTree`, `ExecutionNode`,
-  the `TaskOutcome` enum (with `is_pass`), `ParentedOutcome`, `AdvisorVerdict`, the
+  `PlannerOutcome`, `WorkerOutcome`, `ParentedOutcome`, `AdvisorVerdict`, the
   read-side projection structs, and the submission structs.
 - Delete `MaterializedPlan`, `PlanDisposition`, `ExecutionRole`, `ExecutionTaskOutcome`,
   `PlannerId`, `GeneratorId`, `ReducerId`, `WorkflowNodeId`, the deterministic task-id
-  functions + reverse parsers, and `Task.{outcomes, attempt_id, workflow_id,
-  iteration_id, needs, work_item_id}`; rename `is_terminal_generator -> is_terminal`.
-- `TaskRole` -> `{Root, Planner, Worker}`; `WorkflowTaskRole` -> `{Planner, Worker}`.
+  functions + reverse parsers, `Task`, `TaskId`, `TaskRole`, `TaskStatus`,
+  `TaskOutcome`, and `task_runs`; rename `is_terminal_generator -> is_terminal`.
+- Add `AgentRunRole -> {Root, Planner, Worker}` and `RunStatus`; delete `WorkflowTaskRole`.
 - `eos-db` schema (edit `0001_initial.sql` in place; verify no deployed DB):
   - `workflows`: `launched_by_agent_run_id -> parent_agent_run_id`, `goal -> workflow_goal`, drop `outcomes`.
   - `iterations`: `goal -> iteration_goal`, add `workflow_goal`, drop `outcomes`, drop `deferred_goal_for_next_iteration`.
   - `attempts`: add `plan_id`, `execution_tree`; drop `planner_task_id`, `generator_task_ids`, `reducer_task_ids`, `outcomes`, `deferred_goal`.
-  - `tasks`: `task_id` opaque; `role IN ('root','planner','worker')`; drop `attempt_id`, `workflow_id`, `iteration_id`, `work_item_id`, `needs`, `outcomes`, `terminal_tool_result`, and their indexes; add nullable `task_outcome` TaskOutcome JSON.
-  - `task_runs`: drop workflow coordinate columns/indexes; keep `terminal_payload` for raw agent terminal compatibility and add nullable typed `task_outcome` mirroring the same TaskOutcome JSON.
+  - `tasks` / `task_runs`: delete or migrate into `agent_runs`; no `task_id` or typed outcome mirror survives.
+  - `agent_runs`: `agent_run_id` primary key; keep `terminal_payload` for raw agent terminal compatibility; no `run_outcome`.
   - `parented_runs`: keep `terminal_payload` and add nullable typed `parented_outcome` mirroring the same ParentedOutcome JSON.
-  - `rows.rs`: drop `MaterializedPlan` reconstruction, the `generator`/`reducer` parse, and the outcome normalizer; rebuild `latch_attempt_tasks_cancelled` to read ids from the `execution_tree`.
-- `eos-agent-run`: reshape `SpawnAgentTarget::Workflow` to `{ coords, role, plan_id, work_item_id? }`; the store mints the opaque `task_id`.
+  - `rows.rs`: drop `MaterializedPlan` reconstruction, the `generator`/`reducer` parse, and the outcome normalizer; rebuild cancellation around the active-run registry instead of persisted attempt task ids.
+- `eos-agent-run`: reshape `SpawnAgentTarget::Workflow` to `{ coords, role, plan_id, work_item_id? }`; the run store mints `agent_run_id`.
 
 Verification:
 
@@ -824,13 +795,13 @@ Verification: `cd agent-core && cargo check -p eos-tool --all-targets`
 
 ### Phase 3 - Workflow Runtime
 
-- Keep planner run creation; the planner `task_id` is opaque (recorded in the tree).
+- Keep planner run creation; no planner task id is created or recorded.
 - Replace `GeneratorLaunch`/`ReducerLaunch` with the worker arm of the `AgentLaunch`
   struct+kind (`kind = Planner { plan_id } | Worker { work_item_id }`).
 - Lazy-spawn workers from the tree (no eager materialization of worker rows); readiness
-  over the `execution_tree` nodes + spawned worker statuses.
+  over the `execution_tree` node statuses.
 - Rewrite worker run settlement and missing-terminal synthesis to record
-  `TaskOutcome::Worker`.
+  `WorkerOutcome`.
 - Dissolve `ids.rs` and `state.rs`; rewrite the stranded test trees.
 
 Verification: `cd agent-core && cargo test -p eos-workflow attempt -- --nocapture`
@@ -853,8 +824,7 @@ cd agent-core && cargo test -p eos-workflow service -- --nocapture
 
 - `ContextScope`/`ContextRole` -> `{Planner, Worker}`; collapse context to
   `planner_context.rs` + `worker_context.rs` + `render.rs`.
-- Render worker `<needs>` from the `execution_tree` (`work_item_id -> task_id`) +
-  sibling `TaskOutcome::Worker`.
+- Render worker `<needs>` from sibling `execution_tree` nodes by `work_item_id`.
 - Update `.eos-agents/profile/main/planner.md` and `executor.md`.
 
 Verification: `cd agent-core && cargo test -p eos-workflow context -- --nocapture`
@@ -882,30 +852,29 @@ scheduled for deletion.
 - No reducer row can be created.
 - Exactly one planner run per attempt; the planner is never a worker-DAG member and
   the model never sends a task id.
-- `task_id` is opaque (store-minted at `spawn_agent`), uniform for root/planner/worker;
-  no `worker_task_id`/`planner_task_id` derivation, no `{attempt}:{...}` encoding, no
-  reverse parsers, no `WorkflowNodeId`.
-- `Task`/`task_runs` carry no `attempt_id`/`workflow_id`/`iteration_id`/`needs`/
-  `work_item_id`/`outcomes`; `Task` drops `terminal_tool_result` and exposes
-  `task_outcome: Option<TaskOutcome>`; `AgentRun` keeps the raw terminal payload
-  alongside the equivalent typed `task_outcome`; `ParentedRun` keeps the raw
-  terminal payload alongside the equivalent typed `parented_outcome`.
+- No `Task`, `TaskId`, `TaskRole`, `TaskStatus`, `TaskOutcome`, `RunOutcome`,
+  `task_runs`, `worker_task_id`/`planner_task_id` derivation, `{attempt}:{...}`
+  encoding, reverse parsers, or `WorkflowNodeId`.
+- `agent_runs` are keyed by `agent_run_id`, carry no
+  `attempt_id`/`workflow_id`/`iteration_id`/`needs`/`work_item_id`, and keep only
+  raw terminal payload. `ParentedRun` keeps raw terminal payload beside
+  `parented_outcome`.
 - `Attempt` carries `plan_id` (minted) + `execution_tree`; no `MaterializedPlan`, no
   `planner_task_id`/`generator_task_ids`/`reducer_task_ids` columns.
-- Two per-family outcome enums: `TaskOutcome {Root,Planner,Worker}` and
-  `ParentedOutcome {Advisor,Subagent}`; `PlanOutcome`/`WorkItemOutcome`/
-  `ExecutionTaskOutcome`/`Task.outcomes` do not exist.
-- `TaskOutcome::{Root,Worker}` carry `is_pass`; `Planner` carries the full plan
-  (`plan_spec` + `work_items` + `deferred_goal_for_next_iteration`) and no `is_pass`.
+- Workflow-owned typed results are `PlannerOutcome`, `WorkerOutcome { is_pass }`,
+  and `ParentedOutcome`; `TaskOutcome`, `RunOutcome`, `PlanOutcome`,
+  `WorkItemOutcome`, `ExecutionTaskOutcome`, and `Task.outcomes` do not exist.
+- No structured `outcome` field exists in target DTOs.
 - `AttemptOutcome`/`IterationOutcome`/`WorkflowOutcome` are recursive read-side
   projections with a rolled-up `status: bool`; the lifecycle disposition enums are
   gone; the deferred goal is derived from the planner outcome and the
   `iterations.deferred_goal_for_next_iteration` column does not exist.
 - No model-facing tool named `submit_generator_outcome`, `submit_reducer_outcome`, or
   `submit_planner_outcome`; terminals are the five `Submit*Outcome` tools.
-- `submit_plan_outcome` records `TaskOutcome::Planner` and materializes the
-  `execution_tree`; `submit_worker_outcome` records `TaskOutcome::Worker` and updates
-  the worker status; `submit_root_task_outcome` records `TaskOutcome::Root`.
+- `submit_plan_outcome` records `Attempt.planner_outcome` and materializes the
+  `execution_tree`; `submit_worker_outcome` records `WorkerOutcome { is_pass }`
+  and updates the worker status; `submit_root_outcome` updates request/root-run
+  status only.
 - Schema renames applied: `workflows.{parent_agent_run_id, workflow_goal}`,
   `iterations.{iteration_goal, workflow_goal}`.
 - Worker context contains `plan_spec`, the current work item, and direct needs

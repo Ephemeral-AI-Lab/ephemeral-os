@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentDefinition, AgentName, AgentRegistry, AgentRunId, AgentType, Attempt, AttemptStore,
-    IterationStore, PlanId, RequestId, WorkItemId, WorkItemSpec, WorkflowCoordinates,
-    WorkflowStore, WorkflowAgentRole,
+    AgentDefinition, AgentName, AgentRegistry, AgentRunId, AgentRunStore, AgentType, Attempt,
+    AttemptStore, IterationStore, RequestId, WorkItemSpec, WorkflowStore,
 };
 
 use crate::config::WorkflowLifecycleConfig;
@@ -48,31 +47,13 @@ pub trait AgentRunner: Send + Sync {
     async fn run(&self, launch: AgentLaunch) -> Result<AgentRunReport>;
 }
 
-/// Planner or worker launch discriminator.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AgentLaunchKind {
-    /// Planner run for the attempt.
-    Planner,
-    /// Worker run for one work item.
-    Worker {
-        /// Planner-authored work item id.
-        work_item_id: WorkItemId,
-    },
-}
-
 /// Launch descriptor for one workflow agent.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AgentLaunch {
-    /// Launch kind.
-    pub kind: AgentLaunchKind,
     /// Opaque agent-run id.
     pub agent_run_id: AgentRunId,
     /// Owning request.
     pub request_id: RequestId,
-    /// Workflow coordinates.
-    pub coords: WorkflowCoordinates,
-    /// Attempt-local plan id.
-    pub plan_id: PlanId,
     /// Bound profile name.
     pub agent_name: AgentName,
     /// Persisted task instruction.
@@ -88,46 +69,10 @@ pub struct AgentLaunch {
 }
 
 impl AgentLaunch {
-    /// Workflow task role.
-    #[must_use]
-    pub const fn role(&self) -> WorkflowAgentRole {
-        match self.kind {
-            AgentLaunchKind::Planner => WorkflowAgentRole::Planner,
-            AgentLaunchKind::Worker { .. } => WorkflowAgentRole::Worker,
-        }
-    }
-
     /// Agent-run id.
     #[must_use]
     pub const fn agent_run_id(&self) -> &AgentRunId {
         &self.agent_run_id
-    }
-
-    /// Worker work item id, if this launch is a worker.
-    #[must_use]
-    pub const fn work_item_id(&self) -> Option<&WorkItemId> {
-        match &self.kind {
-            AgentLaunchKind::Planner => None,
-            AgentLaunchKind::Worker { work_item_id } => Some(work_item_id),
-        }
-    }
-
-    /// Attempt id.
-    #[must_use]
-    pub const fn attempt_id(&self) -> &eos_types::AttemptId {
-        &self.coords.attempt_id
-    }
-
-    /// Iteration id.
-    #[must_use]
-    pub const fn iteration_id(&self) -> &eos_types::IterationId {
-        &self.coords.iteration_id
-    }
-
-    /// Workflow id.
-    #[must_use]
-    pub const fn workflow_id(&self) -> &eos_types::WorkflowId {
-        &self.coords.workflow_id
     }
 }
 
@@ -140,6 +85,8 @@ pub struct AttemptResources {
     pub(crate) iteration_store: Arc<dyn IterationStore>,
     /// Attempt store.
     pub(crate) attempt_store: Arc<dyn AttemptStore>,
+    /// Agent-run store.
+    pub(crate) agent_run_store: Arc<dyn AgentRunStore>,
     /// Agent registry.
     pub(crate) agent_registry: Arc<AgentRegistry>,
     /// Active attempt registry.
@@ -157,7 +104,10 @@ pub struct AttemptResources {
 impl std::fmt::Debug for AttemptResources {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AttemptResources")
-            .field("max_concurrent_worker_runs", &self.max_concurrent_worker_runs)
+            .field(
+                "max_concurrent_worker_runs",
+                &self.max_concurrent_worker_runs,
+            )
             .field(
                 "has_iteration_coordinators",
                 &self.iteration_coordinators.is_some(),
@@ -173,6 +123,7 @@ impl AttemptResources {
         workflow_store: Arc<dyn WorkflowStore>,
         iteration_store: Arc<dyn IterationStore>,
         attempt_store: Arc<dyn AttemptStore>,
+        agent_run_store: Arc<dyn AgentRunStore>,
         agent_registry: Arc<AgentRegistry>,
         runner: Arc<dyn AgentRunner>,
     ) -> Self {
@@ -180,6 +131,7 @@ impl AttemptResources {
             workflow_store,
             iteration_store,
             attempt_store,
+            agent_run_store,
             agent_registry,
             runner,
             active_attempt_runs: Arc::new(ActiveAttemptRuns::new()),
@@ -248,26 +200,13 @@ impl AgentLaunchFactory {
         attempt: &Attempt,
         agent_run_id: AgentRunId,
     ) -> Result<AgentLaunch> {
-        let iteration = self
-            .deps
-            .iteration_store
-            .get(&attempt.iteration_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("iteration", attempt.iteration_id.as_str()))?;
         let agent_name = AgentName::new("planner")?;
-        let agent_def = self.agent_definition(&agent_name, WorkflowAgentRole::Planner)?;
-        let context = render_planner_agent_context(&self.deps, attempt, &agent_run_id).await?;
+        let agent_def = self.agent_definition(&agent_name, AgentType::Planner)?;
+        let context = render_planner_agent_context(&self.deps, attempt).await?;
         let context_xml = render_context_xml(&context);
         Ok(AgentLaunch {
-            kind: AgentLaunchKind::Planner,
             agent_run_id,
             request_id: self.deps.request_id_for_attempt(attempt).await?,
-            coords: WorkflowCoordinates {
-                workflow_id: attempt.workflow_id.clone(),
-                iteration_id: iteration.id,
-                attempt_id: attempt.id.clone(),
-            },
-            plan_id: attempt.plan_id.clone(),
             agent_name,
             instruction: context_xml.clone(),
             context: context_xml,
@@ -286,28 +225,12 @@ impl AgentLaunchFactory {
         work_item: &WorkItemSpec,
         agent_run_id: AgentRunId,
     ) -> Result<AgentLaunch> {
-        let iteration = self
-            .deps
-            .iteration_store
-            .get(&attempt.iteration_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("iteration", attempt.iteration_id.as_str()))?;
-        let agent_def = self.agent_definition(&work_item.agent_name, WorkflowAgentRole::Worker)?;
-        let context =
-            render_worker_agent_context(&self.deps, attempt, work_item, &agent_run_id).await?;
+        let agent_def = self.agent_definition(&work_item.agent_name, AgentType::Worker)?;
+        let context = render_worker_agent_context(&self.deps, attempt, work_item).await?;
         let context_xml = render_context_xml(&context);
         Ok(AgentLaunch {
-            kind: AgentLaunchKind::Worker {
-                work_item_id: work_item.id.clone(),
-            },
             agent_run_id,
             request_id: self.deps.request_id_for_attempt(attempt).await?,
-            coords: WorkflowCoordinates {
-                workflow_id: attempt.workflow_id.clone(),
-                iteration_id: iteration.id,
-                attempt_id: attempt.id.clone(),
-            },
-            plan_id: attempt.plan_id.clone(),
             agent_name: work_item.agent_name.clone(),
             instruction: work_item.work_spec.clone(),
             context: context_xml,
@@ -323,7 +246,7 @@ impl AgentLaunchFactory {
     fn agent_definition(
         &self,
         agent_name: &AgentName,
-        role: WorkflowAgentRole,
+        expected_type: AgentType,
     ) -> Result<AgentDefinition> {
         let agent_def = self
             .deps
@@ -337,12 +260,12 @@ impl AgentLaunchFactory {
             })?
             .as_ref()
             .clone();
-        if agent_def.agent_type != AgentType::Agent {
+        if agent_def.agent_type != expected_type {
             return Err(WorkflowError::invariant(format!(
-                "workflow {} launch is bound to agent {:?} with type {:?}, expected agent",
-                role.as_str(),
+                "workflow launch is bound to agent {:?} with type {:?}, expected {:?}",
                 agent_name.as_str(),
-                agent_def.agent_type
+                agent_def.agent_type,
+                expected_type
             )));
         }
         Ok(agent_def)

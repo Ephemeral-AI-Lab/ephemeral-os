@@ -322,23 +322,6 @@ mod config {
                 .get(&name)
                 .expect("ToolConfigSet validated at load: every ToolName is present")
         }
-
-        /// Return a config set whose planner-deferral depth hooks use the workflow
-        /// runtime depth bound.
-        #[must_use]
-        pub fn with_workflow_max_depth(mut self, max_depth: u32) -> Self {
-            for config in self.configs.values_mut() {
-                for hook in &mut config.hooks {
-                    if let Hook::DisallowNestedPlannerDeferral {
-                        max_depth: depth, ..
-                    } = hook
-                    {
-                        *depth = max_depth;
-                    }
-                }
-            }
-            self
-        }
     }
 
     /// A failure loading or validating the tool config tree.
@@ -459,9 +442,7 @@ mod config {
             .collect()
     }
 
-    /// Parse one `hooks` entry: a bare `token` string, or a single-key
-    /// `{token: {params}}` mapping (currently only `max_depth` for
-    /// `disallow_nested_planner_deferral`).
+    /// Parse one `hooks` entry: a bare `token` string, or a single-key mapping.
     fn parse_hook_item(name: ToolName, item: &Value) -> Result<Hook, ToolConfigError> {
         let unknown = || ToolConfigError::UnknownHook {
             tool: name,
@@ -482,24 +463,12 @@ mod config {
         Err(unknown())
     }
 
-    /// Default deepest workflow depth still allowed to defer when a
-    /// `disallow_nested_planner_deferral` entry omits `max_depth` (depth > 1 ⇒
-    /// nested ⇒ denied — the historical emergent cap).
-    const DEFAULT_MAX_WORKFLOW_DEPTH: u32 = 1;
-
     /// Map a config token (see [`Hook::config_token`]) to its [`Hook`], filling the
-    /// `{ tool }` field from the owning tool and any per-hook `params`.
-    fn hook_from_token(tool: ToolName, token: &str, params: Option<&Value>) -> Option<Hook> {
+    /// `{ tool }` field from the owning tool.
+    fn hook_from_token(tool: ToolName, token: &str, _params: Option<&Value>) -> Option<Hook> {
         Some(match token {
             "no_background_sessions" => Hook::RequireNoBackgroundSessions { tool },
             "advisor_approval" => Hook::AdvisorApproval { tool },
-            "disallow_nested_planner_deferral" => Hook::DisallowNestedPlannerDeferral {
-                tool,
-                max_depth: params
-                    .and_then(|p| p.get("max_depth"))
-                    .and_then(Value::as_u64)
-                    .map_or(DEFAULT_MAX_WORKFLOW_DEPTH, |d| d as u32),
-            },
             "destructive_git_shell" => Hook::DestructiveGitShell { tool },
             "destructive_shell" => Hook::DestructiveShell { tool },
             "block_in_isolated_mode" => Hook::BlockInIsolatedMode { tool },
@@ -720,59 +689,12 @@ mod config {
             for hook in [
                 Hook::RequireNoBackgroundSessions { tool },
                 Hook::AdvisorApproval { tool },
-                Hook::DisallowNestedPlannerDeferral { tool, max_depth: 1 },
                 Hook::DestructiveGitShell { tool },
                 Hook::DestructiveShell { tool },
                 Hook::BlockInIsolatedMode { tool },
             ] {
                 assert_eq!(hook_from_token(tool, hook.config_token(), None), Some(hook));
             }
-        }
-
-        /// The parameterized `{disallow_nested_planner_deferral: {max_depth: N}}`
-        /// hooks entry parses the configured depth; the bare token defaults.
-        #[test]
-        fn disallow_nested_max_depth_parses_from_entry() {
-            let name = ToolName::SubmitPlanOutcome;
-            let configured: Value =
-                serde_yaml::from_str("{disallow_nested_planner_deferral: {max_depth: 3}}").unwrap();
-            assert_eq!(
-                parse_hook_item(name, &configured).unwrap(),
-                Hook::DisallowNestedPlannerDeferral {
-                    tool: name,
-                    max_depth: 3,
-                }
-            );
-
-            let bare: Value = serde_yaml::from_str("disallow_nested_planner_deferral").unwrap();
-            assert_eq!(
-                parse_hook_item(name, &bare).unwrap(),
-                Hook::DisallowNestedPlannerDeferral {
-                    tool: name,
-                    max_depth: DEFAULT_MAX_WORKFLOW_DEPTH,
-                }
-            );
-        }
-
-        #[test]
-        fn workflow_max_depth_overrides_deferral_hooks() {
-            let cfg = parse_tool_config(
-            ToolName::SubmitPlanOutcome,
-            "---\nintent: read_only\nterminal: true\nhooks: [{disallow_nested_planner_deferral: {max_depth: 1}}]\n---\nSubmit plan.\n",
-        )
-        .unwrap();
-            let set = ToolConfigSet {
-                configs: HashMap::from([(ToolName::SubmitPlanOutcome, cfg)]),
-            }
-            .with_workflow_max_depth(2);
-
-            assert_eq!(
-                set.get(ToolName::SubmitPlanOutcome).hooks,
-                vec![Hook::DisallowNestedPlannerDeferral {
-                    tool: ToolName::SubmitPlanOutcome,
-                    max_depth: 2,
-                }]
-            );
         }
     }
 }

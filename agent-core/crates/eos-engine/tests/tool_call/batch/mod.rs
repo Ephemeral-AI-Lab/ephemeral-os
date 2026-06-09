@@ -79,10 +79,7 @@ fn terminal_batch_rejected() {
     assert!(reject_terminal_batch(&[call("t1", "submit_root_outcome")], &registry).is_none());
 
     // Terminal + sibling: every call rejected with the same message.
-    let calls = [
-        call("t1", "submit_root_outcome"),
-        call("t2", "read_file"),
-    ];
+    let calls = [call("t1", "submit_root_outcome"), call("t2", "read_file")];
     let rejections = reject_terminal_batch(&calls, &registry).expect("rejected");
     assert_eq!(rejections.len(), 2);
     // Byte-exact verbatim contract (parity "EXACT Rejection Message"): flagged

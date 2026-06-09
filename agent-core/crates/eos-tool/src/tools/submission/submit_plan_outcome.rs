@@ -29,11 +29,10 @@ pub(super) struct SubmitPlanOutcomeInput {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 struct WorkItemSpecInput {
-    id: String,
     agent_name: String,
     work_spec: String,
     #[serde(default)]
-    needs: Vec<String>,
+    needs: Vec<usize>,
 }
 
 struct SubmitPlanOutcome {
@@ -64,8 +63,8 @@ impl ToolExecutor for SubmitPlanOutcome {
             return Ok(ToolResult::error(message));
         }
 
-        let attempt_id = ctx.require_attempt_id()?.clone();
-        let submission = match plan_submission(parsed, attempt_id) {
+        let agent_run_id = ctx.require_agent_run_id()?.clone();
+        let submission = match plan_submission(parsed, agent_run_id.clone()) {
             Ok(submission) => submission,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
@@ -82,10 +81,7 @@ impl ToolExecutor for SubmitPlanOutcome {
                 ("plan_spec", json!(plan_spec)),
                 ("work_items", json!(work_items)),
                 ("deferred_goal_for_next_iteration", json!(deferred_goal)),
-                (
-                    "attempt_id",
-                    json!(ctx.attempt_id.as_ref().map(eos_types::AttemptId::as_str)),
-                ),
+                ("agent_run_id", json!(agent_run_id.as_str())),
                 ("has_deferred_goal_for_next_iteration", json!(has_deferred)),
             ]),
         ))
@@ -94,24 +90,26 @@ impl ToolExecutor for SubmitPlanOutcome {
 
 fn plan_submission(
     parsed: SubmitPlanOutcomeInput,
-    attempt_id: eos_types::AttemptId,
+    agent_run_id: eos_types::AgentRunId,
 ) -> Result<PlanOutcomeSubmission, eos_types::CoreError> {
     Ok(PlanOutcomeSubmission {
-        attempt_id,
+        agent_run_id,
         plan_spec: parsed.plan_spec,
         work_items: parsed
             .work_items
             .into_iter()
+            .enumerate()
             .map(|item| {
+                let (index, item) = item;
                 Ok(WorkItemSpec {
-                    id: WorkItemId::new(item.id)?,
+                    id: generated_work_item_id(index + 1)?,
                     agent_name: AgentName::new(item.agent_name)
                         .map_err(|err| eos_types::CoreError::Store(err.to_string()))?,
                     work_spec: item.work_spec,
                     needs: item
                         .needs
                         .into_iter()
-                        .map(WorkItemId::new)
+                        .map(generated_work_item_id)
                         .collect::<Result<Vec<_>, _>>()?,
                 })
             })
@@ -130,18 +128,22 @@ fn validate_plan_input(input: &SubmitPlanOutcomeInput) -> Result<(), String> {
     if input.work_items.is_empty() {
         return Err("work_items must not be empty".to_owned());
     }
-    for item in &input.work_items {
-        if is_blank(&item.id) {
-            return Err("work item id must be nonblank".to_owned());
-        }
+    let work_item_count = input.work_items.len();
+    for (index, item) in input.work_items.iter().enumerate() {
         if is_blank(&item.agent_name) {
             return Err("agent_name must be nonblank".to_owned());
         }
         if is_blank(&item.work_spec) {
             return Err("work_spec must be nonblank".to_owned());
         }
-        if item.needs.iter().any(|need| is_blank(need)) {
-            return Err("needs must be nonblank".to_owned());
+        for need in &item.needs {
+            if *need == 0 || *need > work_item_count {
+                return Err(format!(
+                    "work item {} needs invalid work item number {}.",
+                    index + 1,
+                    need
+                ));
+            }
         }
     }
     if let Some(deferred) = &input.deferred_goal_for_next_iteration {
@@ -153,38 +155,15 @@ fn validate_plan_input(input: &SubmitPlanOutcomeInput) -> Result<(), String> {
 }
 
 fn validate_plan_structure(input: &SubmitPlanOutcomeInput) -> Result<(), String> {
-    let mut seen = BTreeSet::new();
-    for item in &input.work_items {
-        if !seen.insert(item.id.as_str()) {
-            return Err(format!(
-                "Plan contains duplicate work item id '{}'.",
-                item.id
-            ));
-        }
-    }
-    for item in &input.work_items {
-        for need in &item.needs {
-            if !seen.contains(need.as_str()) {
-                return Err(format!(
-                    "work item '{}' needs unknown work item '{}'.",
-                    item.id, need
-                ));
-            }
-        }
-    }
     assert_acyclic(input)
 }
 
 fn assert_acyclic(input: &SubmitPlanOutcomeInput) -> Result<(), String> {
-    let graph: BTreeMap<&str, Vec<&str>> = input
+    let graph: BTreeMap<usize, Vec<usize>> = input
         .work_items
         .iter()
-        .map(|item| {
-            (
-                item.id.as_str(),
-                item.needs.iter().map(String::as_str).collect::<Vec<_>>(),
-            )
-        })
+        .enumerate()
+        .map(|(index, item)| (index + 1, item.needs.clone()))
         .collect();
     let mut visiting = BTreeSet::new();
     let mut visited = BTreeSet::new();
@@ -194,26 +173,30 @@ fn assert_acyclic(input: &SubmitPlanOutcomeInput) -> Result<(), String> {
     Ok(())
 }
 
-fn visit<'a>(
-    id: &'a str,
-    graph: &BTreeMap<&'a str, Vec<&'a str>>,
-    visiting: &mut BTreeSet<&'a str>,
-    visited: &mut BTreeSet<&'a str>,
+fn visit(
+    id: usize,
+    graph: &BTreeMap<usize, Vec<usize>>,
+    visiting: &mut BTreeSet<usize>,
+    visited: &mut BTreeSet<usize>,
 ) -> Result<(), String> {
     if visited.contains(id) {
         return Ok(());
     }
     if !visiting.insert(id) {
         return Err(format!(
-            "Plan contains a dependency cycle involving '{id}'."
+            "Plan contains a dependency cycle involving work item {id}."
         ));
     }
-    for need in graph.get(id).into_iter().flatten().copied() {
+    for need in graph.get(&id).into_iter().flatten().copied() {
         visit(need, graph, visiting, visited)?;
     }
-    visiting.remove(id);
+    visiting.remove(&id);
     visited.insert(id);
     Ok(())
+}
+
+fn generated_work_item_id(position: usize) -> Result<WorkItemId, eos_types::CoreError> {
+    WorkItemId::new(format!("work-{position}"))
 }
 
 pub(super) fn register(

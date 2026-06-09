@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentRunId, IterationCreationReason, IterationStatus, OpenDelegatedWorkflow,
-    StartWorkflowRequest, StartedWorkflow, TaskId, ExecutionStatus, TerminalWorkflow, ToolUseId,
-    Workflow, WorkflowApi, WorkflowApiError, WorkflowId, WorkflowStatus, WorkflowTerminalStatus,
+    AgentRunId, ExecutionStatus, IterationCreationReason, IterationStatus, OpenDelegatedWorkflow,
+    RequestId, StartWorkflowRequest, StartedWorkflow, TerminalWorkflow, ToolUseId, Workflow,
+    WorkflowApi, WorkflowApiError, WorkflowId, WorkflowStatus, WorkflowTerminalStatus,
 };
 
 use crate::attempt::{AttemptResources, OpenIterationCoordinatorRegistry};
@@ -26,14 +26,8 @@ type IterationCoordinatorFuture<'a> = Pin<
 /// Rich result returned by the in-crate workflow runner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StartedWorkflowRun {
-    /// Launching task.
-    pub parent_task_id: TaskId,
     /// Created workflow id.
     pub workflow_id: WorkflowId,
-    /// Created iteration id.
-    pub iteration_id: eos_types::IterationId,
-    /// Created first attempt id.
-    pub attempt_id: eos_types::AttemptId,
     /// Delegated workflow goal.
     pub workflow_goal: String,
 }
@@ -64,11 +58,11 @@ impl WorkflowRun {
         }
     }
 
-    /// Start a delegated workflow from `parent_task_id`.
+    /// Start a delegated workflow from `parent_agent_run_id`.
     pub async fn start(
         &self,
         workflow_goal: &str,
-        parent_task_id: &TaskId,
+        request_id: &RequestId,
         parent_agent_run_id: &AgentRunId,
         tool_use_id: Option<&ToolUseId>,
     ) -> Result<StartedWorkflowRun> {
@@ -76,19 +70,13 @@ impl WorkflowRun {
         if workflow_goal.is_empty() {
             return Err(WorkflowError::BlankPrompt);
         }
-        let parent = self
-            .assert_parent_running_and_no_open_child(parent_task_id, parent_agent_run_id)
+        self.assert_parent_agent_run_can_delegate(parent_agent_run_id)
             .await?;
+        self.assert_no_open_child(parent_agent_run_id).await?;
         let workflow = self
             .deps
             .workflow_store
-            .insert(
-                &parent.request_id,
-                parent_task_id,
-                parent_agent_run_id,
-                tool_use_id,
-                workflow_goal,
-            )
+            .insert(request_id, parent_agent_run_id, tool_use_id, workflow_goal)
             .await?;
         let (iteration, coordinator) = self
             .create_iteration_with_coordinator(
@@ -97,40 +85,21 @@ impl WorkflowRun {
                 workflow_goal,
             )
             .await?;
-        let attempt = match coordinator.create_and_start_first_attempt().await {
-            Ok(attempt) => attempt,
+        match coordinator.create_and_start_first_attempt().await {
+            Ok(_) => {}
             Err(err) => {
                 self.compensate_failed_start(&workflow.id, &iteration.id)
                     .await?;
                 return Err(err);
             }
-        };
+        }
         Ok(StartedWorkflowRun {
-            parent_task_id: parent_task_id.clone(),
             workflow_id: workflow.id,
-            iteration_id: iteration.id,
-            attempt_id: attempt.id,
             workflow_goal: workflow_goal.to_owned(),
         })
     }
 
-    async fn assert_parent_running_and_no_open_child(
-        &self,
-        parent_task_id: &TaskId,
-        parent_agent_run_id: &AgentRunId,
-    ) -> Result<eos_types::Task> {
-        let task = self
-            .deps
-            .task_store
-            .get(parent_task_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("task", parent_task_id.as_str()))?;
-        if task.status != ExecutionStatus::Running {
-            return Err(WorkflowError::invariant(format!(
-                "task {:?} is not running; delegated workflow start requires a running parent task",
-                parent_task_id.as_str()
-            )));
-        }
+    async fn assert_no_open_child(&self, parent_agent_run_id: &AgentRunId) -> Result<()> {
         let open = self
             .deps
             .workflow_store
@@ -140,12 +109,32 @@ impl WorkflowRun {
             .find(eos_types::Workflow::is_open);
         if let Some(workflow) = open {
             return Err(WorkflowError::invariant(format!(
-                "task {:?} already has an open delegated workflow {:?}",
-                parent_task_id.as_str(),
+                "agent run {:?} already has an open delegated workflow {:?}",
+                parent_agent_run_id.as_str(),
                 workflow.id.as_str()
             )));
         }
-        Ok(task)
+        Ok(())
+    }
+
+    async fn assert_parent_agent_run_can_delegate(
+        &self,
+        parent_agent_run_id: &AgentRunId,
+    ) -> Result<()> {
+        let parent = self
+            .deps
+            .agent_run_store
+            .get_agent_run(parent_agent_run_id)
+            .await?
+            .ok_or_else(|| WorkflowError::not_found("agent run", parent_agent_run_id.as_str()))?;
+        if parent.status != ExecutionStatus::Running {
+            return Err(WorkflowError::invariant(format!(
+                "agent run {:?} cannot launch a workflow from status {:?}",
+                parent_agent_run_id.as_str(),
+                parent.status
+            )));
+        }
+        Ok(())
     }
 
     fn create_iteration_with_coordinator<'a>(
@@ -338,7 +327,7 @@ impl WorkflowApi for WorkflowRun {
         let started = self
             .start(
                 &request.workflow_goal,
-                &request.parent_task_id,
+                &request.request_id,
                 &request.agent_run_id,
                 request.tool_use_id.as_ref(),
             )

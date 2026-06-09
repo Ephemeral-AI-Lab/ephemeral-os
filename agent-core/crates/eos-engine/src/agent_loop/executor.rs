@@ -11,7 +11,7 @@ use super::{
     AgentLoopCancelSignal, AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind,
     AgentLoopProviderStream, AgentLoopRunServices, AgentLoopState, AgentLoopToolRegistryFactory,
     BackgroundSessionRuntimeFactory, ExecutionMetadataBuildInput, StartAgentLoopRequest,
-    ToolCallHookStores, ToolExecutionMetadataReader,
+    ToolExecutionMetadataReader,
 };
 use crate::notifications::EngineNotificationQueue;
 use crate::provider_stream::{messages::build_provider_messages, ProviderStreamSource};
@@ -30,7 +30,6 @@ pub(crate) struct AgentLoopExecutor {
     execution_metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     cancel_signal: AgentLoopCancelSignal,
     background_sessions: Option<BackgroundSessionRuntimeFactory>,
-    hook_stores: Option<ToolCallHookStores>,
     run_outputs: AgentRunOutputs,
     agent_run_api: Arc<dyn AgentRunApi>,
 }
@@ -42,7 +41,6 @@ pub(crate) struct AgentLoopExecutorInput {
     pub(crate) execution_metadata_reader: Arc<dyn ToolExecutionMetadataReader>,
     pub(crate) cancel_signal: AgentLoopCancelSignal,
     pub(crate) background_sessions: Option<BackgroundSessionRuntimeFactory>,
-    pub(crate) hook_stores: Option<ToolCallHookStores>,
     pub(crate) run_outputs: AgentRunOutputs,
     pub(crate) agent_run_api: Arc<dyn AgentRunApi>,
 }
@@ -61,7 +59,6 @@ impl AgentLoopExecutor {
             execution_metadata_reader: input.execution_metadata_reader,
             cancel_signal: input.cancel_signal,
             background_sessions: input.background_sessions,
-            hook_stores: input.hook_stores,
             run_outputs: input.run_outputs,
             agent_run_api: input.agent_run_api,
         }
@@ -438,11 +435,7 @@ impl AgentLoopExecutor {
             tool_input: call.input.clone(),
             tool_use_id: call.tool_use_id.clone(),
         });
-        let hooks = state.background().and_then(|background| {
-            self.hook_stores
-                .clone()
-                .map(|stores| crate::tool_call::ToolCallHooks::new(background, stores))
-        });
+        let hooks = state.background().map(crate::tool_call::ToolCallHooks::new);
         let result = execute_tool_once(tool, &call.input, &metadata, hooks.as_ref()).await?;
         self.emit_event(&AgentRunStreamEvent::ToolExecutionCompleted {
             agent_name: metadata.agent_name,

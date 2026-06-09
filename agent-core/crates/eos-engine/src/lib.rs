@@ -13,7 +13,7 @@ pub mod tool_call;
 
 pub use agent_loop::{
     AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory, BackgroundSessionRuntimeFactory,
-    EngineRuntimeConfig, ExecutionMetadataBuildInput, TokioAgentLoopLauncher, ToolCallHookStores,
+    EngineRuntimeConfig, ExecutionMetadataBuildInput, TokioAgentLoopLauncher,
     ToolExecutionMetadataReader, DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS,
 };
 pub use background::{

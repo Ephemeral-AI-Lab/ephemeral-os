@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use sqlx::SqlitePool;
 
-use eos_types::{AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, WorkflowStore};
+use eos_types::{
+    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, WorkflowStore,
+};
 
 use crate::error::DbError;
 use crate::model_registry::ModelRegistry;

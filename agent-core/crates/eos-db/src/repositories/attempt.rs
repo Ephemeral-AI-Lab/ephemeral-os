@@ -6,8 +6,8 @@ use time::OffsetDateTime;
 
 use eos_types::{
     AgentRunId, Attempt, AttemptClosure, AttemptExecutionTree, AttemptId, AttemptStage,
-    AttemptStore, CoreError, ExecutionNode, IterationId, PlanId, RequestId, Sealed, SubmissionOutcome,
-    ExecutionStatus, WorkItemId, WorkflowId,
+    AttemptStore, CoreError, ExecutionNode, ExecutionStatus, IterationId, PlanId, RequestId,
+    Sealed, SubmissionOutcome, WorkItemId, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -76,19 +76,14 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row.map(row_to_attempt).transpose()?)
     }
 
-    async fn bind_planner_agent_run(
-        &self,
-        id: &AttemptId,
-        planner_agent_run_id: &AgentRunId,
-    ) -> Result<Attempt, CoreError> {
+    async fn mark_planner_started(&self, id: &AttemptId) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
             "UPDATE attempts \
-             SET execution_tree = json_set(execution_tree, '$.planner_agent_run_id', ?), \
+             SET execution_tree = json_set(execution_tree, '$.planner_started', json('true')), \
                  updated_at = ? \
              WHERE id = ? RETURNING *",
         )
-        .bind(planner_agent_run_id.as_str())
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&self.pool)

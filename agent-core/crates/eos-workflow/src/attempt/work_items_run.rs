@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use eos_types::{
-    Attempt, AttemptFailReason, AttemptStage, ExecutionNode, Task, TaskId, SubmissionOutcome, TaskRole,
-    ExecutionStatus, WorkItemId, WorkItemSpec, WorkerOutcomeSubmission,
+    AgentRunId, Attempt, AttemptFailReason, AttemptStage, ExecutionNode, ExecutionStatus,
+    SubmissionOutcome, WorkItemId, WorkItemSpec, WorkerOutcomeSubmission,
 };
 
 use crate::{Result, WorkflowError};
@@ -39,11 +39,11 @@ impl WorkItemsRun {
                 return Ok(());
             }
             let planner = planner_outcome_for_attempt(self.attempt_run.deps(), &attempt).await?;
-            let states = self.node_states(&attempt).await?;
+            let states = self.node_states(&attempt)?;
             if states.values().any(|state| *state == NodeState::Failed) {
                 return self
                     .attempt_run
-                    .close_attempt_failed(AttemptFailReason::WorkItemFailed)
+                    .close_attempt_failed(AttemptFailReason::AgentRunFailed)
                     .await;
             }
             if !states.is_empty() && states.values().all(|state| *state == NodeState::Passed) {
@@ -64,7 +64,7 @@ impl WorkItemsRun {
                 if running_count == 0 && self.unbound_nodes_are_blocked(&attempt, &states) {
                     return self
                         .attempt_run
-                        .close_attempt_failed(AttemptFailReason::WorkItemFailed)
+                        .close_attempt_failed(AttemptFailReason::AgentRunFailed)
                         .await;
                 }
                 return Ok(());
@@ -85,86 +85,47 @@ impl WorkItemsRun {
         &self,
         submission: WorkerOutcomeSubmission,
     ) -> Result<()> {
-        self.attempt_run
-            .assert_submission_attempt(&submission.attempt_id)?;
         let attempt = self.attempt_run.assert_stage(AttemptStage::Run).await?;
-        let node = attempt
-            .execution_tree
-            .node(&submission.work_item_id)
-            .ok_or_else(|| {
-                WorkflowError::not_found("work item", submission.work_item_id.as_str())
-            })?;
-        if node.task_id.as_ref() != Some(&submission.task_id) {
+        let node = node_for_agent_run(&attempt, &submission.agent_run_id)?;
+        let work_item_id = node.work_item_id.clone();
+        if node.status != Some(ExecutionStatus::Running) {
             return Err(WorkflowError::invariant(format!(
-                "worker submission task {:?} does not match work item {:?}",
-                submission.task_id.as_str(),
-                submission.work_item_id.as_str()
+                "worker agent run {:?} is not running",
+                submission.agent_run_id.as_str()
             )));
         }
-        let task = self
-            .attempt_run
-            .deps()
-            .task_store
-            .get(&submission.task_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("worker task", submission.task_id.as_str()))?;
-        if task.role != TaskRole::Worker || task.status != ExecutionStatus::Running {
-            return Err(WorkflowError::invariant(format!(
-                "worker task {:?} is not running",
-                submission.task_id.as_str()
-            )));
-        }
-        let task_status = if submission.status.is_pass() {
+
+        let status = if submission.status.is_pass() {
             ExecutionStatus::Done
         } else {
             ExecutionStatus::Failed
         };
-        let submission_outcome = SubmissionOutcome::Worker {
+        let outcome = SubmissionOutcome::Worker {
             is_pass: submission.status.is_pass(),
             outcome: submission.outcome,
         };
         self.attempt_run
             .deps()
-            .task_store
-            .set_task_status_if_current(
-                &submission.task_id,
-                ExecutionStatus::Running,
-                task_status,
-                Some(&submission_outcome),
-            )
-            .await?
-            .ok_or_else(|| {
-                WorkflowError::invariant(format!(
-                    "worker task {:?} is no longer running",
-                    submission.task_id.as_str()
-                ))
-            })?;
+            .attempt_store
+            .record_worker_outcome(&attempt.id, &work_item_id, status, &outcome)
+            .await?;
         self.advance().await
     }
 
     async fn spawn_worker(&self, attempt: &Attempt, work_item: &WorkItemSpec) -> Result<()> {
-        let task_id = TaskId::new_v4();
+        let agent_run_id = AgentRunId::new_v4();
         let launch = AgentLaunchFactory::new(self.attempt_run.deps().clone())
-            .for_worker(attempt, work_item, task_id.clone())
-            .await?;
-        self.attempt_run
-            .deps()
-            .task_store
-            .insert_task(&Task {
-                id: task_id.clone(),
-                request_id: launch.request_id.clone(),
-                role: TaskRole::Worker,
-                instruction: launch.instruction.clone(),
-                status: ExecutionStatus::Running,
-                agent_name: Some(launch.agent_name.as_str().to_owned()),
-                submission_outcome: None,
-            })
+            .for_worker(attempt, work_item, agent_run_id.clone())
             .await?;
         self.attempt_run
             .deps()
             .attempt_store
-            .bind_worker_task(&attempt.id, &work_item.id, &task_id)
+            .bind_worker_agent_run(&attempt.id, &work_item.id, &agent_run_id)
             .await?;
+        self.attempt_run
+            .deps()
+            .active_attempt_runs
+            .register_agent_run(agent_run_id, Arc::clone(&self.attempt_run))?;
         self.spawn_worker_run(launch);
         Ok(())
     }
@@ -195,92 +156,45 @@ impl WorkItemsRun {
         if let Some(summary) = summary {
             tracing::warn!(
                 attempt_id = %self.attempt_run.attempt_id().as_str(),
-                task_id = %launch.task_id.as_str(),
+                agent_run_id = %launch.agent_run_id.as_str(),
                 %summary,
                 "worker run reported a failure summary"
             );
         }
-        let Some(task) = self
-            .attempt_run
-            .deps()
-            .task_store
-            .get(&launch.task_id)
-            .await?
-        else {
-            return Err(WorkflowError::not_found(
-                "worker task",
-                launch.task_id.as_str(),
-            ));
-        };
-        if matches!(task.status, ExecutionStatus::Pending | ExecutionStatus::Running) {
-            let work_item_id = launch.work_item_id().cloned().ok_or_else(|| {
-                WorkflowError::invariant("worker settlement missing work_item_id")
-            })?;
-            self.synthesize_worker_failure(&launch.task_id, &work_item_id)
+        let attempt = self.attempt_run.fresh_attempt().await?;
+        if attempt.is_closed() {
+            return Ok(());
+        }
+        let node = node_for_agent_run(&attempt, &launch.agent_run_id)?;
+        let work_item_id = node.work_item_id.clone();
+        if matches!(
+            node.status,
+            None | Some(ExecutionStatus::Pending | ExecutionStatus::Running)
+        ) {
+            let outcome = SubmissionOutcome::Worker {
+                is_pass: false,
+                outcome: "worker finished without submit_worker_outcome".to_owned(),
+            };
+            self.attempt_run
+                .deps()
+                .attempt_store
+                .record_worker_outcome(
+                    &attempt.id,
+                    &work_item_id,
+                    ExecutionStatus::Failed,
+                    &outcome,
+                )
                 .await?;
         }
         self.advance().await
     }
 
-    async fn synthesize_worker_failure(
-        &self,
-        task_id: &TaskId,
-        work_item_id: &WorkItemId,
-    ) -> Result<()> {
-        let submission_outcome = SubmissionOutcome::Worker {
-            is_pass: false,
-            outcome: format!(
-                "worker {:?} finished without submit_worker_outcome",
-                work_item_id.as_str()
-            ),
-        };
-        self.attempt_run
-            .deps()
-            .task_store
-            .set_task_status_if_current(
-                task_id,
-                ExecutionStatus::Running,
-                ExecutionStatus::Failed,
-                Some(&submission_outcome),
-            )
-            .await?;
-        Ok(())
-    }
-
-    async fn node_states(&self, attempt: &Attempt) -> Result<BTreeMap<WorkItemId, NodeState>> {
+    fn node_states(&self, attempt: &Attempt) -> Result<BTreeMap<WorkItemId, NodeState>> {
         let mut states = BTreeMap::new();
         for node in &attempt.execution_tree.nodes {
-            let state = match &node.task_id {
-                Some(task_id) => self.task_state(task_id).await?,
-                None => NodeState::Missing,
-            };
-            states.insert(node.work_item_id.clone(), state);
+            states.insert(node.work_item_id.clone(), node_state(node)?);
         }
         Ok(states)
-    }
-
-    async fn task_state(&self, task_id: &TaskId) -> Result<NodeState> {
-        let task = self
-            .attempt_run
-            .deps()
-            .task_store
-            .get(task_id)
-            .await?
-            .ok_or_else(|| WorkflowError::not_found("worker task", task_id.as_str()))?;
-        match task.status {
-            ExecutionStatus::Pending | ExecutionStatus::Running => Ok(NodeState::Running),
-            ExecutionStatus::Done => match task.submission_outcome {
-                Some(SubmissionOutcome::Worker { is_pass: true, .. }) => Ok(NodeState::Passed),
-                Some(SubmissionOutcome::Worker { .. }) => Ok(NodeState::Failed),
-                _ => Err(WorkflowError::invariant(format!(
-                    "worker task {:?} is done without worker outcome",
-                    task_id.as_str()
-                ))),
-            },
-            ExecutionStatus::Failed | ExecutionStatus::Blocked | ExecutionStatus::Cancelled => {
-                Ok(NodeState::Failed)
-            }
-        }
     }
 
     fn ready_unbound_nodes<'a>(
@@ -293,7 +207,7 @@ impl WorkItemsRun {
             .nodes
             .iter()
             .filter(|node| {
-                node.task_id.is_none()
+                node.agent_run_id.is_none()
                     && node
                         .needs
                         .iter()
@@ -311,13 +225,43 @@ impl WorkItemsRun {
             .execution_tree
             .nodes
             .iter()
-            .any(|node| node.task_id.is_none())
+            .any(|node| node.agent_run_id.is_none())
             && !attempt.execution_tree.nodes.iter().any(|node| {
-                node.task_id.is_none()
+                node.agent_run_id.is_none()
                     && node
                         .needs
                         .iter()
                         .all(|need| states.get(need) == Some(&NodeState::Passed))
             })
     }
+}
+
+fn node_state(node: &ExecutionNode) -> Result<NodeState> {
+    match node.status {
+        None => Ok(NodeState::Missing),
+        Some(ExecutionStatus::Pending | ExecutionStatus::Running) => Ok(NodeState::Running),
+        Some(ExecutionStatus::Done) => match &node.outcome {
+            Some(SubmissionOutcome::Worker { is_pass: true, .. }) => Ok(NodeState::Passed),
+            Some(SubmissionOutcome::Worker { .. }) => Ok(NodeState::Failed),
+            Some(_) | None => Err(WorkflowError::invariant(format!(
+                "work item {:?} is done without worker outcome",
+                node.work_item_id.as_str()
+            ))),
+        },
+        Some(ExecutionStatus::Failed | ExecutionStatus::Blocked | ExecutionStatus::Cancelled) => {
+            Ok(NodeState::Failed)
+        }
+    }
+}
+
+fn node_for_agent_run<'a>(
+    attempt: &'a Attempt,
+    agent_run_id: &AgentRunId,
+) -> Result<&'a ExecutionNode> {
+    attempt
+        .execution_tree
+        .nodes
+        .iter()
+        .find(|node| node.agent_run_id.as_ref() == Some(agent_run_id))
+        .ok_or_else(|| WorkflowError::not_found("worker agent run", agent_run_id.as_str()))
 }

@@ -5,8 +5,8 @@ use time::OffsetDateTime;
 
 use eos_types::{
     Attempt, AttemptBudget, AttemptClosure, AttemptExecutionTree, AttemptFailReason, AttemptStage,
-    AttemptState, AttemptStatus, CoreError, Iteration, PlanId, Request, RequestStatus,
-    UtcDateTime, Workflow,
+    AttemptState, AttemptStatus, CoreError, Iteration, PlanId, Request, RequestStatus, UtcDateTime,
+    Workflow,
 };
 
 use crate::error::DbError;
@@ -180,7 +180,7 @@ pub(crate) fn row_to_attempt(r: AttemptRow) -> Result<Attempt, DbError> {
         status,
         fail_reason,
         closed_at,
-        execution_tree.planner_agent_run_id.is_some(),
+        execution_tree.planner_started,
     )?;
     Ok(Attempt {
         id: parse_id("attempts.id", &r.id)?,
