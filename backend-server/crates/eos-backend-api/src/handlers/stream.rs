@@ -1,4 +1,4 @@
-//! `GET /api/user-requests/{request_id}/stream` — the live milestone stream.
+//! `GET /api/agent-core/requests/{request_id}/stream` — the live milestone stream.
 //!
 //! The route serves Server-Sent Events only. It replays persisted `event_log`
 //! rows with `seq > last_seq` and then tails the live broadcast through one

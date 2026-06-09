@@ -66,7 +66,9 @@ eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
 # DTOs come from eos-types, workflow config from eos-workflow, and message
 # records route through eos-agent-run.
 eos-agent-core     = { path = "../agent-core/crates/eos-agent-core" }
+eos-agent-core-server = { path = "../agent-core/crates/eos-agent-core-server" }
 eos-agent-run      = { path = "../agent-core/crates/eos-agent-run" }
+eos-engine         = { path = "../agent-core/crates/eos-engine" }
 eos-workflow       = { path = "../agent-core/crates/eos-workflow" }
 
 # internal backend crates — these path edges are the backend dependency DAG.

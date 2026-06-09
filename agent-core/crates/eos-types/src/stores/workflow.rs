@@ -53,6 +53,13 @@ pub trait WorkflowStore: Sealed + Send + Sync {
         &self,
         launched_by_agent_run_id: &AgentRunId,
     ) -> Result<Vec<Workflow>, CoreError>;
+
+    /// Mark all open workflows for a request as cancelled.
+    async fn cancel_open_workflows_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> Result<usize, CoreError>;
 }
 
 /// Persistence surface for [`Iteration`].
@@ -107,6 +114,13 @@ pub trait IterationStore: Sealed + Send + Sync {
         &self,
         workflow_id: &WorkflowId,
     ) -> Result<Vec<Iteration>, CoreError>;
+
+    /// Mark all open iterations for a request as cancelled.
+    async fn cancel_open_iterations_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> Result<usize, CoreError>;
 }
 
 /// Persistence surface for [`Attempt`].
@@ -145,4 +159,11 @@ pub trait AttemptStore: Sealed + Send + Sync {
         &self,
         iteration_id: &IterationId,
     ) -> Result<Vec<Attempt>, CoreError>;
+
+    /// Mark all open attempts for a request as cancelled.
+    async fn cancel_open_attempts_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> Result<usize, CoreError>;
 }

@@ -433,16 +433,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-agent-core-server"
+version = "0.1.0"
+dependencies = [
+ "eos-agent-run",
+ "eos-sandbox-port",
+ "eos-types",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "eos-agent-run"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-types",
- "serde",
  "serde_json",
- "thiserror 2.0.18",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -451,11 +461,13 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "eos-agent-core-server",
  "eos-agent-run",
  "eos-backend-audit",
  "eos-backend-runtime",
  "eos-backend-store",
  "eos-backend-types",
+ "eos-engine",
  "eos-types",
  "futures",
  "schemars 0.8.22",

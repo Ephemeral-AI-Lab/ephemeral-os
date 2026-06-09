@@ -4,12 +4,12 @@
 #![warn(missing_docs)]
 
 mod active_agent_runs;
-mod agent_loop_request;
-mod agent_run_persistence;
-mod agent_run_service;
+mod persistence;
+mod service;
+mod spawn;
 
 pub use active_agent_runs::ActiveAgentRunRegistry;
-pub use agent_run_service::AgentRunService;
+pub use service::AgentRunService;
 pub use eos_types::{
     AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunStatus, SpawnAgentRequest,
     TaskAgentRunKind, WorkflowTaskRole,

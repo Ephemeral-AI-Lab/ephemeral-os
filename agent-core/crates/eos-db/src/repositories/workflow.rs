@@ -152,4 +152,30 @@ impl WorkflowStore for SqlWorkflowStore {
             .map(row_to_workflow)
             .collect::<Result<Vec<_>, _>>()?)
     }
+
+    async fn cancel_open_workflows_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> Result<usize, CoreError> {
+        let now = OffsetDateTime::now_utc();
+        let outcomes = serde_json::json!([{
+            "status": "cancelled",
+            "reason": reason,
+        }])
+        .to_string();
+        let updated = sqlx::query(
+            "UPDATE workflows SET status = 'cancelled', outcomes = COALESCE(outcomes, ?), \
+             closed_at = COALESCE(closed_at, ?), updated_at = ? \
+             WHERE request_id = ? AND status = 'open'",
+        )
+        .bind(outcomes)
+        .bind(now)
+        .bind(now)
+        .bind(request_id.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(DbError::from)?;
+        Ok(updated.rows_affected() as usize)
+    }
 }

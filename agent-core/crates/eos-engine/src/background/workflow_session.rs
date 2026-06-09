@@ -7,7 +7,9 @@ use eos_types::{AgentRunId, StartedWorkflow, WorkflowApi, WorkflowId, WorkflowTe
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
-use super::runtime::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::session_runtime::{
+    BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus,
+};
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
 /// One delegated workflow tracked as background work for the owning agent run,

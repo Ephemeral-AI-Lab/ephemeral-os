@@ -1,9 +1,9 @@
 //! Public non-blocking agent-loop API and internal loop executor.
 
-mod agent_loop_executor;
-mod agent_loop_state;
 mod contracts;
+mod executor;
 mod launcher;
+mod state;
 
 pub use contracts::{
     AgentLoopToolRegistryBuildInput, AgentLoopToolRegistryFactory, BackgroundSessionInputs,
@@ -14,8 +14,8 @@ pub(crate) use eos_types::{
 };
 pub use launcher::TokioAgentLoopLauncher;
 
-pub(crate) use agent_loop_executor::{AgentLoopExecutor, AgentLoopExecutorInput};
-pub(crate) use agent_loop_state::{AgentLoopRunServices, AgentLoopState};
 pub(crate) use contracts::tool_result_payload;
+pub(crate) use executor::{AgentLoopExecutor, AgentLoopExecutorInput};
 pub(crate) use launcher::AgentLoopCancelSignal;
 pub(crate) use launcher::AgentLoopProviderStream;
+pub(crate) use state::{AgentLoopRunServices, AgentLoopState};

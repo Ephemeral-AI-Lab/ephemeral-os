@@ -233,6 +233,26 @@ impl eos_types::WorkflowStore for MemoryStores {
         workflows.sort_by_key(|workflow| workflow.created_at);
         Ok(workflows)
     }
+
+    async fn cancel_open_workflows_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> std::result::Result<usize, CoreError> {
+        let now = eos_types::UtcDateTime::now();
+        let outcomes = cancellation_outcomes(reason);
+        let mut count = 0;
+        for workflow in self.workflows.lock().values_mut() {
+            if &workflow.request_id == request_id && workflow.status == WorkflowStatus::Open {
+                workflow.status = WorkflowStatus::Cancelled;
+                workflow.outcomes.get_or_insert_with(|| outcomes.clone());
+                workflow.closed_at.get_or_insert(now);
+                workflow.updated_at = now;
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
 }
 
 #[async_trait]
@@ -343,6 +363,29 @@ impl eos_types::IterationStore for MemoryStores {
         iterations.sort_by_key(|iteration| iteration.sequence_no);
         Ok(iterations)
     }
+
+    async fn cancel_open_iterations_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> std::result::Result<usize, CoreError> {
+        let workflow_ids = workflow_ids_for_request(&self.workflows.lock(), request_id);
+        let now = eos_types::UtcDateTime::now();
+        let outcomes = cancellation_outcomes(reason);
+        let mut count = 0;
+        for iteration in self.iterations.lock().values_mut() {
+            if workflow_ids.contains(&iteration.workflow_id)
+                && iteration.status == IterationStatus::Open
+            {
+                iteration.status = IterationStatus::Cancelled;
+                iteration.outcomes.get_or_insert_with(|| outcomes.clone());
+                iteration.closed_at.get_or_insert(now);
+                iteration.updated_at = now;
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
 }
 
 #[async_trait]
@@ -444,6 +487,38 @@ impl eos_types::AttemptStore for MemoryStores {
         attempts.sort_by_key(|attempt| attempt.attempt_sequence_no);
         Ok(attempts)
     }
+
+    async fn cancel_open_attempts_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> std::result::Result<usize, CoreError> {
+        let workflow_ids = workflow_ids_for_request(&self.workflows.lock(), request_id);
+        let mut count = 0;
+        for attempt in self.attempts.lock().values_mut() {
+            if workflow_ids.contains(&attempt.workflow_id) && !attempt.is_closed() {
+                let planner_task_id = attempt.planner_task_id().cloned();
+                let plan = attempt.materialized_plan().cloned();
+                let planner_task_id = if plan.is_some() {
+                    None
+                } else {
+                    planner_task_id
+                };
+                attempt.state = AttemptState::Closed {
+                    closure: AttemptClosure::Cancelled {
+                        reason: reason.to_owned(),
+                        outcomes: Vec::new(),
+                        closed_at: eos_types::UtcDateTime::now(),
+                    },
+                    planner_task_id,
+                    plan,
+                };
+                attempt.updated_at = eos_types::UtcDateTime::now();
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
 }
 
 #[async_trait]
@@ -532,6 +607,25 @@ fn update_task(
     if let Some(result) = terminal_payload {
         task.terminal_payload = Some(result.clone());
     }
+}
+
+fn workflow_ids_for_request(
+    workflows: &HashMap<WorkflowId, Workflow>,
+    request_id: &RequestId,
+) -> Vec<WorkflowId> {
+    workflows
+        .values()
+        .filter(|workflow| &workflow.request_id == request_id)
+        .map(|workflow| workflow.id.clone())
+        .collect()
+}
+
+fn cancellation_outcomes(reason: &str) -> String {
+    serde_json::json!([{
+        "status": "cancelled",
+        "reason": reason,
+    }])
+    .to_string()
 }
 
 fn not_found(entity: &str, id: &str) -> CoreError {

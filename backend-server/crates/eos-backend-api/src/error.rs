@@ -12,7 +12,8 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 
-use eos_agent_run::MessageRecordError;
+use eos_agent_core_server::AgentCoreServerError;
+use eos_engine::records::MessageRecordError;
 use eos_backend_runtime::{DeleteRejection, SandboxManagerError};
 use eos_backend_store::StoreError;
 use eos_types::CoreError;
@@ -90,6 +91,22 @@ impl From<CoreError> for ApiError {
     fn from(err: CoreError) -> Self {
         tracing::error!(error = %err, "agent-core state read error");
         Self::Internal
+    }
+}
+
+/// Agent-core request service errors are mapped at the backend HTTP edge.
+impl From<AgentCoreServerError> for ApiError {
+    fn from(err: AgentCoreServerError) -> Self {
+        match err {
+            AgentCoreServerError::UserRequestNotFound(_) => Self::NotFound("user request"),
+            AgentCoreServerError::UserRequestAlreadyFinished { .. } => {
+                Self::Conflict("user request already finished".to_owned())
+            }
+            other => {
+                tracing::error!(error = %other, "agent-core service error");
+                Self::Internal
+            }
+        }
     }
 }
 

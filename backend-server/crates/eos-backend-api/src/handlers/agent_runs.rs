@@ -13,8 +13,8 @@ use axum::Json;
 use futures::stream;
 use serde::Deserialize;
 
-use eos_agent_run::{AgentMessageRecords, NodeEvent};
-use eos_types::AgentRunId;
+use eos_engine::records::{AgentRecordWriter as AgentMessageRecords, NodeEvent};
+use eos_types::{format_record_dir, AgentRunId, AgentRunRecordDir};
 
 use super::parse_id;
 use crate::error::ApiError;
@@ -38,16 +38,17 @@ pub struct StreamQuery {
     last_seq: Option<u64>,
 }
 
-/// `GET /api/agent-runs/{agent_run_id}/messages`.
+/// `GET /api/agent-core/agent-runs/{agent_run_id}/messages`.
 pub async fn messages(
     State(state): State<AppState>,
     Path(agent_run_id): Path<String>,
     Query(query): Query<MessagesQuery>,
 ) -> Result<Response<Body>, ApiError> {
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
+    let record_dir = record_dir_for_agent_run(&state, &agent_run_id).await?;
     let bytes = state
         .message_records
-        .read_messages(&agent_run_id, query.after_byte.unwrap_or(0))
+        .read_messages_at(&record_dir, query.after_byte.unwrap_or(0))
         .await?;
     Response::builder()
         .header("content-type", "application/x-ndjson")
@@ -59,22 +60,23 @@ pub async fn messages(
         })
 }
 
-/// `GET /api/agent-runs/{agent_run_id}/events`.
+/// `GET /api/agent-core/agent-runs/{agent_run_id}/events`.
 pub async fn events(
     State(state): State<AppState>,
     Path(agent_run_id): Path<String>,
     Query(query): Query<EventsQuery>,
 ) -> Result<Json<Vec<NodeEvent>>, ApiError> {
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
+    let record_dir = record_dir_for_agent_run(&state, &agent_run_id).await?;
     Ok(Json(
         state
             .message_records
-            .read_events(&agent_run_id, query.after_seq.unwrap_or(0))
+            .read_events_at(&record_dir, query.after_seq.unwrap_or(0))
             .await?,
     ))
 }
 
-/// `GET /api/agent-runs/{agent_run_id}/stream`.
+/// `GET /api/agent-core/agent-runs/{agent_run_id}/stream`.
 pub async fn stream(
     State(state): State<AppState>,
     Path(agent_run_id): Path<String>,
@@ -82,14 +84,15 @@ pub async fn stream(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, ApiError> {
     let agent_run_id: AgentRunId = parse_id(&agent_run_id, "agent run")?;
+    let record_dir = record_dir_for_agent_run(&state, &agent_run_id).await?;
     let last_seq = last_event_id(&headers).or(query.last_seq).unwrap_or(0);
     let initial = state
         .message_records
-        .read_events(&agent_run_id, last_seq)
+        .read_events_at(&record_dir, last_seq)
         .await?;
     let tail = TailState::new(
         state.message_records,
-        agent_run_id,
+        record_dir,
         last_seq,
         VecDeque::from(initial),
     );
@@ -108,7 +111,7 @@ pub async fn stream(
             tokio::time::sleep(Duration::from_millis(250)).await;
             match tail
                 .message_records
-                .read_events(&tail.agent_run_id, tail.next_seq)
+                .read_events_at(&tail.record_dir, tail.next_seq)
                 .await
             {
                 Ok(events) => {
@@ -127,7 +130,7 @@ pub async fn stream(
 #[derive(Debug)]
 struct TailState {
     message_records: AgentMessageRecords,
-    agent_run_id: AgentRunId,
+    record_dir: AgentRunRecordDir,
     next_seq: u64,
     pending: VecDeque<NodeEvent>,
     finished: bool,
@@ -136,13 +139,13 @@ struct TailState {
 impl TailState {
     fn new(
         message_records: AgentMessageRecords,
-        agent_run_id: AgentRunId,
+        record_dir: AgentRunRecordDir,
         last_seq: u64,
         pending: VecDeque<NodeEvent>,
     ) -> Self {
         Self {
             message_records,
-            agent_run_id,
+            record_dir,
             next_seq: last_seq,
             pending,
             finished: false,
@@ -163,4 +166,16 @@ fn to_sse_event(event: &NodeEvent) -> Event {
 
 fn last_event_id(headers: &HeaderMap) -> Option<u64> {
     headers.get("last-event-id")?.to_str().ok()?.parse().ok()
+}
+
+async fn record_dir_for_agent_run(
+    state: &AppState,
+    agent_run_id: &AgentRunId,
+) -> Result<AgentRunRecordDir, ApiError> {
+    let index = state
+        .task_agent_run_store
+        .record_index_for_agent_run(agent_run_id)
+        .await?
+        .ok_or(ApiError::NotFound("agent run"))?;
+    Ok(format_record_dir(&index))
 }

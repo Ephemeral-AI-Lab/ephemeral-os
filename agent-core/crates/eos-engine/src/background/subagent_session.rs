@@ -11,7 +11,9 @@ use serde_json::{json, Value};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
-use super::runtime::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::session_runtime::{
+    BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus,
+};
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
 /// One tracked subagent run owned by an agent run's background session runtime.

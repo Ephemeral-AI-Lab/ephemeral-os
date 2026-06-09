@@ -60,9 +60,9 @@ pub use state::{
     GeneratorSubmission, Iteration, IterationCreationReason, IterationOutcome, IterationStatus,
     MaterializedPlan, ModelRegistration, Page, PageResult, ParentedRun, PlanDisposition,
     PlannerFailReason, PlannerFailureSubmission, PlannerId, PlannerSubmission, ReducerId,
-    ReducerSubmission, Request, RequestListFilter, RequestStatus, Task, TaskOutcomeStatus,
-    TaskRole, TaskRun, TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
-    TASK_AGENT_ROLES,
+    ReducerSubmission, Request, RequestListFilter, RequestStatus, RunningRequestAgentRun, Task,
+    TaskOutcomeStatus, TaskRole, TaskRun, TaskStatus, Workflow, WorkflowOutcome, WorkflowStatus,
+    NO_OUTCOME, TASK_AGENT_ROLES,
 };
 pub use stores::{
     parented_task_id, root_task_id, workflow_task_id, AgentRunStore, AttemptStore, IterationStore,

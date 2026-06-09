@@ -616,6 +616,24 @@ Workflow outcome:
 
 ## 12. Context Recipe Design
 
+The context engine is a recipe router plus a projection layer:
+
+```text
+ContextScope + recipe_id + persisted workflow state -> AgentContext
+```
+
+The workflow stores comprehensive outcomes once. The context engine must not
+mutate or truncate persisted `WorkflowOutcome`, `IterationOutcome`, or
+`AttemptOutcome` records. It renders role-specific context slices from those
+complete outcome trees.
+
+Core rule:
+
+```text
+Persist comprehensive outcome.
+Render only the slice needed by the current agent role and lifecycle moment.
+```
+
 The target context system has two workflow recipes:
 
 ```rust
@@ -640,16 +658,36 @@ pub enum ContextScope {
 }
 ```
 
+The recipe router must validate that `recipe_id = "planner"` is only used with
+`ContextRole::Planner` and `recipe_id = "worker"` is only used with
+`ContextRole::Worker`.
+
 ### Planner Recipe
 
-Planner context should include:
+Planner scope has no task identity:
+
+```rust
+ContextScope::Planner {
+    workflow_id,
+    iteration_id,
+    attempt_id,
+}
+```
+
+Planner context is built from the workflow/iteration/attempt lifecycle position,
+not from a planner task row.
+
+Planner context should always include:
 
 - `<workflow_goal>`: original delegated workflow goal.
 - `<current_iteration_goal>`: the current iteration goal.
-- `<latest_iteration_outcome>`: the latest closed iteration outcome, when one
-  exists.
-- `<previous_attempts>`: attempt outcomes from failed attempts in the current
+
+Planner context may include exactly one of these evidence groups:
+
+- `<previous_attempts>`: retry evidence from failed attempts in the current
   iteration.
+- `<latest_iteration_outcome>`: continuation evidence from the latest successful
+  previous iteration.
 
 Planner context should not include:
 
@@ -659,6 +697,14 @@ Planner context should not include:
 - all old iterations by default,
 - `disposition`.
 
+The planner prompt must keep this distinction clear:
+
+```text
+previous_attempts = retry evidence inside the same iteration
+latest_iteration_outcome = continuation evidence from the previous iteration
+current_iteration_goal = the authoritative scope for this planner
+```
+
 Planner directive:
 
 ```text
@@ -667,7 +713,185 @@ plan outcome. Use deferred_goal_for_next_iteration only for concrete current
 iteration goal items intentionally carried into the next iteration.
 ```
 
+#### Planner First Attempt
+
+For the first attempt in the first iteration, render only the workflow and
+iteration scope:
+
+```xml
+<context role="planner">
+  <workflow_goal>...</workflow_goal>
+  <current_iteration_goal>...</current_iteration_goal>
+</context>
+```
+
+There is no prior attempt evidence and no prior iteration evidence.
+
+#### Planner Retry After Attempt Failure
+
+When a new planner launches after a failed attempt in the same iteration, the
+iteration goal does not change. The retry planner sees the same
+`current_iteration_goal` plus filtered failed-attempt evidence.
+
+Render:
+
+```xml
+<context role="planner">
+  <workflow_goal>...</workflow_goal>
+  <current_iteration_goal>...</current_iteration_goal>
+  <previous_attempts>
+    <attempt id="attempt_1">
+      <status>true</status>
+      <is_success>false</is_success>
+      <plan_outcome status="true">
+        <plan_spec>...</plan_spec>
+        <deferred_goal_for_next_iteration>...</deferred_goal_for_next_iteration>
+      </plan_outcome>
+      <worker_evidence>
+        <work_item id="w_leaf_ok" task_id="task_...">
+          <status>true</status>
+          <is_success>true</is_success>
+          <summary>Reusable successful leaf outcome.</summary>
+        </work_item>
+        <work_item id="w_failed" task_id="task_...">
+          <status>true</status>
+          <is_success>false</is_success>
+          <summary>Concrete worker failure.</summary>
+        </work_item>
+        <work_item id="w_missing" task_id="task_...">
+          <status>false</status>
+          <is_success>false</is_success>
+          <summary>Worker did not return a structured outcome.</summary>
+        </work_item>
+      </worker_evidence>
+    </attempt>
+  </previous_attempts>
+</context>
+```
+
+For each failed previous attempt, include:
+
+- `attempt_id`, `status`, and `is_success`.
+- the full `plan_spec` if the planner returned.
+- `PlanOutcome.status`; if `status = false`, no worker outcomes exist.
+- `deferred_goal_for_next_iteration`, if the failed attempt had returned one.
+- successful leaf worker outcomes that are reusable.
+- failed worker outcomes.
+- missing/non-returned worker outcomes synthesized by runtime.
+- successful direct needs of failed workers only when needed to explain the
+  failure.
+
+Do not include every successful internal worker by default. A successful
+internal worker appears only when it is a leaf, or when it is a direct need of a
+failed worker and helps explain the failure.
+
+Leaf definition:
+
+```text
+leaf worker = a work item that no other work item lists in needs
+```
+
+Examples:
+
+```text
+w1 -> w2 -> w3
+```
+
+If `w3` failed, retry context includes `w3` and may include `w2` as the direct
+need that `w3` received. It does not include `w1` unless `w1` is also directly
+relevant.
+
+```text
+w1 -> w2
+w3
+```
+
+If `w2` succeeded and `w3` succeeded, both are leaf outcomes and can be shown as
+reusable successful evidence.
+
+If the planner itself failed to return:
+
+```text
+PlanOutcome.status = false
+work_item_outcomes = []
+AttemptOutcome.is_success = false
+```
+
+The next planner sees that planner-return failure as retry evidence, not as an
+empty successful plan.
+
+#### Planner For A Second Iteration
+
+When the previous iteration succeeded but returned
+`deferred_goal_for_next_iteration`, workflow lifecycle creates a new iteration.
+The second iteration planner sees continuation evidence, not retry evidence.
+
+Render:
+
+```xml
+<context role="planner">
+  <workflow_goal>original delegated workflow goal</workflow_goal>
+  <latest_iteration_outcome>
+    <iteration id="iteration_1">
+      <status>true</status>
+      <is_success>true</is_success>
+      <plan_spec>optional previous plan header</plan_spec>
+      <worker_evidence>
+        <work_item id="w_leaf_1" task_id="task_...">
+          <status>true</status>
+          <is_success>true</is_success>
+          <summary>Successful leaf result from the previous iteration.</summary>
+        </work_item>
+      </worker_evidence>
+    </iteration>
+  </latest_iteration_outcome>
+  <current_iteration_goal>
+    previous deferred_goal_for_next_iteration
+  </current_iteration_goal>
+</context>
+```
+
+For the latest previous iteration, include:
+
+- the latest successful iteration outcome only.
+- successful leaf worker outcomes from the successful terminal attempt.
+- enough ids to reference the prior evidence.
+- the previous plan spec as an optional compact header when it helps interpret
+  the leaf outcomes.
+
+Do not include by default:
+
+- failed attempts from the previous iteration,
+- every internal successful worker,
+- older iterations before the latest previous iteration,
+- a full workflow summary,
+- lifecycle closure decisions.
+
+This rule keeps the continuation planner focused. Prior iteration outcomes are
+evidence; the new `current_iteration_goal` is the scope.
+
+Planner selection matrix:
+
+| Planner launch | Include |
+| --- | --- |
+| First attempt, first iteration | `workflow_goal`, `current_iteration_goal` |
+| Same-iteration retry | failed previous attempts: full `plan_spec`, successful leaf outcomes, failed/missing worker outcomes, relevant direct needs |
+| Second iteration | latest successful previous iteration: successful leaf outcomes, optional previous `plan_spec`, current deferred goal |
+
 ### Worker Recipe
+
+Worker scope has both persisted task identity and planner-authored work item
+identity:
+
+```rust
+ContextScope::Worker {
+    workflow_id,
+    iteration_id,
+    attempt_id,
+    task_id,
+    work_item_id,
+}
+```
 
 Worker context should include:
 
@@ -690,29 +914,129 @@ Complete <assigned_work> using <plan_spec> and direct <needs>. Submit exactly
 one worker outcome.
 ```
 
-### Rendering Shape
-
-Preferred prompt shape:
+Worker render shape:
 
 ```xml
 <context role="worker">
-  <plan_spec>...</plan_spec>
+  <plan_spec>
+    The planner-level explanation of how this attempt is structured and why this
+    work item exists.
+  </plan_spec>
   <needs>
     <work_item id="w1" task_id="task_...">
       <status>true</status>
       <is_success>true</is_success>
-      <summary>...</summary>
+      <summary>Direct dependency outcome summary.</summary>
     </work_item>
   </needs>
   <assigned_work id="w2" task_id="task_...">
-    <work_spec>...</work_spec>
+    <agent_name>executor</agent_name>
+    <work_spec>The exact instruction for this worker only.</work_spec>
   </assigned_work>
 </context>
 ```
 
-The recipe router should validate that `recipe_id = "planner"` is only used with
-`ContextRole::Planner` and `recipe_id = "worker"` is only used with
-`ContextRole::Worker`.
+Worker filter:
+
+```text
+include:
+- plan_outcome.plan_spec
+- plan_outcome.work_items[current_work_item_id]
+- work_item_outcomes where work_item_id in current_work_item.needs
+
+exclude:
+- sibling work items
+- transitive ancestors not directly listed in needs
+- previous attempts
+- workflow lifecycle decisions
+- the full attempt outcome tree
+```
+
+Direct-needs example:
+
+```text
+w1 -> w2 -> w3
+```
+
+If `w3.needs = ["w2"]`, worker `w3` sees `w2` only. It does not see `w1`
+unless the planner explicitly sets:
+
+```json
+{
+  "id": "w3",
+  "needs": ["w1", "w2"]
+}
+```
+
+### Outcome Projection API
+
+Store complete outcomes, then project them for a context role:
+
+```rust
+pub enum ContextOutcomeView {
+    WorkerNeeds {
+        attempt_id: AttemptId,
+        work_item_id: WorkItemId,
+    },
+    PlannerRetry {
+        iteration_id: IterationId,
+        current_attempt_id: AttemptId,
+    },
+    PlannerContinuation {
+        workflow_id: WorkflowId,
+        current_iteration_id: IterationId,
+    },
+    WorkflowLatest {
+        workflow_id: WorkflowId,
+    },
+}
+
+pub struct ContextOutcomeSlice {
+    pub workflow_goal: Option<String>,
+    pub current_iteration_goal: Option<String>,
+    pub plan_spec: Option<String>,
+    pub assigned_work: Option<WorkItemSpec>,
+    pub needs: Vec<WorkItemOutcome>,
+    pub previous_attempts: Vec<AttemptOutcomeForContext>,
+    pub latest_iteration_outcome: Option<IterationOutcomeForContext>,
+}
+
+pub fn project_outcomes_for_context(
+    workflow_outcome: &WorkflowOutcome,
+    view: ContextOutcomeView,
+) -> ContextOutcomeSlice;
+```
+
+The projection structs should be smaller than the persisted structs. They are
+prompt DTOs, not durable state.
+
+Suggested projection fields:
+
+```rust
+pub struct AttemptOutcomeForContext {
+    pub attempt_id: AttemptId,
+    pub status: bool,
+    pub is_success: bool,
+    pub plan_status: bool,
+    pub plan_spec: Option<String>,
+    pub deferred_goal_for_next_iteration: Option<String>,
+    pub reusable_leaf_outcomes: Vec<WorkItemOutcome>,
+    pub failed_or_missing_outcomes: Vec<WorkItemOutcome>,
+    pub relevant_need_outcomes: Vec<WorkItemOutcome>,
+}
+
+pub struct IterationOutcomeForContext {
+    pub iteration_id: IterationId,
+    pub status: bool,
+    pub is_success: bool,
+    pub plan_spec: Option<String>,
+    pub successful_leaf_outcomes: Vec<WorkItemOutcome>,
+}
+```
+
+Filtering belongs in the context engine or a context projection module, not in
+the stores. Stores return complete records; context projection decides what the
+agent should see.
 
 ## 13. Implementation Migration Phases
 

@@ -6,7 +6,7 @@ use time::OffsetDateTime;
 
 use eos_types::{
     Attempt, AttemptClosure, AttemptId, AttemptStage, AttemptStore, CoreError, IterationId,
-    MaterializedPlan, Sealed, TaskId, WorkflowId,
+    MaterializedPlan, RequestId, Sealed, TaskId, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -148,5 +148,26 @@ impl AttemptStore for SqlAttemptStore {
             .into_iter()
             .map(row_to_attempt)
             .collect::<Result<Vec<_>, _>>()?)
+    }
+
+    async fn cancel_open_attempts_for_request(
+        &self,
+        request_id: &RequestId,
+        _reason: &str,
+    ) -> Result<usize, CoreError> {
+        let now = OffsetDateTime::now_utc();
+        let updated = sqlx::query(
+            "UPDATE attempts SET stage = 'closed', status = 'cancelled', outcomes = '[]', \
+             fail_reason = NULL, closed_at = COALESCE(closed_at, ?), updated_at = ? \
+             WHERE status = 'running' AND workflow_id IN \
+             (SELECT id FROM workflows WHERE request_id = ?)",
+        )
+        .bind(now)
+        .bind(now)
+        .bind(request_id.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(DbError::from)?;
+        Ok(updated.rows_affected() as usize)
     }
 }

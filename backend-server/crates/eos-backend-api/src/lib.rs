@@ -2,11 +2,11 @@
 //! SSE milestone streaming, and the `OpenAPI` document.
 //!
 //! The crate exposes one composition surface: [`AppState`] (assembled by the
-//! backend main from the runtime capabilities and store handles) and
-//! [`build_router`], which wires every route in `SPEC.md`. Two narrow ports —
-//! [`RunControl`] and [`SandboxRegistry`] — abstract the stateful runtime
-//! capabilities so the production `RunLauncher` / `SandboxManager` drive the API
-//! in deployment while test doubles drive it in the contract tests.
+//! backend main from the agent-core service, sandbox registry, and store handles)
+//! and [`build_router`], which wires every route in `SPEC.md`. The sandbox
+//! registry remains a narrow trait because tests substitute it for the production
+//! `SandboxManager`; agent-core request lifecycle flows through the concrete
+//! `AgentCoreService`.
 //!
 //! Two contracts are load-bearing: sandbox responses ([`SandboxView`]) never
 //! carry daemon connection material or credentials (AC4), and the milestone
@@ -22,4 +22,4 @@ mod openapi;
 mod router;
 mod stream;
 
-pub use router::{build_router, AgentCoreReads, AppState, RunControl, SandboxRegistry};
+pub use router::{build_router, AppState, SandboxRegistry};

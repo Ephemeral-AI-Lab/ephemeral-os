@@ -158,6 +158,19 @@ pub struct TaskRun {
     pub finished_at: Option<UtcDateTime>,
 }
 
+/// Running agent-run lineage row used for request-scoped cancellation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RunningRequestAgentRun {
+    /// Owning request.
+    pub request_id: RequestId,
+    /// Task identity bound to the agent run.
+    pub task_id: TaskId,
+    /// Agent-run execution identity.
+    pub agent_run_id: AgentRunId,
+    /// Current running status.
+    pub status: TaskStatus,
+}
+
 /// Parent-launched task-backed subagent/advisor run row.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ParentedRun {

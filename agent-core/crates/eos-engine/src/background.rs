@@ -2,9 +2,11 @@
 
 mod command_session;
 mod notification;
-mod runtime;
+mod session_runtime;
 mod subagent_session;
 mod workflow_session;
 
 pub use notification::{BackgroundCompletion, BackgroundNotificationEmitter};
-pub use runtime::{BackgroundSessionRuntime, BackgroundSessionStatus, BackgroundSessionTeardown};
+pub use session_runtime::{
+    BackgroundSessionRuntime, BackgroundSessionStatus, BackgroundSessionTeardown,
+};

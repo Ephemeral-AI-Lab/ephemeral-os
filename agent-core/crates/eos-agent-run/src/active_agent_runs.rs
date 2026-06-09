@@ -9,7 +9,7 @@ use tokio::sync::{watch, Mutex};
 /// Registry of active in-process agent runs.
 #[derive(Clone, Default)]
 pub struct ActiveAgentRunRegistry {
-    inner: Arc<Mutex<HashMap<AgentRunId, ActiveAgentRun>>>,
+    inner: Arc<Mutex<HashMap<AgentRunId, ActiveAgentRunHandle>>>,
 }
 
 impl std::fmt::Debug for ActiveAgentRunRegistry {
@@ -20,9 +20,10 @@ impl std::fmt::Debug for ActiveAgentRunRegistry {
 }
 
 #[derive(Clone)]
-struct ActiveAgentRun {
-    outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
-    cancel_handle: AgentLoopCancellationHandle,
+struct ActiveAgentRunHandle {
+    agent_run_id: AgentRunId,
+    completion_tx: watch::Sender<Option<AgentRunOutcome>>,
+    loop_cancellation: AgentLoopCancellationHandle,
 }
 
 impl ActiveAgentRunRegistry {
@@ -35,14 +36,15 @@ impl ActiveAgentRunRegistry {
     pub(crate) async fn insert(
         &self,
         agent_run_id: AgentRunId,
-        cancel_handle: AgentLoopCancellationHandle,
+        loop_cancellation: AgentLoopCancellationHandle,
     ) {
-        let (outcome_tx, _) = watch::channel(None);
+        let (completion_tx, _) = watch::channel(None);
         self.inner.lock().await.insert(
-            agent_run_id,
-            ActiveAgentRun {
-                outcome_tx,
-                cancel_handle,
+            agent_run_id.clone(),
+            ActiveAgentRunHandle {
+                agent_run_id,
+                completion_tx,
+                loop_cancellation,
             },
         );
     }
@@ -53,8 +55,9 @@ impl ActiveAgentRunRegistry {
             .await
             .remove(agent_run_id)
             .map(|handle| ActiveAgentRunCompletion {
-                outcome_tx: handle.outcome_tx,
-                cancel_handle: handle.cancel_handle,
+                agent_run_id: handle.agent_run_id,
+                completion_tx: handle.completion_tx,
+                loop_cancellation: handle.loop_cancellation,
             })
     }
 
@@ -66,7 +69,7 @@ impl ActiveAgentRunRegistry {
             .lock()
             .await
             .get(agent_run_id)
-            .and_then(|handle| handle.outcome_tx.borrow().clone())
+            .and_then(|handle| handle.completion_tx.borrow().clone())
     }
 
     pub(crate) async fn subscribe(
@@ -77,22 +80,27 @@ impl ActiveAgentRunRegistry {
             .lock()
             .await
             .get(agent_run_id)
-            .map(|handle| handle.outcome_tx.subscribe())
+            .map(|handle| handle.completion_tx.subscribe())
             .ok_or_else(|| AgentRunError::NotActiveInProcess(agent_run_id.clone()))
     }
 }
 
 pub(crate) struct ActiveAgentRunCompletion {
-    outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
-    cancel_handle: AgentLoopCancellationHandle,
+    agent_run_id: AgentRunId,
+    completion_tx: watch::Sender<Option<AgentRunOutcome>>,
+    loop_cancellation: AgentLoopCancellationHandle,
 }
 
 impl ActiveAgentRunCompletion {
+    pub(crate) fn agent_run_id(&self) -> &AgentRunId {
+        &self.agent_run_id
+    }
+
     pub(crate) fn cancel(&self, reason: &str) {
-        self.cancel_handle.cancel(reason);
+        self.loop_cancellation.cancel(reason);
     }
 
     pub(crate) fn publish(self, outcome: AgentRunOutcome) {
-        let _ignored = self.outcome_tx.send(Some(outcome));
+        let _ignored = self.completion_tx.send(Some(outcome));
     }
 }

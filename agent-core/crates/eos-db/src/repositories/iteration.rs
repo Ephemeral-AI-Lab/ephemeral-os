@@ -6,7 +6,7 @@ use time::OffsetDateTime;
 
 use eos_types::{
     AttemptBudget, AttemptId, CoreError, DeferredGoal, Iteration, IterationCreationReason,
-    IterationId, IterationStatus, IterationStore, Sealed, UtcDateTime, WorkflowId,
+    IterationId, IterationStatus, IterationStore, RequestId, Sealed, UtcDateTime, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -183,5 +183,32 @@ impl IterationStore for SqlIterationStore {
             .into_iter()
             .map(row_to_iteration)
             .collect::<Result<Vec<_>, _>>()?)
+    }
+
+    async fn cancel_open_iterations_for_request(
+        &self,
+        request_id: &RequestId,
+        reason: &str,
+    ) -> Result<usize, CoreError> {
+        let now = OffsetDateTime::now_utc();
+        let outcomes = serde_json::json!([{
+            "status": "cancelled",
+            "reason": reason,
+        }])
+        .to_string();
+        let updated = sqlx::query(
+            "UPDATE iterations SET status = 'cancelled', outcomes = COALESCE(outcomes, ?), \
+             closed_at = COALESCE(closed_at, ?), updated_at = ? \
+             WHERE status = 'open' AND workflow_id IN \
+             (SELECT id FROM workflows WHERE request_id = ?)",
+        )
+        .bind(outcomes)
+        .bind(now)
+        .bind(now)
+        .bind(request_id.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(DbError::from)?;
+        Ok(updated.rows_affected() as usize)
     }
 }

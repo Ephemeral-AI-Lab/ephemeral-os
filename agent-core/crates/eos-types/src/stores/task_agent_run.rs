@@ -4,8 +4,9 @@ use async_trait::async_trait;
 
 use crate::{
     AgentName, AgentRunId, AgentRunRecordIndex, CoreError, CreatedTaskAgentRun, JsonObject,
-    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, TaskExecutionIndex, TaskId,
-    TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates, WorkflowNodeId,
+    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, RunningRequestAgentRun,
+    TaskExecutionIndex, TaskId, TaskRun, TaskStatus, ToolUseId, WorkflowCoordinates,
+    WorkflowNodeId,
 };
 
 use super::Sealed;
@@ -69,6 +70,19 @@ pub trait TaskAgentRunStore: Sealed + Send + Sync {
 
     /// Load one task-agent-run row by task id.
     async fn get_task_run(&self, task_id: &TaskId) -> Result<Option<TaskRun>, CoreError>;
+
+    /// Load root/workflow task-agent-run rows for one request.
+    async fn list_task_runs_for_request(
+        &self,
+        request_id: &RequestId,
+    ) -> Result<Vec<TaskRun>, CoreError>;
+
+    /// Load running agent runs for one request across root/workflow and
+    /// parent-launched lineage rows.
+    async fn list_running_agent_runs_for_request(
+        &self,
+        request_id: &RequestId,
+    ) -> Result<Vec<RunningRequestAgentRun>, CoreError>;
 
     /// Load parent-launched child runs for one parent task and kind.
     async fn list_parented_runs_for_parent_task(

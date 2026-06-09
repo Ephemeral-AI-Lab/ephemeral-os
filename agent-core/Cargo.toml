@@ -6,6 +6,7 @@ members = [
   "crates/eos-db", "crates/eos-llm-client",
   "crates/eos-sandbox-port",
   "crates/eos-tool", "crates/eos-engine", "crates/eos-workflow",
+  "crates/eos-agent-core-server",
   "crates/eos-agent-core",
   "crates/eos-testkit",
   "workspace-guard",
@@ -70,6 +71,7 @@ eos-sandbox-port   = { path = "crates/eos-sandbox-port" }
 eos-tool           = { path = "crates/eos-tool" }
 eos-engine         = { path = "crates/eos-engine" }
 eos-workflow       = { path = "crates/eos-workflow" }
+eos-agent-core-server = { path = "crates/eos-agent-core-server" }
 eos-agent-core     = { path = "crates/eos-agent-core" }
 # Dev-only shared test doubles (scripted LLM/EventSource, fake sandbox edges,
 # AppState builder, Layer-B workflow runners). Consumed under [dev-dependencies]

@@ -7,9 +7,9 @@ use time::OffsetDateTime;
 use eos_types::{
     format_record_dir, parented_task_id, root_task_id, workflow_task_id, AgentName, AgentRunId,
     AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget, CoreError, CreatedTaskAgentRun,
-    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, Sealed, TaskAgentRunKind,
-    TaskAgentRunStore, TaskExecutionIndex, TaskId, TaskRole, TaskRun, TaskStatus, ToolUseId,
-    WorkflowCoordinates, WorkflowNodeId, WorkflowTaskRole,
+    ParentAgentRunAnchor, ParentedAgentRunKind, ParentedRun, RequestId, RunningRequestAgentRun,
+    Sealed, TaskAgentRunKind, TaskAgentRunStore, TaskExecutionIndex, TaskId, TaskRole, TaskRun,
+    TaskStatus, ToolUseId, WorkflowCoordinates, WorkflowNodeId, WorkflowTaskRole,
 };
 
 use crate::error::DbError;
@@ -257,6 +257,46 @@ impl TaskAgentRunStore for SqlTaskAgentRunStore {
         row.map(row_to_task_run).transpose().map_err(Into::into)
     }
 
+    async fn list_task_runs_for_request(
+        &self,
+        request_id: &RequestId,
+    ) -> Result<Vec<TaskRun>, CoreError> {
+        let rows = sqlx::query_as::<Sqlite, TaskRunRow>(
+            "SELECT * FROM task_runs WHERE request_id = ? ORDER BY created_at ASC, task_id ASC",
+        )
+        .bind(request_id.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(DbError::from)?;
+        rows.into_iter()
+            .map(row_to_task_run)
+            .collect::<Result<Vec<_>, DbError>>()
+            .map_err(Into::into)
+    }
+
+    async fn list_running_agent_runs_for_request(
+        &self,
+        request_id: &RequestId,
+    ) -> Result<Vec<RunningRequestAgentRun>, CoreError> {
+        let rows = sqlx::query_as::<Sqlite, RunningRequestAgentRunRow>(
+            "SELECT request_id, task_id, agent_run_id, status FROM task_runs \
+             WHERE request_id = ? AND status = 'running' \
+             UNION ALL \
+             SELECT request_id, task_id, agent_run_id, status FROM parented_runs \
+             WHERE request_id = ? AND status = 'running' \
+             ORDER BY task_id ASC, agent_run_id ASC",
+        )
+        .bind(request_id.as_str())
+        .bind(request_id.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(DbError::from)?;
+        rows.into_iter()
+            .map(row_to_running_request_agent_run)
+            .collect::<Result<Vec<_>, DbError>>()
+            .map_err(Into::into)
+    }
+
     async fn list_parented_runs_for_parent_task(
         &self,
         parent_task_id: &TaskId,
@@ -357,6 +397,14 @@ struct ParentedRunRow {
     finished_at: Option<OffsetDateTime>,
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct RunningRequestAgentRunRow {
+    request_id: String,
+    task_id: String,
+    agent_run_id: String,
+    status: String,
+}
+
 fn created_from_index(index: &AgentRunRecordIndex) -> CreatedTaskAgentRun {
     CreatedTaskAgentRun {
         agent_run_id: index.agent_run_id.clone(),
@@ -369,6 +417,17 @@ fn created_from_index(index: &AgentRunRecordIndex) -> CreatedTaskAgentRun {
             record_dir: format_record_dir(index),
         },
     }
+}
+
+fn row_to_running_request_agent_run(
+    row: RunningRequestAgentRunRow,
+) -> Result<RunningRequestAgentRun, DbError> {
+    Ok(RunningRequestAgentRun {
+        request_id: parse_id("running_request_agent_runs.request_id", &row.request_id)?,
+        task_id: parse_id("running_request_agent_runs.task_id", &row.task_id)?,
+        agent_run_id: parse_id("running_request_agent_runs.agent_run_id", &row.agent_run_id)?,
+        status: parse_enum("running_request_agent_runs.status", &row.status)?,
+    })
 }
 
 fn validate_parent_anchor(

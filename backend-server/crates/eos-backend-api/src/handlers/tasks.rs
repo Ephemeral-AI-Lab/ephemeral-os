@@ -1,29 +1,29 @@
 //! Task routes: the per-request task tree, task detail, and the task transcript.
-//! All read agent-core state through `RuntimeServices::state_reader()`.
+//! Request task lists flow through `AgentCoreService`; task detail and transcript
+//! routes use store/record handles kept in backend API state.
 
 use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
 
-use eos_agent_run::MessageRecordError;
-use eos_types::{AgentRun, Task};
+use eos_engine::records::MessageRecordError;
+use eos_types::{format_record_dir, AgentRun, Task, TaskRun};
 use eos_types::{AgentRunId, TaskId};
 
 use super::parse_id;
 use crate::error::ApiError;
 use crate::router::AppState;
 
-/// `GET /api/user-requests/{request_id}/tasks` — the request's task tree from
-/// agent-core state (each task carries its `needs` edges).
+/// `GET /api/agent-core/requests/{request_id}/tasks` — task-agent-runs for one
+/// request.
 pub async fn request_tasks(
     State(state): State<AppState>,
     Path(request_id): Path<String>,
-) -> Result<Json<Vec<Task>>, ApiError> {
+) -> Result<Json<Vec<TaskRun>>, ApiError> {
     let request_id = parse_id(&request_id, "request")?;
-    if state.run_meta.get(&request_id).await?.is_none() {
-        return Err(ApiError::NotFound("user request"));
-    }
-    Ok(Json(state.reads.tasks.list_for_request(&request_id).await?))
+    Ok(Json(
+        state.agent_core.list_user_request_tasks(&request_id).await?,
+    ))
 }
 
 /// Task detail: the persisted task joined with its latest agent run, if any.
@@ -35,19 +35,18 @@ pub struct TaskDetail {
     pub agent_run: Option<AgentRun>,
 }
 
-/// `GET /api/tasks/{task_id}` — task detail plus its related agent run.
+/// `GET /api/agent-core/tasks/{task_id}` — task detail plus its related agent run.
 pub async fn detail(
     State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskDetail>, ApiError> {
     let task_id: TaskId = parse_id(&task_id, "task")?;
     let task = state
-        .reads
-        .tasks
+        .task_store
         .get(&task_id)
         .await?
         .ok_or(ApiError::NotFound("task"))?;
-    let agent_run = state.reads.agent_runs.get_for_task(&task_id).await?;
+    let agent_run = state.agent_run_store.get_for_task(&task_id).await?;
     Ok(Json(TaskDetail { task, agent_run }))
 }
 
@@ -62,20 +61,26 @@ pub struct TranscriptResponse {
     pub messages: Vec<serde_json::Value>,
 }
 
-/// `GET /api/tasks/{task_id}/transcript` — the task's model/tool transcript,
-/// drawn from its agent run's message history.
+/// `GET /api/agent-core/tasks/{task_id}/transcript` — the task's model/tool
+/// transcript, drawn from its agent run's message history.
 pub async fn transcript(
     State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TranscriptResponse>, ApiError> {
     let task_id: TaskId = parse_id(&task_id, "task")?;
-    if state.reads.tasks.get(&task_id).await?.is_none() {
+    if state.task_store.get(&task_id).await?.is_none() {
         return Err(ApiError::NotFound("task"));
     }
-    let run = state.reads.agent_runs.get_for_task(&task_id).await?;
+    let run = state.agent_run_store.get_for_task(&task_id).await?;
     let (agent_run_id, messages) = match run {
         Some(run) => {
-            let messages = match state.message_records.read_messages(&run.id, 0).await {
+            let record_dir = state
+                .task_agent_run_store
+                .record_index_for_agent_run(&run.id)
+                .await?
+                .map(|index| format_record_dir(&index))
+                .ok_or(ApiError::NotFound("agent run"))?;
+            let messages = match state.message_records.read_messages_at(&record_dir, 0).await {
                 Ok(bytes) => parse_jsonl_messages(&bytes.bytes)?,
                 Err(MessageRecordError::NotFound(_)) => Vec::new(),
                 Err(err) => return Err(ApiError::from(err)),

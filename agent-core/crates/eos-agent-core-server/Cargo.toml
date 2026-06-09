@@ -1,0 +1,19 @@
+[package]
+name = "eos-agent-core-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+eos-agent-run.workspace = true
+eos-sandbox-port.workspace = true
+eos-types.workspace = true
+
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
