@@ -11,11 +11,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use eos_agent_ports::{AgentRunApi, AgentRunError, AgentRunOutcome, SpawnAgentRequest};
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tool_ports::{
-    BackgroundSessionCounts, CommandSessionToolService, SubagentToolService, WorkflowToolService,
-};
-use eos_types::AgentRunId;
-use eos_types::WorkflowApi;
+use eos_tool::{BackgroundSessionCounts, BackgroundSessions, ToolError};
+use eos_types::{AgentRunId, CommandSessionId, SandboxId, StartedWorkflow, WorkflowApi};
 
 use self::command_session_manager::{CommandSessionManager, CommandSessionMonitor};
 use self::subagent_session_manager::{SubagentSessionManager, SubagentSessionMonitor};
@@ -247,6 +244,20 @@ impl BackgroundManagers {
         }
     }
 
+    pub(crate) async fn count_subagents(&self) -> usize {
+        self.runtime
+            .subagent_session_manager()
+            .count_background_sessions()
+            .await
+    }
+
+    pub(crate) async fn cancel_all_subagents(&self, reason: &str) {
+        self.runtime
+            .subagent_session_manager()
+            .cancel_all_background_sessions(reason)
+            .await;
+    }
+
     #[must_use]
     pub fn teardown_service(&self) -> BackgroundTeardownService {
         let background = self.clone();
@@ -255,85 +266,44 @@ impl BackgroundManagers {
             async move { background.teardown(&reason).await }
         })
     }
+}
 
-    #[must_use]
-    pub fn subagent_tool_service(&self) -> SubagentToolService {
-        let register = self.clone();
-        let cancel = self.clone();
-        let count = self.clone();
-        let cancel_all = self.clone();
-        SubagentToolService::new(
-            move |agent_run_id| {
-                let service = register.clone();
-                async move {
-                    service
-                        .runtime
-                        .subagent_session_manager()
-                        .register_background_session(&agent_run_id)
-                        .await;
-                }
-            },
-            move |agent_run_id, reason| {
-                let service = cancel.clone();
-                async move {
-                    service
-                        .runtime
-                        .subagent_session_manager()
-                        .cancel_background_agent_run(&agent_run_id, &reason)
-                        .await
-                }
-            },
-            move || {
-                let service = count.clone();
-                async move {
-                    service
-                        .runtime
-                        .subagent_session_manager()
-                        .count_background_sessions()
-                        .await
-                }
-            },
-            move |reason| {
-                let service = cancel_all.clone();
-                async move {
-                    service
-                        .runtime
-                        .subagent_session_manager()
-                        .cancel_all_background_sessions(&reason)
-                        .await;
-                }
-            },
-        )
+#[async_trait]
+impl BackgroundSessions for BackgroundManagers {
+    async fn register_subagent(&self, run: AgentRunId) -> Result<(), ToolError> {
+        self.runtime
+            .subagent_session_manager()
+            .register_background_session(&run)
+            .await;
+        Ok(())
     }
 
-    #[must_use]
-    pub fn workflow_tool_service(&self) -> WorkflowToolService {
-        let register = self.clone();
-        WorkflowToolService::new(move |workflow| {
-            let service = register.clone();
-            async move {
-                service
-                    .runtime
-                    .workflow_session_manager()
-                    .register_background_session(&workflow)
-                    .await;
-            }
-        })
+    async fn register_command(
+        &self,
+        id: CommandSessionId,
+        sandbox: SandboxId,
+    ) -> Result<(), ToolError> {
+        self.runtime
+            .command_session_manager()
+            .register_background_session(&id, &sandbox)
+            .await;
+        Ok(())
     }
 
-    #[must_use]
-    pub fn command_session_tool_service(&self) -> CommandSessionToolService {
-        let register = self.clone();
-        CommandSessionToolService::new(move |command_session_id, sandbox_id| {
-            let service = register.clone();
-            async move {
-                service
-                    .runtime
-                    .command_session_manager()
-                    .register_background_session(&command_session_id, &sandbox_id)
-                    .await;
-            }
-        })
+    async fn register_workflow(&self, started: StartedWorkflow) -> Result<(), ToolError> {
+        self.runtime
+            .workflow_session_manager()
+            .register_background_session(&started)
+            .await;
+        Ok(())
+    }
+
+    async fn cancel_subagent(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError> {
+        Ok(self
+            .runtime
+            .subagent_session_manager()
+            .cancel_background_agent_run(&run, reason)
+            .await)
     }
 }
 

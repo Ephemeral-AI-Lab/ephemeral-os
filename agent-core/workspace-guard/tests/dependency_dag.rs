@@ -18,7 +18,7 @@ fn legacy_edges() -> Edges {
         ("eos-agent-def", &["eos-types"]),
         (
             "eos-agent-ports",
-            &["eos-audit", "eos-tool-ports", "eos-types"],
+            &["eos-audit", "eos-tool", "eos-tool-ports", "eos-types"],
         ),
         (
             "eos-agent-run",
@@ -28,6 +28,7 @@ fn legacy_edges() -> Edges {
                 "eos-agent-ports",
                 "eos-engine",
                 "eos-llm-client",
+                "eos-tool",
                 "eos-tool-ports",
             ],
         ),
@@ -36,16 +37,14 @@ fn legacy_edges() -> Edges {
             &["eos-types", "eos-sandbox-port", "eos-llm-client"],
         ),
         ("eos-sandbox-port", &["eos-types"]),
-        (
-            "eos-tool",
-            &["eos-types", "eos-sandbox-port"],
-        ),
+        ("eos-tool", &["eos-types", "eos-sandbox-port"]),
         (
             "eos-engine",
             &[
                 "eos-types",
                 "eos-agent-ports",
                 "eos-llm-client",
+                "eos-tool",
                 "eos-tool-ports",
                 "eos-sandbox-port",
             ],

@@ -268,7 +268,10 @@ impl WorkflowService {
         // Tear down each task's live agent run. The status CAS inside `cancel_task`
         // no-ops (already latched `Cancelled`), but the live-run teardown still runs.
         for task_id in &tasks {
-            self.cancel_port.cancel_task(task_id, reason).await?;
+            self.cancel_port
+                .cancel_task(task_id, reason)
+                .await
+                .map_err(|err| WorkflowError::Invariant(err.to_string()))?;
         }
         self.attempt_store
             .close(

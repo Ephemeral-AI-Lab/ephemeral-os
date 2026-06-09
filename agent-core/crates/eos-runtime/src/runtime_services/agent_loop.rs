@@ -14,11 +14,9 @@ use eos_engine::{
 };
 use eos_sandbox_port::SandboxCommandService;
 use eos_tool::{
-    build_default_registry_with_services, AttemptSubmissionService, CallerScope,
-    RootSubmissionService, SandboxToolService, SkillToolService,
+    build_default_registry, CallerScope, ExecutionMetadata, Submission, ToolRegistry, ToolRuntime,
 };
-use eos_tool_ports::{ExecutionMetadata, ToolRegistry};
-use eos_types::WorkflowApi;
+use eos_types::{AttemptSubmissionPort, WorkflowApi, WorkflowApiError};
 
 use super::RuntimeServices;
 use crate::plugins::register_plugin_tools;
@@ -30,7 +28,7 @@ pub(crate) type AgentRunApiCell = Arc<OnceLock<Arc<dyn AgentRunApi>>>;
 /// the lifecycle service after it is constructed.
 pub(crate) fn build_agent_loop_launcher(
     services: &RuntimeServices,
-    attempt_submission: Option<AttemptSubmissionService>,
+    attempt_submission: Arc<dyn AttemptSubmissionPort>,
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     event_callback: Option<EventCallback>,
 ) -> (Arc<dyn AgentLoopLauncher>, AgentRunApiCell) {
@@ -125,9 +123,83 @@ impl AgentRunApi for LateBoundAgentRunApi {
     }
 }
 
+#[derive(Clone)]
+struct LateBoundWorkflowApi {
+    cell: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
+}
+
+impl LateBoundWorkflowApi {
+    fn new(cell: Arc<OnceLock<Arc<dyn WorkflowApi>>>) -> Self {
+        Self { cell }
+    }
+
+    fn service(&self) -> Result<Arc<dyn WorkflowApi>, WorkflowApiError> {
+        self.cell
+            .get()
+            .cloned()
+            .ok_or_else(|| WorkflowApiError::Internal("workflow API not initialized".to_owned()))
+    }
+}
+
+impl std::fmt::Debug for LateBoundWorkflowApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LateBoundWorkflowApi")
+            .finish_non_exhaustive()
+    }
+}
+
+#[async_trait]
+impl WorkflowApi for LateBoundWorkflowApi {
+    async fn start_workflow(
+        &self,
+        request: eos_types::StartWorkflowRequest,
+    ) -> Result<eos_types::StartedWorkflow, WorkflowApiError> {
+        self.service()?.start_workflow(request).await
+    }
+
+    async fn check_workflow_status(
+        &self,
+        workflow_id: &eos_types::WorkflowId,
+    ) -> Result<String, WorkflowApiError> {
+        self.service()?.check_workflow_status(workflow_id).await
+    }
+
+    async fn cancel_workflow(
+        &self,
+        workflow_id: &eos_types::WorkflowId,
+        reason: &str,
+    ) -> Result<String, WorkflowApiError> {
+        self.service()?.cancel_workflow(workflow_id, reason).await
+    }
+
+    async fn poll_terminal_workflow(
+        &self,
+        workflow_id: &eos_types::WorkflowId,
+    ) -> Result<Option<eos_types::TerminalWorkflow>, WorkflowApiError> {
+        self.service()?.poll_terminal_workflow(workflow_id).await
+    }
+
+    async fn find_outstanding_workflows(
+        &self,
+        parent_task_id: &eos_types::TaskId,
+        agent_run_id: &eos_types::AgentRunId,
+    ) -> Result<Vec<eos_types::OutstandingWorkflow>, WorkflowApiError> {
+        self.service()?
+            .find_outstanding_workflows(parent_task_id, agent_run_id)
+            .await
+    }
+
+    async fn workflow_depth(
+        &self,
+        workflow_id: &eos_types::WorkflowId,
+    ) -> Result<u32, WorkflowApiError> {
+        self.service()?.workflow_depth(workflow_id).await
+    }
+}
+
 struct RuntimeToolRegistryFactory {
     services: RuntimeServices,
-    attempt_submission: Option<AttemptSubmissionService>,
+    attempt_submission: Arc<dyn AttemptSubmissionPort>,
     workflow_service: Arc<OnceLock<Arc<dyn WorkflowApi>>>,
     agent_run_api: AgentRunApiCell,
 }
@@ -144,11 +216,6 @@ impl AgentLoopToolRegistryFactory for RuntimeToolRegistryFactory {
         &self,
         input: AgentLoopToolRegistryBuildInput,
     ) -> Result<ToolRegistry, eos_engine::EngineError> {
-        let sandbox_service = SandboxToolService::new(self.services.sandbox.transport.clone())
-            .with_isolated_workspace_service(
-                self.services.agent_state.isolated_workspace_tool_service(),
-            );
-        let plugin_sandbox_service = sandbox_service.clone();
         let caller = CallerScope {
             dispatchable_subagents: self
                 .services
@@ -160,23 +227,27 @@ impl AgentLoopToolRegistryFactory for RuntimeToolRegistryFactory {
                 .collect(),
             skill_slug: None,
         };
-        let mut registry = build_default_registry_with_services(
-            &self.services.agent_core.tool_config,
-            &caller,
-            sandbox_service,
-            Some(RootSubmissionService::new(
+        let background = input.background.ok_or_else(|| {
+            eos_engine::EngineError::Internal(
+                "background session runtime not initialized".to_owned(),
+            )
+        })?;
+        let runtime = ToolRuntime {
+            sandbox: self.services.sandbox.transport.clone(),
+            workflow: Arc::new(LateBoundWorkflowApi::new(self.workflow_service.clone())),
+            launcher: Arc::new(LateBoundAgentRunApi::new(self.agent_run_api.clone())),
+            skills: self.services.agent_core.skill_registry.clone(),
+            submission: Submission::new(
                 self.services.db.task_store.clone(),
                 self.services.db.request_store.clone(),
-            )),
-            self.attempt_submission.clone(),
-            self.agent_run_api.get().cloned(),
-            Some(input.subagent_sessions),
-            self.workflow_service.get().cloned(),
-            Some(input.workflow_sessions),
-            Some(input.command_sessions),
-            SkillToolService::new(self.services.agent_core.skill_registry.clone()),
-        );
-        register_plugin_tools(&mut registry, &plugin_sandbox_service);
+                self.attempt_submission.clone(),
+            ),
+            background: Arc::new(background),
+            workspace_mode: Arc::new(self.services.agent_state.clone()),
+        };
+        let mut registry =
+            build_default_registry(&self.services.agent_core.tool_config, &caller, runtime);
+        register_plugin_tools(&mut registry, &self.services.sandbox.transport);
         Ok(registry)
     }
 }

@@ -5,9 +5,7 @@ use std::time::Duration;
 
 use eos_agent_ports::AgentRunApi;
 use eos_sandbox_port::SandboxCommandApi;
-use eos_tool_ports::{
-    CommandSessionToolService, SubagentToolService, ToolRegistry, WorkflowToolService,
-};
+use eos_tool::ToolRegistry;
 use eos_types::{AgentRunId, WorkflowApi};
 
 use crate::background::BackgroundManagers;
@@ -19,12 +17,8 @@ use crate::EngineError;
 pub struct AgentLoopToolRegistryBuildInput {
     /// Agent-run id.
     pub agent_run_id: AgentRunId,
-    /// Subagent-session service for the run.
-    pub subagent_sessions: SubagentToolService,
-    /// Workflow-session service for the run.
-    pub workflow_sessions: WorkflowToolService,
-    /// Command-session service for the run.
-    pub command_sessions: CommandSessionToolService,
+    /// Engine-owned background aggregate for the run.
+    pub background: Option<BackgroundManagers>,
 }
 
 /// Runtime-provided factory for concrete tool registries.

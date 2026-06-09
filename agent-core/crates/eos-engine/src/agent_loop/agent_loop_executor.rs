@@ -7,7 +7,7 @@ use eos_agent_ports::{
     ExecutionMetadataBuildInput, StartAgentLoopRequest,
 };
 use eos_llm_client::{ContentBlock, LlmRequest, Message, UsageSnapshot};
-use eos_tool_ports::{RegisteredTool, ToolName, ToolResult};
+use eos_tool::{RegisteredTool, ToolName, ToolResult};
 use eos_types::{AgentRunId, JsonObject, ToolUseId};
 use futures::StreamExt;
 
@@ -319,7 +319,7 @@ impl AgentLoopExecutor {
             tool_input: call.input.clone(),
             tool_use_id: call.tool_use_id.clone(),
         });
-        let result = execute_tool_once(tool, &call.input, &metadata).await?;
+        let result = execute_tool_once(tool, &call.input, &metadata, state.background()).await?;
         self.emit_event(&StreamEvent::ToolExecutionCompleted {
             agent_name: metadata.agent_name,
             agent_run_id: metadata.agent_run_id,

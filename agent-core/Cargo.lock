@@ -441,6 +441,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-audit",
+ "eos-tool",
  "eos-tool-ports",
  "eos-types",
  "thiserror",
@@ -456,6 +457,7 @@ dependencies = [
  "eos-agent-ports",
  "eos-engine",
  "eos-llm-client",
+ "eos-tool",
  "eos-tool-ports",
  "eos-types",
  "serde_json",
@@ -508,6 +510,7 @@ dependencies = [
  "eos-agent-ports",
  "eos-llm-client",
  "eos-sandbox-port",
+ "eos-tool",
  "eos-tool-ports",
  "eos-types",
  "futures",

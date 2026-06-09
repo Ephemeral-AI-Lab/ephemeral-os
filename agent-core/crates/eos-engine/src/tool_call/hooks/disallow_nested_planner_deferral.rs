@@ -11,7 +11,7 @@
 
 use eos_types::JsonObject;
 
-use eos_tool_ports::{ExecutionMetadata, HookServices, ToolError};
+use eos_tool::{ExecutionMetadata, HookServices, ToolError};
 
 use super::{deferred_goal, HookDenial, HookOutcome};
 

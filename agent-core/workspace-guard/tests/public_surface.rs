@@ -192,7 +192,13 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
         ),
         (
             "eos-tool",
-            &["use:error", "use:hooks", "use:model", "use:registry", "use:tools"],
+            &[
+                "use:error",
+                "use:hooks",
+                "use:model",
+                "use:registry",
+                "use:tools",
+            ],
         ),
         (
             "eos-types",

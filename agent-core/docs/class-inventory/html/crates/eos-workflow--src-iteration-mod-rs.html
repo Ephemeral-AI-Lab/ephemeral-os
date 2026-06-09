@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>134</b><span>items</span></div>
-  <div><b>125</b><span>fields</span></div>
+  <div><b>133</b><span>items</span></div>
+  <div><b>124</b><span>fields</span></div>
   <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -79,7 +79,7 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a>(&amp;<span class="rs-self">self</span>, coordinator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-iteration-mod-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.by_iteration_id.lock();
         <span class="rs-kw">if</span> guard.contains_key(coordinator.<a class="symbol-link rs-fn" href="eos-workflow.html#method-iteration-id-159">iteration_id</a>()) {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration attempt coordinator already registered <span class="rs-kw">for</span> iteration {:?}&quot;,
                 coordinator.<a class="symbol-link rs-fn" href="eos-workflow.html#method-iteration-id-159">iteration_id</a>().<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
@@ -172,20 +172,20 @@
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Attempt</span>&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-current-iteration-snapshot-174">current_iteration_snapshot</a>().<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !iteration.is_open() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration {:?} is not open&quot;,
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
         <span class="rs-kw">let</span> sequence_no = <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(previous_id) = previous_attempt_id {
             <span class="rs-kw">if</span> !iteration.has_budget_remaining() {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;iteration {:?} attempt budget exhausted&quot;,
                     iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 )));
             }
             <span class="rs-kw">if</span> iteration.latest_attempt_id() != <span class="rs-type">Some</span>(previous_id) {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;previous_attempt_id {:?} is not the latest attempt of iteration {:?}&quot;,
                     previous_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                     iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
@@ -194,7 +194,7 @@
             iteration.attempt_count() <span class="rs-kw">as</span> i64 + 1
         } <span class="rs-kw">else</span> {
             <span class="rs-kw">if</span> !iteration.attempt_ids.is_empty() {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;iteration {:?} already has attempts; pass previous_attempt_id to retry&quot;,
                     iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 )));
@@ -229,20 +229,20 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-start-attempt-121">start_attempt</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-current-iteration-snapshot-174">current_iteration_snapshot</a>().<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !iteration.is_open() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration {:?} is not open&quot;,
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
         <span class="rs-kw">if</span> attempt.iteration_id != iteration.id {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;attempt {:?} does not belong to iteration {:?}&quot;,
                 attempt.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
-        <span class="rs-kw">let</span> orchestrator = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(attempt, <span class="rs-self">self</span>.deps.clone());
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>().<span class="rs-kw">await</span> {
+        <span class="rs-kw">let</span> orchestrator = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(attempt, <span class="rs-self">self</span>.deps.clone());
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>().<span class="rs-kw">await</span> {
             <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-close-attempt-after-startup-failure-275">close_attempt_after_startup_failure</a>(attempt).<span class="rs-kw">await</span>?;
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
         }
@@ -258,16 +258,16 @@
             .attempt_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-current-iteration-snapshot-174">current_iteration_snapshot</a>().<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !iteration.is_open() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration {:?} is not open&quot;,
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
         <span class="rs-kw">if</span> attempt.iteration_id != iteration.id {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;attempt {:?} does not belong to iteration {:?}&quot;,
                 attempt.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
@@ -287,7 +287,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;<span class="rs-self">self</span>.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, <span class="rs-self">self</span>.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, <span class="rs-self">self</span>.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))
     }
 </code></pre>
 </details></td></tr><tr id="method-close-iteration-passed-182"><td>method</td><td>close_iteration_passed</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-iteration-mod-rs.html#method-close-iteration-passed-182">close_iteration_passed</a> (&amp; self , attempt : &amp; Attempt) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><details class="function-source">
@@ -479,7 +479,7 @@
 };
 <span class="rs-kw">use</span> parking_lot::<span class="rs-type">Mutex</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::state::project_iteration_outcomes;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
@@ -540,20 +540,20 @@
     ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Attempt</span>&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-current-iteration-snapshot-174">current_iteration_snapshot</a>().<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !iteration.is_open() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration {:?} is not open&quot;,
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
         <span class="rs-kw">let</span> sequence_no = <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(previous_id) = previous_attempt_id {
             <span class="rs-kw">if</span> !iteration.has_budget_remaining() {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;iteration {:?} attempt budget exhausted&quot;,
                     iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 )));
             }
             <span class="rs-kw">if</span> iteration.latest_attempt_id() != <span class="rs-type">Some</span>(previous_id) {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;previous_attempt_id {:?} is not the latest attempt of iteration {:?}&quot;,
                     previous_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                     iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
@@ -562,7 +562,7 @@
             iteration.attempt_count() <span class="rs-kw">as</span> i64 + 1
         } <span class="rs-kw">else</span> {
             <span class="rs-kw">if</span> !iteration.attempt_ids.is_empty() {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;iteration {:?} already has attempts; pass previous_attempt_id to retry&quot;,
                     iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 )));
@@ -593,20 +593,20 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-start-attempt-121">start_attempt</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-current-iteration-snapshot-174">current_iteration_snapshot</a>().<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !iteration.is_open() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration {:?} is not open&quot;,
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
         <span class="rs-kw">if</span> attempt.iteration_id != iteration.id {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;attempt {:?} does not belong to iteration {:?}&quot;,
                 attempt.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
-        <span class="rs-kw">let</span> orchestrator = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(attempt, <span class="rs-self">self</span>.deps.clone());
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>().<span class="rs-kw">await</span> {
+        <span class="rs-kw">let</span> orchestrator = <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(attempt, <span class="rs-self">self</span>.deps.clone());
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-68">start</a>().<span class="rs-kw">await</span> {
             <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-close-attempt-after-startup-failure-275">close_attempt_after_startup_failure</a>(attempt).<span class="rs-kw">await</span>?;
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
         }
@@ -620,16 +620,16 @@
             .attempt_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-current-iteration-snapshot-174">current_iteration_snapshot</a>().<span class="rs-kw">await</span>?;
         <span class="rs-kw">if</span> !iteration.is_open() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration {:?} is not open&quot;,
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));
         }
         <span class="rs-kw">if</span> attempt.iteration_id != iteration.id {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;attempt {:?} does not belong to iteration {:?}&quot;,
                 attempt.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                 iteration.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
@@ -647,7 +647,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;<span class="rs-self">self</span>.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, <span class="rs-self">self</span>.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, <span class="rs-self">self</span>.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))
     }
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-close-iteration-passed-182">close_iteration_passed</a>(&amp;<span class="rs-self">self</span>, attempt: &amp;<span class="rs-type">Attempt</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
@@ -803,7 +803,7 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a>(&amp;<span class="rs-self">self</span>, coordinator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-iteration-mod-rs.html#item-struct-IterationAttemptCoordinator-28">IterationAttemptCoordinator</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.by_iteration_id.lock();
         <span class="rs-kw">if</span> guard.contains_key(coordinator.<a class="symbol-link rs-fn" href="eos-workflow.html#method-iteration-id-159">iteration_id</a>()) {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;iteration attempt coordinator already registered <span class="rs-kw">for</span> iteration {:?}&quot;,
                 coordinator.<a class="symbol-link rs-fn" href="eos-workflow.html#method-iteration-id-159">iteration_id</a>().<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
             )));

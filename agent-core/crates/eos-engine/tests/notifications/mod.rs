@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use eos_llm_client::{ContentBlock, MessageRole};
-use eos_tool_ports::{ToolKey, ToolName};
+use eos_tool::{ToolKey, ToolName};
 use eos_types::JsonObject;
 
 use super::*;

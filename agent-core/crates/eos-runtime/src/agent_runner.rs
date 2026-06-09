@@ -23,9 +23,7 @@ use eos_agent_ports::{
 };
 use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
-use eos_tool::AttemptSubmissionService;
-use eos_tool_ports::AttemptSubmissionPort;
-use eos_types::{AgentRunId, TaskRole, WorkflowApi};
+use eos_types::{AgentRunId, AttemptSubmissionPort, TaskRole, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 
 use crate::runtime_services::{build_agent_loop_launcher, EventCallback, RuntimeServices};
@@ -86,9 +84,7 @@ impl AgentRunner for RuntimeAgentRunner {
 
         let (loop_launcher, agent_run_api_cell) = build_agent_loop_launcher(
             &self.services,
-            Some(AttemptSubmissionService::new(
-                self.attempt_submission.clone(),
-            )),
+            self.attempt_submission.clone(),
             self.workflow_service.clone(),
             self.event_callback.clone(),
         );

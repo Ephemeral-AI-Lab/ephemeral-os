@@ -1,10 +1,11 @@
 //! Per-tool execution pipeline used by engine tool dispatch.
 
-use eos_tool_ports::{ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolResult};
+use eos_tool::{ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolResult};
 use eos_types::JsonObject;
 use serde_json::{json, Value};
 
 use super::hooks::{hook_failure_result, run_hook, HookOutcome};
+use crate::background::BackgroundManagers;
 
 /// Run one tool call end-to-end.
 ///
@@ -15,6 +16,7 @@ pub async fn execute_tool_once(
     tool: &RegisteredTool,
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
+    background: Option<&BackgroundManagers>,
 ) -> Result<ToolResult, ToolError> {
     if raw_input.contains_key("background") {
         return Ok(ToolResult::error(format!(
@@ -24,7 +26,7 @@ pub async fn execute_tool_once(
         )));
     }
 
-    if let Some(denial) = run_pre_hooks(tool, raw_input, ctx).await? {
+    if let Some(denial) = run_pre_hooks(tool, raw_input, ctx, background).await? {
         return Ok(denial);
     }
 
@@ -38,10 +40,11 @@ pub async fn run_pre_hooks(
     tool: &RegisteredTool,
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
+    background: Option<&BackgroundManagers>,
 ) -> Result<Option<ToolResult>, ToolError> {
     let mut hook_trace: Vec<Value> = Vec::new();
     for &hook in &tool.hooks {
-        match run_hook(hook, raw_input, ctx, tool.hook_services()).await? {
+        match run_hook(hook, raw_input, ctx, tool.hook_services(), background).await? {
             HookOutcome::Pass(meta) => hook_trace.push(json!({
                 "phase": "pre",
                 "hook_name": hook.hook_name(),

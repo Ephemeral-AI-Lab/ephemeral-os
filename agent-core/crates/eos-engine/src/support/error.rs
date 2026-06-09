@@ -1,7 +1,7 @@
 //! Engine error type.
 
 use eos_llm_client::ProviderError;
-use eos_tool_ports::ToolError;
+use eos_tool::ToolError;
 use eos_types::CoreError;
 
 /// A framework error raised by the engine loop or one of its owned helpers.

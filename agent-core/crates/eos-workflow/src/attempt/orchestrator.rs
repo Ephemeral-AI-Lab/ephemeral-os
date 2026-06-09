@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use eos_tool_ports::PlannerPlan;
 use eos_types::{
     execution_outcome_for_submission, Attempt, AttemptClosure, AttemptFailReason, AttemptId,
     AttemptStage, ExecutionRole, GeneratorSubmission, MaterializedPlan, PlannerFailReason,
-    PlannerFailureSubmission, PlannerSubmission, ReducerSubmission, Task, TaskOutcomeStatus,
-    TaskRole, TaskStatus,
+    PlannerFailureSubmission, PlannerPlan, PlannerSubmission, ReducerSubmission, Task,
+    TaskOutcomeStatus, TaskRole, TaskStatus,
 };
 
 use crate::attempt::plan_dag::{validate_plan_agents, validate_plan_shape};

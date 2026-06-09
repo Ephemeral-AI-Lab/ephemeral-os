@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use eos_agent_ports::{AgentRunApi, AgentRunOutcome, AgentRunStatus};
-use eos_tool_ports::ToolResult;
+use eos_tool::ToolResult;
 #[cfg(test)]
 use eos_types::AgentRun;
 use eos_types::{AgentRunId, JsonObject};

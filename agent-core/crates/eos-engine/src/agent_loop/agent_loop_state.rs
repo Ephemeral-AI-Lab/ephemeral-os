@@ -7,10 +7,8 @@ use eos_agent_ports::{
     AgentLoopMessage, AgentLoopOutcome, AgentLoopOutcomeKind, StartAgentLoopRequest,
 };
 use eos_llm_client::{ContentBlock, Message, MessageRole};
-use eos_tool_ports::{
-    CommandSessionToolService, SubagentToolService, SystemNotification, ToolKey, ToolRegistry,
-    ToolResult, WorkflowToolService,
-};
+use eos_tool::{ToolKey, ToolRegistry, ToolResult};
+use eos_tool_ports::SystemNotification;
 use eos_types::AgentRunId;
 
 use crate::background::{BackgroundManagers, BackgroundTeardownService};
@@ -85,9 +83,7 @@ impl AgentLoopState {
         let tool_registry =
             tool_registry_factory.build_tool_registry(AgentLoopToolRegistryBuildInput {
                 agent_run_id: request.agent_run_id.clone(),
-                subagent_sessions: run_services.subagent_sessions,
-                workflow_sessions: run_services.workflow_sessions,
-                command_sessions: run_services.command_sessions,
+                background: run_services.background.clone(),
             })?;
         let terminal_tools = tool_registry
             .list()
@@ -193,6 +189,10 @@ impl AgentLoopState {
         }
     }
 
+    pub(crate) fn background(&self) -> Option<&BackgroundManagers> {
+        self.background.as_ref()
+    }
+
     fn hard_no_terminal_ceiling(&self) -> u32 {
         self.tool_call_limit.saturating_mul(3).saturating_add(1) / 2
     }
@@ -211,9 +211,6 @@ impl AgentLoopState {
 
 #[derive(Clone, Debug)]
 pub(crate) struct AgentLoopRunServices {
-    subagent_sessions: SubagentToolService,
-    workflow_sessions: WorkflowToolService,
-    command_sessions: CommandSessionToolService,
     notifier: NotificationService,
     background: Option<BackgroundManagers>,
     background_teardown: Option<BackgroundTeardownService>,
@@ -222,16 +219,6 @@ pub(crate) struct AgentLoopRunServices {
 impl AgentLoopRunServices {
     pub(crate) fn inert() -> Self {
         Self {
-            subagent_sessions: SubagentToolService::new(
-                |_agent_run_id| async {},
-                |_agent_run_id, _reason| async { false },
-                || async { 0 },
-                |_reason| async {},
-            ),
-            workflow_sessions: WorkflowToolService::new(|_workflow| async {}),
-            command_sessions: CommandSessionToolService::new(
-                |_command_session_id, _sandbox_id| async {},
-            ),
             notifier: NotificationService::new(),
             background: None,
             background_teardown: None,
@@ -243,9 +230,6 @@ impl AgentLoopRunServices {
         notifier: NotificationService,
     ) -> Self {
         Self {
-            subagent_sessions: background.subagent_tool_service(),
-            workflow_sessions: background.workflow_tool_service(),
-            command_sessions: background.command_session_tool_service(),
             notifier,
             background: Some(background.clone()),
             background_teardown: Some(background.teardown_service()),

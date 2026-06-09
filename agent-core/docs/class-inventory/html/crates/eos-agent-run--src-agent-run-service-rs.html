@@ -522,17 +522,17 @@
 </details>
 
   <p class="source">crates/eos-agent-run/src/agent_run_service.rs:409</p>
-</article><article id="item-fn-tool-result-from-payload-420" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_from_payload private fn tool_result_from_payload (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool_ports :: ToolResult crates/eos-agent-run/src/agent_run_service.rs  ">
+</article><article id="item-fn-tool-result-from-payload-420" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_from_payload private fn tool_result_from_payload (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool :: ToolResult crates/eos-agent-run/src/agent_run_service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_result_from_payload</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a> (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool_ports :: ToolResult</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a> (payload : &amp; eos_types :: JsonObject) -&gt; eos_tool :: ToolResult</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool_ports::<span class="rs-type">ToolResult</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool::<span class="rs-type">ToolResult</span> {
     <span class="rs-kw">let</span> output = payload
         .get(&quot;output&quot;)
         .and_then(serde_json::<span class="rs-type">Value</span>::as_str)
@@ -547,7 +547,7 @@
         .and_then(serde_json::<span class="rs-type">Value</span>::as_object)
         .cloned()
         .unwrap_or_default();
-    eos_tool_ports::<span class="rs-type">ToolResult</span> {
+    eos_tool::<span class="rs-type">ToolResult</span> {
         output,
         is_error,
         metadata,
@@ -1068,7 +1068,7 @@
         .collect()
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool_ports::<span class="rs-type">ToolResult</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-agent-run-service-rs.html#item-fn-tool-result-from-payload-420">tool_result_from_payload</a>(payload: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; eos_tool::<span class="rs-type">ToolResult</span> {
     <span class="rs-kw">let</span> output = payload
         .get(&quot;output&quot;)
         .and_then(serde_json::<span class="rs-type">Value</span>::as_str)
@@ -1083,7 +1083,7 @@
         .and_then(serde_json::<span class="rs-type">Value</span>::as_object)
         .cloned()
         .unwrap_or_default();
-    eos_tool_ports::<span class="rs-type">ToolResult</span> {
+    eos_tool::<span class="rs-type">ToolResult</span> {
         output,
         is_error,
         metadata,

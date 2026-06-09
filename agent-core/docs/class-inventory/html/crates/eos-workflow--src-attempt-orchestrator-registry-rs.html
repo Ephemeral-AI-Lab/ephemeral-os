@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>134</b><span>items</span></div>
-  <div><b>125</b><span>fields</span></div>
+  <div><b>133</b><span>items</span></div>
+  <div><b>124</b><span>fields</span></div>
   <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -65,7 +65,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a></code>
   <p class="docstring">Process-local liveness map for active attempt orchestrators.</p>
   <div class="tags"><span>derive: Default</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>by_attempt_id</td><td><code>Mutex &lt; HashMap &lt; AttemptId , Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>planner_aborts</td><td><code>Mutex &lt; HashMap &lt; AttemptId , AbortHandle &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-31"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> () -&gt; Self</code><p class="docstring">Create an empty registry.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>by_attempt_id</td><td><code>Mutex &lt; HashMap &lt; AttemptId , Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>planner_aborts</td><td><code>Mutex &lt; HashMap &lt; AttemptId , AbortHandle &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-31"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> () -&gt; Self</code><p class="docstring">Create an empty registry.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create an empty registry.</span>
     #[must_use]
@@ -73,14 +73,14 @@
         <span class="rs-self">Self</span>::default()
     }
 </code></pre>
-</details></td></tr><tr id="method-register-37"><td>method</td><td>register</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a> (&amp; self , orchestrator : Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a> &gt;) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-register-37"><td>method</td><td>register</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a> (&amp; self , orchestrator : Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt;) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a>(&amp;<span class="rs-self">self</span>, orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a>(&amp;<span class="rs-self">self</span>, orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.by_attempt_id.lock();
         <span class="rs-kw">let</span> attempt_id = orchestrator.<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-150">attempt_id</a>().clone();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(current) = guard.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt_id) {
             <span class="rs-kw">if</span> !<span class="rs-type">Arc</span>::ptr_eq(current, &amp;orchestrator) {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;attempt orchestrator already registered <span class="rs-kw">for</span> attempt {:?}&quot;,
                     attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 )));
@@ -90,11 +90,11 @@
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-get-52"><td>method</td><td>get</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a> (&amp; self , attempt_id : &amp; AttemptId) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a> &gt; &gt;</code><p class="docstring">Look up an active orchestrator.</p><details class="function-source">
+</details></td></tr><tr id="method-get-52"><td>method</td><td>get</td><td><code>pub fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a> (&amp; self , attempt_id : &amp; AttemptId) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a> &gt; &gt;</code><p class="docstring">Look up an active orchestrator.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Look up an active orchestrator.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;<span class="rs-self">self</span>, attempt_id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>&gt;&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;<span class="rs-self">self</span>, attempt_id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;&gt; {
         <span class="rs-self">self</span>.by_attempt_id.lock().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id).cloned()
     }
 </code></pre>
@@ -166,12 +166,12 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>;
 
 <span class="rs-comment">/// Process-local liveness map for active attempt orchestrators.</span>
 #[derive(<span class="rs-type">Default</span>)]
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> {
-    by_attempt_id: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">AttemptId</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>&gt;&gt;&gt;,
+    by_attempt_id: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">AttemptId</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;&gt;&gt;,
     <span class="rs-comment">/// Abort handles for the per-attempt planner-driver tasks, so a workflow</span>
     <span class="rs-comment">/// cancel can tear down an attempt's in-flight runs (the planner task owns</span>
     <span class="rs-comment">/// the RUN-stage `JoinSet`). Cleared on settle without aborting.</span>
@@ -193,12 +193,12 @@
         <span class="rs-self">Self</span>::default()
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a>(&amp;<span class="rs-self">self</span>, orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-register-37">register</a>(&amp;<span class="rs-self">self</span>, orchestrator: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.by_attempt_id.lock();
         <span class="rs-kw">let</span> attempt_id = orchestrator.<a class="symbol-link rs-fn" href="eos-workflow.html#method-attempt-id-150">attempt_id</a>().clone();
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(current) = guard.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt_id) {
             <span class="rs-kw">if</span> !<span class="rs-type">Arc</span>::ptr_eq(current, &amp;orchestrator) {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                     &quot;attempt orchestrator already registered <span class="rs-kw">for</span> attempt {:?}&quot;,
                     attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                 )));
@@ -210,7 +210,7 @@
 
     <span class="rs-comment">/// Look up an active orchestrator.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;<span class="rs-self">self</span>, attempt_id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-39">AttemptOrchestrator</a>&gt;&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;<span class="rs-self">self</span>, attempt_id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-rs.html#item-struct-AttemptOrchestrator-38">AttemptOrchestrator</a>&gt;&gt; {
         <span class="rs-self">self</span>.by_attempt_id.lock().<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id).cloned()
     }
 

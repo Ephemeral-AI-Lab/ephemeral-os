@@ -11,7 +11,9 @@
 use eos_types::JsonObject;
 use serde_json::{json, Value};
 
-use eos_tool_ports::{ExecutionMetadata, HookServices, ToolError, ToolName};
+use eos_tool::{ExecutionMetadata, HookServices, ToolError, ToolName};
+
+use crate::background::BackgroundManagers;
 
 use super::{deferred_goal, HookDenial, HookOutcome};
 
@@ -67,20 +69,21 @@ pub(crate) async fn run_require_no_background_sessions(
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
     services: &HookServices,
+    background: Option<&BackgroundManagers>,
 ) -> Result<HookOutcome, ToolError> {
     let agent_run_id = ctx.require_agent_run_id()?;
 
-    if let Some(subagent_sessions) = services.subagent_sessions() {
+    if let Some(background) = background {
         // Terminal/exit tools settle the agent's subagents to 0; enter_isolated
         // only inspects (reject). After cancellation `report.subagent == 0`, so
         // the deny below fires only on the reject path.
         let subagents = if cancels_inflight_subagents(tool) {
-            subagent_sessions
-                .cancel_all_background_sessions("parent submitted its terminal")
-                .await?;
-            subagent_sessions.count_background_sessions().await?
+            background
+                .cancel_all_subagents("parent submitted its terminal")
+                .await;
+            background.count_subagents().await
         } else {
-            subagent_sessions.count_background_sessions().await?
+            background.count_subagents().await
         };
         if subagents > 0 {
             return Ok(HookOutcome::Deny(

@@ -4,8 +4,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_tool_ports::{AttemptSubmissionPort, PlannerPlan, Sealed, SubmissionAck, ToolError};
-use eos_types::{GeneratorSubmission, ReducerSubmission};
+use eos_types::{
+    AttemptSubmissionPort, CoreError, GeneratorSubmission, PlannerPlan, ReducerSubmission,
+    SubmissionAck,
+};
 
 use crate::attempt::AttemptOrchestratorRegistry;
 use crate::WorkflowError;
@@ -39,11 +41,9 @@ impl AttemptSubmissionAdapter {
     }
 }
 
-impl Sealed for AttemptSubmissionAdapter {}
-
 #[async_trait]
 impl AttemptSubmissionPort for AttemptSubmissionAdapter {
-    async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, ToolError> {
+    async fn apply_plan(&self, plan: PlannerPlan) -> Result<SubmissionAck, CoreError> {
         let Some(orchestrator) = self.registry.get(&plan.attempt_id) else {
             return Ok(SubmissionAck::Rejected(format!(
                 "attempt {:?} is not active",
@@ -56,7 +56,7 @@ impl AttemptSubmissionPort for AttemptSubmissionAdapter {
     async fn submit_generator(
         &self,
         submission: GeneratorSubmission,
-    ) -> Result<SubmissionAck, ToolError> {
+    ) -> Result<SubmissionAck, CoreError> {
         let Some(orchestrator) = self.registry.get(&submission.attempt_id) else {
             return Ok(SubmissionAck::Rejected(format!(
                 "attempt {:?} is not active",
@@ -69,7 +69,7 @@ impl AttemptSubmissionPort for AttemptSubmissionAdapter {
     async fn apply_reducer(
         &self,
         submission: ReducerSubmission,
-    ) -> Result<SubmissionAck, ToolError> {
+    ) -> Result<SubmissionAck, CoreError> {
         let Some(orchestrator) = self.registry.get(&submission.attempt_id) else {
             return Ok(SubmissionAck::Rejected(format!(
                 "attempt {:?} is not active",
@@ -80,11 +80,10 @@ impl AttemptSubmissionPort for AttemptSubmissionAdapter {
     }
 }
 
-fn submission_ack(result: crate::Result<()>) -> Result<SubmissionAck, ToolError> {
+fn submission_ack(result: crate::Result<()>) -> Result<SubmissionAck, CoreError> {
     match result {
         Ok(()) => Ok(SubmissionAck::Accepted),
-        Err(WorkflowError::Store(err)) => Err(ToolError::Store(err)),
-        Err(WorkflowError::Tool(err)) => Err(err),
+        Err(WorkflowError::Store(err)) => Err(err),
         Err(err) => Ok(SubmissionAck::Rejected(err.to_string())),
     }
 }

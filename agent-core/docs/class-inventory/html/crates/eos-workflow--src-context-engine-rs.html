@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>134</b><span>items</span></div>
-  <div><b>125</b><span>fields</span></div>
+  <div><b>133</b><span>items</span></div>
+  <div><b>124</b><span>fields</span></div>
   <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -141,19 +141,19 @@
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> current_attempt = <span class="rs-self">self</span>
             .deps
             .attempt_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> workflow_children =
             vec![<a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-ContextSection-28">ContextSection</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(&quot;goal&quot;).<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-with-text-63">with_text</a>(workflow.workflow_goal)];
@@ -204,13 +204,13 @@
             .attempt_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> task = <span class="rs-self">self</span>
             .deps
             .task_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(task_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sections = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
         <span class="rs-kw">let</span> dependencies = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-context-engine-rs.html#method-dependency-sections-257">dependency_sections</a>(&amp;task.needs).<span class="rs-kw">await</span>?;
@@ -318,11 +318,11 @@
                 .task_store
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(task_id)
                 .<span class="rs-kw">await</span>?
-                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;dependency task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;dependency task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcomes = task.outcomes.clone();
             <span class="rs-kw">if</span> outcomes.is_empty() {
                 <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span> {
-                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                         &quot;dependency task {:?} has no execution outcome&quot;,
                         task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                     )));
@@ -527,19 +527,19 @@
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;workflow&quot;, workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> iteration = <span class="rs-self">self</span>
             .deps
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> current_attempt = <span class="rs-self">self</span>
             .deps
             .attempt_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> workflow_children =
             vec![<a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-ContextSection-28">ContextSection</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(&quot;goal&quot;).<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-with-text-63">with_text</a>(workflow.workflow_goal)];
@@ -588,13 +588,13 @@
             .attempt_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;attempt&quot;, attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> task = <span class="rs-self">self</span>
             .deps
             .task_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(task_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sections = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
         <span class="rs-kw">let</span> dependencies = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-context-engine-rs.html#method-dependency-sections-257">dependency_sections</a>(&amp;task.needs).<span class="rs-kw">await</span>?;
@@ -696,11 +696,11 @@
                 .task_store
                 .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(task_id)
                 .<span class="rs-kw">await</span>?
-                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;dependency task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;dependency task&quot;, task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcomes = task.outcomes.clone();
             <span class="rs-kw">if</span> outcomes.is_empty() {
                 <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span> {
-                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                         &quot;dependency task {:?} has no execution outcome&quot;,
                         task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
                     )));

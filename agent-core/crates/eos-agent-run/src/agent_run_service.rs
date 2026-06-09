@@ -417,7 +417,7 @@ fn loop_messages_to_llm_messages(messages: Vec<eos_agent_ports::AgentLoopMessage
         .collect()
 }
 
-fn tool_result_from_payload(payload: &eos_types::JsonObject) -> eos_tool_ports::ToolResult {
+fn tool_result_from_payload(payload: &eos_types::JsonObject) -> eos_tool::ToolResult {
     let output = payload
         .get("output")
         .and_then(serde_json::Value::as_str)
@@ -432,7 +432,7 @@ fn tool_result_from_payload(payload: &eos_types::JsonObject) -> eos_tool_ports::
         .and_then(serde_json::Value::as_object)
         .cloned()
         .unwrap_or_default();
-    eos_tool_ports::ToolResult {
+    eos_tool::ToolResult {
         output,
         is_error,
         metadata,

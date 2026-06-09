@@ -12,14 +12,8 @@ pub(crate) mod workflow;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_sandbox_port::{
-    DaemonOp, SandboxCommandApi, SandboxCommandService, SandboxPortError, SandboxTransport,
-};
-use eos_types::{
-    AgentRunApi, AgentRunError, AgentRunId, AgentRunOutcome, CommandSessionId, JsonObject,
-    SandboxId, SpawnAgentRequest, StartedWorkflow, ToolSpec, WorkflowApi, WorkflowApiError,
-    WorkflowId,
-};
+use eos_sandbox_port::{SandboxCommandApi, SandboxCommandService, SandboxTransport};
+use eos_types::{AgentRunId, CommandSessionId, JsonObject, SandboxId, StartedWorkflow, ToolSpec};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
@@ -107,10 +101,16 @@ impl BackgroundHandle {
     }
 
     async fn register_subagent(&self, agent_run_id: &AgentRunId) -> Result<(), ToolError> {
-        self.background.register_subagent(agent_run_id.clone()).await
+        self.background
+            .register_subagent(agent_run_id.clone())
+            .await
     }
 
-    async fn cancel_subagent(&self, agent_run_id: &AgentRunId, reason: &str) -> Result<bool, ToolError> {
+    async fn cancel_subagent(
+        &self,
+        agent_run_id: &AgentRunId,
+        reason: &str,
+    ) -> Result<bool, ToolError> {
         self.background
             .cancel_subagent(agent_run_id.clone(), reason)
             .await
@@ -140,7 +140,9 @@ pub(crate) struct AttemptSubmissionHandle {
 impl AttemptSubmissionHandle {
     fn new(submission: &Submission) -> Self {
         Self {
-            port: submission.attempt().expect("live tool runtime has attempt submission"),
+            port: submission
+                .attempt()
+                .expect("live tool runtime has attempt submission"),
         }
     }
 }
@@ -172,6 +174,41 @@ pub(crate) fn register_tool(
     );
 }
 
+pub(crate) fn register_schema_tool(
+    registry: &mut ToolRegistry,
+    name: ToolName,
+    config: &ToolConfig,
+    spec: ToolSpec,
+    output: OutputShape,
+) {
+    registry.register(
+        RegisteredTool::new(
+            name,
+            config.intent,
+            config.terminal,
+            spec,
+            output,
+            Arc::new(SchemaOnlyExecutor),
+        )
+        .with_hooks(config.hooks.clone()),
+    );
+}
+
+struct SchemaOnlyExecutor;
+
+#[async_trait]
+impl ToolExecutor for SchemaOnlyExecutor {
+    async fn execute(
+        &self,
+        _input: &JsonObject,
+        _ctx: &crate::ExecutionMetadata,
+    ) -> Result<ToolResult, ToolError> {
+        Err(ToolError::Internal(
+            "schema-only registry cannot execute tools".to_owned(),
+        ))
+    }
+}
+
 /// Build the default executable tool registry for one caller.
 #[must_use]
 pub fn build_default_registry(
@@ -191,7 +228,12 @@ pub fn build_default_registry(
     sandbox::register(&mut registry, config, sandbox);
     submission::register(&mut registry, config, root, attempt);
     ask_advisor::register(&mut registry, config, runtime.launcher.clone());
-    workflow::register(&mut registry, config, runtime.workflow.clone(), background.clone());
+    workflow::register(
+        &mut registry,
+        config,
+        runtime.workflow.clone(),
+        background.clone(),
+    );
     subagent::register(
         &mut registry,
         config,
@@ -207,7 +249,15 @@ pub fn build_default_registry(
 /// Build the default schema-only registry for validation and snapshots.
 #[must_use]
 pub fn build_registry_schema(config: &ToolConfigSet, caller: &CallerScope) -> ToolRegistry {
-    build_default_registry(config, caller, schema_runtime())
+    let mut registry = ToolRegistry::new();
+    command::register_schema(&mut registry, config);
+    sandbox::register_schema(&mut registry, config);
+    submission::register_schema(&mut registry, config);
+    ask_advisor::register_schema(&mut registry, config);
+    workflow::register_schema(&mut registry, config);
+    subagent::register_schema(&mut registry, config, caller);
+    skills::register_schema(&mut registry, config, caller);
+    registry
 }
 
 /// Parse-and-validate raw tool input into a typed DTO.
@@ -227,173 +277,4 @@ pub(crate) fn parse_input<T: DeserializeOwned>(
 pub(crate) fn repo_tools_config() -> ToolConfigSet {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools");
     ToolConfigSet::load_from_dir(&root).expect("repo .eos-agents/tools loads and validates")
-}
-
-fn schema_runtime() -> ToolRuntime {
-    let sandbox = Arc::new(SchemaOnlySandbox);
-    let background = Arc::new(SchemaOnlyBackground);
-    ToolRuntime {
-        sandbox,
-        workflow: Arc::new(SchemaOnlyWorkflow),
-        launcher: Arc::new(SchemaOnlyLauncher),
-        skills: Arc::new(SkillRegistry::new()),
-        submission: Submission::schema(),
-        background,
-        workspace_mode: Arc::new(SchemaOnlyWorkspaceMode),
-    }
-}
-
-#[derive(Debug)]
-struct SchemaOnlySandbox;
-
-#[async_trait]
-impl SandboxTransport for SchemaOnlySandbox {
-    async fn call(
-        &self,
-        _sandbox_id: &SandboxId,
-        _op: DaemonOp,
-        _payload: JsonObject,
-        _timeout_s: u32,
-    ) -> Result<JsonObject, SandboxPortError> {
-        Ok(JsonObject::new())
-    }
-}
-
-#[derive(Debug)]
-struct SchemaOnlyBackground;
-
-#[async_trait]
-impl BackgroundSessions for SchemaOnlyBackground {
-    async fn register_subagent(&self, _run: AgentRunId) -> Result<(), ToolError> {
-        Err(ToolError::Internal("schema-only registry cannot execute tools".to_owned()))
-    }
-
-    async fn register_command(
-        &self,
-        _id: CommandSessionId,
-        _sandbox: SandboxId,
-    ) -> Result<(), ToolError> {
-        Err(ToolError::Internal("schema-only registry cannot execute tools".to_owned()))
-    }
-
-    async fn register_workflow(&self, _started: StartedWorkflow) -> Result<(), ToolError> {
-        Err(ToolError::Internal("schema-only registry cannot execute tools".to_owned()))
-    }
-
-    async fn cancel_subagent(&self, _run: AgentRunId, _reason: &str) -> Result<bool, ToolError> {
-        Err(ToolError::Internal("schema-only registry cannot execute tools".to_owned()))
-    }
-}
-
-#[derive(Debug)]
-struct SchemaOnlyWorkspaceMode;
-
-#[async_trait]
-impl WorkspaceMode for SchemaOnlyWorkspaceMode {
-    async fn set_isolated_workspace_mode(
-        &self,
-        _agent_run_id: AgentRunId,
-        _is_isolated: bool,
-    ) -> Result<(), ToolError> {
-        Err(ToolError::Internal("schema-only registry cannot execute tools".to_owned()))
-    }
-}
-
-#[derive(Debug)]
-struct SchemaOnlyLauncher;
-
-#[async_trait]
-impl AgentRunApi for SchemaOnlyLauncher {
-    async fn spawn_agent(&self, _request: SpawnAgentRequest) -> Result<AgentRunId, AgentRunError> {
-        Err(AgentRunError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn wait_for_agent_outcome(
-        &self,
-        _agent_run_id: &AgentRunId,
-    ) -> Result<AgentRunOutcome, AgentRunError> {
-        Err(AgentRunError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn poll_agent_run_outcome(
-        &self,
-        _agent_run_id: &AgentRunId,
-    ) -> Result<Option<AgentRunOutcome>, AgentRunError> {
-        Err(AgentRunError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn cancel_agent_run(
-        &self,
-        _agent_run_id: &AgentRunId,
-        _reason: &str,
-    ) -> Result<(), AgentRunError> {
-        Err(AgentRunError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-}
-
-#[derive(Debug)]
-struct SchemaOnlyWorkflow;
-
-#[async_trait]
-impl WorkflowApi for SchemaOnlyWorkflow {
-    async fn start_workflow(
-        &self,
-        _request: eos_types::StartWorkflowRequest,
-    ) -> Result<StartedWorkflow, WorkflowApiError> {
-        Err(WorkflowApiError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn check_workflow_status(
-        &self,
-        _workflow_id: &WorkflowId,
-    ) -> Result<String, WorkflowApiError> {
-        Err(WorkflowApiError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn cancel_workflow(
-        &self,
-        _workflow_id: &WorkflowId,
-        _reason: &str,
-    ) -> Result<String, WorkflowApiError> {
-        Err(WorkflowApiError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn poll_terminal_workflow(
-        &self,
-        _workflow_id: &WorkflowId,
-    ) -> Result<Option<eos_types::TerminalWorkflow>, WorkflowApiError> {
-        Err(WorkflowApiError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn find_outstanding_workflows(
-        &self,
-        _task_id: &eos_types::TaskId,
-        _agent_run_id: &AgentRunId,
-    ) -> Result<Vec<eos_types::OutstandingWorkflow>, WorkflowApiError> {
-        Err(WorkflowApiError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
-
-    async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, WorkflowApiError> {
-        Err(WorkflowApiError::Internal(
-            "schema-only registry cannot execute tools".to_owned(),
-        ))
-    }
 }

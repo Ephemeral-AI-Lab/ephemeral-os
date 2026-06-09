@@ -3,6 +3,7 @@
 //! constructor used across the crate's unit tests (`test-mock-traits`).
 
 #![allow(clippy::unwrap_used)]
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

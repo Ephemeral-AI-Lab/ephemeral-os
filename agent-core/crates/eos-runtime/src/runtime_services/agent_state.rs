@@ -3,8 +3,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use async_trait::async_trait;
 use eos_agent_ports::{AgentRunError, AgentRunMessageRecordKind, SpawnAgentRequest};
-use eos_tool_ports::{IsolatedWorkspaceToolService, ToolError};
+use eos_tool::{ToolError, WorkspaceMode};
 use eos_types::{AgentRunId, AttemptId, IterationId, RequestId, SandboxId, TaskId, WorkflowId};
 
 #[derive(Clone, Debug, Default)]
@@ -52,14 +53,6 @@ impl RuntimeAgentStateService {
             .and_then(|states| states.get(agent_run_id).cloned())
     }
 
-    pub(crate) fn isolated_workspace_tool_service(&self) -> IsolatedWorkspaceToolService {
-        let service = self.clone();
-        IsolatedWorkspaceToolService::new(move |agent_run_id, is_isolated| {
-            let service = service.clone();
-            async move { service.set_isolated_workspace_mode(&agent_run_id, is_isolated) }
-        })
-    }
-
     fn set_isolated_workspace_mode(
         &self,
         agent_run_id: &AgentRunId,
@@ -76,6 +69,17 @@ impl RuntimeAgentStateService {
         };
         state.is_isolated_workspace_mode = is_isolated;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl WorkspaceMode for RuntimeAgentStateService {
+    async fn set_isolated_workspace_mode(
+        &self,
+        agent_run_id: AgentRunId,
+        is_isolated: bool,
+    ) -> Result<(), ToolError> {
+        self.set_isolated_workspace_mode(&agent_run_id, is_isolated)
     }
 }
 

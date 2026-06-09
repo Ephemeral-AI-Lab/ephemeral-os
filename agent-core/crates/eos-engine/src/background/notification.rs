@@ -9,7 +9,8 @@
 //! and never another run's queue (spec §13.1). Callers must clone the terminal
 //! data out from under any manager lock and drop the lock *before* awaiting `emit`.
 
-use eos_tool_ports::{SystemNotification as ToolNotification, ToolError, ToolResult};
+use eos_tool::ToolResult;
+use eos_tool_ports::{SystemNotification as ToolNotification, ToolError};
 use eos_types::{AgentRunId, CommandSessionId, SandboxId, WorkflowId};
 use serde_json::Value;
 

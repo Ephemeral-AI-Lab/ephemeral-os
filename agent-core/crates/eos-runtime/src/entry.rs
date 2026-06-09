@@ -16,8 +16,8 @@ use eos_agent_ports::{
 };
 use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
-use eos_tool_ports::{AttemptSubmissionPort, CancelPort};
-use eos_types::{AgentRunId, JsonObject, RequestId, TaskId, WorkflowApi};
+use eos_tool_ports::CancelPort;
+use eos_types::{AgentRunId, AttemptSubmissionPort, JsonObject, RequestId, TaskId, WorkflowApi};
 use eos_types::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_workflow::{
     AgentEntryComposer, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
@@ -123,7 +123,7 @@ pub async fn run_request(
         Arc::new(AttemptSubmissionAdapter::new(orchestrator_registry.clone()));
     let (loop_launcher, agent_run_api_cell) = build_agent_loop_launcher(
         services,
-        None,
+        attempt_submission.clone(),
         workflow_service_cell.clone(),
         on_event.clone(),
     );

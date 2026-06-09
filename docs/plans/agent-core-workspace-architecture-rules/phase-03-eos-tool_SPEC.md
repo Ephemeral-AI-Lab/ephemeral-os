@@ -1,8 +1,13 @@
 # Phase 03 - eos-tool Spec
 
-Status: Draft (conformed to the Phase 00 lock)
+Status: Implemented
 Date: 2026-06-09
 Owner: eos-tool
+
+Implementation 2026-06-09: `agent-core/crates/eos-tool` is the renamed,
+14-source-file implementation crate. Tool-owned framework contracts moved into
+`eos-tool`; workflow submission contracts moved to `eos-types`; cancellation and
+notification contracts remain outside `eos-tool` pending their owner phases.
 
 Revision 2026-06-09: conformed the target file tree to the Phase 00 locked
 `eos-tool` shape (flat `tools/` families, no `config.rs`, no
@@ -411,23 +416,30 @@ subfolder splits, which trade two large cohesive files for two folders.
 
 | Item | Status |
 | --- | --- |
-| Confirm Phase 02 handoff has created or renamed the `eos-tool` crate | Not started |
-| Move tool-owned `eos-tool-ports` contracts into `error.rs`, `model.rs`, `registry.rs`, and `hooks.rs` | Not started |
-| Route non-tool `eos-tool-ports` contracts to owner crates or owner-neutral contract modules | Not started |
-| Fold registry, executor trait, default tool registration, and the markdown tool-config loader/`ToolSpec` helpers into `registry.rs` | Not started |
-| Move hook declarations into `eos-tool/hooks.rs` and keep hook execution in `eos-engine` | Not started |
-| Move concrete tool behavior into the Phase 00 `tools/` family modules | Not started |
-| Keep `tools/submission.rs` flat with all six submission executors and shared file-private helpers | Not started |
-| Define `ToolRuntime` in `registry.rs` with non-optional live handles, the shared agent-launch field, and the hook-resource bundle | Not started |
-| Split the schema-snapshot builder (`build_registry_schema`) from the live builder and delete the `Option`/`MissingPort`/`InertSandboxTransport` layer | Not started |
-| Unify subagent/command/workflow session tracking into one `BackgroundSessions` port (impl = engine `BackgroundSessionRuntime`; register/cancel only); keep the `WorkspaceMode` toggle as the one run-local port | Not started |
-| Name `ToolRuntime` fields by capability with raw `Arc<dyn …>` handles; drop the `*Service`/`*Resource` field types and the separate command field (derive `SandboxCommandApi` from `sandbox`) | Not started |
-| Collapse sandbox file/edit and isolated-workspace tools into `tools/sandbox.rs` | Not started |
-| Collapse shell/session tools into `tools/command.rs` | Not started |
-| Collapse `run_subagent` into `tools/subagent.rs` (background) and `ask_advisor` into `tools/ask_advisor.rs` (inline); keep the two lifecycles in separate files | Not started |
-| Collapse workflow and skill tool files into `tools/workflow.rs` and `tools/skills.rs` | Not started |
-| Remove obsolete one-file-per-tool deep tree | Not started |
-| Update engine and agent-core imports through the Phase 02 integration lane | Not started |
+| Confirm Phase 02 handoff has created or renamed the `eos-tool` crate | Done |
+| Move tool-owned `eos-tool-ports` contracts into `error.rs`, `model.rs`, `registry.rs`, and `hooks.rs` | Done |
+| Route non-tool `eos-tool-ports` contracts to owner crates or owner-neutral contract modules | Done for Phase 03 scope |
+| Fold registry, executor trait, default tool registration, and the markdown tool-config loader/`ToolSpec` helpers into `registry.rs` | Done |
+| Move hook declarations into `eos-tool/hooks.rs` and keep hook execution in `eos-engine` | Done |
+| Move concrete tool behavior into the Phase 00 `tools/` family modules | Done |
+| Keep `tools/submission.rs` flat with all six submission executors and shared file-private helpers | Done |
+| Define `ToolRuntime` in `registry.rs` with non-optional live handles, the shared agent-launch field, and the hook-resource bundle | Done |
+| Split the schema-snapshot builder (`build_registry_schema`) from the live builder and delete the `Option`/`MissingPort`/`InertSandboxTransport` layer | Done |
+| Unify subagent/command/workflow session tracking into one `BackgroundSessions` port (impl = engine `BackgroundSessionRuntime`; register/cancel only); keep the `WorkspaceMode` toggle as the one run-local port | Done |
+| Name `ToolRuntime` fields by capability with raw `Arc<dyn …>` handles; drop the `*Service`/`*Resource` field types and the separate command field (derive `SandboxCommandApi` from `sandbox`) | Done |
+| Collapse sandbox file/edit and isolated-workspace tools into `tools/sandbox.rs` | Done |
+| Collapse shell/session tools into `tools/command.rs` | Done |
+| Collapse `run_subagent` into `tools/subagent.rs` (background) and `ask_advisor` into `tools/ask_advisor.rs` (inline); keep the two lifecycles in separate files | Done |
+| Collapse workflow and skill tool files into `tools/workflow.rs` and `tools/skills.rs` | Done |
+| Remove obsolete one-file-per-tool deep tree | Done |
+| Update engine and agent-core imports through the Phase 02 integration lane | Done |
+
+Implementation verification (2026-06-09):
+
+- `cargo test -p eos-tool`
+- `cargo check -p eos-engine --all-targets`
+- `cargo check -p eos-runtime --all-targets`
+- `find crates/eos-tool/src -maxdepth 3 -type f | sort | wc -l` = `14`
 
 ## Acceptance Criteria
 

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>41</b><span>modules</span></div>
-  <div><b>271</b><span>items</span></div>
-  <div><b>242</b><span>fields</span></div>
-  <div><b>206</b><span>methods</span></div>
+  <div><b>272</b><span>items</span></div>
+  <div><b>237</b><span>fields</span></div>
+  <div><b>209</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -65,15 +65,15 @@
   <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-engine.html#item-struct-AgentLoopExecutor-25">AgentLoopExecutor</a></code>
   <p class="docstring">Executes a full agent loop from request to terminal outcome.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>event_source</td><td><code><a class="symbol-link" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a></code></td></tr><tr><td>private</td><td>loop_hooks</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a> &gt;</code></td></tr><tr><td>private</td><td>tool_registry_factory</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-30">AgentLoopToolRegistryFactory</a> &gt;</code></td></tr><tr><td>private</td><td>metadata_service</td><td><code>Arc &lt; dyn AgentExecutionMetadataService &gt;</code></td></tr><tr><td>private</td><td>cancel_signal</td><td><code>AgentLoopCancelSignal</code></td></tr><tr><td>private</td><td>background_dependencies</td><td><code>Option &lt; <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-39">AgentLoopBackgroundDependencies</a> &gt;</code></td></tr><tr><td>private</td><td>event_callback</td><td><code>Option &lt; crate :: query :: <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-43"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine.html#method-new-43">new</a> (event_source : <a class="symbol-link" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a> , loop_hooks : Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a> &gt; , tool_registry_factory : Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-30">AgentLoopToolRegistryFactory</a> &gt; , metadata_service : Arc &lt; dyn AgentExecutionMetadataService &gt; , cancel_signal : AgentLoopCancelSignal , background_dependencies : Option &lt; <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-39">AgentLoopBackgroundDependencies</a> &gt; , event_callback : Option &lt; crate :: query :: <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a> &gt; ,) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>event_source</td><td><code><a class="symbol-link" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a></code></td></tr><tr><td>private</td><td>loop_hooks</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a> &gt;</code></td></tr><tr><td>private</td><td>tool_registry_factory</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-24">AgentLoopToolRegistryFactory</a> &gt;</code></td></tr><tr><td>private</td><td>metadata_service</td><td><code>Arc &lt; dyn AgentExecutionMetadataService &gt;</code></td></tr><tr><td>private</td><td>cancel_signal</td><td><code>AgentLoopCancelSignal</code></td></tr><tr><td>private</td><td>background_dependencies</td><td><code>Option &lt; <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-33">AgentLoopBackgroundDependencies</a> &gt;</code></td></tr><tr><td>private</td><td>event_callback</td><td><code>Option &lt; crate :: query :: <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-43"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-engine.html#method-new-43">new</a> (event_source : <a class="symbol-link" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a> , loop_hooks : Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a> &gt; , tool_registry_factory : Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-24">AgentLoopToolRegistryFactory</a> &gt; , metadata_service : Arc &lt; dyn AgentExecutionMetadataService &gt; , cancel_signal : AgentLoopCancelSignal , background_dependencies : Option &lt; <a class="symbol-link" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-33">AgentLoopBackgroundDependencies</a> &gt; , event_callback : Option &lt; crate :: query :: <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a> &gt; ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(
         event_source: <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a>,
         loop_hooks: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a>&gt;,
-        tool_registry_factory: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-30">AgentLoopToolRegistryFactory</a>&gt;,
+        tool_registry_factory: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-24">AgentLoopToolRegistryFactory</a>&gt;,
         metadata_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentExecutionMetadataService</span>&gt;,
         cancel_signal: <span class="rs-type">AgentLoopCancelSignal</span>,
-        background_dependencies: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-39">AgentLoopBackgroundDependencies</a>&gt;,
+        background_dependencies: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-33">AgentLoopBackgroundDependencies</a>&gt;,
         event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-kw">crate</span>::query::<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
@@ -112,7 +112,7 @@
         <span class="rs-kw">let</span> event_source = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine.html#method-resolve-event-source-345">resolve_event_source</a>(&amp;request, &amp;event_identity);
         <span class="rs-kw">let</span> run_services = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine.html#method-build-run-services-336">build_run_services</a>(&amp;request.agent_run_id);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state =
-            <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-request-80">from_request</a>(request, &amp;*<span class="rs-self">self</span>.tool_registry_factory, run_services)
+            <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-request-78">from_request</a>(request, &amp;*<span class="rs-self">self</span>.tool_registry_factory, run_services)
             {
                 <span class="rs-type">Ok</span>(state) =&gt; state,
                 <span class="rs-type">Err</span>(error) =&gt; {
@@ -131,18 +131,18 @@
         loop {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reason) = <span class="rs-self">self</span>.cancel_signal.reason() {
                 state
-                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&amp;format!(&quot;agent loop cancelled: {reason}&quot;))
+                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&amp;format!(&quot;agent loop cancelled: {reason}&quot;))
                     .<span class="rs-kw">await</span>;
-                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-137">loop_failed_summary</a>(format!(&quot;agent loop cancelled: {reason}&quot;));
+                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-133">loop_failed_summary</a>(format!(&quot;agent loop cancelled: {reason}&quot;));
                 <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                 <span class="rs-kw">return</span> outcome;
             }
-            <span class="rs-kw">if</span> state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-turn-limit-reached-145">turn_limit_reached</a>() {
+            <span class="rs-kw">if</span> state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-turn-limit-reached-141">turn_limit_reached</a>() {
                 state
-                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&quot;agent loop exited without a terminal tool submission&quot;)
+                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&quot;agent loop exited without a terminal tool submission&quot;)
                     .<span class="rs-kw">await</span>;
-                <span class="rs-kw">let</span> summary = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-not-submitted-summary-151">terminal_not_submitted_summary</a>();
-                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-137">loop_failed_summary</a>(summary);
+                <span class="rs-kw">let</span> summary = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-not-submitted-summary-147">terminal_not_submitted_summary</a>();
+                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-133">loop_failed_summary</a>(summary);
                 <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                 <span class="rs-kw">return</span> outcome;
             }
@@ -156,9 +156,9 @@
                 <span class="rs-type">Ok</span>(turn_result) =&gt; turn_result,
                 <span class="rs-type">Err</span>(error) =&gt; {
                     state
-                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&amp;format!(&quot;agent loop failed: {error}&quot;))
+                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&amp;format!(&quot;agent loop failed: {error}&quot;))
                         .<span class="rs-kw">await</span>;
-                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-133">loop_failed</a>(error);
+                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-129">loop_failed</a>(error);
                     <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                     <span class="rs-kw">return</span> outcome;
                 }
@@ -168,9 +168,9 @@
                 <a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>::<span class="rs-type">Continue</span> =&gt; {}
                 <a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>::<span class="rs-type">TerminalToolSubmitted</span> { outcome } =&gt; {
                     state
-                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&quot;parent agent submitted its terminal&quot;)
+                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&quot;parent agent submitted its terminal&quot;)
                         .<span class="rs-kw">await</span>;
-                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-tool-submitted-125">terminal_tool_submitted</a>(outcome);
+                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-tool-submitted-121">terminal_tool_submitted</a>(outcome);
                     <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                     <span class="rs-kw">return</span> outcome;
                 }
@@ -178,13 +178,13 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-execute-assistant-turn-152"><td>method</td><td>execute_assistant_turn</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-execute-assistant-turn-152">execute_assistant_turn</a> (&amp; self , event_source : &amp; Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a> &gt; , event_identity : &amp; eos_agent_ports :: AgentState , state : &amp; mut <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a> ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; <a class="symbol-link" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a> , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-execute-assistant-turn-152"><td>method</td><td>execute_assistant_turn</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-execute-assistant-turn-152">execute_assistant_turn</a> (&amp; self , event_source : &amp; Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a> &gt; , event_identity : &amp; eos_agent_ports :: AgentState , state : &amp; mut <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a> ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; <a class="symbol-link" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a> , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-execute-assistant-turn-152">execute_assistant_turn</a>(
         &amp;<span class="rs-self">self</span>,
         event_source: &amp;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a>&gt;,
         event_identity: &amp;eos_agent_ports::<span class="rs-type">AgentState</span>,
-        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
         <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a>(state);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = event_source.<a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-stream-27">stream</a>(&amp;request).<span class="rs-kw">await</span>?;
@@ -222,12 +222,12 @@
         }
 
         <span class="rs-kw">let</span> tool_calls = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-425">tool_uses_from_message</a>(&amp;message);
-        state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-tool-calls-116">record_tool_calls</a>(tool_calls.len());
+        state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-tool-calls-112">record_tool_calls</a>(tool_calls.len());
         state
             .conversation_messages
             .push(eos_agent_ports::<span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">AssistantMessage</span>(message));
         <span class="rs-kw">if</span> tool_calls.is_empty() {
-            state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-121">record_text_only_turn</a>();
+            state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-117">record_text_only_turn</a>();
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>::<span class="rs-type">Continue</span>);
         }
 
@@ -250,11 +250,11 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-dispatch-tool-batch-222"><td>method</td><td>dispatch_tool_batch</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-dispatch-tool-batch-222">dispatch_tool_batch</a> (&amp; self , state : &amp; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a> , calls : &amp; [<a class="symbol-link" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a>] ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; <a class="symbol-link" href="eos-engine.html#item-struct-LoopToolDispatchOutcome-389">LoopToolDispatchOutcome</a> , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-dispatch-tool-batch-222"><td>method</td><td>dispatch_tool_batch</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-dispatch-tool-batch-222">dispatch_tool_batch</a> (&amp; self , state : &amp; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a> , calls : &amp; [<a class="symbol-link" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a>] ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; <a class="symbol-link" href="eos-engine.html#item-struct-LoopToolDispatchOutcome-389">LoopToolDispatchOutcome</a> , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-dispatch-tool-batch-222">dispatch_tool_batch</a>(
         &amp;<span class="rs-self">self</span>,
-        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
         calls: &amp;[<a class="symbol-link rs-type" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a>],
     ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<a class="symbol-link rs-type" href="eos-engine.html#item-struct-LoopToolDispatchOutcome-389">LoopToolDispatchOutcome</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
         <span class="rs-kw">let</span> dispatch_calls: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-batch-rs.html#item-struct-DispatchCall-13">DispatchCall</a>&lt;&#x27;_&gt;&gt; = calls
@@ -326,11 +326,11 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-execute-registered-tool-296"><td>method</td><td>execute_registered_tool</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-execute-registered-tool-296">execute_registered_tool</a> (&amp; self , state : &amp; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a> , call : &amp; <a class="symbol-link" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a> , tool : &amp; RegisteredTool , conversation : Arc &lt; [Message] &gt; ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; ToolResult , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-execute-registered-tool-296"><td>method</td><td>execute_registered_tool</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-execute-registered-tool-296">execute_registered_tool</a> (&amp; self , state : &amp; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a> , call : &amp; <a class="symbol-link" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a> , tool : &amp; RegisteredTool , conversation : Arc &lt; [Message] &gt; ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; ToolResult , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-execute-registered-tool-296">execute_registered_tool</a>(
         &amp;<span class="rs-self">self</span>,
-        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
         call: &amp;<a class="symbol-link rs-type" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a>,
         tool: &amp;<span class="rs-type">RegisteredTool</span>,
         conversation: <span class="rs-type">Arc</span>&lt;[<span class="rs-type">Message</span>]&gt;,
@@ -368,15 +368,15 @@
         <span class="rs-type">Ok</span>(result)
     }
 </code></pre>
-</details></td></tr><tr id="method-build-run-services-336"><td>method</td><td>build_run_services</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-build-run-services-336">build_run_services</a> (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a></code><details class="function-source">
+</details></td></tr><tr id="method-build-run-services-336"><td>method</td><td>build_run_services</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-build-run-services-336">build_run_services</a> (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a></code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-build-run-services-336">build_run_services</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-build-run-services-336">build_run_services</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a> {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(dependencies) = &amp;<span class="rs-self">self</span>.background_dependencies <span class="rs-kw">else</span> {
-            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-inert-223">inert</a>();
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-inert-216">inert</a>();
         };
-        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
-        <span class="rs-kw">let</span> background = dependencies.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-build-managers-73">build_managers</a>(agent_run_id.clone(), notifier.clone());
-        <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-background-241">from_background</a>(&amp;background, notifier)
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> background = dependencies.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-build-managers-67">build_managers</a>(agent_run_id.clone(), notifier.clone());
+        <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-background-224">from_background</a>(&amp;background, notifier)
     }
 </code></pre>
 </details></td></tr><tr id="method-resolve-event-source-345"><td>method</td><td>resolve_event_source</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-resolve-event-source-345">resolve_event_source</a> (&amp; self , request : &amp; StartAgentLoopRequest , agent_state : &amp; eos_agent_ports :: AgentState ,) -&gt; Arc &lt; dyn <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a> &gt;</code><details class="function-source">
@@ -392,11 +392,11 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-drain-notifications-356"><td>method</td><td>drain_notifications</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a> (&amp; self , state : &amp; mut <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a> , event_identity : &amp; eos_agent_ports :: AgentState ,)</code><details class="function-source">
+</details></td></tr><tr id="method-drain-notifications-356"><td>method</td><td>drain_notifications</td><td><code>async fn <a class="symbol-link" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a> (&amp; self , state : &amp; mut <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a> , event_identity : &amp; eos_agent_ports :: AgentState ,)</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a>(
         &amp;<span class="rs-self">self</span>,
-        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
         event_identity: &amp;eos_agent_ports::<span class="rs-type">AgentState</span>,
     ) {
         <span class="rs-kw">for</span> notification <span class="rs-kw">in</span> state.<a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a>().<span class="rs-kw">await</span> {
@@ -465,11 +465,11 @@
     <h3>build_loop_provider_request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a> (state : &amp; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>) -&gt; LlmRequest</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a> (state : &amp; <a class="symbol-link" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>) -&gt; LlmRequest</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a>(state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>) -&gt; <span class="rs-type">LlmRequest</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a>(state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>) -&gt; <span class="rs-type">LlmRequest</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> system_prompt = <span class="rs-type">None</span>;
     <span class="rs-kw">let</span> messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; = state
         .conversation_messages
@@ -614,15 +614,15 @@
     <span class="rs-type">ExecutionMetadataBuildInput</span>, <span class="rs-type">StartAgentLoopRequest</span>,
 };
 <span class="rs-kw">use</span> eos_llm_client::{<span class="rs-type">ContentBlock</span>, <span class="rs-type">LlmRequest</span>, <span class="rs-type">Message</span>, <span class="rs-type">UsageSnapshot</span>};
-<span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">RegisteredTool</span>, <span class="rs-type">ToolName</span>, <span class="rs-type">ToolResult</span>};
+<span class="rs-kw">use</span> eos_tool::{<span class="rs-type">RegisteredTool</span>, <span class="rs-type">ToolName</span>, <span class="rs-type">ToolResult</span>};
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">ToolUseId</span>};
 <span class="rs-kw">use</span> futures::<span class="rs-type">StreamExt</span>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
-    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-39">AgentLoopBackgroundDependencies</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a>,
-    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-30">AgentLoopToolRegistryFactory</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-33">AgentLoopBackgroundDependencies</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a>,
+    <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>, <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-24">AgentLoopToolRegistryFactory</a>,
 };
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::query::{provider_messages::build_provider_messages, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, <a class="symbol-link rs-type" href="eos-engine--src-tool-call-batch-rs.html#item-struct-DispatchCall-13">DispatchCall</a>,
@@ -633,10 +633,10 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine.html#item-struct-AgentLoopExecutor-25">AgentLoopExecutor</a> {
     event_source: <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a>,
     loop_hooks: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a>&gt;,
-    tool_registry_factory: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-30">AgentLoopToolRegistryFactory</a>&gt;,
+    tool_registry_factory: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-24">AgentLoopToolRegistryFactory</a>&gt;,
     metadata_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentExecutionMetadataService</span>&gt;,
     cancel_signal: <span class="rs-type">AgentLoopCancelSignal</span>,
-    background_dependencies: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-39">AgentLoopBackgroundDependencies</a>&gt;,
+    background_dependencies: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-33">AgentLoopBackgroundDependencies</a>&gt;,
     event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-kw">crate</span>::query::<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a>&gt;,
 }
 
@@ -650,10 +650,10 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(
         event_source: <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-launcher-rs.html#item-enum-AgentLoopEventSource-17">AgentLoopEventSource</a>,
         loop_hooks: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-loop-hooks-rs.html#item-trait-AgentLoopHooks-8">AgentLoopHooks</a>&gt;,
-        tool_registry_factory: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-30">AgentLoopToolRegistryFactory</a>&gt;,
+        tool_registry_factory: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-trait-AgentLoopToolRegistryFactory-24">AgentLoopToolRegistryFactory</a>&gt;,
         metadata_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentExecutionMetadataService</span>&gt;,
         cancel_signal: <span class="rs-type">AgentLoopCancelSignal</span>,
-        background_dependencies: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-39">AgentLoopBackgroundDependencies</a>&gt;,
+        background_dependencies: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-contracts-rs.html#item-struct-AgentLoopBackgroundDependencies-33">AgentLoopBackgroundDependencies</a>&gt;,
         event_callback: <span class="rs-type">Option</span>&lt;<span class="rs-kw">crate</span>::query::<a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-type-EventCallback-20">EventCallback</a>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
@@ -690,7 +690,7 @@
         <span class="rs-kw">let</span> event_source = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine.html#method-resolve-event-source-345">resolve_event_source</a>(&amp;request, &amp;event_identity);
         <span class="rs-kw">let</span> run_services = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine.html#method-build-run-services-336">build_run_services</a>(&amp;request.agent_run_id);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state =
-            <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-request-80">from_request</a>(request, &amp;*<span class="rs-self">self</span>.tool_registry_factory, run_services)
+            <span class="rs-kw">match</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-request-78">from_request</a>(request, &amp;*<span class="rs-self">self</span>.tool_registry_factory, run_services)
             {
                 <span class="rs-type">Ok</span>(state) =&gt; state,
                 <span class="rs-type">Err</span>(error) =&gt; {
@@ -709,18 +709,18 @@
         loop {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reason) = <span class="rs-self">self</span>.cancel_signal.reason() {
                 state
-                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&amp;format!(&quot;agent loop cancelled: {reason}&quot;))
+                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&amp;format!(&quot;agent loop cancelled: {reason}&quot;))
                     .<span class="rs-kw">await</span>;
-                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-137">loop_failed_summary</a>(format!(&quot;agent loop cancelled: {reason}&quot;));
+                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-133">loop_failed_summary</a>(format!(&quot;agent loop cancelled: {reason}&quot;));
                 <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                 <span class="rs-kw">return</span> outcome;
             }
-            <span class="rs-kw">if</span> state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-turn-limit-reached-145">turn_limit_reached</a>() {
+            <span class="rs-kw">if</span> state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-turn-limit-reached-141">turn_limit_reached</a>() {
                 state
-                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&quot;agent loop exited without a terminal tool submission&quot;)
+                    .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&quot;agent loop exited without a terminal tool submission&quot;)
                     .<span class="rs-kw">await</span>;
-                <span class="rs-kw">let</span> summary = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-not-submitted-summary-151">terminal_not_submitted_summary</a>();
-                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-137">loop_failed_summary</a>(summary);
+                <span class="rs-kw">let</span> summary = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-not-submitted-summary-147">terminal_not_submitted_summary</a>();
+                <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-summary-133">loop_failed_summary</a>(summary);
                 <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                 <span class="rs-kw">return</span> outcome;
             }
@@ -734,9 +734,9 @@
                 <span class="rs-type">Ok</span>(turn_result) =&gt; turn_result,
                 <span class="rs-type">Err</span>(error) =&gt; {
                     state
-                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&amp;format!(&quot;agent loop failed: {error}&quot;))
+                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&amp;format!(&quot;agent loop failed: {error}&quot;))
                         .<span class="rs-kw">await</span>;
-                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-133">loop_failed</a>(error);
+                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-loop-failed-129">loop_failed</a>(error);
                     <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                     <span class="rs-kw">return</span> outcome;
                 }
@@ -746,9 +746,9 @@
                 <a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>::<span class="rs-type">Continue</span> =&gt; {}
                 <a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>::<span class="rs-type">TerminalToolSubmitted</span> { outcome } =&gt; {
                     state
-                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-190">teardown_background</a>(&quot;parent agent submitted its terminal&quot;)
+                        .<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-teardown-background-186">teardown_background</a>(&quot;parent agent submitted its terminal&quot;)
                         .<span class="rs-kw">await</span>;
-                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-tool-submitted-125">terminal_tool_submitted</a>(outcome);
+                    <span class="rs-kw">let</span> outcome = state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-terminal-tool-submitted-121">terminal_tool_submitted</a>(outcome);
                     <span class="rs-self">self</span>.loop_hooks.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-loop-hooks-rs.html#method-on-complete-15">on_complete</a>(&amp;outcome).<span class="rs-kw">await</span>;
                     <span class="rs-kw">return</span> outcome;
                 }
@@ -760,7 +760,7 @@
         &amp;<span class="rs-self">self</span>,
         event_source: &amp;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-trait-EventSource-23">EventSource</a>&gt;,
         event_identity: &amp;eos_agent_ports::<span class="rs-type">AgentState</span>,
-        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
     ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
         <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a>(state);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = event_source.<a class="symbol-link rs-fn" href="eos-engine--src-query-context-rs.html#method-stream-27">stream</a>(&amp;request).<span class="rs-kw">await</span>?;
@@ -798,12 +798,12 @@
         }
 
         <span class="rs-kw">let</span> tool_calls = <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-tool-uses-from-message-425">tool_uses_from_message</a>(&amp;message);
-        state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-tool-calls-116">record_tool_calls</a>(tool_calls.len());
+        state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-tool-calls-112">record_tool_calls</a>(tool_calls.len());
         state
             .conversation_messages
             .push(eos_agent_ports::<span class="rs-type">AgentLoopMessage</span>::<span class="rs-type">AssistantMessage</span>(message));
         <span class="rs-kw">if</span> tool_calls.is_empty() {
-            state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-121">record_text_only_turn</a>();
+            state.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-record-text-only-turn-117">record_text_only_turn</a>();
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-engine.html#item-enum-AssistantTurnResult-377">AssistantTurnResult</a>::<span class="rs-type">Continue</span>);
         }
 
@@ -828,7 +828,7 @@
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-dispatch-tool-batch-222">dispatch_tool_batch</a>(
         &amp;<span class="rs-self">self</span>,
-        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
         calls: &amp;[<a class="symbol-link rs-type" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a>],
     ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<a class="symbol-link rs-type" href="eos-engine.html#item-struct-LoopToolDispatchOutcome-389">LoopToolDispatchOutcome</a>, <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
         <span class="rs-kw">let</span> dispatch_calls: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-tool-call-batch-rs.html#item-struct-DispatchCall-13">DispatchCall</a>&lt;&#x27;_&gt;&gt; = calls
@@ -902,7 +902,7 @@
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-execute-registered-tool-296">execute_registered_tool</a>(
         &amp;<span class="rs-self">self</span>,
-        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
         call: &amp;<a class="symbol-link rs-type" href="eos-engine.html#item-struct-ToolUseRequest-394">ToolUseRequest</a>,
         tool: &amp;<span class="rs-type">RegisteredTool</span>,
         conversation: <span class="rs-type">Arc</span>&lt;[<span class="rs-type">Message</span>]&gt;,
@@ -940,13 +940,13 @@
         <span class="rs-type">Ok</span>(result)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-build-run-services-336">build_run_services</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-build-run-services-336">build_run_services</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a> {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(dependencies) = &amp;<span class="rs-self">self</span>.background_dependencies <span class="rs-kw">else</span> {
-            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-inert-223">inert</a>();
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-inert-216">inert</a>();
         };
-        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
-        <span class="rs-kw">let</span> background = dependencies.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-build-managers-73">build_managers</a>(agent_run_id.clone(), notifier.clone());
-        <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-212">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-background-241">from_background</a>(&amp;background, notifier)
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> background = dependencies.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-build-managers-67">build_managers</a>(agent_run_id.clone(), notifier.clone());
+        <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopRunServices-208">AgentLoopRunServices</a>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#method-from-background-224">from_background</a>(&amp;background, notifier)
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-resolve-event-source-345">resolve_event_source</a>(
@@ -962,7 +962,7 @@
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a>(
         &amp;<span class="rs-self">self</span>,
-        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>,
+        state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>,
         event_identity: &amp;eos_agent_ports::<span class="rs-type">AgentState</span>,
     ) {
         <span class="rs-kw">for</span> notification <span class="rs-kw">in</span> state.<a class="symbol-link rs-fn" href="eos-engine.html#method-drain-notifications-356">drain_notifications</a>().<span class="rs-kw">await</span> {
@@ -1005,7 +1005,7 @@
     input: <span class="rs-type">JsonObject</span>,
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a>(state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-25">AgentLoopState</a>) -&gt; <span class="rs-type">LlmRequest</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#item-fn-build-loop-provider-request-401">build_loop_provider_request</a>(state: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-agent-loop-state-rs.html#item-struct-AgentLoopState-23">AgentLoopState</a>) -&gt; <span class="rs-type">LlmRequest</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> system_prompt = <span class="rs-type">None</span>;
     <span class="rs-kw">let</span> messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Message</span>&gt; = state
         .conversation_messages

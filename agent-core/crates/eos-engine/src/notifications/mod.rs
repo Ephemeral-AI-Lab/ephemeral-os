@@ -12,9 +12,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_llm_client::Message;
-use eos_tool_ports::{
-    NotificationSink, Sealed, SystemNotification as ToolNotification, ToolError, ToolKey,
-};
+use eos_tool::ToolKey;
+use eos_tool_ports::{NotificationSink, Sealed, SystemNotification as ToolNotification, ToolError};
 use tokio::sync::Mutex;
 
 mod rules;

@@ -8,7 +8,7 @@
 //! `test_tool_call_dispatch_lifecycle.py`; the predicate + its unit test live
 //! here).
 
-use eos_tool_ports::{ToolIntent, ToolRegistry};
+use eos_tool::{ToolIntent, ToolRegistry};
 
 /// One call in a model-emitted tool-use batch. The `name` is the raw wire string
 /// (possibly unknown to the registry).
@@ -180,7 +180,7 @@ mod tests {
 
     use async_trait::async_trait;
     use eos_llm_client::ToolSpec;
-    use eos_tool_ports::{
+    use eos_tool::{
         ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolName,
         ToolResult,
     };

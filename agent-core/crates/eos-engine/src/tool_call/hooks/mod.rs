@@ -2,10 +2,12 @@
 
 use std::sync::LazyLock;
 
-use eos_tool_ports::{ExecutionMetadata, Hook, HookServices, ToolError, ToolResult};
+use eos_tool::{ExecutionMetadata, Hook, HookServices, ToolError, ToolResult};
 use eos_types::JsonObject;
 use regex::Regex;
 use serde_json::{json, Value};
+
+use crate::background::BackgroundManagers;
 
 mod advisor_approval;
 mod disallow_nested_planner_deferral;
@@ -61,6 +63,7 @@ pub(super) async fn run_hook(
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
     services: &HookServices,
+    background: Option<&BackgroundManagers>,
 ) -> Result<HookOutcome, ToolError> {
     match hook {
         Hook::DestructiveGitShell { .. } => Ok(run_destructive_git(raw_input)),
@@ -68,7 +71,7 @@ pub(super) async fn run_hook(
         Hook::BlockInIsolatedMode { .. } => run_block_in_isolated_mode(ctx).await,
         Hook::RequireNoBackgroundSessions { tool } => {
             require_no_background_sessions::run_require_no_background_sessions(
-                tool, raw_input, ctx, services,
+                tool, raw_input, ctx, services, background,
             )
             .await
         }

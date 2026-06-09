@@ -23,9 +23,9 @@ use eos_sandbox_port::{
     DaemonOp, RequestProvisioner, RequestSandboxBinding, SandboxGateway, SandboxPortError,
     SandboxProvisionError, SandboxTransport,
 };
-use eos_tool::SkillRegistry;
-use eos_tool::{build_default_registry, CallerScope, SandboxToolService, ToolConfigSet};
-use eos_tool_ports::{ToolKey, ToolRegistry};
+use eos_tool::{
+    build_registry_schema, CallerScope, SkillRegistry, ToolConfigSet, ToolKey, ToolRegistry,
+};
 use eos_types::{JsonObject, RequestId, SandboxId};
 
 use super::{
@@ -335,11 +335,8 @@ impl RuntimeServicesBuilder {
                     Arc::new(UnconfiguredProvisioner),
                 ),
             };
-        let mut tool_registry = build_default_registry(&tool_config, &CallerScope::default());
-        register_plugin_tools(
-            &mut tool_registry,
-            &SandboxToolService::new(transport.clone()),
-        );
+        let mut tool_registry = build_registry_schema(&tool_config, &CallerScope::default());
+        register_plugin_tools(&mut tool_registry, &transport);
 
         // Cross-registry validation: unknown agent tool names fail fast.
         validate_agent_tools(&agent_registry, &tool_registry)?;

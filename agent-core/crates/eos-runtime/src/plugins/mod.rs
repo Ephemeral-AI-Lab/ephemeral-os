@@ -13,10 +13,9 @@ use async_trait::async_trait;
 use eos_llm_client::ToolSpec;
 use eos_sandbox_port::{
     Intent, PluginDispatchRequest, PluginPackageDescriptor, PluginPackageEnsureRequest,
-    SandboxRequestBase,
+    SandboxRequestBase, SandboxTransport,
 };
-use eos_tool::SandboxToolService;
-use eos_tool_ports::{
+use eos_tool::{
     ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolIntent, ToolKey,
     ToolRegistry, ToolResult,
 };
@@ -31,10 +30,10 @@ const PLUGIN_ENSURE_TIMEOUT_S: u32 = 150;
 /// Register every built-in plugin catalog tool into `registry`.
 pub(crate) fn register_plugin_tools(
     registry: &mut ToolRegistry,
-    sandbox_service: &SandboxToolService,
+    sandbox: &Arc<dyn SandboxTransport>,
 ) {
     for spec in plugin_tool_specs() {
-        if let Some(tool) = registered_plugin_tool(spec, sandbox_service.clone()) {
+        if let Some(tool) = registered_plugin_tool(spec, sandbox.clone()) {
             registry.register(tool);
         }
     }
@@ -42,7 +41,7 @@ pub(crate) fn register_plugin_tools(
 
 fn registered_plugin_tool(
     spec: PluginToolSpec,
-    sandbox_service: SandboxToolService,
+    sandbox: Arc<dyn SandboxTransport>,
 ) -> Option<RegisteredTool> {
     let name = spec.name.as_str().to_owned();
     let parsed_name = split_plugin_tool_name(&name);
@@ -64,7 +63,7 @@ fn registered_plugin_tool(
             parsed_name,
             intent: spec.intent,
             package,
-            service: sandbox_service,
+            sandbox,
         }),
     ))
 }
@@ -79,12 +78,21 @@ fn split_plugin_tool_name_parts(name: &str) -> Option<(&str, &str)> {
         .filter(|(plugin_id, op_name)| !plugin_id.is_empty() && !op_name.is_empty())
 }
 
-#[derive(Debug)]
 struct PluginToolExecutor {
     parsed_name: Option<(String, String)>,
     intent: Intent,
     package: PluginPackageDescriptor,
-    service: SandboxToolService,
+    sandbox: Arc<dyn SandboxTransport>,
+}
+
+impl std::fmt::Debug for PluginToolExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PluginToolExecutor")
+            .field("parsed_name", &self.parsed_name)
+            .field("intent", &self.intent)
+            .field("package", &self.package)
+            .finish_non_exhaustive()
+    }
 }
 
 #[async_trait]
@@ -106,9 +114,9 @@ impl ToolExecutor for PluginToolExecutor {
             format!("plugin {plugin_id}.{op_name}"),
             ctx.sandbox_invocation_id.clone(),
         );
-        ensure_plugin_runtime(&self.service, &self.package, &base, ctx).await?;
+        ensure_plugin_runtime(&self.sandbox, &self.package, &base, ctx).await?;
         let response = eos_sandbox_port::plugin_dispatch(
-            &*self.service.transport(),
+            self.sandbox.as_ref(),
             sandbox_id,
             PluginDispatchRequest {
                 base,
@@ -126,14 +134,14 @@ impl ToolExecutor for PluginToolExecutor {
 }
 
 async fn ensure_plugin_runtime(
-    service: &SandboxToolService,
+    sandbox: &Arc<dyn SandboxTransport>,
     package: &PluginPackageDescriptor,
     base: &SandboxRequestBase,
     ctx: &ExecutionMetadata,
 ) -> Result<(), ToolError> {
     let sandbox_id = ctx.require_sandbox_id()?;
     eos_sandbox_port::ensure_plugin_package(
-        &*service.transport(),
+        sandbox.as_ref(),
         sandbox_id,
         PluginPackageEnsureRequest {
             base: base.clone(),
@@ -178,10 +186,8 @@ mod tests {
     #[test]
     fn registers_lsp_plugin_tools() {
         let mut registry = ToolRegistry::new();
-        register_plugin_tools(
-            &mut registry,
-            &SandboxToolService::new(Arc::new(PluginToolTestTransport::default())),
-        );
+        let sandbox: Arc<dyn SandboxTransport> = Arc::new(PluginToolTestTransport::default());
+        register_plugin_tools(&mut registry, &sandbox);
         let hover = registry.get_wire("lsp.hover").expect("hover registered");
         assert_eq!(hover.name.as_str(), "lsp.hover");
         assert_eq!(hover.intent, ToolIntent::ReadOnly);
@@ -198,7 +204,7 @@ mod tests {
             parsed_name: Some(("lsp".to_owned(), "hover".to_owned())),
             intent: Intent::ReadOnly,
             package: package.clone(),
-            service: SandboxToolService::new(transport.clone()),
+            sandbox: transport.clone(),
         };
         let input = json_object(json!({
             "file_path": "src/main.py",

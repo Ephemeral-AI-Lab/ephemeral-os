@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>23</b><span>modules</span></div>
-  <div><b>134</b><span>items</span></div>
-  <div><b>125</b><span>fields</span></div>
+  <div><b>133</b><span>items</span></div>
+  <div><b>124</b><span>fields</span></div>
   <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -207,12 +207,12 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;iteration.workflow_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;workflow&quot;, iteration.workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;workflow&quot;, iteration.workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-type">Ok</span>(workflow.request_id)
     }
 </code></pre>
@@ -261,7 +261,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;planner&quot;,
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>,
@@ -293,7 +293,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name,
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
@@ -321,7 +321,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;reducer&quot;,
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
@@ -358,7 +358,7 @@
             .as_ref()
             .clone();
         <span class="rs-kw">if</span> agent_def.agent_type != <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span> {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;workflow launch {:?} is bound to agent {:?} with <span class="rs-kw">type</span> {:?}, expected agent&quot;,
                 args.role.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                 args.base_agent_name,
@@ -429,7 +429,7 @@
                 skill,
             }),
             <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> =&gt; {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(
                     &quot;workflow launch does not support root task role&quot;,
                 ));
             }
@@ -943,12 +943,12 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-kw">let</span> workflow = <span class="rs-self">self</span>
             .workflow_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;iteration.workflow_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;workflow&quot;, iteration.workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;workflow&quot;, iteration.workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-type">Ok</span>(workflow.request_id)
     }
 }
@@ -988,7 +988,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;planner&quot;,
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Planner</span>,
@@ -1018,7 +1018,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name,
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>,
@@ -1044,7 +1044,7 @@
             .iteration_store
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;attempt.iteration_id)
             .<span class="rs-kw">await</span>?
-            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-46">not_found</a>(&quot;iteration&quot;, attempt.iteration_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow.html#method-build-456">build</a>(<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-LaunchBuildArgs-351">LaunchBuildArgs</a> {
             base_agent_name: &quot;reducer&quot;,
             role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Reducer</span>,
@@ -1079,7 +1079,7 @@
             .as_ref()
             .clone();
         <span class="rs-kw">if</span> agent_def.agent_type != <span class="rs-type">AgentType</span>::<span class="rs-type">Agent</span> {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(format!(
                 &quot;workflow launch {:?} is bound to agent {:?} with <span class="rs-kw">type</span> {:?}, expected agent&quot;,
                 args.role.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
                 args.base_agent_name,
@@ -1150,7 +1150,7 @@
                 skill,
             }),
             <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> =&gt; {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-42">invariant</a>(
                     &quot;workflow launch does not support root task role&quot;,
                 ));
             }

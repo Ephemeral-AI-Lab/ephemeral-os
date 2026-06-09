@@ -1,6 +1,6 @@
 //! Agent-loop DTOs.
 
-use eos_tool_ports::ToolResult;
+use eos_tool::ToolResult;
 use eos_types::{AgentRunId, Message};
 
 /// Thin request to start one agent loop.

@@ -12,7 +12,7 @@
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_types::ToolUseId;
 
-use eos_tool_ports::{ExecutionMetadata, ToolError, ToolName};
+use eos_tool::{ExecutionMetadata, ToolError, ToolName};
 
 use super::{HookDenial, HookOutcome};
 

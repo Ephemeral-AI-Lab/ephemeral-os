@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>41</b><span>modules</span></div>
-  <div><b>271</b><span>items</span></div>
-  <div><b>242</b><span>fields</span></div>
-  <div><b>206</b><span>methods</span></div>
+  <div><b>272</b><span>items</span></div>
+  <div><b>237</b><span>fields</span></div>
+  <div><b>209</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -65,13 +65,13 @@
   <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a></code>
   <p class="docstring">One tracked subagent run owned by an agent run's background session runtime.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>status</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code></td></tr><tr><td>private</td><td>result</td><td><code>Option &lt; ToolResult &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-cancel-43"><td>method</td><td>cancel</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a> (&amp; mut self , reason : &amp; str) -&gt; bool</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>status</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a></code></td></tr><tr><td>private</td><td>result</td><td><code>Option &lt; ToolResult &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-cancel-43"><td>method</td><td>cancel</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a> (&amp; mut self , reason : &amp; str) -&gt; bool</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, reason: &amp;str) -&gt; bool {
-        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
+        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
             <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
         }
-        <span class="rs-self">self</span>.status = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>;
+        <span class="rs-self">self</span>.status = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>;
         <span class="rs-self">self</span>.result = <span class="rs-type">Some</span>(
             <span class="rs-type">ToolResult</span>::error(format!(&quot;<span class="rs-type">Background</span> subagent cancelled: {reason}&quot;))
                 .meta(&quot;subagent_cancelled&quot;, serde_json::json!(<span class="rs-kw">true</span>)),
@@ -79,26 +79,26 @@
         <span class="rs-kw">true</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-agent-run-id-35"><td>method</td><td>agent_run_id</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a> (&amp; self) -&gt; &amp; AgentRunId</code><details class="function-source">
+</details></td></tr><tr id="method-agent-run-id-35"><td>method</td><td>agent_run_id</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a> (&amp; self) -&gt; &amp; AgentRunId</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
         &amp;<span class="rs-self">self</span>.agent_run_id
     }
 </code></pre>
-</details></td></tr><tr id="method-status-39"><td>method</td><td>status</td><td><code>const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code><details class="function-source">
+</details></td></tr><tr id="method-status-39"><td>method</td><td>status</td><td><code>const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a></code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> {
+  <pre><code>    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> {
         <span class="rs-self">self</span>.status
     }
 </code></pre>
-</details></td></tr><tr id="method-settle-55"><td>method</td><td>settle</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a> (&amp; mut self , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> , result : ToolResult ,) -&gt; Option &lt; ToolResult &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-settle-55"><td>method</td><td>settle</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a> (&amp; mut self , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> , result : ToolResult ,) -&gt; Option &lt; ToolResult &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a>(
         &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
         result: <span class="rs-type">ToolResult</span>,
     ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">ToolResult</span>&gt; {
-        <span class="rs-kw">if</span> status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-47">precedence</a>() &gt; <span class="rs-self">self</span>.status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-47">precedence</a>() {
+        <span class="rs-kw">if</span> status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-44">precedence</a>() &gt; <span class="rs-self">self</span>.status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-44">precedence</a>() {
             <span class="rs-self">self</span>.status = status;
             <span class="rs-self">self</span>.result = <span class="rs-type">Some</span>(result);
         }
@@ -110,12 +110,12 @@
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-tracked-27">tracked</a>(agent_run_id: <span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             agent_run_id,
-            status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
+            status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
             result: <span class="rs-type">None</span>,
         }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-60">BackgroundSession</a> for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a></code></summary><table><tbody><tr id="method-id-71"><td>method</td><td>id</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-64">id</a> (&amp; self) -&gt; &amp; Self :: Id</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-57">BackgroundSession</a> for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a></code></summary><table><tbody><tr id="method-id-71"><td>method</td><td>id</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-64">id</a> (&amp; self) -&gt; &amp; Self :: Id</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-64">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-self">Self</span>::<span class="rs-type">Id</span> {
         &amp;<span class="rs-self">self</span>.agent_run_id
@@ -132,7 +132,7 @@
   </div>
   <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub(super)</td><td>status</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code></td></tr><tr><td>pub(super)</td><td>result</td><td><code>ToolResult</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub(super)</td><td>status</td><td><code><a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a></code></td></tr><tr><td>pub(super)</td><td>result</td><td><code>ToolResult</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-engine/src/background/background_session_manager/subagent_session_manager.rs:76</p>
 </article><article id="item-struct-SubagentSessionManager-88" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SubagentSessionManager pub(crate :: background) pub(crate :: background) struct SubagentSessionManager crates/eos-engine/src/background/background_session_manager/subagent_session_manager.rs agent_run_id AgentRunId sessions Arc &lt; Mutex &lt; SubagentSessionState &gt; &gt; agent_run_service Arc &lt; dyn AgentRunApi &gt; notification BackgroundNotificationEmitter ">
@@ -144,12 +144,12 @@
   <code class="signature">pub(crate :: background) struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a></code>
   <p class="docstring">Tracks subagent background sessions for one agent run.</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>sessions</td><td><code>Arc &lt; Mutex &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionState-83">SubagentSessionState</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>agent_run_service</td><td><code>Arc &lt; dyn AgentRunApi &gt;</code></td></tr><tr><td>private</td><td>notification</td><td><code><a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-106"><td>constructor</td><td>new</td><td><code>pub(crate :: background) fn <a class="symbol-link" href="eos-engine.html#method-new-43">new</a> (agent_run_id : AgentRunId , agent_run_service : Arc &lt; dyn AgentRunApi &gt; , notification : <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a> ,) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>sessions</td><td><code>Arc &lt; Mutex &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionState-83">SubagentSessionState</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>agent_run_service</td><td><code>Arc &lt; dyn AgentRunApi &gt;</code></td></tr><tr><td>private</td><td>notification</td><td><code><a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-106"><td>constructor</td><td>new</td><td><code>pub(crate :: background) fn <a class="symbol-link" href="eos-engine.html#method-new-43">new</a> (agent_run_id : AgentRunId , agent_run_service : Arc &lt; dyn AgentRunApi &gt; , notification : <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a> ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(
         agent_run_id: <span class="rs-type">AgentRunId</span>,
         agent_run_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;,
-        notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>,
+        notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             agent_run_id,
@@ -168,7 +168,7 @@
                 <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
             };
             <span class="rs-kw">if</span> session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(reason) {
-                <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>().clone())
+                <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>().clone())
             } <span class="rs-kw">else</span> {
                 <span class="rs-type">None</span>
             }
@@ -178,7 +178,7 @@
         };
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
             .agent_run_service
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(&amp;agent_run_id, reason)
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(&amp;agent_run_id, reason)
             .<span class="rs-kw">await</span>
         {
             tracing::warn!(
@@ -190,9 +190,9 @@
         <span class="rs-kw">true</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-148"><td>method</td><td>cancel_agent_run</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a> (&amp; self , child_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; bool</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-148"><td>method</td><td>cancel_agent_run</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a> (&amp; self , child_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; bool</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         child_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -200,12 +200,12 @@
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-cancel-one-119">cancel_one</a>(child_run_id, reason).<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-settle-156"><td>method</td><td>settle</td><td><code>pub(super) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a> (&amp; self , agent_run_id : &amp; AgentRunId , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> , result : ToolResult ,) -&gt; Option &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-settle-156"><td>method</td><td>settle</td><td><code>pub(super) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a> (&amp; self , agent_run_id : &amp; AgentRunId , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> , result : ToolResult ,) -&gt; Option &lt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
         result: <span class="rs-type">ToolResult</span>,
     ) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.sessions.lock().<span class="rs-kw">await</span>;
@@ -226,7 +226,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> running {
             <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-357">poll_agent_run_outcome</a>(&amp;agent_run_id)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-329">poll_agent_run_outcome</a>(&amp;agent_run_id)
                 .<span class="rs-kw">await</span>
             {
                 <span class="rs-type">Ok</span>(terminal) =&gt; terminal,
@@ -259,8 +259,8 @@
             .<span class="rs-kw">await</span>
             .sessions
             .values()
-            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
-            .map(|session| session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>().clone())
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .map(|session| session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>().clone())
             .collect()
     }
 </code></pre>
@@ -273,7 +273,7 @@
         <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-trace-background-tool-383">trace_background_tool</a>(
             &quot;background_tool.started&quot;,
             agent_run_id,
-            <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
+            <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
             <span class="rs-type">None</span>,
         );
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-tracked-27">tracked</a>(agent_run_id.clone()))
@@ -287,19 +287,19 @@
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
     ) -&gt; bool {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
     }
 </code></pre>
 </details></td></tr><tr id="method-count-background-sessions-331"><td>method</td><td>count_background_sessions</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-count-background-sessions-331">count_background_sessions</a> (&amp; self) -&gt; usize</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-count-background-sessions-331">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-249">count</a>(<span class="rs-self">self</span>).<span class="rs-kw">await</span>
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-249">count</a>(<span class="rs-self">self</span>).<span class="rs-kw">await</span>
     }
 </code></pre>
 </details></td></tr><tr id="method-cancel-all-background-sessions-335"><td>method</td><td>cancel_all_background_sessions</td><td><code>pub(crate :: background) async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-cancel-all-background-sessions-335">cancel_all_background_sessions</a> (&amp; self , reason : &amp; str)</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-cancel-all-background-sessions-335">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>;
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>;
     }
 </code></pre>
 </details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a></code></summary><table><tbody><tr id="method-fmt-98"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-fmt-37">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a></code><details class="function-source">
@@ -310,7 +310,7 @@
             .finish_non_exhaustive()
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a> for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a></code></summary><table><tbody><tr id="method-insert-248"><td>method</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a> (&amp; self , session : Self :: Session)</code><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a> for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a></code></summary><table><tbody><tr id="method-insert-248"><td>method</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a> (&amp; self , session : Self :: Session)</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a>(&amp;<span class="rs-self">self</span>, session: <span class="rs-self">Self</span>::<span class="rs-type">Session</span>) {
         <span class="rs-self">self</span>.sessions
@@ -328,7 +328,7 @@
             .<span class="rs-kw">await</span>
             .sessions
             .values()
-            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
             .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-249">count</a>()
     }
 </code></pre>
@@ -337,7 +337,7 @@
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-258">push_notification_on_completion</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-self">Self</span>::<span class="rs-type">Completion</span>) {
         <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>
             .notification
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
                 agent_run_id: completion.agent_run_id,
                 status: completion.status,
                 result: completion.result,
@@ -355,7 +355,7 @@
                 .values_mut()
                 .filter_map(|session| {
                     <span class="rs-kw">if</span> session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(reason) {
-                        <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>().clone())
+                        <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>().clone())
                     } <span class="rs-kw">else</span> {
                         <span class="rs-type">None</span>
                     }
@@ -365,7 +365,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> actions {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(&amp;agent_run_id, reason)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(&amp;agent_run_id, reason)
                 .<span class="rs-kw">await</span>
             {
                 tracing::warn!(
@@ -434,36 +434,36 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-FakeAgentRunService-466">FakeAgentRunService</a></code>
   <div class="tags"><span>derive: Debug</span><span>derive: Default</span><span>port/service</span></div>
-  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AgentRunApi for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-FakeAgentRunService-466">FakeAgentRunService</a></code></summary><table><tbody><tr id="method-spawn-agent-471"><td>method</td><td>spawn_agent</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-spawn-agent-342">spawn_agent</a> (&amp; self , _request : SpawnAgentRequest ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; AgentRunId , AgentRunError &gt;</code><details class="function-source">
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AgentRunApi for <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-FakeAgentRunService-466">FakeAgentRunService</a></code></summary><table><tbody><tr id="method-spawn-agent-471"><td>method</td><td>spawn_agent</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-spawn-agent-314">spawn_agent</a> (&amp; self , _request : SpawnAgentRequest ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; AgentRunId , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-spawn-agent-342">spawn_agent</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-spawn-agent-314">spawn_agent</a>(
             &amp;<span class="rs-self">self</span>,
             _request: <span class="rs-type">SpawnAgentRequest</span>,
         ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-type">AgentRunId</span>::new_v4())
         }
 </code></pre>
-</details></td></tr><tr id="method-wait-for-agent-outcome-478"><td>method</td><td>wait_for_agent_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-349">wait_for_agent_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; AgentRunOutcome , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-wait-for-agent-outcome-478"><td>method</td><td>wait_for_agent_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-321">wait_for_agent_outcome</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; AgentRunOutcome , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-349">wait_for_agent_outcome</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-321">wait_for_agent_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">NotActiveInProcess</span>(agent_run_id.clone()))
         }
 </code></pre>
-</details></td></tr><tr id="method-poll-agent-run-outcome-485"><td>method</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-357">poll_agent_run_outcome</a> (&amp; self , _agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-poll-agent-run-outcome-485"><td>method</td><td>poll_agent_run_outcome</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-329">poll_agent_run_outcome</a> (&amp; self , _agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; AgentRunOutcome &gt; , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-357">poll_agent_run_outcome</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-329">poll_agent_run_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt;, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
         }
 </code></pre>
-</details></td></tr><tr id="method-cancel-agent-run-492"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a> (&amp; self , _agent_run_id : &amp; AgentRunId , _reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; () , AgentRunError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-cancel-agent-run-492"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a> (&amp; self , _agent_run_id : &amp; AgentRunId , _reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; () , AgentRunError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
             _reason: &amp;str,
@@ -480,19 +480,19 @@
     <h3>completion_from_agent_run</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a> (run : &amp; AgentRun ,) -&gt; Option &lt; (<a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> , ToolResult , i64) &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a> (run : &amp; AgentRun ,) -&gt; Option &lt; (<a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> , ToolResult , i64) &gt;</code>
   <div class="tags"><span>cfg: test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(test)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a>(
     run: &amp;<span class="rs-type">AgentRun</span>,
-) -&gt; <span class="rs-type">Option</span>&lt;(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>, <span class="rs-type">ToolResult</span>, i64)&gt; {
+) -&gt; <span class="rs-type">Option</span>&lt;(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>, <span class="rs-type">ToolResult</span>, i64)&gt; {
     run.finished_at?;
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(terminal) = &amp;run.terminal_tool_result {
         <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-tool-result-from-payload-424">tool_result_from_payload</a>(terminal);
         <span class="rs-kw">let</span> exit_code = i64::from(result.is_error);
-        <span class="rs-kw">return</span> <span class="rs-type">Some</span>((<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>, result, exit_code));
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>((<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>, result, exit_code));
     }
     <span class="rs-kw">let</span> message = <span class="rs-kw">match</span> &amp;run.error {
         <span class="rs-type">Some</span>(error) =&gt; format!(&quot;subagent crashed: {error}&quot;),
@@ -500,7 +500,7 @@
             .to_owned(),
     };
     <span class="rs-type">Some</span>((
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
         <span class="rs-type">ToolResult</span>::error(message).meta(&quot;subagent_terminal_called&quot;, json!(<span class="rs-kw">false</span>)),
         1,
     ))
@@ -543,15 +543,15 @@
     <h3>agent_run_status_to_background</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-agent-run-status-to-background-355">agent_run_status_to_background</a> (status : AgentRunStatus) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-agent-run-status-to-background-355">agent_run_status_to_background</a> (status : AgentRunStatus) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-agent-run-status-to-background-355">agent_run_status_to_background</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-agent-run-status-to-background-355">agent_run_status_to_background</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> {
     <span class="rs-kw">match</span> status {
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>,
     }
 }
 </code></pre>
@@ -564,17 +564,17 @@
     <h3>terminal_event_type</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-terminal-event-type-363">terminal_event_type</a> (status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp; &#x27;static str</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-terminal-event-type-363">terminal_event_type</a> (status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-terminal-event-type-363">terminal_event_type</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-terminal-event-type-363">terminal_event_type</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> status {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;background_tool.started&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;background_tool.completed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;background_tool.failed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;background_tool.cancelled&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;background_tool.delivered&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;background_tool.started&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;background_tool.completed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;background_tool.failed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;background_tool.cancelled&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;background_tool.delivered&quot;,
     }
 }
 </code></pre>
@@ -587,17 +587,17 @@
     <h3>status_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-status-value-373">status_value</a> (status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp; &#x27;static str</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-status-value-373">status_value</a> (status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-status-value-373">status_value</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-status-value-373">status_value</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> status {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
     }
 }
 </code></pre>
@@ -610,14 +610,14 @@
     <h3>trace_background_tool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-trace-background-tool-383">trace_background_tool</a> (event_type : &amp; str , agent_run_id : &amp; AgentRunId , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> , exit_code : Option &lt; i64 &gt; ,)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-trace-background-tool-383">trace_background_tool</a> (event_type : &amp; str , agent_run_id : &amp; AgentRunId , status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> , exit_code : Option &lt; i64 &gt; ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-trace-background-tool-383">trace_background_tool</a>(
     event_type: &amp;str,
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
     exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
 ) {
     tracing::debug!(
@@ -683,15 +683,15 @@
     <h3>manager</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a> (notifier : &amp; <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a> (notifier : &amp; <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>) -&gt; <a class="symbol-link" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a>(notifier: &amp;<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a>(notifier: &amp;<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
         <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(
             &quot;owner-run&quot;.parse().expect(&quot;agent run id&quot;),
             <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-FakeAgentRunService-466">FakeAgentRunService</a>),
-            <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone()),
+            <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone()),
         )
     }
 </code></pre>
@@ -745,7 +745,7 @@
         terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a>(&quot;is_terminal&quot;.to_owned(), json!(<span class="rs-kw">true</span>));
         <span class="rs-kw">let</span> (status, result, exit_code) =
             <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a>(&amp;<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-finished-run-509">finished_run</a>(<span class="rs-type">Some</span>(terminal), <span class="rs-type">None</span>)).expect(&quot;completion&quot;);
-        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>);
+        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>);
         assert!(result.is_error);
         assert_eq!(exit_code, 1);
         assert_eq!(result.output, &quot;partial but delivered&quot;);
@@ -769,7 +769,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-no-terminal-settles-failed-540">no_terminal_settles_failed</a>() {
         <span class="rs-kw">let</span> (status, result, _) =
             <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a>(&amp;<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-finished-run-509">finished_run</a>(<span class="rs-type">None</span>, <span class="rs-type">None</span>)).expect(&quot;completion&quot;);
-        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>);
+        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>);
         assert!(result.output.contains(&quot;without calling a terminal tool&quot;));
     }
 </code></pre>
@@ -788,7 +788,7 @@
   <summary>code</summary>
   <pre><code>    #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-count-cancel-and-completion-notification-are-manager-owned-548">count_cancel_and_completion_notification_are_manager_owned</a>() {
-        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
         <span class="rs-kw">let</span> manager = <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a>(&amp;notifier);
         <span class="rs-kw">let</span> running_id: <span class="rs-type">AgentRunId</span> = &quot;run-sub-1&quot;.parse().expect(&quot;agent run id&quot;);
         manager
@@ -806,14 +806,14 @@
         <span class="rs-kw">let</span> completion = manager
             .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a>(
                 &amp;done_id,
-                <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+                <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
                 <span class="rs-type">ToolResult</span>::ok(&quot;findings&quot;),
             )
             .<span class="rs-kw">await</span>
             .expect(&quot;completion&quot;);
         manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-258">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
 
-        <span class="rs-kw">let</span> notifications = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-128">drain</a>().<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> notifications = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-127">drain</a>().<span class="rs-kw">await</span>;
         assert_eq!(notifications.len(), 1);
         assert!(notifications[0]
             .message
@@ -838,7 +838,7 @@
 
 <span class="rs-kw">use</span> async_trait::async_trait;
 <span class="rs-kw">use</span> eos_agent_ports::{<span class="rs-type">AgentRunApi</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>};
-<span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">ToolResult</span>;
+<span class="rs-kw">use</span> eos_tool::<span class="rs-type">ToolResult</span>;
 #[cfg(test)]
 <span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRun</span>;
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>};
@@ -846,14 +846,14 @@
 <span class="rs-kw">use</span> tokio::sync::<span class="rs-type">Mutex</span>;
 <span class="rs-kw">use</span> tokio::task::<span class="rs-type">JoinHandle</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-60">BackgroundSession</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::notification::{<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-57">BackgroundSession</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::notification::{<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>, <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>};
 
 <span class="rs-comment">/// One tracked subagent run owned by an agent run's background session runtime.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a> {
     agent_run_id: <span class="rs-type">AgentRunId</span>,
-    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
     result: <span class="rs-type">Option</span>&lt;<span class="rs-type">ToolResult</span>&gt;,
 }
 
@@ -861,24 +861,24 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-tracked-27">tracked</a>(agent_run_id: <span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             agent_run_id,
-            status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
+            status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
             result: <span class="rs-type">None</span>,
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
         &amp;<span class="rs-self">self</span>.agent_run_id
     }
 
-    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> {
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> {
         <span class="rs-self">self</span>.status
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, reason: &amp;str) -&gt; bool {
-        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
+        <span class="rs-kw">if</span> !matches!(<span class="rs-self">self</span>.status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>) {
             <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
         }
-        <span class="rs-self">self</span>.status = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>;
+        <span class="rs-self">self</span>.status = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>;
         <span class="rs-self">self</span>.result = <span class="rs-type">Some</span>(
             <span class="rs-type">ToolResult</span>::error(format!(&quot;<span class="rs-type">Background</span> subagent cancelled: {reason}&quot;))
                 .meta(&quot;subagent_cancelled&quot;, serde_json::json!(<span class="rs-kw">true</span>)),
@@ -888,10 +888,10 @@
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a>(
         &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
         result: <span class="rs-type">ToolResult</span>,
     ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">ToolResult</span>&gt; {
-        <span class="rs-kw">if</span> status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-47">precedence</a>() &gt; <span class="rs-self">self</span>.status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-47">precedence</a>() {
+        <span class="rs-kw">if</span> status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-44">precedence</a>() &gt; <span class="rs-self">self</span>.status.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-precedence-44">precedence</a>() {
             <span class="rs-self">self</span>.status = status;
             <span class="rs-self">self</span>.result = <span class="rs-type">Some</span>(result);
         }
@@ -899,7 +899,7 @@
     }
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-60">BackgroundSession</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSession-57">BackgroundSession</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a> {
     <span class="rs-kw">type</span> <span class="rs-type">Id</span> = <span class="rs-type">AgentRunId</span>;
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-id-64">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-self">Self</span>::<span class="rs-type">Id</span> {
@@ -910,7 +910,7 @@
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a> {
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) agent_run_id: <span class="rs-type">AgentRunId</span>,
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) result: <span class="rs-type">ToolResult</span>,
 }
 
@@ -925,7 +925,7 @@
     agent_run_id: <span class="rs-type">AgentRunId</span>,
     sessions: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionState-83">SubagentSessionState</a>&gt;&gt;,
     agent_run_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;,
-    notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>,
+    notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>,
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
@@ -940,7 +940,7 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(
         agent_run_id: <span class="rs-type">AgentRunId</span>,
         agent_run_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt;,
-        notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>,
+        notification: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>,
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             agent_run_id,
@@ -957,7 +957,7 @@
                 <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
             };
             <span class="rs-kw">if</span> session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(reason) {
-                <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>().clone())
+                <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>().clone())
             } <span class="rs-kw">else</span> {
                 <span class="rs-type">None</span>
             }
@@ -967,7 +967,7 @@
         };
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
             .agent_run_service
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(&amp;agent_run_id, reason)
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(&amp;agent_run_id, reason)
             .<span class="rs-kw">await</span>
         {
             tracing::warn!(
@@ -979,7 +979,7 @@
         <span class="rs-kw">true</span>
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         child_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
@@ -990,7 +990,7 @@
     <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
         result: <span class="rs-type">ToolResult</span>,
     ) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.sessions.lock().<span class="rs-kw">await</span>;
@@ -1009,7 +1009,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> running {
             <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-357">poll_agent_run_outcome</a>(&amp;agent_run_id)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-329">poll_agent_run_outcome</a>(&amp;agent_run_id)
                 .<span class="rs-kw">await</span>
             {
                 <span class="rs-type">Ok</span>(terminal) =&gt; terminal,
@@ -1040,8 +1040,8 @@
             .<span class="rs-kw">await</span>
             .sessions
             .values()
-            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
-            .map(|session| session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>().clone())
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .map(|session| session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>().clone())
             .collect()
     }
 }
@@ -1075,7 +1075,7 @@
 }
 
 #[async_trait]
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
     <span class="rs-kw">type</span> <span class="rs-type">Session</span> = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a>;
     <span class="rs-kw">type</span> <span class="rs-type">Completion</span> = <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentCompletion-76">SubagentCompletion</a>;
 
@@ -1093,14 +1093,14 @@
             .<span class="rs-kw">await</span>
             .sessions
             .values()
-            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
+            .filter(|session| matches!(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-status-38">status</a>(), <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>))
             .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-249">count</a>()
     }
 
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-258">push_notification_on_completion</a>(&amp;<span class="rs-self">self</span>, completion: <span class="rs-self">Self</span>::<span class="rs-type">Completion</span>) {
         <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>
             .notification
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
                 agent_run_id: completion.agent_run_id,
                 status: completion.status,
                 result: completion.result,
@@ -1116,7 +1116,7 @@
                 .values_mut()
                 .filter_map(|session| {
                     <span class="rs-kw">if</span> session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(reason) {
-                        <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-133">agent_run_id</a>().clone())
+                        <span class="rs-type">Some</span>(session.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-agent-run-id-130">agent_run_id</a>().clone())
                     } <span class="rs-kw">else</span> {
                         <span class="rs-type">None</span>
                     }
@@ -1126,7 +1126,7 @@
         <span class="rs-kw">for</span> agent_run_id <span class="rs-kw">in</span> actions {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>
                 .agent_run_service
-                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(&amp;agent_run_id, reason)
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(&amp;agent_run_id, reason)
                 .<span class="rs-kw">await</span>
             {
                 tracing::warn!(
@@ -1147,7 +1147,7 @@
         <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-trace-background-tool-383">trace_background_tool</a>(
             &quot;background_tool.started&quot;,
             agent_run_id,
-            <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
+            <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span>,
             <span class="rs-type">None</span>,
         );
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSession-18">SubagentSession</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-tracked-27">tracked</a>(agent_run_id.clone()))
@@ -1159,15 +1159,15 @@
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         reason: &amp;str,
     ) -&gt; bool {
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(agent_run_id, reason).<span class="rs-kw">await</span>
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-count-background-sessions-331">count_background_sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-249">count</a>(<span class="rs-self">self</span>).<span class="rs-kw">await</span>
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-count-249">count</a>(<span class="rs-self">self</span>).<span class="rs-kw">await</span>
     }
 
     <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::background) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-cancel-all-background-sessions-335">cancel_all_background_sessions</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-66">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>;
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-trait-BackgroundSessionManager-63">BackgroundSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-cancel-49">cancel</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>;
     }
 }
 
@@ -1186,38 +1186,38 @@
         })
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-agent-run-status-to-background-355">agent_run_status_to_background</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a> {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-agent-run-status-to-background-355">agent_run_status_to_background</a>(status: <span class="rs-type">AgentRunStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a> {
     <span class="rs-kw">match</span> status {
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
-        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Completed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Failed</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
+        <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span> =&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span>,
     }
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-terminal-event-type-363">terminal_event_type</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-terminal-event-type-363">terminal_event_type</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> status {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;background_tool.started&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;background_tool.completed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;background_tool.failed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;background_tool.cancelled&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;background_tool.delivered&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;background_tool.started&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;background_tool.completed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;background_tool.failed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;background_tool.cancelled&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;background_tool.delivered&quot;,
     }
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-status-value-373">status_value</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-status-value-373">status_value</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> status {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
     }
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-trace-background-tool-383">trace_background_tool</a>(
     event_type: &amp;str,
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+    status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
     exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
 ) {
     tracing::debug!(
@@ -1236,12 +1236,12 @@
 #[cfg(test)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a>(
     run: &amp;<span class="rs-type">AgentRun</span>,
-) -&gt; <span class="rs-type">Option</span>&lt;(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>, <span class="rs-type">ToolResult</span>, i64)&gt; {
+) -&gt; <span class="rs-type">Option</span>&lt;(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>, <span class="rs-type">ToolResult</span>, i64)&gt; {
     run.finished_at?;
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(terminal) = &amp;run.terminal_tool_result {
         <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-tool-result-from-payload-424">tool_result_from_payload</a>(terminal);
         <span class="rs-kw">let</span> exit_code = i64::from(result.is_error);
-        <span class="rs-kw">return</span> <span class="rs-type">Some</span>((<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>, result, exit_code));
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>((<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>, result, exit_code));
     }
     <span class="rs-kw">let</span> message = <span class="rs-kw">match</span> &amp;run.error {
         <span class="rs-type">Some</span>(error) =&gt; format!(&quot;subagent crashed: {error}&quot;),
@@ -1249,7 +1249,7 @@
             .to_owned(),
     };
     <span class="rs-type">Some</span>((
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>,
         <span class="rs-type">ToolResult</span>::error(message).meta(&quot;subagent_terminal_called&quot;, json!(<span class="rs-kw">false</span>)),
         1,
     ))
@@ -1293,7 +1293,7 @@
     <span class="rs-kw">use</span> eos_agent_ports::{<span class="rs-type">AgentRunError</span>, <span class="rs-type">SpawnAgentRequest</span>};
     <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRun</span>, <span class="rs-type">UtcDateTime</span>};
 
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>;
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
@@ -1302,28 +1302,28 @@
 
     #[async_trait]
     <span class="rs-kw">impl</span> <span class="rs-type">AgentRunApi</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-FakeAgentRunService-466">FakeAgentRunService</a> {
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-spawn-agent-342">spawn_agent</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-spawn-agent-314">spawn_agent</a>(
             &amp;<span class="rs-self">self</span>,
             _request: <span class="rs-type">SpawnAgentRequest</span>,
         ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-type">AgentRunId</span>::new_v4())
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-349">wait_for_agent_outcome</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-wait-for-agent-outcome-321">wait_for_agent_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">NotActiveInProcess</span>(agent_run_id.clone()))
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-357">poll_agent_run_outcome</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-poll-agent-run-outcome-329">poll_agent_run_outcome</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt;, <span class="rs-type">AgentRunError</span>&gt; {
             <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
         }
 
-        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-365">cancel_agent_run</a>(
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-mod-rs.html#method-cancel-agent-run-337">cancel_agent_run</a>(
             &amp;<span class="rs-self">self</span>,
             _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
             _reason: &amp;str,
@@ -1332,11 +1332,11 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a>(notifier: &amp;<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a>(notifier: &amp;<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a> {
         <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-SubagentSessionManager-88">SubagentSessionManager</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(
             &quot;owner-run&quot;.parse().expect(&quot;agent run id&quot;),
             <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-struct-FakeAgentRunService-466">FakeAgentRunService</a>),
-            <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone()),
+            <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone()),
         )
     }
 
@@ -1364,7 +1364,7 @@
         terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-insert-242">insert</a>(&quot;is_terminal&quot;.to_owned(), json!(<span class="rs-kw">true</span>));
         <span class="rs-kw">let</span> (status, result, exit_code) =
             <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a>(&amp;<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-finished-run-509">finished_run</a>(<span class="rs-type">Some</span>(terminal), <span class="rs-type">None</span>)).expect(&quot;completion&quot;);
-        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>);
+        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>);
         assert!(result.is_error);
         assert_eq!(exit_code, 1);
         assert_eq!(result.output, &quot;partial but delivered&quot;);
@@ -1375,13 +1375,13 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-no-terminal-settles-failed-540">no_terminal_settles_failed</a>() {
         <span class="rs-kw">let</span> (status, result, _) =
             <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-completion-from-agent-run-402">completion_from_agent_run</a>(&amp;<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-finished-run-509">finished_run</a>(<span class="rs-type">None</span>, <span class="rs-type">None</span>)).expect(&quot;completion&quot;);
-        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>);
+        assert_eq!(status, <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span>);
         assert!(result.output.contains(&quot;without calling a terminal tool&quot;));
     }
 
     #[tokio::test]
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#item-fn-count-cancel-and-completion-notification-are-manager-owned-548">count_cancel_and_completion_notification_are_manager_owned</a>() {
-        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
         <span class="rs-kw">let</span> manager = <a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-fn-manager-380">manager</a>(&amp;notifier);
         <span class="rs-kw">let</span> running_id: <span class="rs-type">AgentRunId</span> = &quot;run-sub-1&quot;.parse().expect(&quot;agent run id&quot;);
         manager
@@ -1399,14 +1399,14 @@
         <span class="rs-kw">let</span> completion = manager
             .<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-subagent-session-manager-rs.html#method-settle-55">settle</a>(
                 &amp;done_id,
-                <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+                <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
                 <span class="rs-type">ToolResult</span>::ok(&quot;findings&quot;),
             )
             .<span class="rs-kw">await</span>
             .expect(&quot;completion&quot;);
         manager.<a class="symbol-link rs-fn" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#method-push-notification-on-completion-258">push_notification_on_completion</a>(completion).<span class="rs-kw">await</span>;
 
-        <span class="rs-kw">let</span> notifications = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-128">drain</a>().<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> notifications = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-127">drain</a>().<span class="rs-kw">await</span>;
         assert_eq!(notifications.len(), 1);
         assert!(notifications[0]
             .message

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>41</b><span>modules</span></div>
-  <div><b>271</b><span>items</span></div>
-  <div><b>242</b><span>fields</span></div>
-  <div><b>206</b><span>methods</span></div>
+  <div><b>272</b><span>items</span></div>
+  <div><b>237</b><span>fields</span></div>
+  <div><b>209</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -56,60 +56,60 @@
       <span>5 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-BackgroundNotificationEmitter-122" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct BackgroundNotificationEmitter pub pub struct BackgroundNotificationEmitter crates/eos-engine/src/background/notification.rs notifications NotificationService ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-BackgroundNotificationEmitter-123" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct BackgroundNotificationEmitter pub pub struct BackgroundNotificationEmitter crates/eos-engine/src/background/notification.rs notifications NotificationService ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>BackgroundNotificationEmitter</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a></code>
   <p class="docstring">Centralized renderer + delivery adapter wrapping one agent run's notifier.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-129"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine.html#method-new-43">new</a> (notifications : <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>) -&gt; Self</code><p class="docstring">Wrap the agent run's notification service.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-130"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine.html#method-new-43">new</a> (notifications : <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>) -&gt; Self</code><p class="docstring">Wrap the agent run's notification service.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Wrap the agent run's notification service.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { notifications }
     }
 </code></pre>
-</details></td></tr><tr id="method-notifications-135"><td>method</td><td>notifications</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-notifications-135">notifications</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a></code><p class="docstring">The wrapped notification service (the exact run-local queue).</p><details class="function-source">
+</details></td></tr><tr id="method-notifications-136"><td>method</td><td>notifications</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-notifications-136">notifications</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a></code><p class="docstring">The wrapped notification service (the exact run-local queue).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The wrapped notification service (the exact run-local queue).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-notifications-135">notifications</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-notifications-136">notifications</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a> {
         <span class="rs-self">self</span>.notifications.clone()
     }
 </code></pre>
-</details></td></tr><tr id="method-emit-141"><td>method</td><td>emit</td><td><code>pub async fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a> (&amp; self , completion : <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; () , ToolError &gt;</code><p class="docstring">Render and enqueue one background completion into the run's notifier.</p><details class="function-source">
+</details></td></tr><tr id="method-emit-142"><td>method</td><td>emit</td><td><code>pub async fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a> (&amp; self , completion : <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>) -&gt; <a class="symbol-link" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a> &lt; () , ToolError &gt;</code><p class="docstring">Render and enqueue one background completion into the run's notifier.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Render and enqueue one background completion into the run's notifier.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a>(&amp;<span class="rs-self">self</span>, completion: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a>(&amp;<span class="rs-self">self</span>, completion: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">NotificationSink</span>;
         <span class="rs-self">self</span>.notifications
-            .<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-notify-system-138">notify_system</a>(<span class="rs-type">ToolNotification</span> {
-                event: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-52">event_key</a>(),
-                message: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-63">render</a>(),
+            .<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-notify-system-137">notify_system</a>(<span class="rs-type">ToolNotification</span> {
+                event: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-53">event_key</a>(),
+                message: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-64">render</a>(),
             })
             .<span class="rs-kw">await</span>
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-engine/src/background/notification.rs:122</p>
-</article><article id="item-enum-BackgroundCompletion-19" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum BackgroundCompletion pub pub enum BackgroundCompletion crates/eos-engine/src/background/notification.rs  ">
+  <p class="source">crates/eos-engine/src/background/notification.rs:123</p>
+</article><article id="item-enum-BackgroundCompletion-20" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum BackgroundCompletion pub pub enum BackgroundCompletion crates/eos-engine/src/background/notification.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>BackgroundCompletion</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a></code>
   <p class="docstring">A terminal background transition to surface to the owning agent run.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Subagent</td><td><code>agent_run_id: AgentRunId, status: <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>, result: ToolResult</code></td></tr><tr><td>Workflow</td><td><code>workflow_id: WorkflowId, status: <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a></code></td></tr><tr><td>CommandSession</td><td><code>command_session_id: CommandSessionId, sandbox_id: SandboxId, status: <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>, result: Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-event-key-52"><td>method</td><td>event_key</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-event-key-52">event_key</a> (&amp; self) -&gt; String</code><p class="docstring">The notification dedup/event key (the typed session id).</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Subagent</td><td><code>agent_run_id: AgentRunId, status: <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>, result: ToolResult</code></td></tr><tr><td>Workflow</td><td><code>workflow_id: WorkflowId, status: <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a></code></td></tr><tr><td>CommandSession</td><td><code>command_session_id: CommandSessionId, sandbox_id: SandboxId, status: <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>, result: Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-event-key-53"><td>method</td><td>event_key</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-event-key-53">event_key</a> (&amp; self) -&gt; String</code><p class="docstring">The notification dedup/event key (the typed session id).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The notification dedup/event key (the typed session id).</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-52">event_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-53">event_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> { agent_run_id, .. } =&gt; agent_run_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>().to_owned(),
             <span class="rs-self">Self</span>::<span class="rs-type">Workflow</span> { workflow_id, .. } =&gt; workflow_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>().to_owned(),
@@ -119,12 +119,12 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-render-63"><td>method</td><td>render</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-render-63">render</a> (&amp; self) -&gt; String</code><p class="docstring">Render the model-visible `[BACKGROUND COMPLETED]` body. The payload names<br>the background kind and its typed session id so the model can call the<br>matching progress/check tool for details.</p><details class="function-source">
+</details></td></tr><tr id="method-render-64"><td>method</td><td>render</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#method-render-64">render</a> (&amp; self) -&gt; String</code><p class="docstring">Render the model-visible `[BACKGROUND COMPLETED]` body. The payload names<br>the background kind and its typed session id so the model can call the<br>matching progress/check tool for details.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Render the model-visible `[BACKGROUND COMPLETED]` body. The payload names</span>
     <span class="rs-comment">/// the background kind and its typed session id so the model can call the</span>
     <span class="rs-comment">/// matching progress/check tool for details.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-63">render</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-64">render</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> {
                 agent_run_id,
@@ -133,7 +133,7 @@
             } =&gt; format!(
                 &quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] agent_run_id={} status={}\n{}&quot;,
                 agent_run_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
-                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(*status),
+                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(*status),
                 result.output,
             ),
             <span class="rs-self">Self</span>::<span class="rs-type">Workflow</span> {
@@ -142,7 +142,7 @@
             } =&gt; format!(
                 &quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] workflow_id={} status={}&quot;,
                 workflow_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
-                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(*status),
+                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(*status),
             ),
             <span class="rs-self">Self</span>::<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-struct-CommandSession-15">CommandSession</a> {
                 command_session_id,
@@ -163,7 +163,7 @@
                 format!(
                     &quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] command_session_id={} status={} exit_code={exit}\nstdout: {stdout}&quot;,
                     command_session_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
-                    <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(*status),
+                    <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(*status),
                 )
             }
         }
@@ -171,37 +171,37 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-engine/src/background/notification.rs:19</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-status-token-112" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_token private fn status_token (status : BackgroundSessionStatus) -&gt; &amp; 'static str crates/eos-engine/src/background/notification.rs  ">
+  <p class="source">crates/eos-engine/src/background/notification.rs:20</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-status-token-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_token private fn status_token (status : BackgroundSessionStatus) -&gt; &amp; 'static str crates/eos-engine/src/background/notification.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>status_token</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a> (status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp; &#x27;static str</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a> (status : <a class="symbol-link" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> status {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-engine/src/background/notification.rs:112</p>
-</article><article id="item-fn-emits-subagent-completion-into-its-own-notifier-159" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn emits_subagent_completion_into_its_own_notifier private async fn emits_subagent_completion_into_its_own_notifier () crates/eos-engine/src/background/notification.rs  ">
+  <p class="source">crates/eos-engine/src/background/notification.rs:113</p>
+</article><article id="item-fn-emits-subagent-completion-into-its-own-notifier-160" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn emits_subagent_completion_into_its_own_notifier private async fn emits_subagent_completion_into_its_own_notifier () crates/eos-engine/src/background/notification.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>emits_subagent_completion_into_its_own_notifier</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-fn-emits-subagent-completion-into-its-own-notifier-159">emits_subagent_completion_into_its_own_notifier</a> ()</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-engine--src-background-notification-rs.html#item-fn-emits-subagent-completion-into-its-own-notifier-160">emits_subagent_completion_into_its_own_notifier</a> ()</code>
   <p class="docstring">Spec §8.4/§9.1: a subagent completion renders the `[BACKGROUND COMPLETED]`<br>body with the typed session id and lands in the wrapped notifier; a second<br>notifier never sees it (instance isolation, §13.1).</p>
   <div class="tags"><span>async</span><span>tokio::test</span></div>
   <details class="function-source">
@@ -210,22 +210,22 @@
     <span class="rs-comment">/// body with the typed session id and lands in the wrapped notifier; a second</span>
     <span class="rs-comment">/// notifier never sees it (instance isolation, §13.1).</span>
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-emits-subagent-completion-into-its-own-notifier-159">emits_subagent_completion_into_its_own_notifier</a>() {
-        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
-        <span class="rs-kw">let</span> other = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
-        <span class="rs-kw">let</span> emitter = <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone());
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-emits-subagent-completion-into-its-own-notifier-160">emits_subagent_completion_into_its_own_notifier</a>() {
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> other = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> emitter = <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone());
 
         emitter
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
                 agent_run_id: &quot;run-sub-1&quot;.parse().expect(&quot;id&quot;),
-                status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+                status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
                 result: <span class="rs-type">ToolResult</span>::ok(&quot;did the work&quot;),
             })
             .<span class="rs-kw">await</span>
             .expect(&quot;emit&quot;);
 
-        assert!(other.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-128">drain</a>().<span class="rs-kw">await</span>.is_empty(), &quot;isolated from other runs&quot;);
-        <span class="rs-kw">let</span> drained = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-128">drain</a>().<span class="rs-kw">await</span>;
+        assert!(other.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-127">drain</a>().<span class="rs-kw">await</span>.is_empty(), &quot;isolated from other runs&quot;);
+        <span class="rs-kw">let</span> drained = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-127">drain</a>().<span class="rs-kw">await</span>;
         assert_eq!(drained.len(), 1, &quot;exactly one completion notification&quot;);
         assert_eq!(drained[0].event, &quot;run-sub-1&quot;);
         assert!(drained[0]
@@ -237,7 +237,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-engine/src/background/notification.rs:159</p>
+  <p class="source">crates/eos-engine/src/background/notification.rs:160</p>
 </article></div>
 </section></div>
 </main>
@@ -257,22 +257,23 @@
 <span class="rs-comment">//! and never another run's queue (spec §13.1). Callers must clone the terminal</span>
 <span class="rs-comment">//! data out from under any manager lock and drop the lock *before* awaiting `emit`.</span>
 
-<span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">SystemNotification</span> <span class="rs-kw">as</span> <span class="rs-type">ToolNotification</span>, <span class="rs-type">ToolError</span>, <span class="rs-type">ToolResult</span>};
+<span class="rs-kw">use</span> eos_tool::<span class="rs-type">ToolResult</span>;
+<span class="rs-kw">use</span> eos_tool_ports::{<span class="rs-type">SystemNotification</span> <span class="rs-kw">as</span> <span class="rs-type">ToolNotification</span>, <span class="rs-type">ToolError</span>};
 <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">CommandSessionId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">WorkflowId</span>};
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::background_session_manager::<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::background_session_manager::<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>;
 
 <span class="rs-comment">/// A terminal background transition to surface to the owning agent run.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a> {
     <span class="rs-comment">/// A subagent run settled (the parent run is the notification target).</span>
     <span class="rs-type">Subagent</span> {
         <span class="rs-comment">/// Natural child agent-run id.</span>
         agent_run_id: <span class="rs-type">AgentRunId</span>,
         <span class="rs-comment">/// Terminal status.</span>
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
         <span class="rs-comment">/// The subagent's terminal tool outcome.</span>
         result: <span class="rs-type">ToolResult</span>,
     },
@@ -281,7 +282,7 @@
         <span class="rs-comment">/// The persisted workflow id.</span>
         workflow_id: <span class="rs-type">WorkflowId</span>,
         <span class="rs-comment">/// Terminal status.</span>
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
     },
     <span class="rs-comment">/// A background command session completed (the owner run is the target).</span>
     <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-struct-CommandSession-15">CommandSession</a> {
@@ -290,15 +291,15 @@
         <span class="rs-comment">/// Owning sandbox.</span>
         sandbox_id: <span class="rs-type">SandboxId</span>,
         <span class="rs-comment">/// Terminal status.</span>
-        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>,
         <span class="rs-comment">/// The daemon completion `result` payload.</span>
         result: <span class="rs-type">Value</span>,
     },
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a> {
     <span class="rs-comment">/// The notification dedup/event key (the typed session id).</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-52">event_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-53">event_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> { agent_run_id, .. } =&gt; agent_run_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>().to_owned(),
             <span class="rs-self">Self</span>::<span class="rs-type">Workflow</span> { workflow_id, .. } =&gt; workflow_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>().to_owned(),
@@ -311,7 +312,7 @@
     <span class="rs-comment">/// Render the model-visible `[BACKGROUND COMPLETED]` body. The payload names</span>
     <span class="rs-comment">/// the background kind and its typed session id so the model can call the</span>
     <span class="rs-comment">/// matching progress/check tool for details.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-63">render</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-64">render</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Subagent</span> {
                 agent_run_id,
@@ -320,7 +321,7 @@
             } =&gt; format!(
                 &quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] agent_run_id={} status={}\n{}&quot;,
                 agent_run_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
-                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(*status),
+                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(*status),
                 result.output,
             ),
             <span class="rs-self">Self</span>::<span class="rs-type">Workflow</span> {
@@ -329,7 +330,7 @@
             } =&gt; format!(
                 &quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] workflow_id={} status={}&quot;,
                 workflow_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
-                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(*status),
+                <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(*status),
             ),
             <span class="rs-self">Self</span>::<a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-command-session-manager-rs.html#item-struct-CommandSession-15">CommandSession</a> {
                 command_session_id,
@@ -350,49 +351,49 @@
                 format!(
                     &quot;[<span class="rs-type">BACKGROUND</span> <span class="rs-type">COMPLETED</span>] command_session_id={} status={} exit_code={exit}\nstdout: {stdout}&quot;,
                     command_session_id.<a class="symbol-link rs-fn" href="eos-engine--src-records-handle-rs.html#method-as-str-99">as_str</a>(),
-                    <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(*status),
+                    <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(*status),
                 )
             }
         }
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-112">status_token</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-status-token-113">status_token</a>(status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> status {
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
-        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span> =&gt; &quot;completed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
+        <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Delivered</span> =&gt; &quot;delivered&quot;,
     }
 }
 
 <span class="rs-comment">/// Centralized renderer + delivery adapter wrapping one agent run's notifier.</span>
 #[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a> {
-    notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>,
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a> {
+    notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a> {
     <span class="rs-comment">/// Wrap the agent run's notification service.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { notifications }
     }
 
     <span class="rs-comment">/// The wrapped notification service (the exact run-local queue).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-notifications-135">notifications</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-notifications-136">notifications</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a> {
         <span class="rs-self">self</span>.notifications.clone()
     }
 
     <span class="rs-comment">/// Render and enqueue one background completion into the run's notifier.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a>(&amp;<span class="rs-self">self</span>, completion: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a>(&amp;<span class="rs-self">self</span>, completion: <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-records-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">use</span> eos_tool_ports::<span class="rs-type">NotificationSink</span>;
         <span class="rs-self">self</span>.notifications
-            .<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-notify-system-138">notify_system</a>(<span class="rs-type">ToolNotification</span> {
-                event: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-52">event_key</a>(),
-                message: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-63">render</a>(),
+            .<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-notify-system-137">notify_system</a>(<span class="rs-type">ToolNotification</span> {
+                event: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-event-key-53">event_key</a>(),
+                message: completion.<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-render-64">render</a>(),
             })
             .<span class="rs-kw">await</span>
     }
@@ -408,22 +409,22 @@
     <span class="rs-comment">/// body with the typed session id and lands in the wrapped notifier; a second</span>
     <span class="rs-comment">/// notifier never sees it (instance isolation, §13.1).</span>
     #[tokio::test]
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-emits-subagent-completion-into-its-own-notifier-159">emits_subagent_completion_into_its_own_notifier</a>() {
-        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
-        <span class="rs-kw">let</span> other = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-115">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
-        <span class="rs-kw">let</span> emitter = <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-122">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone());
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#item-fn-emits-subagent-completion-into-its-own-notifier-160">emits_subagent_completion_into_its_own_notifier</a>() {
+        <span class="rs-kw">let</span> notifier = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> other = <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-114">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>();
+        <span class="rs-kw">let</span> emitter = <a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-struct-BackgroundNotificationEmitter-123">BackgroundNotificationEmitter</a>::<a class="symbol-link rs-fn" href="eos-engine.html#method-new-43">new</a>(notifier.clone());
 
         emitter
-            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-141">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-19">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
+            .<a class="symbol-link rs-fn" href="eos-engine--src-background-notification-rs.html#method-emit-142">emit</a>(<a class="symbol-link rs-type" href="eos-engine--src-background-notification-rs.html#item-enum-BackgroundCompletion-20">BackgroundCompletion</a>::<span class="rs-type">Subagent</span> {
                 agent_run_id: &quot;run-sub-1&quot;.parse().expect(&quot;id&quot;),
-                status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-31">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
+                status: <a class="symbol-link rs-type" href="eos-engine--src-background-background-session-manager-mod-rs.html#item-enum-BackgroundSessionStatus-28">BackgroundSessionStatus</a>::<span class="rs-type">Completed</span>,
                 result: <span class="rs-type">ToolResult</span>::ok(&quot;did the work&quot;),
             })
             .<span class="rs-kw">await</span>
             .expect(&quot;emit&quot;);
 
-        assert!(other.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-128">drain</a>().<span class="rs-kw">await</span>.is_empty(), &quot;isolated from other runs&quot;);
-        <span class="rs-kw">let</span> drained = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-128">drain</a>().<span class="rs-kw">await</span>;
+        assert!(other.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-127">drain</a>().<span class="rs-kw">await</span>.is_empty(), &quot;isolated from other runs&quot;);
+        <span class="rs-kw">let</span> drained = notifier.<a class="symbol-link rs-fn" href="eos-engine--src-notifications-mod-rs.html#method-drain-127">drain</a>().<span class="rs-kw">await</span>;
         assert_eq!(drained.len(), 1, &quot;exactly one completion notification&quot;);
         assert_eq!(drained[0].event, &quot;run-sub-1&quot;);
         assert!(drained[0]

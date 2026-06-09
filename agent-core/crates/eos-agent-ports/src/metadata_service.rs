@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use eos_audit::AuditNode;
-use eos_tool_ports::{ExecutionMetadata, ToolName};
+use eos_tool::{ExecutionMetadata, ToolName};
 use eos_types::{AgentRunId, Message, ToolUseId};
 use std::sync::Arc;
 
