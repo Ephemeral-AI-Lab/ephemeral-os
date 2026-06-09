@@ -8,7 +8,7 @@ use eos_types::{
 
 use crate::config::WorkflowLifecycleConfig;
 use crate::context::{
-    build_skill_message, render_context_xml, render_planner_agent_context, render_task_guidance,
+    render_context_xml, render_planner_agent_context, render_task_guidance,
     render_worker_agent_context, wrap_task_guidance,
 };
 use crate::{Result, WorkflowError};
@@ -64,8 +64,6 @@ pub struct AgentLaunch {
     pub task_guidance: Option<String>,
     /// Resolved definition.
     pub agent_def: AgentDefinition,
-    /// Skill row.
-    pub skill: Option<String>,
 }
 
 impl AgentLaunch {
@@ -214,7 +212,6 @@ impl AgentLaunchFactory {
                 &render_task_guidance(&context),
                 &agent_def,
             )),
-            skill: build_skill_message(&agent_def)?,
             agent_def,
         })
     }
@@ -238,7 +235,6 @@ impl AgentLaunchFactory {
                 &render_task_guidance(&context),
                 &agent_def,
             )),
-            skill: build_skill_message(&agent_def)?,
             agent_def,
         })
     }

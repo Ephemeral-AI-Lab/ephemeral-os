@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -115,7 +115,7 @@ macro_rules! define_id {
         <span class="rs-kw">impl</span> $name {
             <span class="rs-comment">/// Borrow the identifier as a string slice.</span>
             #[must_use]
-            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
                 &amp;<span class="rs-self">self</span>.0
             }
 
@@ -128,7 +128,7 @@ macro_rules! define_id {
         }
 
         <span class="rs-kw">impl</span> ::core::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> $name {
-            <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> ::core::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; ::core::fmt::<span class="rs-type">Result</span> {
+            <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> ::core::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; ::core::fmt::<span class="rs-type">Result</span> {
                 f.write_str(&amp;<span class="rs-self">self</span>.0)
             }
         }
@@ -150,7 +150,7 @@ macro_rules! define_id {
             <span class="rs-kw">where</span>
                 <span class="rs-type">D</span>: ::serde::<span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
             {
-                <span class="rs-kw">let</span> value = &lt;::std::string::<span class="rs-type">String</span> <span class="rs-kw">as</span> ::serde::<span class="rs-type">Deserialize</span>&gt;::<a class="symbol-link rs-fn" href="eos-types.html#method-deserialize-62">deserialize</a>(
+                <span class="rs-kw">let</span> value = &lt;::std::string::<span class="rs-type">String</span> <span class="rs-kw">as</span> ::serde::<span class="rs-type">Deserialize</span>&gt;::<a class="symbol-link rs-fn" href="eos-types.html#method-deserialize-61">deserialize</a>(
                     deserializer,
                 )?;
                 value.parse().map_err(::serde::de::<span class="rs-type">Error</span>::custom)

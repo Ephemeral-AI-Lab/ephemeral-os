@@ -217,9 +217,9 @@ mod name {
     //! [`ToolName`] / [`ToolKey`] — typed names for model-facing tools.
     //!
     //! Ports `_names.py` **plus** the five names that module omits (`write_stdin`,
-    //! `read_command_progress`, `enter_isolated_workspace`, `exit_isolated_workspace`,
-    //! `load_skill_reference`) and `cancel_subagent` — GC-tools-04. The authoritative
-    //! set is the union of the six registration sites, not `_names.py`. Each variant
+    //! `read_command_progress`, `enter_isolated_workspace`, `exit_isolated_workspace`)
+    //! and `cancel_subagent` — GC-tools-04. The authoritative
+    //! set is the union of the registration sites, not `_names.py`. Each variant
     //! maps to its wire string (the exact `snake_case` of the variant), so `serde`
     //! `rename_all` and the hand-written [`ToolName::as_str`] agree (asserted by a
     //! test).
@@ -268,8 +268,6 @@ mod name {
         CheckWorkflowStatus,
         /// `cancel_workflow` (workflow).
         CancelWorkflow,
-        /// `load_skill_reference` (skills; omitted from `_names.py`).
-        LoadSkillReference,
         /// `submit_root_outcome` (submission, terminal).
         SubmitRootOutcome,
         /// `submit_plan_outcome` (submission, terminal).
@@ -285,7 +283,7 @@ mod name {
     impl ToolName {
         /// Every tool name, in a stable order. Used by registry-totality tests and
         /// as the canonical iteration order for default-set construction.
-        pub const ALL: [ToolName; 21] = [
+        pub const ALL: [ToolName; 20] = [
             ToolName::ReadFile,
             ToolName::WriteFile,
             ToolName::EditFile,
@@ -301,7 +299,6 @@ mod name {
             ToolName::DelegateWorkflow,
             ToolName::CheckWorkflowStatus,
             ToolName::CancelWorkflow,
-            ToolName::LoadSkillReference,
             ToolName::SubmitRootOutcome,
             ToolName::SubmitPlanOutcome,
             ToolName::SubmitWorkerOutcome,
@@ -328,7 +325,6 @@ mod name {
                 ToolName::DelegateWorkflow => "delegate_workflow",
                 ToolName::CheckWorkflowStatus => "check_workflow_status",
                 ToolName::CancelWorkflow => "cancel_workflow",
-                ToolName::LoadSkillReference => "load_skill_reference",
                 ToolName::SubmitRootOutcome => "submit_root_outcome",
                 ToolName::SubmitPlanOutcome => "submit_plan_outcome",
                 ToolName::SubmitWorkerOutcome => "submit_worker_outcome",

@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -140,13 +140,13 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-time-rs.html#item-struct-TestClock-116">TestClock</a></code>
   <p class="docstring">Test clock with a settable instant for deterministic tests. Reads dominate,<br>so the instant lives behind an `RwLock` (`own-rwlock-readers`).</p>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>instant</td><td><code>RwLock &lt; <a class="symbol-link" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-124"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-36">new</a> (instant : <a class="symbol-link" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>) -&gt; Self</code><p class="docstring">Create a test clock fixed at `instant`.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>instant</td><td><code>RwLock &lt; <a class="symbol-link" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-124"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-35">new</a> (instant : <a class="symbol-link" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>) -&gt; Self</code><p class="docstring">Create a test clock fixed at `instant`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a test clock fixed at `instant`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(instant: <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(instant: <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            instant: <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(instant),
+            instant: <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(instant),
         }
     }
 </code></pre>
@@ -236,7 +236,7 @@
 <span class="rs-kw">where</span>
     <span class="rs-type">D</span>: serde::<span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
 {
-    <span class="rs-kw">let</span> dt = ::time::serde::rfc3339::<a class="symbol-link rs-fn" href="eos-types.html#method-deserialize-62">deserialize</a>(deserializer)?;
+    <span class="rs-kw">let</span> dt = ::time::serde::rfc3339::<a class="symbol-link rs-fn" href="eos-types.html#method-deserialize-61">deserialize</a>(deserializer)?;
     <span class="rs-type">Ok</span>(dt.to_offset(<span class="rs-type">UtcOffset</span>::<span class="rs-type">UTC</span>))
 }
 </code></pre>
@@ -345,7 +345,7 @@
 <span class="rs-kw">where</span>
     <span class="rs-type">D</span>: serde::<span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
 {
-    <span class="rs-kw">let</span> dt = ::time::serde::rfc3339::<a class="symbol-link rs-fn" href="eos-types.html#method-deserialize-62">deserialize</a>(deserializer)?;
+    <span class="rs-kw">let</span> dt = ::time::serde::rfc3339::<a class="symbol-link rs-fn" href="eos-types.html#method-deserialize-61">deserialize</a>(deserializer)?;
     <span class="rs-type">Ok</span>(dt.to_offset(<span class="rs-type">UtcOffset</span>::<span class="rs-type">UTC</span>))
 }
 
@@ -376,9 +376,9 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-TestClock-116">TestClock</a> {
     <span class="rs-comment">/// Create a test clock fixed at `instant`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(instant: <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(instant: <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            instant: <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(instant),
+            instant: <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(instant),
         }
     }
 

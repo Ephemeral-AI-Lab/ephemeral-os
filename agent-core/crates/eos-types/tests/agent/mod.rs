@@ -15,7 +15,6 @@ fn def(name: &str, agent_type: AgentType) -> AgentDefinition {
         allowed_tools: vec![],
         terminals: vec!["submit_x".to_owned()],
         notification_triggers: vec![],
-        skill: None,
         context_recipe: None,
     }
 }

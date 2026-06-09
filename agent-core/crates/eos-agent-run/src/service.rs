@@ -200,7 +200,6 @@ mod tests {
             allowed_tools: Vec::new(),
             terminals: Vec::new(),
             notification_triggers: Vec::new(),
-            skill: None,
             context_recipe: None,
         }
     }

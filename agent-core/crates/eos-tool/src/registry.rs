@@ -10,7 +10,7 @@ use eos_types::{
     WorkflowApi, WorkflowAttemptSubmissionApi,
 };
 
-use crate::{SkillRegistry, ToolError};
+use crate::ToolError;
 
 mod executor {
     //! [`ToolExecutor`] — the object-safe execute seam — and [`RegisteredTool`],
@@ -861,8 +861,6 @@ pub struct ToolRuntime {
     pub workflow: Arc<dyn WorkflowApi>,
     /// Agent-run launcher API.
     pub launcher: Arc<dyn AgentRunApi>,
-    /// Skill registry.
-    pub skills: Arc<SkillRegistry>,
     /// Terminal submission resources.
     pub submission: TerminalSubmissionRuntime,
     /// Background session registration/cancellation.

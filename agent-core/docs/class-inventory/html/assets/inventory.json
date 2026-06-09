@@ -1535,7 +1535,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 208
+              "line": 207
             },
             {
               "kind": "fn",
@@ -1551,7 +1551,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 223
+              "line": 222
             },
             {
               "kind": "struct",
@@ -1580,7 +1580,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 245
+              "line": 244
             },
             {
               "kind": "impl",
@@ -1595,14 +1595,14 @@
                   "signature": "fn complete (& self , outcome : AgentLoopOutcome)",
                   "kind": "method",
                   "docs": null,
-                  "line": 252
+                  "line": 251
                 },
                 {
                   "name": "cancellation_reason",
                   "signature": "fn cancellation_reason (& self) -> Option < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 259
+                  "line": 258
                 }
               ],
               "impl_target": "ControlledLauncher",
@@ -1613,7 +1613,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 251
+              "line": 250
             },
             {
               "kind": "impl",
@@ -1628,7 +1628,7 @@
                   "signature": "fn start_agent_loop (& self , _request : StartAgentLoopRequest , _agent_run_api : Arc < dyn AgentRunApi > ,) -> StartedAgentLoop",
                   "kind": "method",
                   "docs": null,
-                  "line": 265
+                  "line": 264
                 }
               ],
               "impl_target": "ControlledLauncher",
@@ -1640,7 +1640,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 264
+              "line": 263
             },
             {
               "kind": "struct",
@@ -1665,7 +1665,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 287
+              "line": 286
             },
             {
               "kind": "impl",
@@ -1680,7 +1680,7 @@
                   "signature": "fn cancel (& self , reason : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 293
+                  "line": 292
                 }
               ],
               "impl_target": "TestCancellation",
@@ -1692,7 +1692,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 292
+              "line": 291
             },
             {
               "kind": "struct",
@@ -1726,7 +1726,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 301
+              "line": 300
             },
             {
               "kind": "impl",
@@ -1741,7 +1741,7 @@
                   "signature": "fn finish_count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 309
+                  "line": 308
                 }
               ],
               "impl_target": "FakeAgentRunStore",
@@ -1752,7 +1752,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 308
+              "line": 307
             },
             {
               "kind": "impl",
@@ -1771,7 +1771,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 314
+              "line": 313
             },
             {
               "kind": "impl",
@@ -1786,49 +1786,49 @@
                   "signature": "async fn create_agent_run (& self , agent_run_id : & AgentRunId , request_id : & RequestId , agent_name : & AgentName , agent_type : AgentType , parent_agent_run_id : Option < & AgentRunId > , tool_use_id : Option < & ToolUseId > ,) -> Result < CreatedAgentRun , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 318
+                  "line": 317
                 },
                 {
                   "name": "finish_agent_run",
                   "signature": "async fn finish_agent_run (& self , agent_run_id : & AgentRunId , status : ExecutionStatus , terminal_payload : Option < & JsonObject > , submission_outcome : Option < & SubmissionOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 350
+                  "line": 349
                 },
                 {
                   "name": "record_index_for_agent_run",
                   "signature": "async fn record_index_for_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunRecordIndex > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 391
+                  "line": 390
                 },
                 {
                   "name": "get_agent_run",
                   "signature": "async fn get_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 398
+                  "line": 397
                 },
                 {
                   "name": "list_agent_runs_for_request",
                   "signature": "async fn list_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 405
+                  "line": 404
                 },
                 {
                   "name": "list_running_agent_runs_for_request",
                   "signature": "async fn list_running_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < RunningRequestAgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 416
+                  "line": 415
                 },
                 {
                   "name": "list_child_agent_runs_for_parent_agent_run",
                   "signature": "async fn list_child_agent_runs_for_parent_agent_run (& self , parent_agent_run_id : & AgentRunId , agent_type : Option < AgentType > ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 431
+                  "line": 430
                 }
               ],
               "impl_target": "FakeAgentRunStore",
@@ -1841,7 +1841,7 @@
               ],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 316
+              "line": 315
             },
             {
               "kind": "fn",
@@ -1857,7 +1857,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 445
+              "line": 444
             },
             {
               "kind": "fn",
@@ -1873,7 +1873,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 456
+              "line": 455
             },
             {
               "kind": "fn",
@@ -1889,7 +1889,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 486
+              "line": 485
             }
           ]
         },
@@ -4628,11 +4628,11 @@
       "path": "crates/eos-engine",
       "stats": {
         "modules": 30,
-        "items": 245,
+        "items": 244,
         "structs": 59,
         "enums": 9,
         "traits": 7,
-        "functions": 96,
+        "functions": 95,
         "impls": 66,
         "fields": 256,
         "methods": 216
@@ -12047,22 +12047,6 @@
             },
             {
               "kind": "fn",
-              "name": "deferred_goal",
-              "visibility": "private",
-              "signature": "fn deferred_goal (raw_input : & JsonObject) -> Option < & str >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-engine/src/tool_call/hooks.rs",
-              "module": "tool_call::hooks",
-              "line": 245
-            },
-            {
-              "kind": "fn",
               "name": "split_git_args",
               "visibility": "private",
               "signature": "fn split_git_args (raw_args : & str) -> Vec < & str >",
@@ -12075,7 +12059,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 253
+              "line": 245
             },
             {
               "kind": "fn",
@@ -12091,7 +12075,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 257
+              "line": 249
             },
             {
               "kind": "fn",
@@ -12107,7 +12091,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 288
+              "line": 280
             },
             {
               "kind": "fn",
@@ -12123,7 +12107,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 311
+              "line": 303
             },
             {
               "kind": "fn",
@@ -12139,7 +12123,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 315
+              "line": 307
             },
             {
               "kind": "fn",
@@ -12155,7 +12139,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 339
+              "line": 331
             },
             {
               "kind": "fn",
@@ -12171,7 +12155,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 348
+              "line": 340
             },
             {
               "kind": "fn",
@@ -12189,7 +12173,7 @@
               ],
               "file": "crates/eos-engine/src/tool_call/hooks.rs",
               "module": "tool_call::hooks",
-              "line": 359
+              "line": 351
             }
           ]
         },
@@ -20672,15 +20656,15 @@
       "name": "eos-tool",
       "path": "crates/eos-tool",
       "stats": {
-        "modules": 20,
-        "items": 339,
-        "structs": 73,
-        "enums": 11,
+        "modules": 19,
+        "items": 282,
+        "structs": 64,
+        "enums": 9,
         "traits": 3,
-        "functions": 171,
-        "impls": 81,
-        "fields": 199,
-        "methods": 131
+        "functions": 135,
+        "impls": 71,
+        "fields": 175,
+        "methods": 114
       },
       "modules": [
         {
@@ -21309,10 +21293,6 @@
                   "fields": []
                 },
                 {
-                  "name": "LoadSkillReference",
-                  "fields": []
-                },
-                {
                   "name": "SubmitRootOutcome",
                   "fields": []
                 },
@@ -21370,14 +21350,14 @@
                   "signature": "pub const fn as_str (self) -> & 'static str",
                   "kind": "method",
                   "docs": "The wire string the model calls this tool by.",
-                  "line": 312
+                  "line": 309
                 },
                 {
                   "name": "from_wire",
                   "signature": "pub fn from_wire (value : & str) -> Option < Self >",
                   "kind": "constructor",
                   "docs": "Parse a wire string into a [`ToolName`], or `None` when unknown.",
-                  "line": 340
+                  "line": 336
                 }
               ],
               "impl_target": "ToolName",
@@ -21388,7 +21368,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 285
+              "line": 283
             },
             {
               "kind": "struct",
@@ -21424,7 +21404,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 347
+              "line": 343
             },
             {
               "kind": "impl",
@@ -21439,28 +21419,28 @@
                   "signature": "pub fn from_wire (value : & str) -> Option < Self >",
                   "kind": "constructor",
                   "docs": "Parse a wire tool name into a registry key.\n\nBuilt-ins are always accepted. Dynamic plugin names must be a dotted\n`<plugin>.<op>` name with non-empty identifier segments; this is enough\nfor agent-profile validation to reach the registry lookup while rejecting\narbitrary strings that are neither built-ins nor plugin tools.",
-                  "line": 360
+                  "line": 356
                 },
                 {
                   "name": "dynamic",
                   "signature": "pub fn dynamic (value : impl Into < String >) -> Self",
                   "kind": "associated-fn",
                   "docs": "Build a dynamic tool key from a catalog-validated name.",
-                  "line": 378
+                  "line": 374
                 },
                 {
                   "name": "as_str",
                   "signature": "pub fn as_str (& self) -> & str",
                   "kind": "method",
                   "docs": "The model/provider wire string.",
-                  "line": 384
+                  "line": 380
                 },
                 {
                   "name": "as_builtin",
                   "signature": "pub fn as_builtin (& self) -> Option < ToolName >",
                   "kind": "method",
                   "docs": "The built-in tool name, when this key names one.",
-                  "line": 390
+                  "line": 386
                 }
               ],
               "impl_target": "ToolKey",
@@ -21471,7 +21451,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 359
+              "line": 355
             },
             {
               "kind": "impl",
@@ -21486,7 +21466,7 @@
                   "signature": "fn from (name : ToolName) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 398
+                  "line": 394
                 }
               ],
               "impl_target": "ToolKey",
@@ -21498,7 +21478,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 397
+              "line": 393
             },
             {
               "kind": "impl",
@@ -21513,7 +21493,7 @@
                   "signature": "fn from (name : & ToolKey) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 404
+                  "line": 400
                 }
               ],
               "impl_target": "ToolKey",
@@ -21525,7 +21505,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 403
+              "line": 399
             },
             {
               "kind": "impl",
@@ -21540,7 +21520,7 @@
                   "signature": "fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 410
+                  "line": 406
                 }
               ],
               "impl_target": "ToolKey",
@@ -21552,7 +21532,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 409
+              "line": 405
             },
             {
               "kind": "fn",
@@ -21568,7 +21548,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 415
+              "line": 411
             },
             {
               "kind": "fn",
@@ -21584,7 +21564,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 422
+              "line": 418
             },
             {
               "kind": "impl",
@@ -21599,7 +21579,7 @@
                   "signature": "fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 432
+                  "line": 428
                 }
               ],
               "impl_target": "ToolName",
@@ -21611,7 +21591,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 431
+              "line": 427
             },
             {
               "kind": "impl",
@@ -21626,7 +21606,7 @@
                   "signature": "fn from_str (s : & str) -> Result < Self , Self :: Err >",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 440
+                  "line": 436
                 }
               ],
               "impl_target": "ToolName",
@@ -21638,7 +21618,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name",
-              "line": 437
+              "line": 433
             },
             {
               "kind": "fn",
@@ -21656,7 +21636,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name::tests",
-              "line": 450
+              "line": 446
             },
             {
               "kind": "fn",
@@ -21674,7 +21654,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name::tests",
-              "line": 460
+              "line": 456
             },
             {
               "kind": "fn",
@@ -21692,7 +21672,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::name::tests",
-              "line": 474
+              "line": 470
             },
             {
               "kind": "struct",
@@ -21735,7 +21715,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::result",
-              "line": 495
+              "line": 491
             },
             {
               "kind": "impl",
@@ -21750,28 +21730,28 @@
                   "signature": "pub fn ok (output : impl Into < String >) -> Self",
                   "kind": "associated-fn",
                   "docs": "A successful plain result.",
-                  "line": 510
+                  "line": 506
                 },
                 {
                   "name": "error",
                   "signature": "pub fn error (output : impl Into < String >) -> Self",
                   "kind": "associated-fn",
                   "docs": "An in-band tool-domain error result.",
-                  "line": 521
+                  "line": 517
                 },
                 {
                   "name": "with_metadata",
                   "signature": "pub fn with_metadata (mut self , metadata : JsonObject) -> Self",
                   "kind": "method",
                   "docs": "Attach result metadata.",
-                  "line": 532
+                  "line": 528
                 },
                 {
                   "name": "meta",
                   "signature": "pub fn meta (mut self , key : impl Into < String > , value : serde_json :: Value) -> Self",
                   "kind": "method",
                   "docs": "Insert one metadata key.",
-                  "line": 539
+                  "line": 535
                 }
               ],
               "impl_target": "ToolResult",
@@ -21782,7 +21762,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::result",
-              "line": 509
+              "line": 505
             },
             {
               "kind": "enum",
@@ -21820,7 +21800,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::result",
-              "line": 547
+              "line": 543
             },
             {
               "kind": "impl",
@@ -21835,7 +21815,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 562
+                  "line": 558
                 }
               ],
               "impl_target": "OutputShape",
@@ -21847,7 +21827,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::result",
-              "line": 561
+              "line": 557
             },
             {
               "kind": "impl",
@@ -21862,7 +21842,7 @@
                   "signature": "pub fn json < T : DeserializeOwned > (model_name : & 'static str) -> Self",
                   "kind": "associated-fn",
                   "docs": "Build an [`OutputShape::Json`] for output model `T`.",
-                  "line": 573
+                  "line": 569
                 }
               ],
               "impl_target": "OutputShape",
@@ -21873,7 +21853,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::result",
-              "line": 572
+              "line": 568
             },
             {
               "kind": "fn",
@@ -21889,7 +21869,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model::result",
-              "line": 583
+              "line": 579
             },
             {
               "kind": "enum",
@@ -21940,7 +21920,7 @@
               ],
               "file": "crates/eos-tool/src/model.rs",
               "module": "model",
-              "line": 595
+              "line": 591
             }
           ]
         },
@@ -23199,11 +23179,6 @@
                   "ty": "Arc < dyn AgentRunApi >"
                 },
                 {
-                  "name": "skills",
-                  "visibility": "pub",
-                  "ty": "Arc < SkillRegistry >"
-                },
-                {
                   "name": "submission",
                   "visibility": "pub",
                   "ty": "TerminalSubmissionRuntime"
@@ -23244,7 +23219,7 @@
                   "signature": "fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 875
+                  "line": 873
                 }
               ],
               "impl_target": "ToolRuntime",
@@ -23256,7 +23231,7 @@
               ],
               "file": "crates/eos-tool/src/registry.rs",
               "module": "registry",
-              "line": 874
+              "line": 872
             }
           ]
         },
@@ -23274,11 +23249,6 @@
                   "name": "dispatchable_subagents",
                   "visibility": "pub",
                   "ty": "Vec < String >"
-                },
-                {
-                  "name": "skill_slug",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
                 }
               ],
               "variants": [],
@@ -23293,7 +23263,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 32
+              "line": 27
             },
             {
               "kind": "struct",
@@ -23322,7 +23292,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 41
+              "line": 34
             },
             {
               "kind": "impl",
@@ -23337,14 +23307,14 @@
                   "signature": "fn new (runtime : & ToolRuntime) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 48
+                  "line": 41
                 },
                 {
                   "name": "set_isolated_workspace_mode",
                   "signature": "async fn set_isolated_workspace_mode (& self , agent_run_id : & AgentRunId , is_isolated : bool ,) -> Result < () , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 55
+                  "line": 48
                 }
               ],
               "impl_target": "SandboxHandle",
@@ -23355,7 +23325,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 47
+              "line": 40
             },
             {
               "kind": "struct",
@@ -23384,7 +23354,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 66
+              "line": 59
             },
             {
               "kind": "impl",
@@ -23399,14 +23369,14 @@
                   "signature": "fn new (runtime : & ToolRuntime) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 73
+                  "line": 66
                 },
                 {
                   "name": "register_command_session",
                   "signature": "async fn register_command_session (& self , command_session_id : & CommandSessionId , sandbox_id : & SandboxId ,) -> Result < () , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 80
+                  "line": 73
                 }
               ],
               "impl_target": "CommandHandle",
@@ -23417,7 +23387,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 72
+              "line": 65
             },
             {
               "kind": "struct",
@@ -23441,7 +23411,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 91
+              "line": 84
             },
             {
               "kind": "impl",
@@ -23456,28 +23426,28 @@
                   "signature": "fn new (runtime : & ToolRuntime) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 97
+                  "line": 90
                 },
                 {
                   "name": "register_subagent_run",
                   "signature": "async fn register_subagent_run (& self , agent_run_id : & AgentRunId) -> Result < () , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 103
+                  "line": 96
                 },
                 {
                   "name": "cancel_subagent_run",
                   "signature": "async fn cancel_subagent_run (& self , agent_run_id : & AgentRunId , reason : & str ,) -> Result < bool , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 109
+                  "line": 102
                 },
                 {
                   "name": "register_workflow_session",
                   "signature": "async fn register_workflow_session (& self , workflow : & StartedWorkflow) -> Result < () , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 119
+                  "line": 112
                 }
               ],
               "impl_target": "BackgroundHandle",
@@ -23488,7 +23458,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 96
+              "line": 89
             },
             {
               "kind": "struct",
@@ -23512,7 +23482,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 126
+              "line": 119
             },
             {
               "kind": "impl",
@@ -23527,7 +23497,7 @@
                   "signature": "fn new (submission : TerminalSubmissionRuntime) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 132
+                  "line": 125
                 }
               ],
               "impl_target": "RootSubmissionHandle",
@@ -23538,7 +23508,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 131
+              "line": 124
             },
             {
               "kind": "struct",
@@ -23562,7 +23532,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 137
+              "line": 130
             },
             {
               "kind": "impl",
@@ -23577,7 +23547,7 @@
                   "signature": "fn new (submission : & TerminalSubmissionRuntime) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 143
+                  "line": 136
                 }
               ],
               "impl_target": "AttemptSubmissionHandle",
@@ -23588,57 +23558,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 142
-            },
-            {
-              "kind": "struct",
-              "name": "SkillHandle",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) struct SkillHandle",
-              "fields": [
-                {
-                  "name": "skill_registry",
-                  "visibility": "pub(crate)",
-                  "ty": "Arc < SkillRegistry >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Clone"
-              ],
-              "file": "crates/eos-tool/src/tools.rs",
-              "module": "tools",
-              "line": 152
-            },
-            {
-              "kind": "impl",
-              "name": "impl SkillHandle",
-              "visibility": "private",
-              "signature": "impl SkillHandle",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub(crate) fn new (skill_registry : Arc < SkillRegistry >) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 158
-                }
-              ],
-              "impl_target": "SkillHandle",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools.rs",
-              "module": "tools",
-              "line": 157
+              "line": 135
             },
             {
               "kind": "fn",
@@ -23654,7 +23574,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 164
+              "line": 145
             },
             {
               "kind": "fn",
@@ -23670,7 +23590,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 179
+              "line": 160
             },
             {
               "kind": "struct",
@@ -23686,7 +23606,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 199
+              "line": 180
             },
             {
               "kind": "impl",
@@ -23701,7 +23621,7 @@
                   "signature": "async fn execute (& self , _input : & JsonObject , _ctx : & crate :: ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 203
+                  "line": 184
                 }
               ],
               "impl_target": "SchemaOnlyExecutor",
@@ -23714,7 +23634,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 201
+              "line": 182
             },
             {
               "kind": "fn",
@@ -23732,7 +23652,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 214
+              "line": 195
             },
             {
               "kind": "fn",
@@ -23750,7 +23670,7 @@
               ],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 250
+              "line": 229
             },
             {
               "kind": "fn",
@@ -23766,25 +23686,7 @@
               "tags": [],
               "file": "crates/eos-tool/src/tools.rs",
               "module": "tools",
-              "line": 264
-            },
-            {
-              "kind": "fn",
-              "name": "repo_tools_config",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn repo_tools_config () -> ToolConfigSet",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "cfg: test"
-              ],
-              "file": "crates/eos-tool/src/tools.rs",
-              "module": "tools",
-              "line": 277
+              "line": 242
             }
           ]
         },
@@ -26071,1252 +25973,6 @@
           ]
         },
         {
-          "path": "crates/eos-tool/src/tools/skills.rs",
-          "module": "tools::skills",
-          "items": [
-            {
-              "kind": "fn",
-              "name": "validate_name",
-              "visibility": "private",
-              "signature": "fn validate_name (value : & str) -> bool",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Reject empty names and names carrying a path component — a parent-dir `..`,\na separator (`/` or `\\`), or a NUL. A bare `.` and dotted stems (`api.v2`)\nare allowed so `ReferenceName`s derived from a `.md` stem round-trip.",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 22
-            },
-            {
-              "kind": "struct",
-              "name": "SkillName",
-              "visibility": "pub",
-              "signature": "pub struct SkillName",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A skill name: the parsed name (frontmatter `name`, else the directory name)\nand the registry key, a 1:1 port of Rust `registry.py`'s `skill.name` key.\n\nThe traversal-safety guarantee is that names are used **only as map keys**\n(never path-joined); this newtype's separator/`..`/NUL rejection is\ndefense-in-depth on top of that (`api-parse-dont-validate`).",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: Ord",
-                "derive: PartialEq",
-                "derive: PartialOrd",
-                "derive: Serialize",
-                "serde",
-                "serde: transparent"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 29
-            },
-            {
-              "kind": "impl",
-              "name": "impl SkillName",
-              "visibility": "private",
-              "signature": "impl SkillName",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "parse",
-                  "signature": "pub fn parse (value : impl Into < String >) -> Result < Self , SkillLoadError >",
-                  "kind": "associated-fn",
-                  "docs": "Parse a skill name, rejecting empty or path-bearing values.\n\n# Errors\nReturns [`SkillLoadError::InvalidName`] when the value is empty or\ncontains a path separator, a `..` component, or a NUL.",
-                  "line": 40
-                },
-                {
-                  "name": "as_str",
-                  "signature": "pub fn as_str (& self) -> & str",
-                  "kind": "method",
-                  "docs": "Borrow the name as a string slice.",
-                  "line": 54
-                }
-              ],
-              "impl_target": "SkillName",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 39
-            },
-            {
-              "kind": "struct",
-              "name": "ReferenceName",
-              "visibility": "pub",
-              "signature": "pub struct ReferenceName",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A reference name: a skill's `references/*.md` file **stem** and its map key.\n\nSame shape and validation as [`SkillName`]; accepts dotted stems like\n`api.v2` (matching Rust `ref_file.stem`).",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: Ord",
-                "derive: PartialEq",
-                "derive: PartialOrd",
-                "derive: Serialize",
-                "serde",
-                "serde: transparent"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 61
-            },
-            {
-              "kind": "impl",
-              "name": "impl ReferenceName",
-              "visibility": "private",
-              "signature": "impl ReferenceName",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "parse",
-                  "signature": "pub fn parse (value : impl Into < String >) -> Result < Self , SkillLoadError >",
-                  "kind": "associated-fn",
-                  "docs": "Parse a reference name, rejecting empty or path-bearing values.\n\n# Errors\nReturns [`SkillLoadError::InvalidName`] when the value is empty or\ncontains a path separator, a `..` component, or a NUL.",
-                  "line": 70
-                },
-                {
-                  "name": "as_str",
-                  "signature": "pub fn as_str (& self) -> & str",
-                  "kind": "method",
-                  "docs": "Borrow the name as a string slice.",
-                  "line": 84
-                }
-              ],
-              "impl_target": "ReferenceName",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 69
-            },
-            {
-              "kind": "enum",
-              "name": "SkillSource",
-              "visibility": "pub",
-              "signature": "pub enum SkillSource",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Bundled",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Where a skill was loaded from. Replaces the Rust free `source: str`.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "non_exhaustive",
-                "serde",
-                "serde: rename_all"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 91
-            },
-            {
-              "kind": "struct",
-              "name": "SkillDefinition",
-              "visibility": "pub",
-              "signature": "pub struct SkillDefinition",
-              "fields": [
-                {
-                  "name": "name",
-                  "visibility": "pub",
-                  "ty": "SkillName"
-                },
-                {
-                  "name": "description",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "content",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "source",
-                  "visibility": "pub",
-                  "ty": "SkillSource"
-                },
-                {
-                  "name": "path",
-                  "visibility": "pub",
-                  "ty": "Option < PathBuf >"
-                },
-                {
-                  "name": "references",
-                  "visibility": "pub",
-                  "ty": "BTreeMap < ReferenceName , String >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A loaded skill — the immutable runtime content exposed to agents.\n\nDerives `Serialize` solely to pin the wire shape in a snapshot test; nothing\nreconstructs a `SkillDefinition` from JSON (the loader builds it from\nmarkdown, and `eos-tool` reads it in-memory via the registry).",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "non_exhaustive",
-                "serde"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition",
-              "line": 100
-            },
-            {
-              "kind": "fn",
-              "name": "rejects_path_separators_accepts_dotted_stems",
-              "visibility": "private",
-              "signature": "fn rejects_path_separators_accepts_dotted_stems ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition::tests",
-              "line": 128
-            },
-            {
-              "kind": "fn",
-              "name": "skill_definition_serialize_snapshot",
-              "visibility": "private",
-              "signature": "fn skill_definition_serialize_snapshot ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::definition::tests",
-              "line": 146
-            },
-            {
-              "kind": "enum",
-              "name": "SkillLoadError",
-              "visibility": "pub",
-              "signature": "pub enum SkillLoadError",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "RootNotDir",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    }
-                  ]
-                },
-                {
-                  "name": "ReadDir",
-                  "fields": [
-                    {
-                      "name": "path",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    },
-                    {
-                      "name": "cause",
-                      "visibility": "private",
-                      "ty": "std :: io :: Error"
-                    }
-                  ]
-                },
-                {
-                  "name": "ReadFile",
-                  "fields": [
-                    {
-                      "name": "path",
-                      "visibility": "private",
-                      "ty": "PathBuf"
-                    },
-                    {
-                      "name": "cause",
-                      "visibility": "private",
-                      "ty": "std :: io :: Error"
-                    }
-                  ]
-                },
-                {
-                  "name": "InvalidName",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "String"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Failures raised while loading skills from the configured skill root.\n\nThere is deliberately **no** malformed-frontmatter variant: matching Rust's\n`parse_markdown_frontmatter`, broken YAML is swallowed and the loader falls\nback to the heading/first-paragraph metadata scan rather than failing the load.",
-              "tags": [
-                "derive: Debug",
-                "derive: thiserror::Error",
-                "error",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::error",
-              "line": 174
-            },
-            {
-              "kind": "struct",
-              "name": "SkillRegistry",
-              "visibility": "pub",
-              "signature": "pub struct SkillRegistry",
-              "fields": [
-                {
-                  "name": "skills",
-                  "visibility": "pub(crate)",
-                  "ty": "BTreeMap < SkillName , SkillDefinition >"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Stores loaded skills by [`SkillName`]. Built once at the composition root and\nthen shared immutably as `Arc<SkillRegistry>`.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Default",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::registry",
-              "line": 222
-            },
-            {
-              "kind": "impl",
-              "name": "impl SkillRegistry",
-              "visibility": "private",
-              "signature": "impl SkillRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "pub fn new () -> Self",
-                  "kind": "constructor",
-                  "docs": "An empty registry.",
-                  "line": 230
-                },
-                {
-                  "name": "register",
-                  "signature": "pub fn register (& mut self , skill : SkillDefinition)",
-                  "kind": "method",
-                  "docs": "Insert one skill, replacing any same-named entry (last-wins, matching the\nRust dict assignment `self._skills[skill.name] = skill`).",
-                  "line": 236
-                },
-                {
-                  "name": "get",
-                  "signature": "pub fn get (& self , name : & SkillName) -> Option < & SkillDefinition >",
-                  "kind": "method",
-                  "docs": "Look up a skill by name; `None` if absent.",
-                  "line": 242
-                },
-                {
-                  "name": "list_skills",
-                  "signature": "pub fn list_skills (& self) -> impl Iterator < Item = & SkillDefinition >",
-                  "kind": "method",
-                  "docs": "All skills in [`SkillName`] order (the `BTreeMap` guarantees the sort).",
-                  "line": 248
-                }
-              ],
-              "impl_target": "SkillRegistry",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::registry",
-              "line": 229
-            },
-            {
-              "kind": "fn",
-              "name": "def",
-              "visibility": "private",
-              "signature": "fn def (name : & str , description : & str) -> SkillDefinition",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::registry::tests",
-              "line": 260
-            },
-            {
-              "kind": "fn",
-              "name": "register_get_list_semantics",
-              "visibility": "private",
-              "signature": "fn register_get_list_semantics ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::registry::tests",
-              "line": 273
-            },
-            {
-              "kind": "fn",
-              "name": "load_bundled_skills",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn load_bundled_skills (content_dir : & Path ,) -> Result < Vec < SkillDefinition > , SkillLoadError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Load every directory skill under `content_dir` in sorted order.\n\nThe caller ([`super::loader`]) guarantees `content_dir` is an existing\ndirectory; here it is walked one level deep, requiring `SKILL.md` per skill.",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 327
-            },
-            {
-              "kind": "fn",
-              "name": "discover_references",
-              "visibility": "private",
-              "signature": "fn discover_references (skill_dir : & Path ,) -> Result < BTreeMap < ReferenceName , String > , SkillLoadError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Read `references/*.md` keyed by file stem (`__init__.py` lines 29-34).",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 358
-            },
-            {
-              "kind": "fn",
-              "name": "parse_skill_metadata",
-              "visibility": "private",
-              "signature": "fn parse_skill_metadata (default_name : & str , content : & str) -> (String , String)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Extract `(name, description)` from a skill markdown file (`__init__.py` 49-67).\n\nFrontmatter `name`/`description` win; otherwise scan the **full content**\n(not the post-frontmatter body) for a `# ` heading (used as `name` iff `name`\nis still the default) and the first non-blank line that starts with neither\n`#` nor `---`, truncated to [`DESCRIPTION_MAX_CHARS`]; the final fallback is\n`\"Bundled skill: {name}\"`.",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 380
-            },
-            {
-              "kind": "fn",
-              "name": "frontmatter_str",
-              "visibility": "private",
-              "signature": "fn frontmatter_str < 'a > (frontmatter : & 'a serde_yaml :: Mapping , key : & str) -> Option < & 'a str >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A frontmatter string field, treating empty as absent (Rust's `... or`).",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 428
-            },
-            {
-              "kind": "fn",
-              "name": "dir_name",
-              "visibility": "private",
-              "signature": "fn dir_name (path : & Path) -> String",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 436
-            },
-            {
-              "kind": "fn",
-              "name": "extension",
-              "visibility": "private",
-              "signature": "fn extension (path : & Path) -> Option < & str >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 443
-            },
-            {
-              "kind": "fn",
-              "name": "read_dir_sorted",
-              "visibility": "private",
-              "signature": "fn read_dir_sorted (dir : & Path) -> Result < Vec < PathBuf > , SkillLoadError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "List a directory's entries as paths, sorted (parity with Rust `sorted(...)`).",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 447
-            },
-            {
-              "kind": "fn",
-              "name": "read_file",
-              "visibility": "private",
-              "signature": "fn read_file (path : & Path) -> Result < String , SkillLoadError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled",
-              "line": 465
-            },
-            {
-              "kind": "fn",
-              "name": "discovers_only_md_references_keyed_by_stem",
-              "visibility": "private",
-              "signature": "fn discovers_only_md_references_keyed_by_stem ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled::tests",
-              "line": 479
-            },
-            {
-              "kind": "fn",
-              "name": "malformed_frontmatter_uses_fallback_description",
-              "visibility": "private",
-              "signature": "fn malformed_frontmatter_uses_fallback_description ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled::tests",
-              "line": 504
-            },
-            {
-              "kind": "fn",
-              "name": "description_falls_back_to_full_content_lines",
-              "visibility": "private",
-              "signature": "fn description_falls_back_to_full_content_lines ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled::tests",
-              "line": 525
-            },
-            {
-              "kind": "fn",
-              "name": "dotted_reference_stem_is_keyed",
-              "visibility": "private",
-              "signature": "fn dotted_reference_stem_is_keyed ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled::tests",
-              "line": 536
-            },
-            {
-              "kind": "fn",
-              "name": "empty_frontmatter_name_falls_back_to_dir_name",
-              "visibility": "private",
-              "signature": "fn empty_frontmatter_name_falls_back_to_dir_name ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled::tests",
-              "line": 556
-            },
-            {
-              "kind": "fn",
-              "name": "skill_dir_without_skill_md_is_skipped_without_error",
-              "visibility": "private",
-              "signature": "fn skill_dir_without_skill_md_is_skipped_without_error ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::bundled::tests",
-              "line": 569
-            },
-            {
-              "kind": "impl",
-              "name": "impl SkillRegistry",
-              "visibility": "private",
-              "signature": "impl SkillRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "load_from_dir",
-                  "signature": "pub fn load_from_dir (skill_root : & Path) -> Result < Self , SkillLoadError >",
-                  "kind": "associated-fn",
-                  "docs": "Load a registry from an explicit skill root — the seam's only filesystem\nconstructor.\n\nA **missing** root yields an empty registry (Rust returns `[]` when the\ncontent dir does not exist). A root that exists but is **not a directory**\nis a config error and yields [`SkillLoadError::RootNotDir`].\n\n# Errors\nReturns [`SkillLoadError`] for a non-directory root or any I/O / invalid\nname encountered while walking the tree.",
-                  "line": 596
-                }
-              ],
-              "impl_target": "SkillRegistry",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader",
-              "line": 595
-            },
-            {
-              "kind": "struct",
-              "name": "CwdGuard",
-              "visibility": "private",
-              "signature": "struct CwdGuard",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Restore the process working directory on drop so the cwd-mutating test\ncannot leak into others.",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 630
-            },
-            {
-              "kind": "impl",
-              "name": "impl CwdGuard",
-              "visibility": "private",
-              "signature": "impl CwdGuard",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "capture",
-                  "signature": "fn capture () -> Self",
-                  "kind": "associated-fn",
-                  "docs": null,
-                  "line": 635
-                }
-              ],
-              "impl_target": "CwdGuard",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 634
-            },
-            {
-              "kind": "impl",
-              "name": "impl Drop for CwdGuard",
-              "visibility": "private",
-              "signature": "impl Drop for CwdGuard",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "drop",
-                  "signature": "fn drop (& mut self)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 641
-                }
-              ],
-              "impl_target": "CwdGuard",
-              "trait_name": "Drop",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 640
-            },
-            {
-              "kind": "fn",
-              "name": "alpha_beta_fixture",
-              "visibility": "private",
-              "signature": "fn alpha_beta_fixture (name : & str) -> Scratch",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 646
-            },
-            {
-              "kind": "fn",
-              "name": "loads_directory_skills_with_metadata_fallback",
-              "visibility": "private",
-              "signature": "fn loads_directory_skills_with_metadata_fallback ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 657
-            },
-            {
-              "kind": "fn",
-              "name": "load_is_deterministic",
-              "visibility": "private",
-              "signature": "fn load_is_deterministic ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 683
-            },
-            {
-              "kind": "fn",
-              "name": "ignores_process_cwd",
-              "visibility": "private",
-              "signature": "fn ignores_process_cwd ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 692
-            },
-            {
-              "kind": "fn",
-              "name": "missing_root_empty_nondir_root_errors",
-              "visibility": "private",
-              "signature": "fn missing_root_empty_nondir_root_errors ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::loader::tests",
-              "line": 709
-            },
-            {
-              "kind": "struct",
-              "name": "LoadSkillReferenceInput",
-              "visibility": "pub(super)",
-              "signature": "pub(super) struct LoadSkillReferenceInput",
-              "fields": [
-                {
-                  "name": "skill_name",
-                  "visibility": "private",
-                  "ty": "String"
-                },
-                {
-                  "name": "reference_name",
-                  "visibility": "private",
-                  "ty": "String"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: JsonSchema",
-                "derive: Serialize",
-                "serde"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference",
-              "line": 757
-            },
-            {
-              "kind": "struct",
-              "name": "LoadSkillReference",
-              "visibility": "private",
-              "signature": "struct LoadSkillReference",
-              "fields": [
-                {
-                  "name": "allowed",
-                  "visibility": "private",
-                  "ty": "Vec < SkillName >"
-                },
-                {
-                  "name": "service",
-                  "visibility": "private",
-                  "ty": "SkillHandle"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "The `load_skill_reference` executor, scoped to the caller's own skill(s). The\n`allowed` list is built from the bound agent's declared skill at\nregistration; empty ⇒ a no-op tool that errors on every call.",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference",
-              "line": 765
-            },
-            {
-              "kind": "impl",
-              "name": "impl ToolExecutor for LoadSkillReference",
-              "visibility": "private",
-              "signature": "impl ToolExecutor for LoadSkillReference",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "execute",
-                  "signature": "async fn execute (& self , input : & JsonObject , _ctx : & ExecutionMetadata ,) -> Result < ToolResult , ToolError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 775
-                }
-              ],
-              "impl_target": "LoadSkillReference",
-              "trait_name": "ToolExecutor",
-              "docs": null,
-              "tags": [
-                "async_trait",
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference",
-              "line": 773
-            },
-            {
-              "kind": "fn",
-              "name": "register",
-              "visibility": "pub(super)",
-              "signature": "pub(super) fn register (registry : & mut ToolRegistry , config : & ToolConfigSet , caller : & CallerScope , skill_service : SkillHandle ,)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference",
-              "line": 840
-            },
-            {
-              "kind": "struct",
-              "name": "Scratch",
-              "visibility": "private",
-              "signature": "struct Scratch",
-              "fields": [
-                {
-                  "name": "0",
-                  "visibility": "private",
-                  "ty": "PathBuf"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Throwaway skill root under the temp dir, removed on drop (the loader is\nfilesystem-backed and `SkillDefinition` is `#[non_exhaustive]`, so a real\nregistry must come from disk). Mirrors the tool-owned skill test scratch.",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 884
-            },
-            {
-              "kind": "impl",
-              "name": "impl Scratch",
-              "visibility": "private",
-              "signature": "impl Scratch",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "new",
-                  "signature": "fn new (name : & str) -> Self",
-                  "kind": "constructor",
-                  "docs": null,
-                  "line": 889
-                },
-                {
-                  "name": "write",
-                  "signature": "fn write (& self , rel : & str , body : & str)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 900
-                },
-                {
-                  "name": "path",
-                  "signature": "fn path (& self) -> & Path",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 905
-                }
-              ],
-              "impl_target": "Scratch",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 888
-            },
-            {
-              "kind": "impl",
-              "name": "impl Drop for Scratch",
-              "visibility": "private",
-              "signature": "impl Drop for Scratch",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "drop",
-                  "signature": "fn drop (& mut self)",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 910
-                }
-              ],
-              "impl_target": "Scratch",
-              "trait_name": "Drop",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 909
-            },
-            {
-              "kind": "fn",
-              "name": "two_skill_registry",
-              "visibility": "private",
-              "signature": "fn two_skill_registry (scratch : & Scratch) -> SkillRegistry",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "A two-skill registry: `a` (reference `ref_a`) and `b` (reference `secret`).",
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 915
-            },
-            {
-              "kind": "fn",
-              "name": "service_with",
-              "visibility": "private",
-              "signature": "fn service_with (registry : SkillRegistry) -> SkillHandle",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 930
-            },
-            {
-              "kind": "fn",
-              "name": "input",
-              "visibility": "private",
-              "signature": "fn input (skill : & str , reference : & str) -> JsonObject",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 934
-            },
-            {
-              "kind": "fn",
-              "name": "scoped_to",
-              "visibility": "private",
-              "signature": "fn scoped_to (slug : & str , service : SkillHandle) -> LoadSkillReference",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 944
-            },
-            {
-              "kind": "fn",
-              "name": "scoped_agent_cannot_read_other_skill",
-              "visibility": "private",
-              "signature": "async fn scoped_agent_cannot_read_other_skill ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 954
-            },
-            {
-              "kind": "fn",
-              "name": "scoped_agent_reads_own_reference",
-              "visibility": "private",
-              "signature": "async fn scoped_agent_reads_own_reference ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 978
-            },
-            {
-              "kind": "fn",
-              "name": "skill_less_agent_has_empty_allowlist",
-              "visibility": "private",
-              "signature": "async fn skill_less_agent_has_empty_allowlist ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "async",
-                "tokio::test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 993
-            },
-            {
-              "kind": "fn",
-              "name": "register_scopes_to_caller_skill_slug",
-              "visibility": "private",
-              "signature": "fn register_scopes_to_caller_skill_slug ()",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "test"
-              ],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills::load_skill_reference::tests",
-              "line": 1012
-            },
-            {
-              "kind": "fn",
-              "name": "register",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn register (registry : & mut crate :: ToolRegistry , config : & crate :: registry :: ToolConfigSet , caller : & crate :: tools :: CallerScope , skills : crate :: tools :: SkillHandle ,)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills",
-              "line": 1036
-            },
-            {
-              "kind": "fn",
-              "name": "register_schema",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn register_schema (registry : & mut crate :: ToolRegistry , config : & crate :: registry :: ToolConfigSet , _caller : & crate :: tools :: CallerScope ,)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-tool/src/tools/skills.rs",
-              "module": "tools::skills",
-              "line": 1045
-            }
-          ]
-        },
-        {
           "path": "crates/eos-tool/src/tools/subagent.rs",
           "module": "tools::subagent",
           "items": [
@@ -29248,7 +27904,7 @@
         "traits": 14,
         "functions": 5,
         "impls": 36,
-        "fields": 234,
+        "fields": 233,
         "methods": 131
       },
       "modules": [
@@ -29304,7 +27960,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 12
+              "line": 11
             },
             {
               "kind": "struct",
@@ -29339,7 +27995,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 29
+              "line": 28
             },
             {
               "kind": "impl",
@@ -29354,14 +28010,14 @@
                   "signature": "pub fn new (raw : impl AsRef < str >) -> Result < Self , AgentNameError >",
                   "kind": "constructor",
                   "docs": "Construct a name, trimming surrounding whitespace.\n\n# Errors\nReturns [`AgentNameError::Empty`] when the trimmed value is empty.",
-                  "line": 36
+                  "line": 35
                 },
                 {
                   "name": "as_str",
                   "signature": "pub fn as_str (& self) -> & str",
                   "kind": "method",
                   "docs": "Borrow the name as a string slice.",
-                  "line": 48
+                  "line": 47
                 }
               ],
               "impl_target": "AgentName",
@@ -29372,7 +28028,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 35
+              "line": 34
             },
             {
               "kind": "impl",
@@ -29387,7 +28043,7 @@
                   "signature": "fn fmt (& self , formatter : & mut fmt :: Formatter < '_ >) -> fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 56
+                  "line": 55
                 }
               ],
               "impl_target": "AgentName",
@@ -29399,7 +28055,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 55
+              "line": 54
             },
             {
               "kind": "impl",
@@ -29414,7 +28070,7 @@
                   "signature": "fn deserialize < D > (deserializer : D) -> Result < Self , D :: Error > where D : Deserializer < 'de > ,",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 62
+                  "line": 61
                 }
               ],
               "impl_target": "AgentName",
@@ -29426,7 +28082,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 61
+              "line": 60
             },
             {
               "kind": "enum",
@@ -29456,7 +28112,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 70
+              "line": 69
             },
             {
               "kind": "struct",
@@ -29510,11 +28166,6 @@
                   "ty": "Vec < String >"
                 },
                 {
-                  "name": "skill",
-                  "visibility": "pub",
-                  "ty": "Option < PathBuf >"
-                },
-                {
                   "name": "context_recipe",
                   "visibility": "pub",
                   "ty": "Option < String >"
@@ -29537,7 +28188,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 79
+              "line": 78
             },
             {
               "kind": "struct",
@@ -29563,7 +28214,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 114
+              "line": 110
             },
             {
               "kind": "impl",
@@ -29578,21 +28229,21 @@
                   "signature": "pub fn new () -> Self",
                   "kind": "constructor",
                   "docs": "Start an empty builder.",
-                  "line": 122
+                  "line": 118
                 },
                 {
                   "name": "add",
                   "signature": "pub fn add (& mut self , definition : AgentDefinition) -> & mut Self",
                   "kind": "method",
                   "docs": "Register or replace a definition by its name.",
-                  "line": 127
+                  "line": 123
                 },
                 {
                   "name": "build",
                   "signature": "pub fn build (self) -> AgentRegistry",
                   "kind": "method",
                   "docs": "Finalize the immutable registry.",
-                  "line": 134
+                  "line": 130
                 }
               ],
               "impl_target": "AgentRegistryBuilder",
@@ -29603,7 +28254,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 121
+              "line": 117
             },
             {
               "kind": "impl",
@@ -29618,7 +28269,7 @@
                   "signature": "fn from_iter < I : IntoIterator < Item = AgentDefinition > > (iter : I) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 144
+                  "line": 140
                 }
               ],
               "impl_target": "AgentRegistry",
@@ -29630,7 +28281,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 143
+              "line": 139
             },
             {
               "kind": "struct",
@@ -29654,7 +28305,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 153
+              "line": 149
             },
             {
               "kind": "impl",
@@ -29669,21 +28320,21 @@
                   "signature": "pub fn get (& self , name : & AgentName) -> Option < & Arc < AgentDefinition > >",
                   "kind": "method",
                   "docs": "Look up a definition by name.",
-                  "line": 160
+                  "line": 156
                 },
                 {
                   "name": "list",
                   "signature": "pub fn list (& self) -> impl Iterator < Item = & Arc < AgentDefinition > >",
                   "kind": "method",
                   "docs": "Iterate every registered definition.",
-                  "line": 166
+                  "line": 162
                 },
                 {
                   "name": "dispatchable_subagent_names",
                   "signature": "pub fn dispatchable_subagent_names (& self) -> Vec < AgentName >",
                   "kind": "method",
                   "docs": "Subagent names targetable by `run_subagent`, sorted.",
-                  "line": 171
+                  "line": 167
                 }
               ],
               "impl_target": "AgentRegistry",
@@ -29694,7 +28345,7 @@
               ],
               "file": "crates/eos-types/src/agent.rs",
               "module": "agent",
-              "line": 159
+              "line": 155
             }
           ]
         },
@@ -34769,12 +33420,12 @@
       "path": "crates/eos-workflow",
       "stats": {
         "modules": 18,
-        "items": 84,
+        "items": 80,
         "structs": 19,
-        "enums": 4,
+        "enums": 3,
         "traits": 1,
-        "functions": 28,
-        "impls": 29,
+        "functions": 26,
+        "impls": 28,
         "fields": 57,
         "methods": 101
       },
@@ -35295,11 +33946,6 @@
                   "name": "agent_def",
                   "visibility": "pub",
                   "ty": "AgentDefinition"
-                },
-                {
-                  "name": "skill",
-                  "visibility": "pub",
-                  "ty": "Option < String >"
                 }
               ],
               "variants": [],
@@ -35329,7 +33975,7 @@
                   "signature": "pub const fn agent_run_id (& self) -> & AgentRunId",
                   "kind": "method",
                   "docs": "Agent-run id.",
-                  "line": 72
+                  "line": 70
                 }
               ],
               "impl_target": "AgentLaunch",
@@ -35340,7 +33986,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/launch.rs",
               "module": "attempt::launch",
-              "line": 71
+              "line": 69
             },
             {
               "kind": "struct",
@@ -35362,6 +34008,11 @@
                   "name": "attempt_store",
                   "visibility": "pub(crate)",
                   "ty": "Arc < dyn AttemptStore >"
+                },
+                {
+                  "name": "agent_run_store",
+                  "visibility": "pub(crate)",
+                  "ty": "Arc < dyn AgentRunStore >"
                 },
                 {
                   "name": "agent_registry",
@@ -35404,7 +34055,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/launch.rs",
               "module": "attempt::launch",
-              "line": 79
+              "line": 77
             },
             {
               "kind": "impl",
@@ -35443,7 +34094,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (workflow_store : Arc < dyn WorkflowStore > , iteration_store : Arc < dyn IterationStore > , attempt_store : Arc < dyn AttemptStore > , agent_registry : Arc < AgentRegistry > , runner : Arc < dyn AgentRunner > ,) -> Self",
+                  "signature": "pub fn new (workflow_store : Arc < dyn WorkflowStore > , iteration_store : Arc < dyn IterationStore > , attempt_store : Arc < dyn AttemptStore > , agent_run_store : Arc < dyn AgentRunStore > , agent_registry : Arc < AgentRegistry > , runner : Arc < dyn AgentRunner > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Create deps with sane workflow defaults.",
                   "line": 118
@@ -35453,35 +34104,35 @@
                   "signature": "pub fn with_active_attempt_runs (mut self , registry : Arc < ActiveAttemptRuns >) -> Self",
                   "kind": "method",
                   "docs": "Use a caller-owned active attempt registry.",
-                  "line": 140
+                  "line": 142
                 },
                 {
                   "name": "with_iteration_coordinators",
                   "signature": "pub fn with_iteration_coordinators (mut self , registry : Arc < OpenIterationCoordinatorRegistry > ,) -> Self",
                   "kind": "method",
                   "docs": "Use a caller-owned open-iteration coordinator registry.",
-                  "line": 147
+                  "line": 149
                 },
                 {
                   "name": "with_lifecycle_config",
                   "signature": "pub fn with_lifecycle_config (mut self , config : WorkflowLifecycleConfig) -> Self",
                   "kind": "method",
                   "docs": "Use caller-supplied lifecycle knobs.",
-                  "line": 157
+                  "line": 159
                 },
                 {
                   "name": "with_max_concurrent_worker_runs",
                   "signature": "pub fn with_max_concurrent_worker_runs (mut self , max : usize) -> Self",
                   "kind": "method",
                   "docs": "Use a caller-supplied per-attempt worker-run concurrency cap.",
-                  "line": 164
+                  "line": 166
                 },
                 {
                   "name": "request_id_for_attempt",
                   "signature": "pub(crate) async fn request_id_for_attempt (& self , attempt : & Attempt) -> Result < RequestId >",
                   "kind": "method",
                   "docs": null,
-                  "line": 171
+                  "line": 173
                 }
               ],
               "impl_target": "AttemptResources",
@@ -35517,7 +34168,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/launch.rs",
               "module": "attempt::launch",
-              "line": 181
+              "line": 183
             },
             {
               "kind": "impl",
@@ -35532,28 +34183,28 @@
                   "signature": "pub fn new (deps : AttemptResources) -> Self",
                   "kind": "constructor",
                   "docs": "Create a launch factory.",
-                  "line": 188
+                  "line": 190
                 },
                 {
                   "name": "for_planner",
                   "signature": "pub(crate) async fn for_planner (& self , attempt : & Attempt , agent_run_id : AgentRunId ,) -> Result < AgentLaunch >",
                   "kind": "method",
                   "docs": null,
-                  "line": 194
+                  "line": 196
                 },
                 {
                   "name": "for_worker",
                   "signature": "pub(crate) async fn for_worker (& self , attempt : & Attempt , work_item : & WorkItemSpec , agent_run_id : AgentRunId ,) -> Result < AgentLaunch >",
                   "kind": "method",
                   "docs": null,
-                  "line": 218
+                  "line": 219
                 },
                 {
                   "name": "agent_definition",
                   "signature": "fn agent_definition (& self , agent_name : & AgentName , expected_type : AgentType ,) -> Result < AgentDefinition >",
                   "kind": "method",
                   "docs": null,
-                  "line": 243
+                  "line": 242
                 }
               ],
               "impl_target": "AgentLaunchFactory",
@@ -35564,7 +34215,7 @@
               ],
               "file": "crates/eos-workflow/src/attempt/launch.rs",
               "module": "attempt::launch",
-              "line": 187
+              "line": 189
             }
           ]
         },
@@ -35839,7 +34490,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/attempt/work_items.rs",
               "module": "attempt::work_items::tests",
-              "line": 224
+              "line": 223
             }
           ]
         },
@@ -36412,39 +35063,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 8
-            },
-            {
-              "kind": "fn",
-              "name": "build_skill_message",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn build_skill_message (agent_def : & AgentDefinition) -> Result < Option < String > >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-workflow/src/context/composer.rs",
-              "module": "context::composer",
-              "line": 17
-            },
-            {
-              "kind": "fn",
-              "name": "strip_frontmatter",
-              "visibility": "private",
-              "signature": "fn strip_frontmatter (raw : & str) -> & str",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-workflow/src/context/composer.rs",
-              "module": "context::composer",
-              "line": 43
+              "line": 4
             },
             {
               "kind": "fn",
@@ -36460,7 +35079,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/composer.rs",
               "module": "context::composer",
-              "line": 53
+              "line": 13
             }
           ]
         },
@@ -36497,69 +35116,6 @@
           "path": "crates/eos-workflow/src/context/render.rs",
           "module": "context::render",
           "items": [
-            {
-              "kind": "enum",
-              "name": "ContextRole",
-              "visibility": "pub",
-              "signature": "pub enum ContextRole",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Planner",
-                  "fields": []
-                },
-                {
-                  "name": "Worker",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Role-specific context packet kind.",
-              "tags": [
-                "derive: Clone",
-                "derive: Copy",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: Hash",
-                "derive: JsonSchema",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "serde",
-                "serde: rename_all"
-              ],
-              "file": "crates/eos-workflow/src/context/render.rs",
-              "module": "context::render",
-              "line": 4
-            },
-            {
-              "kind": "impl",
-              "name": "impl ContextRole",
-              "visibility": "private",
-              "signature": "impl ContextRole",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "as_str",
-                  "signature": "pub const fn as_str (self) -> & 'static str",
-                  "kind": "method",
-                  "docs": "Canonical role token.",
-                  "line": 15
-                }
-              ],
-              "impl_target": "ContextRole",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-workflow/src/context/render.rs",
-              "module": "context::render",
-              "line": 14
-            },
             {
               "kind": "struct",
               "name": "ContextSection",
@@ -36604,7 +35160,7 @@
               ],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 25
+              "line": 4
             },
             {
               "kind": "impl",
@@ -36619,28 +35175,28 @@
                   "signature": "pub fn new (tag : impl Into < String >) -> Self",
                   "kind": "constructor",
                   "docs": "Section with a tag and no content.",
-                  "line": 42
+                  "line": 21
                 },
                 {
                   "name": "with_attrs",
                   "signature": "pub fn with_attrs (mut self , attrs : Vec < (String , String) >) -> Self",
                   "kind": "method",
                   "docs": "Attach attributes.",
-                  "line": 53
+                  "line": 32
                 },
                 {
                   "name": "with_text",
                   "signature": "pub fn with_text (mut self , text : impl Into < String >) -> Self",
                   "kind": "method",
                   "docs": "Attach text.",
-                  "line": 60
+                  "line": 39
                 },
                 {
                   "name": "with_children",
                   "signature": "pub fn with_children (mut self , children : Vec < ContextSection >) -> Self",
                   "kind": "method",
                   "docs": "Attach children.",
-                  "line": 67
+                  "line": 46
                 }
               ],
               "impl_target": "ContextSection",
@@ -36651,7 +35207,7 @@
               ],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 41
+              "line": 20
             },
             {
               "kind": "struct",
@@ -36660,14 +35216,14 @@
               "signature": "pub struct AgentContext",
               "fields": [
                 {
-                  "name": "role",
-                  "visibility": "pub",
-                  "ty": "ContextRole"
-                },
-                {
                   "name": "sections",
                   "visibility": "pub",
                   "ty": "Vec < ContextSection >"
+                },
+                {
+                  "name": "guidance_contents",
+                  "visibility": "pub",
+                  "ty": "Vec < String >"
                 },
                 {
                   "name": "directive",
@@ -36697,7 +35253,7 @@
               ],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 75
+              "line": 54
             },
             {
               "kind": "fn",
@@ -36715,7 +35271,7 @@
               ],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 89
+              "line": 68
             },
             {
               "kind": "fn",
@@ -36733,7 +35289,7 @@
               ],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 96
+              "line": 75
             },
             {
               "kind": "fn",
@@ -36749,7 +35305,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 129
+              "line": 97
             },
             {
               "kind": "fn",
@@ -36765,7 +35321,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/context/render.rs",
               "module": "context::render",
-              "line": 149
+              "line": 117
             }
           ]
         },
@@ -36777,7 +35333,7 @@
               "kind": "fn",
               "name": "render_worker_agent_context",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) async fn render_worker_agent_context (deps : & AttemptResources , attempt : & Attempt , work_item : & WorkItemSpec , _agent_run_id : & eos_types :: AgentRunId ,) -> Result < AgentContext >",
+              "signature": "pub(crate) async fn render_worker_agent_context (deps : & AttemptResources , attempt : & Attempt , work_item : & WorkItemSpec ,) -> Result < AgentContext >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -36807,7 +35363,7 @@
               ],
               "file": "crates/eos-workflow/src/context/worker_context.rs",
               "module": "context::worker_context",
-              "line": 39
+              "line": 42
             }
           ]
         },
@@ -37406,56 +35962,63 @@
                   "signature": "async fn assert_no_open_child (& self , parent_agent_run_id : & AgentRunId) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 100
+                  "line": 102
+                },
+                {
+                  "name": "assert_parent_agent_run_can_delegate",
+                  "signature": "async fn assert_parent_agent_run_can_delegate (& self , parent_agent_run_id : & AgentRunId ,) -> Result < () >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 120
                 },
                 {
                   "name": "create_iteration_with_coordinator",
                   "signature": "fn create_iteration_with_coordinator < 'a > (& 'a self , workflow_id : & 'a WorkflowId , reason : IterationCreationReason , iteration_goal : & 'a str ,) -> IterationCoordinatorFuture < 'a >",
                   "kind": "method",
                   "docs": null,
-                  "line": 118
+                  "line": 140
                 },
                 {
                   "name": "create_iteration_with_coordinator_inner",
                   "signature": "async fn create_iteration_with_coordinator_inner (& self , workflow_id : & WorkflowId , reason : IterationCreationReason , iteration_goal : & str ,) -> Result < (eos_types :: Iteration , Arc < IterationRunCoordinator >) >",
                   "kind": "method",
                   "docs": null,
-                  "line": 127
+                  "line": 149
                 },
                 {
                   "name": "handle_iteration_closed",
                   "signature": "pub(crate) async fn handle_iteration_closed (& self , closed : IterationRunClosed) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 169
+                  "line": 191
                 },
                 {
                   "name": "start_iteration_with_deferred_goal",
                   "signature": "async fn start_iteration_with_deferred_goal (& self , workflow_id : & WorkflowId , iteration_goal : & str ,) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 197
+                  "line": 219
                 },
                 {
                   "name": "close_workflow",
                   "signature": "async fn close_workflow (& self , workflow_id : & WorkflowId , status : WorkflowStatus ,) -> Result < Workflow >",
                   "kind": "method",
                   "docs": null,
-                  "line": 231
+                  "line": 253
                 },
                 {
                   "name": "compensate_failed_start",
                   "signature": "async fn compensate_failed_start (& self , workflow_id : & WorkflowId , iteration_id : & eos_types :: IterationId ,) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 247
+                  "line": 269
                 },
                 {
                   "name": "require_workflow",
                   "signature": "async fn require_workflow (& self , workflow_id : & WorkflowId) -> Result < Workflow >",
                   "kind": "method",
                   "docs": null,
-                  "line": 290
+                  "line": 312
                 }
               ],
               "impl_target": "WorkflowRun",
@@ -37481,42 +36044,42 @@
                   "signature": "async fn start_workflow (& self , request : StartWorkflowRequest ,) -> std :: result :: Result < StartedWorkflow , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 301
+                  "line": 323
                 },
                 {
                   "name": "check_workflow_status",
                   "signature": "async fn check_workflow_status (& self , workflow_id : & WorkflowId ,) -> std :: result :: Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 320
+                  "line": 342
                 },
                 {
                   "name": "cancel_workflow",
                   "signature": "async fn cancel_workflow (& self , workflow_id : & WorkflowId , _reason : & str ,) -> std :: result :: Result < String , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 331
+                  "line": 353
                 },
                 {
                   "name": "poll_terminal_workflow",
                   "signature": "async fn poll_terminal_workflow (& self , workflow_id : & WorkflowId ,) -> std :: result :: Result < Option < TerminalWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 343
+                  "line": 365
                 },
                 {
                   "name": "list_open_delegated_workflows_for_agent_run",
                   "signature": "async fn list_open_delegated_workflows_for_agent_run (& self , agent_run_id : & AgentRunId ,) -> std :: result :: Result < Vec < OpenDelegatedWorkflow > , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 363
+                  "line": 385
                 },
                 {
                   "name": "workflow_depth",
                   "signature": "async fn workflow_depth (& self , _workflow_id : & WorkflowId ,) -> std :: result :: Result < u32 , WorkflowApiError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 382
+                  "line": 404
                 }
               ],
               "impl_target": "WorkflowRun",
@@ -37529,7 +36092,7 @@
               ],
               "file": "crates/eos-workflow/src/workflow_run.rs",
               "module": "workflow_run",
-              "line": 299
+              "line": 321
             },
             {
               "kind": "fn",
@@ -37545,7 +36108,7 @@
               "tags": [],
               "file": "crates/eos-workflow/src/workflow_run.rs",
               "module": "workflow_run",
-              "line": 390
+              "line": 412
             }
           ]
         }

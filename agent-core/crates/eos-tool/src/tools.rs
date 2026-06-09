@@ -3,7 +3,6 @@
 pub(crate) mod ask_advisor;
 pub(crate) mod command;
 pub(crate) mod sandbox;
-pub(crate) mod skills;
 pub(crate) mod subagent;
 pub(crate) mod submission;
 pub mod terminal;
@@ -25,17 +24,11 @@ use crate::{
     OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolName, ToolRegistry, ToolResult,
 };
 
-pub use skills::{
-    ReferenceName, SkillDefinition, SkillLoadError, SkillName, SkillRegistry, SkillSource,
-};
-
 /// The per-caller scope a tool registry is built for.
 #[derive(Debug, Clone, Default)]
 pub struct CallerScope {
     /// The subagent profile names this caller may dispatch.
     pub dispatchable_subagents: Vec<String>,
-    /// The bound agent's own skill folder slug, if it declares one.
-    pub skill_slug: Option<String>,
 }
 
 #[derive(Clone)]
@@ -149,18 +142,6 @@ impl AttemptSubmissionHandle {
     }
 }
 
-#[derive(Clone)]
-pub(crate) struct SkillHandle {
-    pub(crate) skill_registry: Arc<SkillRegistry>,
-}
-
-impl SkillHandle {
-    #[must_use]
-    pub(crate) fn new(skill_registry: Arc<SkillRegistry>) -> Self {
-        Self { skill_registry }
-    }
-}
-
 /// Register one tool, stamping its intent / terminal flag / hooks from config.
 pub(crate) fn register_tool(
     registry: &mut ToolRegistry,
@@ -224,7 +205,6 @@ pub fn build_default_registry(
     let background = BackgroundHandle::new(runtime);
     let root = RootSubmissionHandle::new(runtime.submission.clone());
     let attempt = AttemptSubmissionHandle::new(&runtime.submission);
-    let skills = SkillHandle::new(runtime.skills.clone());
 
     command::register(&mut registry, config, command);
     sandbox::register(&mut registry, config, sandbox);
@@ -243,7 +223,6 @@ pub fn build_default_registry(
         runtime.launcher.clone(),
         background,
     );
-    skills::register(&mut registry, config, caller, skills);
     registry
 }
 
@@ -257,7 +236,6 @@ pub fn build_registry_schema(config: &ToolConfigSet, caller: &CallerScope) -> To
     ask_advisor::register_schema(&mut registry, config);
     workflow::register_schema(&mut registry, config);
     subagent::register_schema(&mut registry, config, caller);
-    skills::register_schema(&mut registry, config, caller);
     registry
 }
 
@@ -272,10 +250,4 @@ pub(crate) fn parse_input<T: DeserializeOwned>(
             tool.as_str()
         ))
     })
-}
-
-#[cfg(test)]
-pub(crate) fn repo_tools_config() -> ToolConfigSet {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools");
-    ToolConfigSet::load_from_dir(&root).expect("repo .eos-agents/tools loads and validates")
 }

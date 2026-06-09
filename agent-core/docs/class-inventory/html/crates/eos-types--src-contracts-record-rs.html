@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -77,19 +77,19 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a></code>
   <p class="docstring">Request-rooted record directory for one agent run.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-19"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-36">new</a> (value : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Construct from a normalized request-rooted path string.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-19"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-35">new</a> (value : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Construct from a normalized request-rooted path string.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct from a normalized request-rooted path string.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>(value.into())
     }
 </code></pre>
-</details></td></tr><tr id="method-as-str-25"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-as-str-48">as_str</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the path string.</p><details class="function-source">
+</details></td></tr><tr id="method-as-str-25"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-as-str-47">as_str</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the path string.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Borrow the path string.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.0
     }
 </code></pre>
@@ -101,10 +101,10 @@
         <span class="rs-self">self</span>.0
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a></code></summary><table><tbody><tr id="method-fmt-39"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-types.html#method-fmt-56">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a></code></summary><table><tbody><tr id="method-fmt-39"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-types.html#method-fmt-55">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
-        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(f)
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(f)
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
@@ -150,9 +150,9 @@
 <span class="rs-comment">/// The formatter is intentionally pure and owns the path-segment literals.</span>
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-64">format_record_dir</a>(index: &amp;<a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-5">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a> {
-    <span class="rs-kw">let</span> request_root = format!(&quot;requests/{}&quot;, index.request_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>());
-    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-74">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>());
-    <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(format!(&quot;{request_root}/agent-runs/{agent_run_segment}&quot;))
+    <span class="rs-kw">let</span> request_root = format!(&quot;requests/{}&quot;, index.request_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>());
+    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-74">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>());
+    <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(format!(&quot;{request_root}/agent-runs/{agent_run_segment}&quot;))
 }
 </code></pre>
 </details>
@@ -203,13 +203,13 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a> {
     <span class="rs-comment">/// Construct from a normalized request-rooted path string.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>(value.into())
     }
 
     <span class="rs-comment">/// Borrow the path string.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
         &amp;<span class="rs-self">self</span>.0
     }
 
@@ -221,8 +221,8 @@
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
-        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(f)
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(f)
     }
 }
 
@@ -251,9 +251,9 @@
 <span class="rs-comment">/// The formatter is intentionally pure and owns the path-segment literals.</span>
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-64">format_record_dir</a>(index: &amp;<a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-5">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a> {
-    <span class="rs-kw">let</span> request_root = format!(&quot;requests/{}&quot;, index.request_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>());
-    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-74">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>());
-    <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(format!(&quot;{request_root}/agent-runs/{agent_run_segment}&quot;))
+    <span class="rs-kw">let</span> request_root = format!(&quot;requests/{}&quot;, index.request_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>());
+    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-74">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>());
+    <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-14">AgentRunRecordDir</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(format!(&quot;{request_root}/agent-runs/{agent_run_segment}&quot;))
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-74">prefixed</a>(prefix: &amp;str, id: &amp;str) -&gt; <span class="rs-type">String</span> {

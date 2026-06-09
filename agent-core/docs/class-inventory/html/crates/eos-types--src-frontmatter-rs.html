@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -76,7 +76,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-frontmatter-rs.html#item-fn-parse-markdown-frontmatter-5">parse_markdown_frontmatter</a>(content: &amp;str) -&gt; (<span class="rs-type">Mapping</span>, <span class="rs-type">String</span>) {
     <span class="rs-kw">let</span> lines: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = content.lines().collect();
     <span class="rs-kw">if</span> lines.first().map(|line| line.trim()) != <span class="rs-type">Some</span>(&quot;---&quot;) {
-        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(), content.to_owned());
+        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(), content.to_owned());
     }
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(end) = lines
         .iter()
@@ -85,13 +85,13 @@
         .find(|(_, line)| line.trim() == &quot;---&quot;)
         .map(|(index, _)| index)
     <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(), content.to_owned());
+        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(), content.to_owned());
     };
     <span class="rs-kw">let</span> block = lines[1..end].join(&quot;\n&quot;);
     <span class="rs-kw">let</span> frontmatter = <span class="rs-kw">match</span> serde_yaml::from_str::&lt;<span class="rs-type">Value</span>&gt;(&amp;block) {
         <span class="rs-type">Ok</span>(<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(mapping)) =&gt; mapping,
-        <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(),
-        <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(), content.to_owned()),
+        <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(),
+        <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(), content.to_owned()),
     };
     <span class="rs-kw">let</span> body = lines[end + 1..].join(&quot;\n&quot;).trim().to_owned();
     (frontmatter, body)
@@ -121,7 +121,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-frontmatter-rs.html#item-fn-parse-markdown-frontmatter-5">parse_markdown_frontmatter</a>(content: &amp;str) -&gt; (<span class="rs-type">Mapping</span>, <span class="rs-type">String</span>) {
     <span class="rs-kw">let</span> lines: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = content.lines().collect();
     <span class="rs-kw">if</span> lines.first().map(|line| line.trim()) != <span class="rs-type">Some</span>(&quot;---&quot;) {
-        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(), content.to_owned());
+        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(), content.to_owned());
     }
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(end) = lines
         .iter()
@@ -130,13 +130,13 @@
         .find(|(_, line)| line.trim() == &quot;---&quot;)
         .map(|(index, _)| index)
     <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(), content.to_owned());
+        <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(), content.to_owned());
     };
     <span class="rs-kw">let</span> block = lines[1..end].join(&quot;\n&quot;);
     <span class="rs-kw">let</span> frontmatter = <span class="rs-kw">match</span> serde_yaml::from_str::&lt;<span class="rs-type">Value</span>&gt;(&amp;block) {
         <span class="rs-type">Ok</span>(<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(mapping)) =&gt; mapping,
-        <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(),
-        <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(), content.to_owned()),
+        <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(),
+        <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">return</span> (<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(), content.to_owned()),
     };
     <span class="rs-kw">let</span> body = lines[end + 1..].join(&quot;\n&quot;).trim().to_owned();
     (frontmatter, body)

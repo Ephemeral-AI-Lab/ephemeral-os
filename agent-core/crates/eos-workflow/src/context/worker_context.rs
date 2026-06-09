@@ -9,7 +9,6 @@ pub(crate) async fn render_worker_agent_context(
     deps: &AttemptResources,
     attempt: &Attempt,
     work_item: &WorkItemSpec,
-    _agent_run_id: &eos_types::AgentRunId,
 ) -> Result<AgentContext> {
     let planner = planner_outcome_for_attempt(deps, attempt).await?;
     let needs = dependency_sections(deps, attempt, work_item).await?;

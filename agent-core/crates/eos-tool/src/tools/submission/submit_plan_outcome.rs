@@ -179,7 +179,7 @@ fn visit(
     visiting: &mut BTreeSet<usize>,
     visited: &mut BTreeSet<usize>,
 ) -> Result<(), String> {
-    if visited.contains(id) {
+    if visited.contains(&id) {
         return Ok(());
     }
     if !visiting.insert(id) {

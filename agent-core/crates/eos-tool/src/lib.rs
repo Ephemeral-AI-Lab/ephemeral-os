@@ -24,6 +24,3 @@ pub use registry::{
     ToolConfigError, ToolConfigSet, ToolExecutor, ToolRegistry, ToolRuntime,
 };
 pub use tools::terminal::{render_tool_instruction, TerminalTool, ToolInstructions};
-pub use tools::{
-    ReferenceName, SkillDefinition, SkillLoadError, SkillName, SkillRegistry, SkillSource,
-};

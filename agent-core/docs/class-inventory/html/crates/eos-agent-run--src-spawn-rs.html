@@ -91,13 +91,13 @@
 
     <span class="rs-kw">let</span> agent_def = (**agent_def).clone();
     <span class="rs-kw">let</span> agent_run_id = request.agent_run_id.clone();
-    <span class="rs-kw">let</span> created_run = <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a>(service, &amp;request, &amp;agent_name).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> created_run = <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a>(service, &amp;request, &amp;agent_name).<span class="rs-kw">await</span>?;
     <span class="rs-kw">let</span> record_target = created_run.record_target.clone();
     <span class="rs-kw">let</span> start_request = <a class="symbol-link rs-fn" href="eos-agent-run--src-spawn-rs.html#item-fn-build-start-agent-loop-request-75">build_start_agent_loop_request</a>(&amp;agent_def, request, record_target);
     <span class="rs-kw">let</span> agent_run_api: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-agent-run.html#method-new-30">new</a>(service.clone());
     <span class="rs-kw">let</span> started = service
         .loop_launcher
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-start-agent-loop-265">start_agent_loop</a>(start_request, agent_run_api);
+        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-start-agent-loop-264">start_agent_loop</a>(start_request, agent_run_api);
 
     service
         .active_agent_runs
@@ -147,18 +147,18 @@
     <h3>create_agent_run</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a> (service : &amp; <a class="symbol-link" href="eos-agent-run--src-service-rs.html#item-struct-AgentRunService-14">AgentRunService</a> , request : &amp; SpawnAgentRequest , agent_name : &amp; DefinitionAgentName ,) -&gt; Result &lt; CreatedAgentRun , AgentRunError &gt;</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a> (service : &amp; <a class="symbol-link" href="eos-agent-run--src-service-rs.html#item-struct-AgentRunService-14">AgentRunService</a> , request : &amp; SpawnAgentRequest , agent_name : &amp; DefinitionAgentName ,) -&gt; Result &lt; CreatedAgentRun , AgentRunError &gt;</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a>(
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a>(
     service: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-service-rs.html#item-struct-AgentRunService-14">AgentRunService</a>,
     request: &amp;<span class="rs-type">SpawnAgentRequest</span>,
     agent_name: &amp;<span class="rs-type">DefinitionAgentName</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CreatedAgentRun</span>, <span class="rs-type">AgentRunError</span>&gt; {
     service
         .agent_run_store
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a>(
+        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a>(
             &amp;request.agent_run_id,
             &amp;request.request_id,
             agent_name,
@@ -278,13 +278,13 @@
 
     <span class="rs-kw">let</span> agent_def = (**agent_def).clone();
     <span class="rs-kw">let</span> agent_run_id = request.agent_run_id.clone();
-    <span class="rs-kw">let</span> created_run = <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a>(service, &amp;request, &amp;agent_name).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> created_run = <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a>(service, &amp;request, &amp;agent_name).<span class="rs-kw">await</span>?;
     <span class="rs-kw">let</span> record_target = created_run.record_target.clone();
     <span class="rs-kw">let</span> start_request = <a class="symbol-link rs-fn" href="eos-agent-run--src-spawn-rs.html#item-fn-build-start-agent-loop-request-75">build_start_agent_loop_request</a>(&amp;agent_def, request, record_target);
     <span class="rs-kw">let</span> agent_run_api: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunApi</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-agent-run.html#method-new-30">new</a>(service.clone());
     <span class="rs-kw">let</span> started = service
         .loop_launcher
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-start-agent-loop-265">start_agent_loop</a>(start_request, agent_run_api);
+        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-start-agent-loop-264">start_agent_loop</a>(start_request, agent_run_api);
 
     service
         .active_agent_runs
@@ -295,14 +295,14 @@
     <span class="rs-type">Ok</span>(agent_run_id)
 }
 
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a>(
     service: &amp;<a class="symbol-link rs-type" href="eos-agent-run--src-service-rs.html#item-struct-AgentRunService-14">AgentRunService</a>,
     request: &amp;<span class="rs-type">SpawnAgentRequest</span>,
     agent_name: &amp;<span class="rs-type">DefinitionAgentName</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CreatedAgentRun</span>, <span class="rs-type">AgentRunError</span>&gt; {
     service
         .agent_run_store
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-318">create_agent_run</a>(
+        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-create-agent-run-317">create_agent_run</a>(
             &amp;request.agent_run_id,
             &amp;request.request_id,
             agent_name,

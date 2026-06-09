@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -89,7 +89,7 @@
 #[non_exhaustive]
 <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-types--src-error-rs.html#item-enum-CoreError-9">CoreError</a> {
     <span class="rs-comment">/// An identifier `FromStr` rejected an empty string. `kind` is the newtype</span>
-    <span class="rs-comment">/// name (e.g. `"TaskId"`) so callers can report which id failed.</span>
+    <span class="rs-comment">/// name (e.g. `"AgentRunId"`) so callers can report which id failed.</span>
     #[error(&quot;empty {kind} identifier&quot;)]
     <span class="rs-type">EmptyId</span> {
         <span class="rs-comment">/// The newtype kind whose `FromStr` received the empty string.</span>

@@ -242,14 +242,6 @@ fn shell_command(raw_input: &JsonObject) -> Option<&str> {
     }
 }
 
-fn deferred_goal(raw_input: &JsonObject) -> Option<&str> {
-    raw_input
-        .get("deferred_goal_for_next_iteration")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|goal| !goal.is_empty())
-}
-
 fn split_git_args(raw_args: &str) -> Vec<&str> {
     raw_args.split_whitespace().collect()
 }

@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::num::NonZeroU32;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use schemars::JsonSchema;
@@ -103,9 +102,6 @@ pub struct AgentDefinition {
     /// Declarative notification-trigger ids.
     #[serde(default)]
     pub notification_triggers: Vec<String>,
-    /// Absolute path to the agent's workflow skill, resolved by the loader.
-    #[serde(default)]
-    pub skill: Option<PathBuf>,
     /// Context-engine recipe id resolved at compose time.
     #[serde(default)]
     pub context_recipe: Option<String>,

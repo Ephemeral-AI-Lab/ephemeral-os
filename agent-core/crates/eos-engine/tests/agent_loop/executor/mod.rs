@@ -11,7 +11,6 @@ use eos_tool::{
 use eos_types::{
     AgentLoopCancellationHandle, AgentLoopLauncher, AgentRunError, AgentRunOutcome,
     AgentRunRecordDir, AgentRunRecordTarget, AgentRunStatus, RequestId, SpawnAgentRequest,
-    TaskAgentRunKind, TaskId,
 };
 use tokio::sync::Notify;
 use tokio::time::{timeout, Duration};
@@ -183,14 +182,11 @@ fn registry_with_counting_tool(executions: &Arc<AtomicUsize>) -> ToolRegistry {
 fn test_start_request() -> StartAgentLoopRequest {
     let request_id = RequestId::new_v4();
     let agent_run_id = AgentRunId::new_v4();
-    let task_id = TaskId::new_v4();
     StartAgentLoopRequest {
         record_target: AgentRunRecordTarget {
             request_id,
             agent_run_id,
-            task_id,
-            agent_run_kind: TaskAgentRunKind::Root,
-            record_dir: AgentRunRecordDir::new("requests/test/root-task-test/agent-run-test"),
+            record_dir: AgentRunRecordDir::new("requests/test/agent-runs/agent-run-test"),
         },
         initial_messages: vec![AgentLoopMessage::UserMessage(Message::from_user_text(
             "run both tools",

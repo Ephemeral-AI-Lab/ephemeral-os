@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -65,20 +65,20 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptBudget-14">AttemptBudget</a></code>
   <p class="docstring">Validated attempt budget.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: transparent</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>NonZeroU32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-20"><td>constructor</td><td>new</td><td><code>pub const fn <a class="symbol-link" href="eos-types.html#method-new-36">new</a> (value : NonZeroU32) -&gt; Self</code><p class="docstring">Construct a budget from a nonzero count.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>NonZeroU32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-20"><td>constructor</td><td>new</td><td><code>pub const fn <a class="symbol-link" href="eos-types.html#method-new-35">new</a> (value : NonZeroU32) -&gt; Self</code><p class="docstring">Construct a budget from a nonzero count.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct a budget from a nonzero count.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(value: <span class="rs-type">NonZeroU32</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(value: <span class="rs-type">NonZeroU32</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>(value)
     }
 </code></pre>
-</details></td></tr><tr id="method-get-47"><td>method</td><td>get</td><td><code>pub const fn <a class="symbol-link" href="eos-types.html#method-get-160">get</a> (self) -&gt; u32</code><p class="docstring">Return the budget as a plain count.</p><details class="function-source">
+</details></td></tr><tr id="method-get-47"><td>method</td><td>get</td><td><code>pub const fn <a class="symbol-link" href="eos-types.html#method-get-156">get</a> (self) -&gt; u32</code><p class="docstring">Return the budget as a plain count.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Return the budget as a plain count.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-get-160">get</a>(<span class="rs-self">self</span>) -&gt; u32 {
-        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-160">get</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-get-156">get</a>(<span class="rs-self">self</span>) -&gt; u32 {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-156">get</a>()
     }
 </code></pre>
 </details></td></tr><tr id="method-as-i64-53"><td>method</td><td>as_i64</td><td><code>pub const fn <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#method-as-i64-53">as_i64</a> (self) -&gt; i64</code><p class="docstring">Return the database integer representation.</p><details class="function-source">
@@ -86,7 +86,7 @@
   <pre><code>    <span class="rs-comment">/// Return the database integer representation.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-as-i64-53">as_i64</a>(<span class="rs-self">self</span>) -&gt; i64 {
-        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-160">get</a>() <span class="rs-kw">as</span> i64
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-156">get</a>() <span class="rs-kw">as</span> i64
     }
 </code></pre>
 </details></td></tr><tr id="method-try-from-u32-26"><td>associated-fn</td><td>try_from_u32</td><td><code>pub fn <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#method-try-from-u32-26">try_from_u32</a> (value : u32) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-types--src-error-rs.html#item-enum-CoreError-9">CoreError</a> &gt;</code><p class="docstring">Try to construct a budget from a `u32`.<br># Errors<br>Returns [`CoreError`] when the count is zero.</p><details class="function-source">
@@ -96,7 +96,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`CoreError`] when the count is zero.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-try-from-u32-26">try_from_u32</a>(value: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-types--src-error-rs.html#item-enum-CoreError-9">CoreError</a>&gt; {
-        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(value)
+        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(value)
             .map(<span class="rs-self">Self</span>)
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-types--src-error-rs.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Store</span>(&quot;attempt budget must be greater than zero&quot;.to_owned()))
     }
@@ -117,7 +117,7 @@
 </details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptBudget-14">AttemptBudget</a></code></summary><table><tbody><tr id="method-default-61"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#method-default-61">default</a> () -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-default-61">default</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>(<span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(2).unwrap_or(<span class="rs-type">NonZeroU32</span>::<span class="rs-type">MIN</span>))
+        <span class="rs-self">Self</span>(<span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(2).unwrap_or(<span class="rs-type">NonZeroU32</span>::<span class="rs-type">MIN</span>))
     }
 </code></pre>
 </details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; u32 &gt; for <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptBudget-14">AttemptBudget</a></code></summary><table><tbody><tr id="method-try-from-69"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#method-try-from-69">try_from</a> (value : u32) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
@@ -144,16 +144,16 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptExecutionTree-235">AttemptExecutionTree</a></code>
   <p class="docstring">Attempt-owned mapping from work item ids to agent runs and outcomes.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>plan_id</td><td><code>PlanId</code></td></tr><tr><td>pub</td><td>planner_started</td><td><code>bool</code></td></tr><tr><td>pub</td><td>planner_outcome</td><td><code>Option &lt; <a class="symbol-link" href="eos-types--src-state-workflow-outcome-rs.html#item-enum-SubmissionOutcome-32">SubmissionOutcome</a> &gt;</code></td></tr><tr><td>pub</td><td>nodes</td><td><code>Vec &lt; <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-ExecutionNode-281">ExecutionNode</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-252"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-36">new</a> (plan_id : PlanId) -&gt; Self</code><p class="docstring">Create an empty execution tree for a freshly minted plan id.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>plan_id</td><td><code>PlanId</code></td></tr><tr><td>pub</td><td>planner_started</td><td><code>bool</code></td></tr><tr><td>pub</td><td>planner_outcome</td><td><code>Option &lt; <a class="symbol-link" href="eos-types--src-state-workflow-outcome-rs.html#item-enum-SubmissionOutcome-32">SubmissionOutcome</a> &gt;</code></td></tr><tr><td>pub</td><td>nodes</td><td><code>Vec &lt; <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-ExecutionNode-281">ExecutionNode</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-252"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-35">new</a> (plan_id : PlanId) -&gt; Self</code><p class="docstring">Create an empty execution tree for a freshly minted plan id.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create an empty execution tree for a freshly minted plan id.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(plan_id: <span class="rs-type">PlanId</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(plan_id: <span class="rs-type">PlanId</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             plan_id,
             planner_started: <span class="rs-kw">false</span>,
             planner_outcome: <span class="rs-type">None</span>,
-            nodes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(),
+            nodes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(),
         }
     }
 </code></pre>
@@ -296,11 +296,11 @@
   <code class="signature">pub enum <a class="symbol-link" href="eos-types--src-state-workflow-attempt-rs.html#item-enum-AttemptStatus-94">AttemptStatus</a></code>
   <p class="docstring">Outcome status of an [`Attempt`].</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Passed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-109"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-types.html#method-as-str-48">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The canonical `snake_case` token.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Passed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-109"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-types.html#method-as-str-47">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The canonical `snake_case` token.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The canonical `snake_case` token.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> =&gt; &quot;passed&quot;,
@@ -446,7 +446,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptBudget-14">AttemptBudget</a> {
     <span class="rs-comment">/// Construct a budget from a nonzero count.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(value: <span class="rs-type">NonZeroU32</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(value: <span class="rs-type">NonZeroU32</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>(value)
     }
 
@@ -455,7 +455,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`CoreError`] when the count is zero.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-try-from-u32-26">try_from_u32</a>(value: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-types--src-error-rs.html#item-enum-CoreError-9">CoreError</a>&gt; {
-        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(value)
+        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(value)
             .map(<span class="rs-self">Self</span>)
             .ok_or_else(|| <a class="symbol-link rs-type" href="eos-types--src-error-rs.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Store</span>(&quot;attempt budget must be greater than zero&quot;.to_owned()))
     }
@@ -473,20 +473,20 @@
 
     <span class="rs-comment">/// Return the budget as a plain count.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-get-160">get</a>(<span class="rs-self">self</span>) -&gt; u32 {
-        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-160">get</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-get-156">get</a>(<span class="rs-self">self</span>) -&gt; u32 {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-156">get</a>()
     }
 
     <span class="rs-comment">/// Return the database integer representation.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-as-i64-53">as_i64</a>(<span class="rs-self">self</span>) -&gt; i64 {
-        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-160">get</a>() <span class="rs-kw">as</span> i64
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-types.html#method-get-156">get</a>() <span class="rs-kw">as</span> i64
     }
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptBudget-14">AttemptBudget</a> {
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-state-workflow-attempt-rs.html#method-default-61">default</a>() -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>(<span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(2).unwrap_or(<span class="rs-type">NonZeroU32</span>::<span class="rs-type">MIN</span>))
+        <span class="rs-self">Self</span>(<span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(2).unwrap_or(<span class="rs-type">NonZeroU32</span>::<span class="rs-type">MIN</span>))
     }
 }
 
@@ -535,7 +535,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-state-workflow-attempt-rs.html#item-enum-AttemptStatus-94">AttemptStatus</a> {
     <span class="rs-comment">/// The canonical `snake_case` token.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> =&gt; &quot;passed&quot;,
@@ -678,12 +678,12 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-state-workflow-attempt-rs.html#item-struct-AttemptExecutionTree-235">AttemptExecutionTree</a> {
     <span class="rs-comment">/// Create an empty execution tree for a freshly minted plan id.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(plan_id: <span class="rs-type">PlanId</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(plan_id: <span class="rs-type">PlanId</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             plan_id,
             planner_started: <span class="rs-kw">false</span>,
             planner_outcome: <span class="rs-type">None</span>,
-            nodes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(),
+            nodes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(),
         }
     }
 

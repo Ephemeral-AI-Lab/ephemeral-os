@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -84,7 +84,7 @@
         <span class="rs-self">self</span>.content
             .iter()
             .filter_map(|block| <span class="rs-kw">match</span> block {
-                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>()),
+                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>()),
                 _ =&gt; <span class="rs-type">None</span>,
             })
             .collect()
@@ -98,7 +98,7 @@
         <span class="rs-self">self</span>.content
             .iter()
             .filter_map(|block| <span class="rs-kw">match</span> block {
-                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>()),
+                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>()),
                 _ =&gt; <span class="rs-type">None</span>,
             })
             .collect()
@@ -125,11 +125,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-llm-rs.html#item-struct-ToolSpec-145">ToolSpec</a></code>
   <p class="docstring">A neutral tool declaration sent to the model.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>String</code></td></tr><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>input_schema</td><td><code><a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a></code></td></tr><tr><td>pub</td><td>output_schema</td><td><code>Option &lt; <a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-160"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-36">new</a> (name : impl Into &lt; String &gt; , description : impl Into &lt; String &gt; , input_schema : <a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a> , output_schema : Option &lt; <a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a> &gt; ,) -&gt; Self</code><p class="docstring">Construct a tool declaration.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>String</code></td></tr><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>input_schema</td><td><code><a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a></code></td></tr><tr><td>pub</td><td>output_schema</td><td><code>Option &lt; <a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-160"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-35">new</a> (name : impl Into &lt; String &gt; , description : impl Into &lt; String &gt; , input_schema : <a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a> , output_schema : Option &lt; <a class="symbol-link" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a> &gt; ,) -&gt; Self</code><p class="docstring">Construct a tool declaration.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct a tool declaration.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(
         name: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
         description: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
         input_schema: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a>,
@@ -308,7 +308,7 @@
         <span class="rs-self">self</span>.content
             .iter()
             .filter_map(|block| <span class="rs-kw">match</span> block {
-                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>()),
+                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>()),
                 _ =&gt; <span class="rs-type">None</span>,
             })
             .collect()
@@ -320,7 +320,7 @@
         <span class="rs-self">self</span>.content
             .iter()
             .filter_map(|block| <span class="rs-kw">match</span> block {
-                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-48">as_str</a>()),
+                <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-enum-ContentBlock-41">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text } =&gt; <span class="rs-type">Some</span>(text.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-47">as_str</a>()),
                 _ =&gt; <span class="rs-type">None</span>,
             })
             .collect()
@@ -351,7 +351,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-types--src-llm-rs.html#item-struct-ToolSpec-145">ToolSpec</a> {
     <span class="rs-comment">/// Construct a tool declaration.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-36">new</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-new-35">new</a>(
         name: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
         description: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
         input_schema: <a class="symbol-link rs-type" href="eos-types--src-models-rs.html#item-type-JsonObject-50">JsonObject</a>,

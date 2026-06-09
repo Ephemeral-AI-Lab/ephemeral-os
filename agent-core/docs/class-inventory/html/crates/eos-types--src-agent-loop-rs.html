@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>28</b><span>modules</span></div>
   <div><b>130</b><span>items</span></div>
-  <div><b>234</b><span>fields</span></div>
+  <div><b>233</b><span>fields</span></div>
   <div><b>131</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -65,7 +65,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a></code>
   <p class="docstring">Awaitable terminal completion returned after an agent loop is launched.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>terminal_outcome</td><td><code>Pin &lt; Box &lt; dyn Future &lt; Output = <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopOutcome-71">AgentLoopOutcome</a> &gt; + Send + &#x27;static &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-18"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-36">new</a> &lt; F &gt; (completion : F) -&gt; Self where F : Future &lt; Output = <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopOutcome-71">AgentLoopOutcome</a> &gt; + Send + &#x27;static ,</code><p class="docstring">Wrap an engine-loop completion future.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>terminal_outcome</td><td><code>Pin &lt; Box &lt; dyn Future &lt; Output = <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopOutcome-71">AgentLoopOutcome</a> &gt; + Send + &#x27;static &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-18"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-types.html#method-new-35">new</a> &lt; F &gt; (completion : F) -&gt; Self where F : Future &lt; Output = <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopOutcome-71">AgentLoopOutcome</a> &gt; + Send + &#x27;static ,</code><p class="docstring">Wrap an engine-loop completion future.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Wrap an engine-loop completion future.</span>
     #[must_use]
@@ -85,9 +85,9 @@
         <span class="rs-self">self</span>.terminal_outcome.<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a></code></summary><table><tbody><tr id="method-fmt-36"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-types.html#method-fmt-56">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a></code></summary><table><tbody><tr id="method-fmt-36"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-types.html#method-fmt-55">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a>&quot;)
             .finish_non_exhaustive()
     }
@@ -128,9 +128,9 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-StartedAgentLoop-103">StartedAgentLoop</a></code>
   <p class="docstring">Handle returned after an agent loop has been started.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>completion</td><td><code><a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a></code></td></tr><tr><td>pub</td><td>cancellation</td><td><code><a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-type-AgentLoopCancellationHandle-42">AgentLoopCancellationHandle</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-StartedAgentLoop-103">StartedAgentLoop</a></code></summary><table><tbody><tr id="method-fmt-112"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-types.html#method-fmt-56">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>completion</td><td><code><a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a></code></td></tr><tr><td>pub</td><td>cancellation</td><td><code><a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-type-AgentLoopCancellationHandle-42">AgentLoopCancellationHandle</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-types--src-agent-loop-rs.html#item-struct-StartedAgentLoop-103">StartedAgentLoop</a></code></summary><table><tbody><tr id="method-fmt-112"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-types.html#method-fmt-55">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-types--src-agent-loop-rs.html#item-struct-StartedAgentLoop-103">StartedAgentLoop</a>&quot;).finish_non_exhaustive()
     }
 </code></pre>
@@ -253,7 +253,7 @@
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-types--src-agent-loop-rs.html#item-struct-AgentLoopCompletion-12">AgentLoopCompletion</a>&quot;)
             .finish_non_exhaustive()
     }
@@ -329,7 +329,7 @@
 }
 
 <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-types--src-agent-loop-rs.html#item-struct-StartedAgentLoop-103">StartedAgentLoop</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-56">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#method-fmt-55">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-types--src-agent-loop-rs.html#item-struct-StartedAgentLoop-103">StartedAgentLoop</a>&quot;).finish_non_exhaustive()
     }
 }

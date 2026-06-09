@@ -216,7 +216,6 @@ mod tests {
             allowed_tools: Vec::new(),
             terminals: vec!["submit_worker_outcome".to_owned()],
             notification_triggers: Vec::new(),
-            skill: None,
             context_recipe: None,
         }
     }
