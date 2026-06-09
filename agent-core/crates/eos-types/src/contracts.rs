@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use crate::{
     AgentName, AgentRunId, AttemptId, CoreError, GeneratorSubmission, IterationId, JsonObject,
     Message, PlanDisposition, PlanNodeId, ReducerSubmission, RequestId, SandboxId, TaskId,
-    WorkflowId,
+    ToolUseId, WorkflowId,
 };
 
 /// Request to spawn any agent kind.
@@ -26,6 +26,9 @@ pub struct SpawnAgentRequest {
     pub initial_messages: Vec<Message>,
     /// Closed spawn target and lineage facts.
     pub target: SpawnAgentTarget,
+    /// Durable launch fact for workflow/parented launches. It is never part of
+    /// the record-dir target.
+    pub tool_use_id: Option<ToolUseId>,
     /// Bound sandbox id.
     pub sandbox_id: Option<SandboxId>,
     /// Request-visible workspace root.
@@ -204,6 +207,177 @@ pub enum WorkflowTaskRole {
     Generator,
     /// Reducer task.
     Reducer,
+}
+
+impl WorkflowTaskRole {
+    /// The canonical record/task path label.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Planner => "planner",
+            Self::Generator => "generator",
+            Self::Reducer => "reducer",
+        }
+    }
+
+    /// The task path segment prefix for this workflow role.
+    #[must_use]
+    pub const fn task_segment_prefix(self) -> &'static str {
+        match self {
+            Self::Planner => "planner-task",
+            Self::Generator => "generator-task",
+            Self::Reducer => "reducer-task",
+        }
+    }
+}
+
+impl ParentedAgentRunKind {
+    /// The canonical row value.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Subagent => "subagent",
+            Self::Advisor => "advisor",
+        }
+    }
+
+    /// The request-rooted child directory segment.
+    #[must_use]
+    pub const fn collection_segment(self) -> &'static str {
+        match self {
+            Self::Subagent => "subagents",
+            Self::Advisor => "advisors",
+        }
+    }
+
+    /// The run path segment prefix.
+    #[must_use]
+    pub const fn run_segment_prefix(self) -> &'static str {
+        match self {
+            Self::Subagent => "subagent-run",
+            Self::Advisor => "advisor-run",
+        }
+    }
+}
+
+/// Input to record-dir resolution for a task-backed agent run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentRunRecordIndex {
+    /// Owning request.
+    pub request_id: RequestId,
+    /// Agent-run id.
+    pub agent_run_id: AgentRunId,
+    /// The run's own task id.
+    pub task_id: TaskId,
+    /// Closed lineage kind.
+    pub kind: TaskAgentRunKind,
+}
+
+/// Request-rooted record directory for one agent run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentRunRecordDir(String);
+
+impl AgentRunRecordDir {
+    /// Construct from a normalized request-rooted path string.
+    #[must_use]
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// Borrow the path string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Consume and return the path string.
+    #[must_use]
+    pub fn into_string(self) -> String {
+        self.0
+    }
+}
+
+impl std::fmt::Display for AgentRunRecordDir {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// Passive engine-facing record target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentRunRecordTarget {
+    /// Owning request.
+    pub request_id: RequestId,
+    /// Agent-run id.
+    pub agent_run_id: AgentRunId,
+    /// The run's own task id.
+    pub task_id: TaskId,
+    /// Resolved request-rooted record directory.
+    pub record_dir: AgentRunRecordDir,
+}
+
+/// Row-creation-local task-agent-run result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedTaskAgentRun {
+    /// Agent-run id.
+    pub agent_run_id: AgentRunId,
+    /// The run's own task id.
+    pub task_id: TaskId,
+    /// Pre-resolved record target for the engine loop.
+    pub record_target: AgentRunRecordTarget,
+}
+
+/// Flat read-side child index for one task-backed run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskExecutionIndex {
+    /// The task id being indexed.
+    pub task_id: TaskId,
+    /// Its main agent-run id.
+    pub agent_run_id: AgentRunId,
+    /// Workflows launched by this task.
+    pub workflow_ids: Vec<WorkflowId>,
+    /// Parent-launched subagent run ids.
+    pub subagent_ids: Vec<AgentRunId>,
+    /// Parent-launched advisor run ids.
+    pub advisor_ids: Vec<AgentRunId>,
+}
+
+/// Format a request-rooted record directory from a resolved record index.
+///
+/// The formatter is intentionally pure and owns the path-segment literals.
+#[must_use]
+pub fn format_record_dir(index: &AgentRunRecordIndex) -> AgentRunRecordDir {
+    let request_root = format!("requests/{}", index.request_id.as_str());
+    let agent_run_segment = prefixed("agent-run", index.agent_run_id.as_str());
+    let task_id = index.task_id.as_str();
+    let dir = match &index.kind {
+        TaskAgentRunKind::Root => format!(
+            "{}/{}/{}",
+            request_root,
+            prefixed("root-task", task_id),
+            agent_run_segment
+        ),
+        TaskAgentRunKind::Workflow { workflow, role } => format!(
+            "{}/workflows/{}/{}/{}/{}/{}",
+            request_root,
+            prefixed("workflow", workflow.workflow_id.as_str()),
+            prefixed("iteration", workflow.iteration_id.as_str()),
+            prefixed("attempt", workflow.attempt_id.as_str()),
+            prefixed(role.task_segment_prefix(), task_id),
+            agent_run_segment
+        ),
+        TaskAgentRunKind::Parented { kind, .. } => format!(
+            "{}/{}/{}",
+            request_root,
+            kind.collection_segment(),
+            prefixed(kind.run_segment_prefix(), index.agent_run_id.as_str())
+        ),
+    };
+    AgentRunRecordDir::new(dir)
+}
+
+fn prefixed(prefix: &str, id: &str) -> String {
+    format!("{prefix}-{id}")
 }
 
 /// Terminal outcome for one agent run.

@@ -1,4 +1,4 @@
-//! `Workflow` DTO (origin axis) and its lifecycle status.
+//! `Workflow` entity DTO (origin axis) and its lifecycle status.
 //!
 //! Ports the Workflow half of `workflow/_core/state.py`. `parent_task_id` is a
 //! durable back-link and is **never** mutated at close (anchor §3).

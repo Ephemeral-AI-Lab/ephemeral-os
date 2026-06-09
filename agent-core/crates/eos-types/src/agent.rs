@@ -10,21 +10,16 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Runtime class of an agent profile.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentType {
     /// A regular agent.
+    #[default]
     Agent,
     /// A worker subagent targetable by `run_subagent`.
     Subagent,
     /// A blocking read-only advisor targetable by `ask_advisor`.
     Advisor,
-}
-
-impl Default for AgentType {
-    fn default() -> Self {
-        Self::Agent
-    }
 }
 
 /// A registry key / dispatchable agent profile name.
@@ -114,7 +109,6 @@ pub struct AgentRegistryBuilder {
 
 impl AgentRegistryBuilder {
     /// Start an empty builder.
-    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

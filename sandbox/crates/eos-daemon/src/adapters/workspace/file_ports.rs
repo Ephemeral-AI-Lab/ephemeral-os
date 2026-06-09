@@ -30,6 +30,14 @@ fn api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
     WorkspaceApiError::new("daemon_workspace_error", error.to_string())
 }
 
+/// Parse a request path into a `LayerPath`, surfacing failures as the daemon
+/// workspace API error.
+fn parse_layer_path(raw: &str) -> Result<LayerPath, WorkspaceApiError> {
+    LayerPath::parse(raw)
+        .map_err(eos_layerstack::LayerStackError::from)
+        .map_err(api_error)
+}
+
 fn resolve_layer_path(
     binding: &WorkspaceBinding,
     request_path: &str,
@@ -91,9 +99,7 @@ impl WorkspaceMutationSink for EphemeralFilePorts {
         &self,
         request: WorkspaceMutationRequest,
     ) -> Result<WorkspaceMutationOutcome, WorkspaceApiError> {
-        let path = LayerPath::parse(&request.path.path)
-            .map_err(eos_layerstack::LayerStackError::from)
-            .map_err(api_error)?;
+        let path = parse_layer_path(&request.path.path)?;
         let base_hash = hash_current(request.base.bytes.as_deref(), request.base.exists);
         let snapshot_version = request
             .base
@@ -209,9 +215,7 @@ impl WorkspaceReadView for IsolatedFilePorts {
         path: &ResolvedWorkspacePath,
     ) -> Result<WorkspaceReadBytes, WorkspaceApiError> {
         let read_start = Instant::now();
-        let layer_path = LayerPath::parse(&path.path)
-            .map_err(eos_layerstack::LayerStackError::from)
-            .map_err(api_error)?;
+        let layer_path = parse_layer_path(&path.path)?;
         let (bytes, exists) = read_isolated_current(&self.handle, &layer_path)?;
         let mut timings = isolated_timings(0);
         timings.insert(
@@ -233,9 +237,7 @@ impl WorkspaceMutationSink for IsolatedFilePorts {
         &self,
         request: WorkspaceMutationRequest,
     ) -> Result<WorkspaceMutationOutcome, WorkspaceApiError> {
-        let layer_path = LayerPath::parse(&request.path.path)
-            .map_err(eos_layerstack::LayerStackError::from)
-            .map_err(api_error)?;
+        let layer_path = parse_layer_path(&request.path.path)?;
         write_isolated_upper(&self.handle, &layer_path, &request.content)?;
         let changed_paths = vec![layer_path.as_str().to_owned()];
         record_isolated_tool_call(
